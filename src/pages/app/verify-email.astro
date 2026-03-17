@@ -1,0 +1,58 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { getCentralDb, centralSchema } from '../../lib/db';
+import { eq } from 'drizzle-orm';
+
+const token = Astro.url.searchParams.get('token') || '';
+let success = false;
+let error = '';
+
+if (token) {
+  const verification = getCentralDb().select().from(centralSchema.emailVerifications)
+    .where(eq(centralSchema.emailVerifications.token, token)).get();
+
+  if (!verification) {
+    error = 'Invalid verification link.';
+  } else if (verification.usedAt) {
+    success = true; // Already verified, just show success
+  } else if (verification.expiresAt < new Date()) {
+    error = 'This verification link has expired. Log in to request a new one.';
+  } else {
+    // Mark verification as used
+    getCentralDb().update(centralSchema.emailVerifications)
+      .set({ usedAt: new Date() })
+      .where(eq(centralSchema.emailVerifications.id, verification.id)).run();
+
+    // Mark user as verified
+    getCentralDb().update(centralSchema.users)
+      .set({ emailVerified: true, emailVerifiedAt: new Date(), updatedAt: new Date() })
+      .where(eq(centralSchema.users.id, verification.userId)).run();
+
+    success = true;
+  }
+} else {
+  error = 'No verification token provided.';
+}
+---
+<Layout title="Verify Email — StdOut">
+  <div class="auth-page">
+    {success ? (
+      <div class="success-msg">
+        <div class="check-icon">&#10003;</div>
+        <h2>Email verified</h2>
+        <p>Your email has been verified. You're all set.</p>
+        <a href="/app" class="btn btn-primary" style="width: 100%;">Go to dashboard</a>
+      </div>
+    ) : (
+      <div class="auth-error" style="text-align: left;">{error}</div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .success-msg { text-align: center; padding: 32px; }
+  .check-icon { font-size: 36px; color: var(--low); margin-bottom: 12px; }
+  .success-msg h2 { font-size: 20px; margin-bottom: 8px; }
+  .success-msg p { font-size: 14px; color: var(--text-secondary); margin-bottom: 20px; }
+</style>

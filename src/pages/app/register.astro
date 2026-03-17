@@ -7,6 +7,8 @@ import { hashPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
+import { sendVerificationEmail } from '../../lib/email';
+import crypto from 'node:crypto';
 
 let error = '';
 let email = '';
@@ -61,6 +63,17 @@ if (Astro.request.method === 'POST') {
         // Provision tenant DB (creates file + tables on first access)
         getTenantDb(id);
         logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
+
+        // Send verification email
+        const verifyToken = crypto.randomBytes(32).toString('hex');
+        getCentralDb().insert(centralSchema.emailVerifications).values({
+          id: nanoid(),
+          userId: id,
+          token: verifyToken,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+          createdAt: new Date(),
+        }).run();
+        sendVerificationEmail(email, verifyToken);
 
         const sessionId = await createSession(id);
         Astro.cookies.set(SESSION_COOKIE, sessionId, {

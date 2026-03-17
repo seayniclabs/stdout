@@ -113,9 +113,16 @@ if (!user) return Astro.redirect('/app/login');
       <p class="section-desc">These actions are irreversible.</p>
       <div class="danger-actions">
         <a href="/app/api/export" class="btn btn-ghost">Export all data (JSON)</a>
-        <button id="deleteAccountBtn" class="btn btn-danger">Delete account</button>
       </div>
-      <div id="deleteStatus" class="backup-status"></div>
+      <div class="delete-zone">
+        <p class="delete-warning">Deleting your account deactivates it immediately. Your data is kept for 14 days in case you need recovery (contact support). After 14 days, all data is permanently purged.</p>
+        <label class="delete-confirm-label">
+          <span>Type <strong>DELETE</strong> to confirm</span>
+          <input type="text" id="deleteConfirmInput" placeholder="DELETE" class="settings-input" autocomplete="off" />
+        </label>
+        <button id="deleteAccountBtn" class="btn btn-danger" disabled>Delete account</button>
+        <div id="deleteStatus" class="backup-status"></div>
+      </div>
     </section>
   </div>
 </Layout>
@@ -380,30 +387,39 @@ if (!user) return Astro.redirect('/app/login');
   loadTokens();
 
   // Delete account
-  const deleteBtn = document.getElementById('deleteAccountBtn');
-  const deleteStatus = document.getElementById('deleteStatus')!;
-  deleteBtn?.addEventListener('click', async () => {
-    const confirm1 = confirm('Are you sure you want to delete your account? This cannot be undone.');
-    if (!confirm1) return;
-    const confirm2 = confirm('This will permanently delete all your incidents, stacks, resolutions, diagnoses, and backups. Type OK to confirm.');
-    if (!confirm2) return;
+  const deleteBtn = document.getElementById('deleteAccountBtn') as HTMLButtonElement;
+  const deleteInput = document.getElementById('deleteConfirmInput') as HTMLInputElement;
+  const deleteStatusEl = document.getElementById('deleteStatus')!;
 
-    deleteStatus.textContent = 'Deleting account...';
-    deleteStatus.className = 'backup-status';
+  deleteInput?.addEventListener('input', () => {
+    deleteBtn.disabled = deleteInput.value !== 'DELETE';
+  });
+
+  deleteBtn?.addEventListener('click', async () => {
+    if (deleteInput.value !== 'DELETE') return;
+    deleteBtn.disabled = true;
+    deleteStatusEl.textContent = 'Deactivating account...';
+    deleteStatusEl.className = 'backup-status';
     try {
-      const res = await fetch('/app/api/account', { method: 'DELETE' });
+      const res = await fetch('/app/api/account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE' }),
+      });
       const data = await res.json();
       if (data.deleted) {
-        deleteStatus.textContent = 'Account deleted. Redirecting...';
-        deleteStatus.className = 'backup-status success';
-        setTimeout(() => window.location.href = '/app/login', 1500);
+        deleteStatusEl.textContent = 'Account deactivated. Data retained for 14 days. Redirecting...';
+        deleteStatusEl.className = 'backup-status success';
+        setTimeout(() => window.location.href = '/app/login', 2000);
       } else {
-        deleteStatus.textContent = data.error || 'Delete failed.';
-        deleteStatus.className = 'backup-status error';
+        deleteStatusEl.textContent = data.error || 'Delete failed.';
+        deleteStatusEl.className = 'backup-status error';
+        deleteBtn.disabled = false;
       }
     } catch {
-      deleteStatus.textContent = 'Network error.';
-      deleteStatus.className = 'backup-status error';
+      deleteStatusEl.textContent = 'Network error.';
+      deleteStatusEl.className = 'backup-status error';
+      deleteBtn.disabled = false;
     }
   });
 
@@ -456,5 +472,9 @@ if (!user) return Astro.redirect('/app/login');
   .color-row { display: flex; gap: 8px; align-items: center; }
   .color-picker { width: 40px; height: 34px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); cursor: pointer; padding: 2px; }
   .notif-add { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
+  .delete-zone { margin-top: 12px; padding: 16px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15); border-radius: var(--radius); }
+  .delete-warning { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .delete-confirm-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .delete-confirm-label span { font-size: 12px; font-weight: 600; color: var(--critical); text-transform: uppercase; letter-spacing: 0.04em; }
   .mono { font-family: var(--font-mono); }
 </style>

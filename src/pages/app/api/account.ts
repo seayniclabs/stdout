@@ -3,30 +3,35 @@ import crypto from 'node:crypto';
 import { getCentralDb, centralSchema, evictTenantDb } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import { deleteAllBackups } from '../../../lib/backup';
 import { logAudit, getClientIp } from '../../../lib/audit';
-import fs from 'node:fs';
-import path from 'node:path';
-
-const DATA_DIR = process.env.DB_PATH
-  ? path.dirname(process.env.DB_PATH)
-  : './data';
 
 export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+
+  // Require confirmation word in request body
+  let body: any = {};
+  try { body = await request.json(); } catch {}
+
+  if (body.confirmation !== 'DELETE') {
+    return new Response(JSON.stringify({ error: 'Type DELETE to confirm account deletion.' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const userId = locals.user.id;
   const email = locals.user.email;
   const ip = getClientIp(request);
 
-  // Log the deletion before removing data
+  // Log the deletion
   logAudit('account_delete', {
     userId,
     ip,
-    details: { email: email.replace(/(.{2}).*(@.*)/, '$1***$2') }, // Partially masked
+    details: { email: email.replace(/(.{2}).*(@.*)/, '$1***$2') },
   });
 
-  // Record deletion for audit trail (uses email hash, not actual email)
+  // Record deletion for audit trail + soft-delete window
+  // Data is kept for 14 days before permanent purge
   const emailHash = crypto.createHash('sha256').update(email).digest('hex');
   getCentralDb().insert(centralSchema.deletions).values({
     id: nanoid(),
@@ -34,41 +39,36 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
     deletedAt: new Date(),
   }).run();
 
-  // Delete sessions
+  // Soft-delete: mark user as deleted but keep data for 14 days
+  // Set email to deleted_<hash>@deleted to free up the email address
+  // but keep the record so we can restore if needed
+  getCentralDb().update(centralSchema.users).set({
+    email: `deleted_${emailHash.substring(0, 12)}@deleted`,
+    role: 'member' as const,
+    subscriptionStatus: 'none' as const,
+    updatedAt: new Date(),
+  }).where(eq(centralSchema.users.id, userId)).run();
+
+  // Delete sessions (force logout)
   getCentralDb().delete(centralSchema.sessions)
     .where(eq(centralSchema.sessions.userId, userId)).run();
 
-  // Delete API tokens
+  // Delete API tokens (revoke access)
   getCentralDb().delete(centralSchema.apiTokens)
     .where(eq(centralSchema.apiTokens.userId, userId)).run();
 
-  // Delete user record
-  getCentralDb().delete(centralSchema.users)
-    .where(eq(centralSchema.users.id, userId)).run();
-
-  // Evict tenant DB from pool
+  // Evict tenant DB from pool (but DON'T delete the DB file or backups)
+  // Data stays for 14 days — permanent purge handled by cleanup job
   evictTenantDb(userId);
-
-  // Delete tenant DB file (SaaS mode)
-  const selfHost = process.env.STDOUT_MODE !== 'saas';
-  if (!selfHost) {
-    const tenantPath = path.join(DATA_DIR, 'tenants', `${userId}.db`);
-    const walPath = tenantPath + '-wal';
-    const shmPath = tenantPath + '-shm';
-    if (fs.existsSync(tenantPath)) fs.unlinkSync(tenantPath);
-    if (fs.existsSync(walPath)) fs.unlinkSync(walPath);
-    if (fs.existsSync(shmPath)) fs.unlinkSync(shmPath);
-  }
-
-  // Delete all backups
-  try {
-    deleteAllBackups(userId);
-  } catch { /* may not have backups */ }
 
   // Clear session cookie
   cookies.delete('sl_session', { path: '/' });
 
-  return new Response(JSON.stringify({ deleted: true }), {
+  return new Response(JSON.stringify({
+    deleted: true,
+    retentionDays: 14,
+    message: 'Account deactivated. Data will be permanently purged in 14 days. Contact support for recovery.',
+  }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
