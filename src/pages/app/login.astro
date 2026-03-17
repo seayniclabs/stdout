@@ -50,7 +50,7 @@ if (Astro.request.method === 'POST') {
               secure: true,
               sameSite: 'lax',
               maxAge: 30 * 24 * 60 * 60,
-              domain: import.meta.env.DEV ? undefined : '.seayniclabs.com',
+              domain: undefined,
             });
             return Astro.redirect(destination);
           }

@@ -156,7 +156,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     secure: true,
     sameSite: 'lax',
     maxAge: 60 * 60 * 2,
-    domain: import.meta.env.DEV ? undefined : '.seayniclabs.com',
+    domain: undefined,  // No cross-domain sharing needed yet; set to .seayniclabs.com when SaaS launches
   });
   context.locals.csrfToken = csrfToken;
 
