@@ -136,6 +136,19 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       completion_tokens INTEGER,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS docs (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      doc_type TEXT NOT NULL DEFAULT 'note',
+      incident_id TEXT,
+      stack_id TEXT,
+      tags TEXT,
+      size_bytes INTEGER NOT NULL DEFAULT 0,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS stack_imports (
       id TEXT PRIMARY KEY,
       raw_json TEXT NOT NULL,
@@ -151,6 +164,11 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
     CREATE VIRTUAL TABLE IF NOT EXISTS resolutions_fts USING fts5(
       content,
       content='resolutions',
+      content_rowid='rowid'
+    );
+    CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
+      title, content, tags,
+      content='docs',
       content_rowid='rowid'
     );
   `);

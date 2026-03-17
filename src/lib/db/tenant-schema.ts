@@ -52,6 +52,24 @@ export const diagnoses = sqliteTable('diagnoses', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Knowledge Base: runbooks, post-mortems, operational docs ---
+
+export const docs = sqliteTable('docs', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  content: text('content').notNull(), // Markdown
+  docType: text('doc_type', {
+    enum: ['runbook', 'postmortem', 'guide', 'note'],
+  }).notNull().default('note'),
+  incidentId: text('incident_id'), // Optional link to originating incident
+  stackId: text('stack_id'), // Optional link to related stack
+  tags: text('tags'), // Comma-separated
+  sizeBytes: integer('size_bytes').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
   rawJson: text('raw_json').notNull(),
