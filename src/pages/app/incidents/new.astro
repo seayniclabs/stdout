@@ -5,6 +5,7 @@ import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
+import { notify } from '../../../lib/notify';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -40,6 +41,15 @@ if (Astro.request.method === 'POST') {
       if (rawDb?.prepare) {
         rawDb.prepare('INSERT INTO incidents_fts(rowid, title, description, tags) SELECT rowid, title, description, tags FROM incidents WHERE id = ?').run(id);
       }
+
+      // Notify
+      notify(user.id, {
+        event: severity === 'critical' ? 'severity_critical' : 'incident_created',
+        title: `Incident: ${title}`,
+        body: description.substring(0, 200),
+        url: `/app/incidents/${id}`,
+        metadata: { severity, incidentId: id },
+      });
 
       return Astro.redirect(`/app/incidents/${id}`);
     }

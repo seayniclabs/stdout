@@ -136,6 +136,24 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       completion_tokens INTEGER,
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS tenant_preferences (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      workspace_name TEXT,
+      accent_color TEXT,
+      logo_url TEXT,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS notification_preferences (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      channel TEXT NOT NULL,
+      destination TEXT NOT NULL,
+      events TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS docs (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,

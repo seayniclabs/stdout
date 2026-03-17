@@ -28,6 +28,50 @@ if (!user) return Astro.redirect('/app/login');
       </div>
     </section>
 
+    <!-- Branding (Solo+) -->
+    <section class="section">
+      <h2>Workspace Branding</h2>
+      <p class="section-desc">Customize how StdOut looks for your workspace. Solo tier and above.</p>
+      <div class="brand-form">
+        <label>
+          <span>Workspace name</span>
+          <input type="text" id="brandName" placeholder="e.g. My Lab" class="settings-input" />
+        </label>
+        <label>
+          <span>Accent color</span>
+          <div class="color-row">
+            <input type="color" id="brandColor" value="#F97316" class="color-picker" />
+            <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
+          </div>
+        </label>
+        <button id="saveBrandingBtn" class="btn btn-primary btn-sm">Save branding</button>
+        <div id="brandingStatus" class="backup-status"></div>
+      </div>
+    </section>
+
+    <!-- Notifications -->
+    <section class="section">
+      <h2>Notifications</h2>
+      <p class="section-desc">Get notified when incidents are created or diagnoses complete.</p>
+
+      <div id="notifList" class="backup-list">
+        <div class="loading mono">Loading...</div>
+      </div>
+
+      <div class="notif-add">
+        <select id="notifChannel" class="settings-input" style="width: 120px;">
+          <option value="email">Email</option>
+          <option value="webhook">Webhook</option>
+        </select>
+        <input type="text" id="notifDest" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
+        <button id="addNotifBtn" class="btn btn-primary btn-sm">Add</button>
+      </div>
+      <div class="notif-events mono" style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+        Events: incident_created, diagnosis_complete, severity_critical, backup_complete
+      </div>
+      <div id="notifStatus" class="backup-status"></div>
+    </section>
+
     <!-- Backups -->
     <section class="section">
       <h2>Backups</h2>
@@ -81,6 +125,109 @@ if (!user) return Astro.redirect('/app/login');
   const createBtn = document.getElementById('createBackupBtn')!;
   const statusEl = document.getElementById('backupStatus')!;
 
+  // --- Branding ---
+  const brandName = document.getElementById('brandName') as HTMLInputElement;
+  const brandColor = document.getElementById('brandColor') as HTMLInputElement;
+  const brandColorHex = document.getElementById('brandColorHex') as HTMLInputElement;
+  const saveBrandingBtn = document.getElementById('saveBrandingBtn')!;
+  const brandingStatusEl = document.getElementById('brandingStatus')!;
+
+  brandColor?.addEventListener('input', () => { brandColorHex.value = brandColor.value; });
+  brandColorHex?.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(brandColorHex.value)) brandColor.value = brandColorHex.value; });
+
+  async function loadPreferences() {
+    try {
+      const res = await fetch('/app/api/preferences');
+      const data = await res.json();
+      if (data.branding) {
+        if (data.branding.workspace_name || data.branding.workspaceName) brandName.value = data.branding.workspace_name || data.branding.workspaceName || '';
+        if (data.branding.accent_color || data.branding.accentColor) {
+          const c = data.branding.accent_color || data.branding.accentColor;
+          brandColor.value = c; brandColorHex.value = c;
+        }
+      }
+      // Notifications
+      const notifListEl = document.getElementById('notifList')!;
+      if (!data.notifications || data.notifications.length === 0) {
+        notifListEl.innerHTML = '<div class="empty mono">No notifications configured.</div>';
+      } else {
+        notifListEl.innerHTML = data.notifications.map((n: any) => {
+          const events = (() => { try { return JSON.parse(n.events).join(', '); } catch { return n.events; } })();
+          return `
+          <div class="backup-row">
+            <div class="backup-info">
+              <span class="backup-date">${n.channel}: ${escapeHtml(n.destination.substring(0, 40))}</span>
+              <span class="backup-size mono">${events}</span>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm notif-toggle" data-id="${n.id}" data-enabled="${n.enabled}">${n.enabled ? 'Disable' : 'Enable'}</button>
+              <button class="btn btn-danger btn-sm notif-delete" data-id="${n.id}">Remove</button>
+            </div>
+          </div>`;
+        }).join('');
+
+        document.querySelectorAll('.notif-toggle').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            const enabled = btn.getAttribute('data-enabled') === 'true' ? false : true;
+            await fetch('/app/api/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'toggle_notification', id, enabled }) });
+            loadPreferences();
+          });
+        });
+        document.querySelectorAll('.notif-delete').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-id');
+            await fetch('/app/api/preferences', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete_notification', id }) });
+            loadPreferences();
+          });
+        });
+      }
+    } catch {}
+  }
+
+  saveBrandingBtn?.addEventListener('click', async () => {
+    brandingStatusEl.textContent = 'Saving...';
+    try {
+      await fetch('/app/api/preferences', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_branding', workspaceName: brandName.value, accentColor: brandColorHex.value }),
+      });
+      brandingStatusEl.textContent = 'Saved. Reload to see changes.';
+      brandingStatusEl.className = 'backup-status success';
+    } catch {
+      brandingStatusEl.textContent = 'Failed.';
+      brandingStatusEl.className = 'backup-status error';
+    }
+  });
+
+  // Add notification
+  const addNotifBtn = document.getElementById('addNotifBtn')!;
+  const notifChannel = document.getElementById('notifChannel') as HTMLSelectElement;
+  const notifDest = document.getElementById('notifDest') as HTMLInputElement;
+  const notifStatusEl = document.getElementById('notifStatus')!;
+
+  addNotifBtn?.addEventListener('click', async () => {
+    const channel = notifChannel.value;
+    const destination = notifDest.value.trim();
+    if (!destination) { notifStatusEl.textContent = 'Enter a destination.'; notifStatusEl.className = 'backup-status error'; return; }
+    try {
+      await fetch('/app/api/preferences', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'add_notification', channel, destination, events: ['incident_created', 'diagnosis_complete', 'severity_critical'] }),
+      });
+      notifDest.value = '';
+      notifStatusEl.textContent = 'Added.';
+      notifStatusEl.className = 'backup-status success';
+      loadPreferences();
+    } catch {
+      notifStatusEl.textContent = 'Failed.';
+      notifStatusEl.className = 'backup-status error';
+    }
+  });
+
+  loadPreferences();
+
+  // --- Backups ---
   async function loadBackups() {
     try {
       const res = await fetch('/app/api/backups');
@@ -301,5 +448,13 @@ if (!user) return Astro.redirect('/app/login');
   .token-reveal { margin-top: 12px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: var(--radius-sm); }
   .token-warning { font-size: 12px; color: var(--accent-light); font-weight: 600; margin-bottom: 8px; }
   .token-value { display: block; font-family: var(--font-mono); font-size: 11px; word-break: break-all; color: var(--text); user-select: all; }
+  .brand-form { display: flex; flex-direction: column; gap: 12px; }
+  .brand-form label { display: flex; flex-direction: column; gap: 4px; }
+  .brand-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .settings-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; }
+  .settings-input:focus { border-color: var(--accent); outline: none; }
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-picker { width: 40px; height: 34px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); cursor: pointer; padding: 2px; }
+  .notif-add { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
   .mono { font-family: var(--font-mono); }
 </style>

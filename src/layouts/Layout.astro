@@ -1,5 +1,8 @@
 ---
 import '../styles/global.css';
+import { getTenantDb, tenantSchema } from '../lib/db';
+import { eq } from 'drizzle-orm';
+
 interface Props {
   title?: string;
   description?: string;
@@ -15,6 +18,22 @@ const nav = [
   { href: '/app/search', label: 'Search' },
   { href: '/app/settings', label: 'Settings' },
 ];
+
+// Load tenant branding if logged in
+let workspaceName = 'StdOut';
+let accentOverride = '';
+let logoOverride = '';
+const user = Astro.locals.user;
+if (user) {
+  try {
+    const db = getTenantDb(user.id);
+    const prefs = db.select().from(tenantSchema.tenantPreferences)
+      .where(eq(tenantSchema.tenantPreferences.userId, user.id)).get();
+    if (prefs?.workspaceName) workspaceName = prefs.workspaceName;
+    if (prefs?.accentColor) accentOverride = prefs.accentColor;
+    if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
+  } catch {}
+}
 ---
 <!doctype html>
 <html lang="en">
@@ -30,6 +49,7 @@ const nav = [
   <meta name="theme-color" content="#F97316" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <style>@import '../styles/fonts.css';</style>
+  {accentOverride && <style set:html={`:root { --accent: ${accentOverride}; --accent-light: ${accentOverride}; --accent-dim: ${accentOverride}1f; --accent-glow: ${accentOverride}40; }`}></style>}
   <meta name="csrf-token" content={csrfToken} />
 </head>
 <body>
@@ -37,8 +57,12 @@ const nav = [
 
   <nav class="topnav" aria-label="Main navigation">
     <a href="/app" class="topnav-brand">
-      <img src="/logo.svg" alt="StdOut" width="24" height="24" />
-      StdOut
+      {logoOverride ? (
+        <img src={logoOverride} alt={workspaceName} width="24" height="24" style="border-radius: 4px;" />
+      ) : (
+        <img src="/logo.svg" alt={workspaceName} width="24" height="24" />
+      )}
+      {workspaceName}
     </a>
     <div class="topnav-links">
       {nav.map(({ href, label }) => (

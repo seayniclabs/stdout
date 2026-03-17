@@ -52,6 +52,32 @@ export const diagnoses = sqliteTable('diagnoses', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Tenant Preferences: branding, display settings ---
+
+export const tenantPreferences = sqliteTable('tenant_preferences', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  workspaceName: text('workspace_name'), // Replaces "StdOut" in nav
+  accentColor: text('accent_color'), // Hex color override (e.g. #3B82F6)
+  logoUrl: text('logo_url'), // Small image URL or data URI
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// --- Notification Preferences ---
+
+export const notificationPreferences = sqliteTable('notification_preferences', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  channel: text('channel', {
+    enum: ['email', 'webhook'],
+  }).notNull(),
+  destination: text('destination').notNull(), // Email address or webhook URL
+  events: text('events').notNull(), // JSON array: ["incident_created","diagnosis_complete","severity_critical"]
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- Knowledge Base: runbooks, post-mortems, operational docs ---
 
 export const docs = sqliteTable('docs', {
