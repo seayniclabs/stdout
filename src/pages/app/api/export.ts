@@ -19,6 +19,9 @@ export const GET: APIRoute = async ({ locals, request }) => {
 
   const diagnoses = db.select().from(tenantSchema.diagnoses).all();
 
+  const docs = db.select().from(tenantSchema.docs)
+    .where(eq(tenantSchema.docs.userId, locals.user.id)).all();
+
   const exportData = {
     exportedAt: new Date().toISOString(),
     user: {
@@ -30,6 +33,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
     incidents,
     resolutions,
     diagnoses,
+    docs,
   };
 
   logAudit('data_export', {
@@ -40,6 +44,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
       incidents: incidents.length,
       resolutions: resolutions.length,
       diagnoses: diagnoses.length,
+      docs: docs.length,
     },
   });
 

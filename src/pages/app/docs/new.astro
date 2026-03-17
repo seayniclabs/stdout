@@ -1,0 +1,156 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
+import { validateCsrf } from '../../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const db = getTenantDb(user.id);
+
+// Get stacks and incidents for linking
+const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
+const userIncidents = db.select({ id: tenantSchema.incidents.id, title: tenantSchema.incidents.title })
+  .from(tenantSchema.incidents).where(eq(tenantSchema.incidents.userId, user.id)).all();
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (!validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    error = 'Invalid form submission.';
+  } else {
+    const title = (form.get('title') as string || '').trim();
+    const content = (form.get('content') as string || '').trim();
+    const docType = form.get('docType') as string || 'note';
+    const stackId = (form.get('stackId') as string || '') || null;
+    const incidentId = (form.get('incidentId') as string || '') || null;
+    const tags = (form.get('tags') as string || '').trim() || null;
+
+    if (!title || !content) {
+      error = 'Title and content are required.';
+    } else {
+      const id = nanoid();
+      const now = new Date();
+      const sizeBytes = new TextEncoder().encode(content).length;
+
+      db.insert(tenantSchema.docs).values({
+        id, userId: user.id, title, content, docType, stackId, incidentId, tags, sizeBytes,
+        createdAt: now, updatedAt: now,
+      }).run();
+
+      // Sync to FTS
+      const rawDb = (db as any)._.session?.client;
+      if (rawDb?.prepare) {
+        try {
+          rawDb.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(id);
+        } catch {}
+      }
+
+      return Astro.redirect(`/app/docs/${id}`);
+    }
+  }
+}
+---
+<Layout title="New Doc — StdOut">
+  <div class="form-page">
+    <div class="form-header">
+      <a href="/app/docs" class="back-link">&larr; Knowledge Base</a>
+      <h1>New document</h1>
+    </div>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="doc-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+
+      <label>
+        <span>Title</span>
+        <input type="text" name="title" required placeholder="e.g. Docker restart runbook" autocomplete="off" />
+      </label>
+
+      <div class="form-row">
+        <label class="form-third">
+          <span>Type</span>
+          <select name="docType">
+            <option value="note">Note</option>
+            <option value="runbook">Runbook</option>
+            <option value="postmortem">Post-Mortem</option>
+            <option value="guide">Guide</option>
+          </select>
+        </label>
+
+        <label class="form-third">
+          <span>Stack</span>
+          <select name="stackId">
+            <option value="">None</option>
+            {userStacks.map(s => (
+              <option value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </label>
+
+        <label class="form-third">
+          <span>Incident</span>
+          <select name="incidentId">
+            <option value="">None</option>
+            {userIncidents.map(i => (
+              <option value={i.id}>{i.title.substring(0, 40)}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label>
+        <span>Tags <span style="color:var(--text-muted); font-weight:400;">(comma-separated)</span></span>
+        <input type="text" name="tags" placeholder="docker, nginx, ssl" autocomplete="off" />
+      </label>
+
+      <label>
+        <span>Content <span style="color:var(--text-muted); font-weight:400;">(Markdown)</span></span>
+        <textarea name="content" required rows={16} placeholder="Write your runbook, post-mortem, or operational notes here..."></textarea>
+      </label>
+
+      <button type="submit" class="btn btn-primary">Save document</button>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .form-page { max-width: 720px; }
+  .form-header { margin-bottom: 20px; }
+  .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .back-link:hover { color: var(--text); }
+  .form-header h1 { font-size: 20px; margin-top: 4px; }
+  .doc-form { display: flex; flex-direction: column; gap: 16px; }
+  .doc-form label { display: flex; flex-direction: column; gap: 4px; }
+  .doc-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc-form input, .doc-form select, .doc-form textarea {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    padding: 10px 12px;
+    transition: border-color 150ms;
+  }
+  .doc-form textarea {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  .doc-form input:focus, .doc-form select:focus, .doc-form textarea:focus {
+    border-color: var(--accent); outline: none;
+  }
+  .form-row { display: flex; gap: 12px; }
+  .form-third { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  @media (max-width: 600px) { .form-row { flex-direction: column; } }
+</style>

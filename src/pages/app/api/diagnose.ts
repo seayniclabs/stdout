@@ -84,6 +84,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   } catch (err: any) {
     console.error('Diagnosis error:', err);
-    return new Response(err.message || 'Diagnosis failed', { status: 500 });
+    const status = err?.status === 429 ? 429 : 500;
+    const message = status === 429
+      ? 'AI service is busy. Please try again in a moment.'
+      : 'Diagnosis failed. Please try again later.';
+    return new Response(JSON.stringify({ error: message, retryable: status >= 429 }), {
+      status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 };

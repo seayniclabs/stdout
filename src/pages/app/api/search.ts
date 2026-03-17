@@ -66,6 +66,28 @@ export const GET: APIRoute = async ({ locals, url }) => {
     }
   } catch { /* FTS may fail on complex queries */ }
 
+  // Search docs
+  try {
+    const ftsQuery = q.split(/\s+/).map(w => `"${w}"`).join(' OR ');
+    const docRows = rawDb.prepare(`
+      SELECT d.id, d.title, d.content, d.doc_type
+      FROM docs_fts fts
+      JOIN docs d ON d.rowid = fts.rowid
+      WHERE docs_fts MATCH ? AND d.user_id = ?
+      ORDER BY rank LIMIT 10
+    `).all(ftsQuery, locals.user.id);
+
+    for (const row of docRows) {
+      results.push({
+        type: 'doc',
+        docId: row.id,
+        title: row.title,
+        snippet: (row.content || '').substring(0, 120),
+        docType: row.doc_type,
+      });
+    }
+  } catch { /* FTS may fail on complex queries */ }
+
   return new Response(JSON.stringify({ results }), {
     headers: { 'Content-Type': 'application/json' },
   });

@@ -1,0 +1,213 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { eq } from 'drizzle-orm';
+import { validateCsrf } from '../../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getTenantDb(user.id);
+
+const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).get();
+if (!doc || doc.userId !== user.id) return Astro.redirect('/app/docs');
+
+// Get stacks and incidents for edit form
+const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
+const userIncidents = db.select({ id: tenantSchema.incidents.id, title: tenantSchema.incidents.title })
+  .from(tenantSchema.incidents).where(eq(tenantSchema.incidents.userId, user.id)).all();
+
+let error = '';
+const editing = Astro.url.searchParams.get('edit') === 'true';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    const action = form.get('action') as string;
+
+    if (action === 'update') {
+      const title = (form.get('title') as string || '').trim();
+      const content = (form.get('content') as string || '').trim();
+      const docType = form.get('docType') as string || doc.docType;
+      const stackId = (form.get('stackId') as string || '') || null;
+      const incidentId = (form.get('incidentId') as string || '') || null;
+      const tags = (form.get('tags') as string || '').trim() || null;
+
+      if (!title || !content) {
+        error = 'Title and content are required.';
+      } else {
+        const sizeBytes = new TextEncoder().encode(content).length;
+        db.update(tenantSchema.docs).set({
+          title, content, docType, stackId, incidentId, tags, sizeBytes, updatedAt: new Date(),
+        }).where(eq(tenantSchema.docs.id, id!)).run();
+
+        // Re-sync FTS
+        const rawDb = (db as any)._.session?.client;
+        if (rawDb?.prepare) {
+          try {
+            rawDb.prepare('DELETE FROM docs_fts WHERE rowid = (SELECT rowid FROM docs WHERE id = ?)').run(id);
+            rawDb.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(id);
+          } catch {}
+        }
+
+        return Astro.redirect(`/app/docs/${id}`);
+      }
+    } else if (action === 'delete') {
+      // Delete FTS entry
+      const rawDb = (db as any)._.session?.client;
+      if (rawDb?.prepare) {
+        try { rawDb.prepare('DELETE FROM docs_fts WHERE rowid = (SELECT rowid FROM docs WHERE id = ?)').run(id); } catch {}
+      }
+      db.delete(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).run();
+      return Astro.redirect('/app/docs');
+    }
+  } else {
+    error = 'Invalid form submission.';
+  }
+}
+
+// Re-fetch after potential POST
+const current = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).get()!;
+
+const typeLabels: Record<string, string> = { runbook: 'Runbook', postmortem: 'Post-Mortem', guide: 'Guide', note: 'Note' };
+const typeColors: Record<string, string> = { runbook: 'var(--accent-light)', postmortem: 'var(--critical)', guide: 'var(--low)', note: 'var(--text-muted)' };
+
+// Get linked names
+let stackName = '';
+let incidentTitle = '';
+if (current.stackId) {
+  const s = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, current.stackId)).get();
+  if (s) stackName = s.name;
+}
+if (current.incidentId) {
+  const i = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, current.incidentId)).get();
+  if (i) incidentTitle = i.title;
+}
+---
+<Layout title={`${current.title} — StdOut`}>
+  <div class="doc-detail">
+    <div class="doc-header">
+      <a href="/app/docs" class="back-link">&larr; Knowledge Base</a>
+      {!editing ? (
+        <>
+          <h1>{current.title}</h1>
+          <div class="doc-meta">
+            <span class="doc-type-pill" style={`color: ${typeColors[current.docType] || 'var(--text-muted)'}`}>{typeLabels[current.docType] || current.docType}</span>
+            {stackName && <a href="/app/stacks" class="link-pill">{stackName}</a>}
+            {incidentTitle && <a href={`/app/incidents/${current.incidentId}`} class="link-pill">{incidentTitle.substring(0, 30)}</a>}
+            {current.tags && current.tags.split(',').map(t => <span class="tag">{t.trim()}</span>)}
+            <span class="mono" style="color: var(--text-muted); font-size: 11px;">{current.updatedAt.toISOString().split('T')[0]}</span>
+          </div>
+          <div class="doc-actions">
+            <a href={`/app/docs/${id}?edit=true`} class="btn btn-ghost btn-sm">Edit</a>
+            <form method="POST" style="display:inline;">
+              <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+              <input type="hidden" name="action" value="delete" />
+              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this document?')">Delete</button>
+            </form>
+          </div>
+        </>
+      ) : (
+        <h1>Edit document</h1>
+      )}
+    </div>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    {editing ? (
+      <form method="POST" class="doc-form">
+        <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+        <input type="hidden" name="action" value="update" />
+
+        <label>
+          <span>Title</span>
+          <input type="text" name="title" value={current.title} required />
+        </label>
+
+        <div class="form-row">
+          <label class="form-third">
+            <span>Type</span>
+            <select name="docType">
+              {['note', 'runbook', 'postmortem', 'guide'].map(t => (
+                <option value={t} selected={t === current.docType}>{typeLabels[t] || t}</option>
+              ))}
+            </select>
+          </label>
+          <label class="form-third">
+            <span>Stack</span>
+            <select name="stackId">
+              <option value="">None</option>
+              {userStacks.map(s => (
+                <option value={s.id} selected={s.id === current.stackId}>{s.name}</option>
+              ))}
+            </select>
+          </label>
+          <label class="form-third">
+            <span>Incident</span>
+            <select name="incidentId">
+              <option value="">None</option>
+              {userIncidents.map(i => (
+                <option value={i.id} selected={i.id === current.incidentId}>{i.title.substring(0, 40)}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <label>
+          <span>Tags</span>
+          <input type="text" name="tags" value={current.tags || ''} />
+        </label>
+
+        <label>
+          <span>Content (Markdown)</span>
+          <textarea name="content" required rows={20}>{current.content}</textarea>
+        </label>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Save</button>
+          <a href={`/app/docs/${id}`} class="btn btn-ghost">Cancel</a>
+        </div>
+      </form>
+    ) : (
+      <div class="doc-content">
+        <pre class="doc-body">{current.content}</pre>
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .doc-detail { max-width: 760px; }
+  .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .back-link:hover { color: var(--text); }
+  .doc-header h1 { font-size: 20px; margin: 6px 0 10px; }
+  .doc-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .doc-type-pill { font-size: 11px; font-weight: 600; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+  .link-pill { font-size: 11px; color: var(--accent-light); background: var(--accent-dim); padding: 2px 8px; border-radius: 4px; text-decoration: none; }
+  .link-pill:hover { background: var(--accent-glow); }
+  .tag { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; background: rgba(144,144,168,0.1); color: var(--text-secondary); }
+  .doc-actions { display: flex; gap: 8px; margin-bottom: 20px; }
+  .doc-content { margin-top: 20px; }
+  .doc-body { font-family: var(--font-mono); font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-wrap: break-word; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; color: var(--text); }
+  .doc-form { display: flex; flex-direction: column; gap: 16px; }
+  .doc-form label { display: flex; flex-direction: column; gap: 4px; }
+  .doc-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc-form input, .doc-form select, .doc-form textarea { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 14px; padding: 10px 12px; }
+  .doc-form textarea { font-family: var(--font-mono); font-size: 13px; resize: vertical; line-height: 1.6; }
+  .doc-form input:focus, .doc-form select:focus, .doc-form textarea:focus { border-color: var(--accent); outline: none; }
+  .form-row { display: flex; gap: 12px; }
+  .form-third { flex: 1; }
+  .form-actions { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+  .mono { font-family: var(--font-mono); }
+  @media (max-width: 600px) { .form-row { flex-direction: column; } }
+</style>

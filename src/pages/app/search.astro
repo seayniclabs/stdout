@@ -36,15 +36,17 @@ if (!user) return Astro.redirect('/app/login');
           results.innerHTML = '<p class="search-empty">No results found.</p>';
           return;
         }
-        results.innerHTML = data.results.map((r: any) => `
-          <a href="/app/incidents/${r.incidentId}" class="search-result">
+        results.innerHTML = data.results.map((r: any) => {
+          const href = r.type === 'doc' ? `/app/docs/${r.docId}` : `/app/incidents/${r.incidentId}`;
+          return `
+          <a href="${href}" class="search-result">
             <div class="result-type ${r.type}">${r.type}</div>
             <div class="result-content">
               <div class="result-title">${escapeHtml(r.title || '')}</div>
               <div class="result-snippet">${escapeHtml(r.snippet || '')}</div>
             </div>
-          </a>
-        `).join('');
+          </a>`;
+        }).join('');
       } catch {
         results.innerHTML = '<p class="search-empty">Network error.</p>';
       }
@@ -97,6 +99,7 @@ if (!user) return Astro.redirect('/app/login');
   }
   .result-type.incident { color: var(--accent-light); background: var(--accent-dim); }
   .result-type.resolution { color: var(--low); background: var(--low-dim); }
+  .result-type.doc { color: var(--high); background: var(--high-dim); }
   .result-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
   .result-snippet { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
   .search-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 0; }
