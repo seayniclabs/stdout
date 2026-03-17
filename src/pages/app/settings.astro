@@ -43,6 +43,26 @@ if (!user) return Astro.redirect('/app/login');
       </div>
     </section>
 
+    <!-- API Tokens -->
+    <section class="section">
+      <h2>API Tokens</h2>
+      <p class="section-desc">Tokens for the stack discovery scanner. The raw token is shown once at creation.</p>
+
+      <div id="tokenList" class="backup-list">
+        <div class="loading mono">Loading tokens...</div>
+      </div>
+
+      <div class="token-create">
+        <input type="text" id="tokenNameInput" placeholder="Token name (e.g. Scanner)" class="token-input" />
+        <button id="createTokenBtn" class="btn btn-primary btn-sm">Generate token</button>
+      </div>
+      <div id="tokenStatus" class="backup-status"></div>
+      <div id="tokenReveal" class="token-reveal" style="display:none;">
+        <p class="token-warning">Copy this token now — it won't be shown again.</p>
+        <code id="tokenValue" class="token-value"></code>
+      </div>
+    </section>
+
     <!-- Danger Zone -->
     <section class="section danger-zone">
       <h2>Danger Zone</h2>
@@ -150,6 +170,68 @@ if (!user) return Astro.redirect('/app/login');
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   }
 
+  // Tokens
+  const tokenList = document.getElementById('tokenList')!;
+  const tokenNameInput = document.getElementById('tokenNameInput') as HTMLInputElement;
+  const createTokenBtn = document.getElementById('createTokenBtn')!;
+  const tokenStatusEl = document.getElementById('tokenStatus')!;
+  const tokenReveal = document.getElementById('tokenReveal')!;
+  const tokenValue = document.getElementById('tokenValue')!;
+
+  async function loadTokens() {
+    try {
+      const res = await fetch('/app/api/tokens');
+      const data = await res.json();
+      if (!data.tokens || data.tokens.length === 0) {
+        tokenList.innerHTML = '<div class="empty mono">No tokens.</div>';
+        return;
+      }
+      tokenList.innerHTML = data.tokens.map((t: any) => `
+        <div class="backup-row">
+          <div class="backup-info">
+            <span class="backup-date">${escapeHtml(t.name)}</span>
+            <span class="backup-size mono">${t.lastUsedAt ? 'Last used: ' + formatDate(t.lastUsedAt) : 'Never used'}</span>
+          </div>
+          <button class="btn btn-danger btn-sm revoke-btn" data-id="${t.id}">Revoke</button>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.revoke-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          if (!confirm('Revoke this token?')) return;
+          await fetch('/app/api/tokens', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+          loadTokens();
+        });
+      });
+    } catch {
+      tokenList.innerHTML = '<div class="empty mono">Failed to load tokens.</div>';
+    }
+  }
+
+  createTokenBtn.addEventListener('click', async () => {
+    const name = tokenNameInput.value.trim();
+    if (!name) { tokenStatusEl.textContent = 'Enter a token name.'; tokenStatusEl.className = 'backup-status error'; return; }
+    try {
+      const res = await fetch('/app/api/tokens', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+      const data = await res.json();
+      if (data.token) {
+        tokenValue.textContent = data.token;
+        tokenReveal.style.display = 'block';
+        tokenNameInput.value = '';
+        loadTokens();
+      } else {
+        tokenStatusEl.textContent = data.error || 'Failed.';
+        tokenStatusEl.className = 'backup-status error';
+      }
+    } catch {
+      tokenStatusEl.textContent = 'Network error.';
+      tokenStatusEl.className = 'backup-status error';
+    }
+  });
+
+  loadTokens();
+
   // Delete account
   const deleteBtn = document.getElementById('deleteAccountBtn');
   const deleteStatus = document.getElementById('deleteStatus')!;
@@ -213,5 +295,11 @@ if (!user) return Astro.redirect('/app/login');
   .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
   .btn-danger:hover { background: var(--critical-dim); }
   .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .token-create { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .token-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 6px 10px; flex: 1; }
+  .token-input:focus { border-color: var(--accent); outline: none; }
+  .token-reveal { margin-top: 12px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: var(--radius-sm); }
+  .token-warning { font-size: 12px; color: var(--accent-light); font-weight: 600; margin-bottom: 8px; }
+  .token-value { display: block; font-family: var(--font-mono); font-size: 11px; word-break: break-all; color: var(--text); user-select: all; }
   .mono { font-family: var(--font-mono); }
 </style>

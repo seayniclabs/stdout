@@ -1,6 +1,40 @@
 import { defineMiddleware } from 'astro:middleware';
 import { validateSession, getSessionFromCookies, SESSION_COOKIE } from './lib/auth';
+import { getCentralDb, centralSchema } from './lib/db';
+import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
+
+// --- Bearer Token Auth (for scanner API) ---
+const BEARER_PATHS = ['/app/api/stacks/import'];
+
+function validateBearerToken(request: Request): { userId: string } | null {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) return null;
+
+  const rawToken = authHeader.slice(7);
+  if (!rawToken.startsWith('stdout_scan_')) return null;
+
+  const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+  const row = getCentralDb()
+    .select({
+      id: centralSchema.apiTokens.id,
+      userId: centralSchema.apiTokens.userId,
+    })
+    .from(centralSchema.apiTokens)
+    .where(eq(centralSchema.apiTokens.tokenHash, tokenHash))
+    .get();
+
+  if (!row) return null;
+
+  // Update last_used_at
+  getCentralDb().update(centralSchema.apiTokens)
+    .set({ lastUsedAt: new Date() })
+    .where(eq(centralSchema.apiTokens.id, row.id))
+    .run();
+
+  return { userId: row.userId };
+}
 
 // --- CSRF Origin Check ---
 const ALLOWED_ORIGINS = [
@@ -135,12 +169,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const rateLimitResponse = checkRateLimit(context.request, pathname);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // Session validation
-  const sessionId = getSessionFromCookies(context.cookies);
-  if (sessionId) {
-    context.locals.user = validateSession(sessionId);
+  // Bearer token auth for scanner API paths
+  const isBearerPath = BEARER_PATHS.some(p => pathname.startsWith(p));
+  if (isBearerPath) {
+    const tokenAuth = validateBearerToken(context.request);
+    if (tokenAuth) {
+      // Minimal user object for API token auth
+      context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, subscriptionStatus: 'none', role: 'member', stripeCustomerId: null };
+    } else {
+      context.locals.user = null;
+    }
   } else {
-    context.locals.user = null;
+    // Session validation (cookie-based)
+    const sessionId = getSessionFromCookies(context.cookies);
+    if (sessionId) {
+      context.locals.user = validateSession(sessionId);
+    } else {
+      context.locals.user = null;
+    }
   }
 
   // Nonce for CSP
