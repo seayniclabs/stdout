@@ -1,0 +1,188 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+---
+<Layout title="Settings — StdOut">
+  <div class="settings-page">
+    <h1>Account Settings</h1>
+
+    <!-- Profile -->
+    <section class="section">
+      <h2>Profile</h2>
+      <div class="profile-info">
+        <div class="profile-row">
+          <span class="label">Email</span>
+          <span class="value mono">{user.email}</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Display name</span>
+          <span class="value">{user.displayName || '—'}</span>
+        </div>
+        <div class="profile-row">
+          <span class="label">Plan</span>
+          <span class="value">{user.subscriptionStatus === 'active' ? 'Solo' : 'Free'}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Backups -->
+    <section class="section">
+      <h2>Backups</h2>
+      <p class="section-desc">Encrypted snapshots of your data. Up to 3 kept automatically.</p>
+
+      <div id="backupList" class="backup-list">
+        <div class="loading mono">Loading backups...</div>
+      </div>
+
+      <div class="backup-actions">
+        <button id="createBackupBtn" class="btn btn-primary">Create backup now</button>
+        <div id="backupStatus" class="backup-status"></div>
+      </div>
+    </section>
+
+    <!-- Danger Zone -->
+    <section class="section danger-zone">
+      <h2>Danger Zone</h2>
+      <p class="section-desc">These actions are irreversible.</p>
+      <div class="danger-actions">
+        <button class="btn btn-danger" disabled title="Coming soon">Export all data (JSON)</button>
+        <button class="btn btn-danger" disabled title="Coming soon">Delete account</button>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  const backupList = document.getElementById('backupList')!;
+  const createBtn = document.getElementById('createBackupBtn')!;
+  const statusEl = document.getElementById('backupStatus')!;
+
+  async function loadBackups() {
+    try {
+      const res = await fetch('/app/api/backups');
+      const data = await res.json();
+      if (!data.backups || data.backups.length === 0) {
+        backupList.innerHTML = '<div class="empty mono">No backups yet.</div>';
+        return;
+      }
+      backupList.innerHTML = data.backups.map((b: any) => `
+        <div class="backup-row">
+          <div class="backup-info">
+            <span class="backup-date">${formatDate(b.createdAt)}</span>
+            <span class="backup-size mono">${formatSize(b.sizeBytes)}</span>
+          </div>
+          <button class="btn btn-ghost btn-sm restore-btn" data-filename="${escapeAttr(b.filename)}">Restore</button>
+        </div>
+      `).join('');
+
+      // Attach restore handlers
+      document.querySelectorAll('.restore-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const filename = btn.getAttribute('data-filename');
+          if (!confirm('Restore this backup? This will replace your current data.')) return;
+          statusEl.textContent = 'Restoring...';
+          statusEl.className = 'backup-status';
+          try {
+            const res = await fetch('/app/api/backups', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'restore', filename }),
+            });
+            const data = await res.json();
+            if (data.restored) {
+              statusEl.textContent = 'Restored successfully. Reloading...';
+              statusEl.className = 'backup-status success';
+              setTimeout(() => window.location.reload(), 1000);
+            } else {
+              statusEl.textContent = data.error || 'Restore failed.';
+              statusEl.className = 'backup-status error';
+            }
+          } catch {
+            statusEl.textContent = 'Network error.';
+            statusEl.className = 'backup-status error';
+          }
+        });
+      });
+    } catch {
+      backupList.innerHTML = '<div class="empty mono">Failed to load backups.</div>';
+    }
+  }
+
+  createBtn.addEventListener('click', async () => {
+    createBtn.setAttribute('disabled', '');
+    statusEl.textContent = 'Creating backup...';
+    statusEl.className = 'backup-status';
+    try {
+      const res = await fetch('/app/api/backups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create' }),
+      });
+      const data = await res.json();
+      if (data.backup) {
+        statusEl.textContent = 'Backup created.';
+        statusEl.className = 'backup-status success';
+        loadBackups();
+      } else {
+        statusEl.textContent = data.error || 'Backup failed.';
+        statusEl.className = 'backup-status error';
+      }
+    } catch {
+      statusEl.textContent = 'Network error.';
+      statusEl.className = 'backup-status error';
+    }
+    createBtn.removeAttribute('disabled');
+  });
+
+  function formatDate(iso: string) {
+    try { return new Date(iso).toLocaleString(); } catch { return iso; }
+  }
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function escapeAttr(s: string) {
+    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  }
+
+  loadBackups();
+</script>
+
+<style>
+  .settings-page { max-width: 640px; }
+  .settings-page h1 { font-size: 20px; margin-bottom: 24px; }
+  .section { margin-bottom: 32px; }
+  .section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+  .profile-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .profile-row:last-child { border-bottom: none; }
+  .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .value { font-size: 13px; }
+  .backup-list { margin-bottom: 12px; }
+  .backup-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .backup-info { display: flex; gap: 16px; align-items: center; }
+  .backup-date { font-size: 13px; }
+  .backup-size { font-size: 11px; color: var(--text-muted); }
+  .backup-actions { display: flex; gap: 12px; align-items: center; }
+  .backup-status { font-size: 12px; font-family: var(--font-mono); }
+  .backup-status.success { color: var(--low); }
+  .backup-status.error { color: var(--critical); }
+  .loading, .empty { font-size: 13px; color: var(--text-muted); padding: 16px 0; }
+  .danger-zone h2 { color: var(--critical); }
+  .danger-actions { display: flex; gap: 8px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .mono { font-family: var(--font-mono); }
+</style>
