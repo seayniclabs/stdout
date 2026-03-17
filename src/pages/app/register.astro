@@ -6,6 +6,7 @@ import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
 import { hashPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
+import { logAudit, getClientIp } from '../../lib/audit';
 
 let error = '';
 let email = '';
@@ -59,6 +60,7 @@ if (Astro.request.method === 'POST') {
 
         // Provision tenant DB (creates file + tables on first access)
         getTenantDb(id);
+        logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
 
         const sessionId = await createSession(id);
         Astro.cookies.set(SESSION_COOKIE, sessionId, {

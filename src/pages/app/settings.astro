@@ -48,9 +48,10 @@ if (!user) return Astro.redirect('/app/login');
       <h2>Danger Zone</h2>
       <p class="section-desc">These actions are irreversible.</p>
       <div class="danger-actions">
-        <button class="btn btn-danger" disabled title="Coming soon">Export all data (JSON)</button>
-        <button class="btn btn-danger" disabled title="Coming soon">Delete account</button>
+        <a href="/app/api/export" class="btn btn-ghost">Export all data (JSON)</a>
+        <button id="deleteAccountBtn" class="btn btn-danger">Delete account</button>
       </div>
+      <div id="deleteStatus" class="backup-status"></div>
     </section>
   </div>
 </Layout>
@@ -148,6 +149,34 @@ if (!user) return Astro.redirect('/app/login');
   function escapeAttr(s: string) {
     return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
   }
+
+  // Delete account
+  const deleteBtn = document.getElementById('deleteAccountBtn');
+  const deleteStatus = document.getElementById('deleteStatus')!;
+  deleteBtn?.addEventListener('click', async () => {
+    const confirm1 = confirm('Are you sure you want to delete your account? This cannot be undone.');
+    if (!confirm1) return;
+    const confirm2 = confirm('This will permanently delete all your incidents, stacks, resolutions, diagnoses, and backups. Type OK to confirm.');
+    if (!confirm2) return;
+
+    deleteStatus.textContent = 'Deleting account...';
+    deleteStatus.className = 'backup-status';
+    try {
+      const res = await fetch('/app/api/account', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.deleted) {
+        deleteStatus.textContent = 'Account deleted. Redirecting...';
+        deleteStatus.className = 'backup-status success';
+        setTimeout(() => window.location.href = '/app/login', 1500);
+      } else {
+        deleteStatus.textContent = data.error || 'Delete failed.';
+        deleteStatus.className = 'backup-status error';
+      }
+    } catch {
+      deleteStatus.textContent = 'Network error.';
+      deleteStatus.className = 'backup-status error';
+    }
+  });
 
   loadBackups();
 </script>

@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { createBackup, listBackups, restoreBackup } from '../../../lib/backup';
+import { logAudit, getClientIp } from '../../../lib/audit';
 
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -30,6 +31,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (action === 'create') {
     try {
       const backup = createBackup(locals.user.id);
+      logAudit('backup_create', { userId: locals.user.id, ip: getClientIp(request), details: { filename: backup.filename } });
       return new Response(JSON.stringify({ backup }), {
         headers: { 'Content-Type': 'application/json' },
       });
@@ -52,6 +54,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     try {
       restoreBackup(locals.user.id, filename);
+      logAudit('backup_restore', { userId: locals.user.id, ip: getClientIp(request), details: { filename } });
       return new Response(JSON.stringify({ restored: true, filename }), {
         headers: { 'Content-Type': 'application/json' },
       });

@@ -4,6 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import { getCentralDb, centralSchema } from '../../lib/db';
 import { verifyPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
+import { logAudit, getClientIp } from '../../lib/audit';
 import { eq } from 'drizzle-orm';
 
 let error = '';
@@ -40,10 +41,12 @@ if (Astro.request.method === 'POST') {
           const valid = await verifyPassword(user.passwordHash, password);
           if (!valid) {
             recordFailedLogin(email);
+            logAudit('login_failed', { userId: user.id, ip: getClientIp(Astro.request) });
             error = 'Invalid email or password.';
           } else {
             resetLoginAttempts(email);
             const sessionId = await createSession(user.id);
+            logAudit('login', { userId: user.id, ip: getClientIp(Astro.request) });
             Astro.cookies.set(SESSION_COOKIE, sessionId, {
               path: '/',
               httpOnly: true,

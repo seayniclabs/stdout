@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { diagnoseIncident } from '../../../lib/diagnose';
+import { logAudit, getClientIp } from '../../../lib/audit';
 import { nanoid } from 'nanoid';
 import { eq, desc } from 'drizzle-orm';
 
@@ -71,6 +72,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       completionTokens: result.completionTokens,
       createdAt: new Date(),
     }).run();
+
+    logAudit('ai_diagnosis', {
+      userId: locals.user.id,
+      ip: getClientIp(request),
+      details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens },
+    });
 
     return new Response(JSON.stringify(result), {
       headers: { 'Content-Type': 'application/json' },
