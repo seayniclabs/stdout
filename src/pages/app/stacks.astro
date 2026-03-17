@@ -1,0 +1,150 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { getDb, schema } from '../../lib/db';
+import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
+import { validateCsrf } from '../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const db = getDb();
+let error = '';
+let editingStack: any = null;
+
+// Handle POST: create or update
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    const action = form.get('action') as string;
+    const name = (form.get('name') as string || '').trim();
+    const description = (form.get('description') as string || '').trim();
+
+    if (action === 'create' && name) {
+      const id = nanoid();
+      const now = new Date();
+      db.insert(schema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
+    } else if (action === 'update') {
+      const stackId = form.get('stackId') as string;
+      if (stackId && name) {
+        db.update(schema.stacks).set({ name, description, updatedAt: new Date() }).where(eq(schema.stacks.id, stackId)).run();
+      }
+    } else if (action === 'delete') {
+      const stackId = form.get('stackId') as string;
+      if (stackId) {
+        db.delete(schema.stacks).where(eq(schema.stacks.id, stackId)).run();
+      }
+    }
+    return Astro.redirect('/app/stacks');
+  } else {
+    error = 'Invalid form submission.';
+  }
+}
+
+const editId = Astro.url.searchParams.get('edit');
+const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+if (editId) editingStack = userStacks.find(s => s.id === editId);
+---
+<Layout title="Stacks — StdOut">
+  <div class="stacks-page">
+    <div class="page-header">
+      <h1>Your Stacks</h1>
+    </div>
+
+    <p class="page-desc">Describe your infrastructure so StdOut can give better diagnoses. Include services, ports, dependencies, and anything an on-call engineer would need to know.</p>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <!-- Stack list -->
+    {userStacks.length > 0 && (
+      <div class="stack-list">
+        {userStacks.map(stack => (
+          <div class={`stack-card ${editingStack?.id === stack.id ? 'editing' : ''}`}>
+            {editingStack?.id === stack.id ? (
+              <form method="POST" class="stack-edit-form">
+                <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                <input type="hidden" name="action" value="update" />
+                <input type="hidden" name="stackId" value={stack.id} />
+                <input type="text" name="name" value={stack.name} required class="stack-name-input" />
+                <textarea name="description" rows={10} class="stack-desc-input">{stack.description}</textarea>
+                <div class="stack-actions">
+                  <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                  <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
+                </div>
+              </form>
+            ) : (
+              <>
+                <div class="stack-header">
+                  <h3>{stack.name}</h3>
+                  <div class="stack-controls">
+                    <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-sm">Edit</a>
+                    <form method="POST" style="display:inline;">
+                      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                      <input type="hidden" name="action" value="delete" />
+                      <input type="hidden" name="stackId" value={stack.id} />
+                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this stack?')">Delete</button>
+                    </form>
+                  </div>
+                </div>
+                <pre class="stack-description">{stack.description || 'No description yet.'}</pre>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+
+    <!-- New stack form -->
+    <div class="new-stack">
+      <h2>Add a stack</h2>
+      <form method="POST" class="stack-form">
+        <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+        <input type="hidden" name="action" value="create" />
+        <label>
+          <span>Name</span>
+          <input type="text" name="name" required placeholder="e.g. Mac Mini Lab" />
+        </label>
+        <label>
+          <span>Description</span>
+          <textarea name="description" rows={8} placeholder="Docker containers, ports, services, dependencies...&#10;&#10;Example:&#10;- nginx proxy on :8101&#10;- Node.js app on :3000 (Astro SSR)&#10;- SQLite at /app/data/app.db&#10;- Cloudflare Tunnel for public access"></textarea>
+        </label>
+        <button type="submit" class="btn btn-primary">Create stack</button>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .stacks-page { max-width: 700px; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .page-header h1 { font-size: 20px; }
+  .page-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
+  .stack-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+  .stack-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .stack-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .stack-header h3 { font-size: 15px; }
+  .stack-controls { display: flex; gap: 6px; }
+  .stack-description { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: var(--text-secondary); }
+  .stack-edit-form { display: flex; flex-direction: column; gap: 10px; }
+  .stack-name-input, .stack-desc-input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; }
+  .stack-desc-input { resize: vertical; }
+  .stack-name-input:focus, .stack-desc-input:focus { border-color: var(--accent); outline: none; }
+  .stack-actions { display: flex; gap: 8px; }
+  .new-stack { border-top: 1px solid var(--border); padding-top: 24px; }
+  .new-stack h2 { font-size: 16px; margin-bottom: 12px; }
+  .stack-form { display: flex; flex-direction: column; gap: 12px; }
+  .stack-form label { display: flex; flex-direction: column; gap: 4px; }
+  .stack-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .stack-form input, .stack-form textarea { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; }
+  .stack-form textarea { resize: vertical; }
+  .stack-form input:focus, .stack-form textarea:focus { border-color: var(--accent); outline: none; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+</style>

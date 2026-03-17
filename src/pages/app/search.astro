@@ -1,0 +1,103 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+---
+<Layout title="Search — StdOut">
+  <div class="search-page">
+    <h1>Search</h1>
+    <p class="search-desc">Search your past incidents and resolutions.</p>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="e.g. nginx 502, docker restart, SSL cert..." autocomplete="off" autofocus />
+    </div>
+
+    <div id="searchResults" class="search-results"></div>
+  </div>
+</Layout>
+
+<script>
+  let debounce: any;
+  const input = document.getElementById('searchInput') as HTMLInputElement;
+  const results = document.getElementById('searchResults')!;
+
+  input?.addEventListener('input', () => {
+    clearTimeout(debounce);
+    const q = input.value.trim();
+    if (q.length < 2) { results.innerHTML = ''; return; }
+    debounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/app/api/search?q=${encodeURIComponent(q)}`);
+        if (!res.ok) { results.innerHTML = '<p class="search-empty">Search failed.</p>'; return; }
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+          results.innerHTML = '<p class="search-empty">No results found.</p>';
+          return;
+        }
+        results.innerHTML = data.results.map((r: any) => `
+          <a href="/app/incidents/${r.incidentId}" class="search-result">
+            <div class="result-type ${r.type}">${r.type}</div>
+            <div class="result-content">
+              <div class="result-title">${escapeHtml(r.title || '')}</div>
+              <div class="result-snippet">${escapeHtml(r.snippet || '')}</div>
+            </div>
+          </a>
+        `).join('');
+      } catch {
+        results.innerHTML = '<p class="search-empty">Network error.</p>';
+      }
+    }, 300);
+  });
+
+  function escapeHtml(s: string) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+<style>
+  .search-page { max-width: 700px; }
+  .search-page h1 { font-size: 20px; margin-bottom: 4px; }
+  .search-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
+  .search-box input {
+    width: 100%;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 14px;
+    padding: 12px 16px;
+  }
+  .search-box input:focus { border-color: var(--accent); outline: none; }
+  .search-results { margin-top: 16px; }
+  .search-result {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 8px;
+    text-decoration: none;
+    color: inherit;
+    transition: var(--transition);
+  }
+  .search-result:hover { border-color: var(--accent); background: var(--bg-surface); }
+  .result-type {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .result-type.incident { color: var(--accent-light); background: var(--accent-dim); }
+  .result-type.resolution { color: var(--low); background: var(--low-dim); }
+  .result-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
+  .result-snippet { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .search-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 0; }
+</style>

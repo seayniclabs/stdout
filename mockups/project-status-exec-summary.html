@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Status — Executive Summary</title>
+<style>
+  :root {
+    --bg: #0A0B10;
+    --bg-card: #12141C;
+    --bg-card-hover: #181B25;
+    --border: #1E2130;
+    --border-accent: #2A2D40;
+    --text: #E2E4EA;
+    --text-muted: #8B8FA3;
+    --text-dim: #565A6E;
+    --green: #34D399;
+    --green-dim: #0D3D2E;
+    --yellow: #FBBF24;
+    --yellow-dim: #3D3514;
+    --red: #F87171;
+    --red-dim: #3D1414;
+    --blue: #60A5FA;
+    --blue-dim: #142A3D;
+    --purple: #A78BFA;
+    --purple-dim: #241A3D;
+    --gold: #F6C547;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    line-height: 1.6;
+    padding: 0;
+    min-height: 100vh;
+  }
+
+  .report {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .header .date {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+  .subtitle {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 28px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Scoreboard */
+  .scoreboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .score-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+  .score-card .number {
+    font-size: 2rem;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    line-height: 1;
+  }
+  .score-card .label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-top: 6px;
+  }
+  .score-card.green .number { color: var(--green); }
+  .score-card.yellow .number { color: var(--yellow); }
+  .score-card.red .number { color: var(--red); }
+  .score-card.blue .number { color: var(--blue); }
+  .score-card.purple .number { color: var(--purple); }
+
+  /* Section */
+  .section {
+    margin-bottom: 28px;
+  }
+  .section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Priority actions */
+  .action-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .action-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    transition: border-color 0.15s;
+  }
+  .action-item:hover {
+    border-color: var(--border-accent);
+    background: var(--bg-card-hover);
+  }
+  .action-tag {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .action-tag.blocker { background: var(--red-dim); color: var(--red); }
+  .action-tag.decision { background: var(--yellow-dim); color: var(--yellow); }
+  .action-tag.action { background: var(--blue-dim); color: var(--blue); }
+  .action-tag.cleanup { background: var(--purple-dim); color: var(--purple); }
+  .action-text {
+    font-size: 0.88rem;
+    color: var(--text);
+  }
+  .action-text .context {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+  .action-text strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Project table */
+  .project-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .project-table th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .project-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    vertical-align: top;
+  }
+  .project-table tr:last-child td {
+    border-bottom: none;
+  }
+  .project-table tr:hover td {
+    background: var(--bg-card);
+  }
+  .project-name {
+    font-weight: 600;
+    color: var(--text);
+  }
+  .project-name a {
+    color: var(--blue);
+    text-decoration: none;
+  }
+  .project-name a:hover { text-decoration: underline; }
+  .project-desc {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-top: 2px;
+  }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge.on-track { background: var(--green-dim); color: var(--green); }
+  .badge.new { background: var(--blue-dim); color: var(--blue); }
+  .badge.blocked { background: var(--red-dim); color: var(--red); }
+  .badge.waiting { background: var(--yellow-dim); color: var(--yellow); }
+  .badge.stale { background: var(--purple-dim); color: var(--purple); }
+  .badge.maintenance { color: var(--text-dim); background: #1A1C26; }
+  .badge.idea { color: var(--text-dim); background: #1A1C26; }
+
+  /* Days idle */
+  .days-idle {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+  }
+  .days-idle.hot { color: var(--green); }
+  .days-idle.warm { color: var(--yellow); }
+  .days-idle.cold { color: var(--red); }
+
+  /* Idea queue */
+  .idea-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .idea-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+  }
+  .idea-item .size {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    min-width: 28px;
+  }
+  .idea-item .name { font-weight: 500; }
+  .idea-item .related {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    margin-left: auto;
+  }
+
+  /* Scope drift */
+  .drift-item {
+    display: flex;
+    gap: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--yellow);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+  .drift-item .project-tag {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--yellow);
+    font-weight: 600;
+    flex-shrink: 0;
+    min-width: 80px;
+  }
+  .drift-item .detail { color: var(--text-muted); }
+
+  /* Infra bar */
+  .infra-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 12px;
+  }
+  .infra-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+  }
+  .infra-card .infra-label {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .infra-card .infra-value {
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  .infra-card .infra-detail {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* n8n health strip */
+  .workflow-health {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .wf-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    cursor: default;
+  }
+  .wf-dot.green { background: var(--green); }
+  .wf-dot.yellow { background: var(--yellow); }
+  .wf-dot.red { background: var(--red); }
+  .wf-dot.gray { background: var(--text-dim); }
+
+  /* Footer */
+  .footer {
+    margin-top: 32px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    color: var(--text-dim);
+  }
+  .footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .footer a:hover { color: var(--text); }
+
+  /* Responsive */
+  @media (max-width: 640px) {
+    .report { padding: 20px 16px; }
+    .header h1 { font-size: 1.25rem; }
+    .project-table { font-size: 0.8rem; }
+    .project-table th, .project-table td { padding: 8px; }
+    .scoreboard { grid-template-columns: repeat(3, 1fr); }
+    .score-card .number { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+<div class="report">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Project Status</h1>
+    <span class="date">Saturday, March 15, 2026 &middot; 06:00 CT</span>
+  </div>
+  <div class="subtitle">
+    Executive summary generated by ProjectManager &middot; 13 tracked projects
+  </div>
+
+  <!-- Scoreboard -->
+  <div class="scoreboard">
+    <div class="score-card green">
+      <div class="number">3</div>
+      <div class="label">Building</div>
+    </div>
+    <div class="score-card yellow">
+      <div class="number">2</div>
+      <div class="label">Waiting</div>
+    </div>
+    <div class="score-card red">
+      <div class="number">1</div>
+      <div class="label">Blocked</div>
+    </div>
+    <div class="score-card blue">
+      <div class="number">3</div>
+      <div class="label">Maintenance</div>
+    </div>
+    <div class="score-card purple">
+      <div class="number">4</div>
+      <div class="label">Parked</div>
+    </div>
+  </div>
+
+  <!-- Priority Actions -->
+  <div class="section">
+    <div class="section-title">Priority Actions</div>
+    <div class="action-list">
+      <div class="action-item">
+        <span class="action-tag blocker">Blocker</span>
+        <div class="action-text">
+          <strong>Vault MCP</strong> &mdash; 4 manual steps blocking first sale: LS listing, checkout URLs, R2 upload, GitHub PAT
+          <div class="context">Product code done, QA passed, zips packaged. Shortest path to revenue.</div>
+        </div>
+      </div>
+      <div class="action-item">
+        <span class="action-tag decision">Decision</span>
+        <div class="action-text">
+          <strong>StdOut vs. Hone</strong> &mdash; Both competing for build time. Which is primary focus this week?
+          <div class="context">StdOut: Phase 1 not started, scaffolds from Hone. Hone: content pipeline + foundational tracks in progress.</div>
+        </div>
+      </div>
+      <div class="action-item">
+        <span class="action-tag decision">Decision</span>
+        <div class="action-text">
+          <strong>REACT Pro</strong> &mdash; 11 days idle. Does Becki have a timeline?
+          <div class="context">Site built, not deployed. Docker setup in progress. If no deadline, formally park it.</div>
+        </div>
+      </div>
+      <div class="action-item">
+        <span class="action-tag cleanup">Cleanup</span>
+        <div class="action-text">
+          <strong>Projects Index</strong> &mdash; Update status labels. 5 projects marked "active" are actually maintenance/ideas/research.
+          <div class="context">charlieseay.com, JobAid, HydrationPack, Off the Grid, Distribution</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Projects -->
+  <div class="section">
+    <div class="section-title">Project Portfolio</div>
+    <table class="project-table">
+      <thead>
+        <tr>
+          <th>Project</th>
+          <th>Status</th>
+          <th>Current Work</th>
+          <th style="text-align:center">Idle</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://hone.academy">Hone</a></div>
+            <div class="project-desc">Self-assessment platform &middot; SaaS</div>
+          </td>
+          <td><span class="badge on-track">On Track</span></td>
+          <td>Phase 12 complete. Search + Leaderboards shipped. Content pipeline auto-update fixed. 25 tracks, 92 guides.</td>
+          <td style="text-align:center"><span class="days-idle hot">0d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">StdOut</div>
+            <div class="project-desc">AI incident companion &middot; SaaS</div>
+          </td>
+          <td><span class="badge new">New</span></td>
+          <td>Full spec written. Phase 1 (core loop) not started. Scaffolds from Hone codebase.</td>
+          <td style="text-align:center"><span class="days-idle hot">0d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://claudecp.seaynicroute.com">Vault MCP</a></div>
+            <div class="project-desc">Homelab MCP server &middot; Product</div>
+          </td>
+          <td><span class="badge blocked">Blocked</span></td>
+          <td>Phase 5 (product packaging) &mdash; code done, QA passed, zips ready. Waiting on 4 manual steps.</td>
+          <td style="text-align:center"><span class="days-idle hot">0d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://enchapter.kids">Enchapter</a></div>
+            <div class="project-desc">iOS reading app &middot; App Store</div>
+          </td>
+          <td><span class="badge waiting">Waiting</span></td>
+          <td>Submitted to App Store 3/12. Pending Apple review. v8.0.</td>
+          <td style="text-align:center"><span class="days-idle warm">3d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://enchapter.kids">Enchapter Site</a></div>
+            <div class="project-desc">Marketing site &middot; Astro</div>
+          </td>
+          <td><span class="badge waiting">Waiting</span></td>
+          <td>Live. Open features (screenshots, TestFlight link) blocked until app approved.</td>
+          <td style="text-align:center"><span class="days-idle cold">10d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://seayniclabs.com">SeaynicLabs</a></div>
+            <div class="project-desc">Storefront &middot; Astro</div>
+          </td>
+          <td><span class="badge maintenance">Parked</span></td>
+          <td>Phase 1 (coming soon) done. Phase 2 coupled to StdOut Phase 3. Correctly parked.</td>
+          <td style="text-align:center"><span class="days-idle warm">4d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">REACT Pro</div>
+            <div class="project-desc">Client site &middot; Astro</div>
+          </td>
+          <td><span class="badge stale">Stale</span></td>
+          <td>Site built. Docker deployment in progress. No client deadline confirmed.</td>
+          <td style="text-align:center"><span class="days-idle cold">11d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://charlieseay.com">charlieseay.com</a></div>
+            <div class="project-desc">Personal site + blog</div>
+          </td>
+          <td><span class="badge maintenance">Maint</span></td>
+          <td>All phases complete. Blog live. SEO done. Active for new posts only.</td>
+          <td style="text-align:center"><span class="days-idle cold">10d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name"><a href="https://jobaid.seaynicroute.com">JobAid</a></div>
+            <div class="project-desc">Resume tailoring tool</div>
+          </td>
+          <td><span class="badge maintenance">Maint</span></td>
+          <td>Deployed and functional. No open work.</td>
+          <td style="text-align:center"><span class="days-idle cold">9d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">Distribution</div>
+            <div class="project-desc">Content pipeline</div>
+          </td>
+          <td><span class="badge maintenance">Maint</span></td>
+          <td>5-platform pipeline built. Monitor and iterate phase.</td>
+          <td style="text-align:center"><span class="days-idle cold">12d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">Lab</div>
+            <div class="project-desc">Homelab infrastructure</div>
+          </td>
+          <td><span class="badge on-track">Active</span></td>
+          <td>47 containers running. Always-on infrastructure project.</td>
+          <td style="text-align:center"><span class="days-idle hot">0d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">HydrationPack</div>
+            <div class="project-desc">AI context bootstrapper</div>
+          </td>
+          <td><span class="badge idea">Idea</span></td>
+          <td>Tech spec written. No build activity. SeaynicLabs product candidate.</td>
+          <td style="text-align:center"><span class="days-idle warm">4d</span></td>
+        </tr>
+        <tr>
+          <td>
+            <div class="project-name">Off the Grid</div>
+            <div class="project-desc">Offline strategy doc</div>
+          </td>
+          <td><span class="badge idea">Research</span></td>
+          <td>Living reference document. Not a build project.</td>
+          <td style="text-align:center"><span class="days-idle warm">5d</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Scope Drift Watch -->
+  <div class="section">
+    <div class="section-title">Scope Drift Watch</div>
+    <div class="drift-item">
+      <span class="project-tag">StdOut</span>
+      <div class="detail">
+        Research files still named "cascade" (cascade-research.md, ~/Projects/cascade/mockups/). Rename tracked in project note but not executed.
+      </div>
+    </div>
+    <div class="drift-item">
+      <span class="project-tag">SeaynicLabs</span>
+      <div class="detail">
+        StdOut Phase 3 redesigns seayniclabs.com (SSR conversion + store + shared auth). Current SeaynicLabs project note doesn't reflect this dependency.
+      </div>
+    </div>
+  </div>
+
+  <!-- Idea Queue -->
+  <div class="section">
+    <div class="section-title">Idea Queue</div>
+    <div class="idea-list">
+      <div class="idea-item">
+        <span class="size">L</span>
+        <span class="name">HydrationPack</span>
+        <span class="related">SeaynicLabs product</span>
+      </div>
+      <div class="idea-item">
+        <span class="size">M</span>
+        <span class="name">Blue-Green n8n</span>
+        <span class="related">Vault MCP Phase 4</span>
+      </div>
+      <div class="idea-item">
+        <span class="size">?</span>
+        <span class="name">10+ OpportunityScout ideas</span>
+        <span class="related">Needs keep/kill pass</span>
+      </div>
+      <div class="idea-item">
+        <span class="size">?</span>
+        <span class="name">Reel Detective</span>
+        <span class="related">Unreviewed</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Infrastructure -->
+  <div class="section">
+    <div class="section-title">Infrastructure</div>
+    <div class="infra-bar">
+      <div class="infra-card">
+        <div class="infra-label">Docker</div>
+        <div class="infra-value" style="color: var(--green);">47 / 48</div>
+        <div class="infra-detail">containers running</div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-label">n8n Workflows</div>
+        <div class="infra-value" style="color: var(--yellow);">23 active</div>
+        <div class="infra-detail">6 red &middot; 6 warning &middot; 3 green</div>
+        <div class="workflow-health">
+          <span class="wf-dot green" title="Daily News Briefing"></span>
+          <span class="wf-dot green" title="Hone RSS to Buttondown"></span>
+          <span class="wf-dot green" title="LinkedIn Token Expiry"></span>
+          <span class="wf-dot yellow" title="Telegram Inbox"></span>
+          <span class="wf-dot yellow" title="Hone Idea Notifier"></span>
+          <span class="wf-dot yellow" title="Digest Publisher"></span>
+          <span class="wf-dot red" title="Gemini Hone Content Builder"></span>
+          <span class="wf-dot red" title="LS Catalog Audit"></span>
+          <span class="wf-dot red" title="Stripe Revenue Digest"></span>
+          <span class="wf-dot red" title="Content Queue Processor"></span>
+          <span class="wf-dot red" title="Opportunity Scout"></span>
+          <span class="wf-dot red" title="Claude Hone Content Builder"></span>
+          <span class="wf-dot gray" title="Hone Content Pipeline (verification)"></span>
+          <span class="wf-dot gray" title="Mercury Weekly Digest (verification)"></span>
+          <span class="wf-dot gray" title="Daily Health Check (verification)"></span>
+          <span class="wf-dot gray" title="NVD CVE Scanner (verification)"></span>
+          <span class="wf-dot gray" title="RSS to Distribution (warning)"></span>
+          <span class="wf-dot gray" title="Docker Hub Checker (warning)"></span>
+          <span class="wf-dot gray" title="Shodan Scanner (warning)"></span>
+          <span class="wf-dot gray" title="RSS to LinkedIn (warning)"></span>
+          <span class="wf-dot gray" title="Project Status to Digest (warning)"></span>
+          <span class="wf-dot gray" title="Work Queue Generator (warning)"></span>
+          <span class="wf-dot green" title="LinkedIn Token Expiry"></span>
+        </div>
+      </div>
+      <div class="infra-card">
+        <div class="infra-label">Hone Content</div>
+        <div class="infra-value" style="color: var(--gold);">92</div>
+        <div class="infra-detail">guides across 25 tracks</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span>ProjectManager Agent &middot; Seaynic Labs</span>
+    <a href="https://reports.seaynicroute.com">reports.seaynicroute.com</a>
+  </div>
+
+</div>
+</body>
+</html>

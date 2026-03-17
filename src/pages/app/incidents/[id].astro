@@ -1,0 +1,244 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getDb, schema } from '../../../lib/db';
+import { nanoid } from 'nanoid';
+import { eq, desc } from 'drizzle-orm';
+import { validateCsrf } from '../../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getDb();
+
+const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, id!)).get();
+if (!incident || incident.userId !== user.id) return Astro.redirect('/app');
+
+// Handle resolution POST
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    const action = form.get('action') as string;
+
+    if (action === 'resolve') {
+      const content = (form.get('content') as string || '').trim();
+      if (content) {
+        const resId = nanoid();
+        const now = new Date();
+        db.insert(schema.resolutions).values({
+          id: resId, incidentId: id!, userId: user.id, content, createdAt: now,
+        }).run();
+
+        // Sync to FTS
+        const rawDb = (db as any)._.session?.client;
+        if (rawDb?.prepare) {
+          rawDb.prepare('INSERT INTO resolutions_fts(rowid, content) SELECT rowid, content FROM resolutions WHERE id = ?').run(resId);
+        }
+
+        db.update(schema.incidents).set({ status: 'resolved', resolvedAt: now, updatedAt: now }).where(eq(schema.incidents.id, id!)).run();
+      }
+    } else if (action === 'status') {
+      const status = form.get('status') as string;
+      if (['active', 'investigating', 'monitoring', 'resolved'].includes(status)) {
+        const updates: any = { status, updatedAt: new Date() };
+        if (status === 'resolved') updates.resolvedAt = new Date();
+        db.update(schema.incidents).set(updates).where(eq(schema.incidents.id, id!)).run();
+      }
+    }
+
+    return Astro.redirect(`/app/incidents/${id}`);
+  }
+}
+
+// Re-fetch after potential POST
+const current = db.select().from(schema.incidents).where(eq(schema.incidents.id, id!)).get()!;
+const resolutions = db.select().from(schema.resolutions).where(eq(schema.resolutions.incidentId, id!)).orderBy(desc(schema.resolutions.createdAt)).all();
+const diagnosis = db.select().from(schema.diagnoses).where(eq(schema.diagnoses.incidentId, id!)).orderBy(desc(schema.diagnoses.createdAt)).limit(1).all();
+const latestDiagnosis = diagnosis[0] || null;
+
+// Get stack context if linked
+let stackName = '';
+if (current.stackId) {
+  const stack = db.select().from(schema.stacks).where(eq(schema.stacks.id, current.stackId)).get();
+  if (stack) stackName = stack.name;
+}
+
+const severityColors: Record<string, string> = { critical: 'var(--critical)', high: 'var(--high)', medium: 'var(--medium)', low: 'var(--low)' };
+const statusLabels: Record<string, string> = { active: 'Active', investigating: 'Investigating', monitoring: 'Monitoring', resolved: 'Resolved' };
+---
+<Layout title={`${current.title} — StdOut`}>
+  <div class="detail-page">
+    <!-- Header -->
+    <div class="incident-header">
+      <div class="header-top">
+        <a href="/app" class="back-link">&larr; Incidents</a>
+        <span class="mono" style="color:var(--text-muted);">#{current.id.slice(0, 8)}</span>
+      </div>
+      <h1>{current.title}</h1>
+      <div class="header-meta">
+        <span class={`severity-pill ${current.severity}`}>{current.severity}</span>
+        <span class={`status-pill ${current.status}`}>{statusLabels[current.status] || current.status}</span>
+        {stackName && <span class="stack-label">{stackName}</span>}
+        {current.tags && current.tags.split(',').map(t => <span class="tag">{t.trim()}</span>)}
+      </div>
+    </div>
+
+    <!-- Description -->
+    <section class="section">
+      <h2>Description</h2>
+      <pre class="description-block">{current.description}</pre>
+    </section>
+
+    <!-- Status controls -->
+    {current.status !== 'resolved' && (
+      <section class="section">
+        <h2>Update Status</h2>
+        <form method="POST" class="status-form">
+          <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+          <input type="hidden" name="action" value="status" />
+          {['investigating', 'monitoring', 'resolved'].filter(s => s !== current.status).map(s => (
+            <button type="submit" name="status" value={s} class={`status-btn ${s}`}>{statusLabels[s]}</button>
+          ))}
+        </form>
+      </section>
+    )}
+
+    <!-- AI Diagnosis -->
+    <section class="section">
+      <h2>AI Diagnosis</h2>
+      {latestDiagnosis ? (
+        <div class="diagnosis-result">
+          <h3>Root Causes</h3>
+          <ol class="root-causes">
+            {JSON.parse(latestDiagnosis.rootCauses).map((cause: string) => <li>{cause}</li>)}
+          </ol>
+          {latestDiagnosis.suggestedCommands && (
+            <>
+              <h3>Suggested Commands</h3>
+              <div class="commands">
+                {JSON.parse(latestDiagnosis.suggestedCommands).map((cmd: string) => (
+                  <code class="command-line">{cmd}</code>
+                ))}
+              </div>
+            </>
+          )}
+          <div class="diagnosis-meta">
+            <span class="mono">{latestDiagnosis.model}</span>
+            <span>{latestDiagnosis.promptTokens} in / {latestDiagnosis.completionTokens} out</span>
+          </div>
+        </div>
+      ) : (
+        <div class="diagnosis-empty">
+          <button id="diagnoseBtn" class="btn btn-primary" data-incident-id={current.id}>
+            Get AI Diagnosis
+          </button>
+          <div id="diagnoseLoading" style="display:none;">
+            <span class="mono" style="color:var(--accent);">Analyzing...</span>
+          </div>
+        </div>
+      )}
+    </section>
+
+    <!-- Resolutions -->
+    <section class="section">
+      <h2>Resolutions ({resolutions.length})</h2>
+      {resolutions.map(r => (
+        <div class="resolution-card">
+          <pre class="resolution-content">{r.content}</pre>
+          <div class="resolution-meta mono">{r.createdAt.toISOString().split('T')[0]}</div>
+        </div>
+      ))}
+
+      {current.status !== 'resolved' && (
+        <form method="POST" class="resolution-form">
+          <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+          <input type="hidden" name="action" value="resolve" />
+          <label>
+            <span>What fixed it?</span>
+            <textarea name="content" rows={4} required placeholder="Describe the resolution..."></textarea>
+          </label>
+          <button type="submit" class="btn btn-primary">Record Resolution</button>
+        </form>
+      )}
+    </section>
+  </div>
+</Layout>
+
+<script>
+  const btn = document.getElementById('diagnoseBtn');
+  const loading = document.getElementById('diagnoseLoading');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      const incidentId = btn.getAttribute('data-incident-id');
+      btn.style.display = 'none';
+      if (loading) loading.style.display = 'block';
+      try {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const res = await fetch('/app/api/diagnose', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ incidentId, _csrf: csrf }),
+        });
+        if (res.ok) {
+          window.location.reload();
+        } else {
+          const err = await res.text();
+          window.showToast?.('Diagnosis failed: ' + err, 'error');
+          btn.style.display = 'inline-flex';
+          if (loading) loading.style.display = 'none';
+        }
+      } catch (e) {
+        window.showToast?.('Network error', 'error');
+        btn.style.display = 'inline-flex';
+        if (loading) loading.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+<style>
+  .detail-page { max-width: 760px; }
+  .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .back-link:hover { color: var(--text); }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .incident-header h1 { font-size: 20px; margin-bottom: 10px; }
+  .header-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .severity-pill, .status-pill { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); }
+  .severity-pill.critical { color: var(--critical); background: var(--critical-dim); }
+  .severity-pill.high { color: var(--high); background: var(--high-dim); }
+  .severity-pill.medium { color: var(--medium); background: var(--medium-dim); }
+  .severity-pill.low { color: var(--low); background: var(--low-dim); }
+  .status-pill.active { color: var(--critical); background: var(--critical-dim); }
+  .status-pill.investigating { color: var(--high); background: var(--high-dim); }
+  .status-pill.monitoring { color: var(--medium); background: var(--medium-dim); }
+  .status-pill.resolved { color: var(--resolved); background: rgba(85,85,106,0.12); }
+  .stack-label { font-size: 11px; color: var(--accent-light); background: var(--accent-dim); padding: 2px 8px; border-radius: 4px; }
+  .tag { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; background: rgba(144,144,168,0.1); color: var(--text-secondary); }
+  .section { margin-top: 28px; }
+  .section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .description-block { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; color: var(--text); }
+  .status-form { display: flex; gap: 8px; }
+  .status-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); color: var(--text-secondary); font-size: 12px; font-weight: 500; cursor: pointer; transition: var(--transition); }
+  .status-btn:hover { border-color: var(--accent); color: var(--text); }
+  .diagnosis-result { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .diagnosis-result h3 { font-size: 13px; font-weight: 600; margin: 12px 0 8px; color: var(--accent-light); }
+  .diagnosis-result h3:first-child { margin-top: 0; }
+  .root-causes { padding-left: 20px; font-size: 13px; line-height: 1.6; }
+  .root-causes li { margin-bottom: 6px; }
+  .commands { display: flex; flex-direction: column; gap: 4px; }
+  .command-line { display: block; font-family: var(--font-mono); font-size: 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; color: var(--accent-light); }
+  .diagnosis-meta { margin-top: 12px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
+  .resolution-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
+  .resolution-content { font-family: var(--font-mono); font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); }
+  .resolution-meta { margin-top: 8px; font-size: 11px; color: var(--text-muted); }
+  .resolution-form { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .resolution-form label { display: flex; flex-direction: column; gap: 4px; }
+  .resolution-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+  .resolution-form textarea { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; resize: vertical; }
+  .resolution-form textarea:focus { border-color: var(--accent); outline: none; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .mono { font-family: var(--font-mono); }
+</style>

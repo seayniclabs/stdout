@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seaynic Labs — Coming Soon</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0A0A0F;
+      --bg-surface: #111118;
+      --border: #1E1E2E;
+      --text: #EEEEF5;
+      --text-secondary: #8888A0;
+      --text-muted: #55556A;
+      --teal: #2DD4BF;
+      --teal-dim: rgba(45, 212, 191, 0.12);
+      --teal-glow: rgba(45, 212, 191, 0.25);
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient glow */
+    .glow {
+      position: fixed;
+      top: -300px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 700px;
+      background: radial-gradient(ellipse at center, rgba(45, 212, 191, 0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 560px;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Logo mark */
+    .logo-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+    .logo-mark svg { width: 32px; height: 32px; }
+    .logo-mark span {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    h1 {
+      font-size: clamp(28px, 4vw, 40px);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 16px;
+    }
+    h1 .accent {
+      color: var(--teal);
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 40px;
+    }
+
+    /* Product cards */
+    .products {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 40px;
+      text-align: left;
+    }
+    .product-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      transition: all 200ms ease;
+      cursor: default;
+      text-decoration: none;
+      color: inherit;
+    }
+    .product-card:hover {
+      border-color: #2A2A3E;
+      background: #151520;
+    }
+    .product-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .product-icon.stdout { background: rgba(139, 92, 246, 0.15); }
+    .product-icon.stdout svg { color: #A78BFA; }
+    .product-icon.store { background: var(--teal-dim); }
+    .product-icon.store svg { color: var(--teal); }
+    .product-icon svg { width: 18px; height: 18px; }
+    .product-info { flex: 1; min-width: 0; }
+    .product-name {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .product-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .product-badge {
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      flex-shrink: 0;
+    }
+    .badge-soon {
+      background: var(--teal-dim);
+      color: var(--teal);
+    }
+    .badge-live {
+      background: rgba(68, 204, 136, 0.12);
+      color: #44CC88;
+    }
+
+    /* Email form */
+    .notify-form {
+      display: flex;
+      gap: 8px;
+      max-width: 400px;
+      margin: 0 auto 32px;
+    }
+    .notify-input {
+      flex: 1;
+      padding: 10px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-ui);
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 200ms;
+    }
+    .notify-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px var(--teal-dim); }
+    .notify-input::placeholder { color: var(--text-muted); }
+    .notify-btn {
+      padding: 10px 18px;
+      background: var(--teal);
+      color: #000;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms;
+      font-family: var(--font-ui);
+      white-space: nowrap;
+    }
+    .notify-btn:hover { background: #5EEAD4; box-shadow: 0 0 20px var(--teal-glow); }
+
+    /* Footer */
+    .footer {
+      margin-top: 48px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .footer a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 200ms;
+    }
+    .footer a:hover { color: var(--text); }
+
+    /* Existing products link */
+    .existing {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .existing a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 200ms;
+    }
+    .existing a:hover { color: var(--teal); }
+
+    @media (max-width: 500px) {
+      .notify-form { flex-direction: column; }
+      .products { gap: 10px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<div class="container">
+  <div class="logo-mark">
+    <svg viewBox="0 0 32 32" fill="none">
+      <rect width="32" height="32" rx="8" fill="#111118" stroke="#2A2A3E" stroke-width="1"/>
+      <text x="16" y="21" text-anchor="middle" fill="#2DD4BF" font-family="JetBrains Mono, monospace" font-size="13" font-weight="700">SL</text>
+    </svg>
+    <span>Seaynic Labs</span>
+  </div>
+
+  <h1>Building tools for <span class="accent">the solo operator.</span></h1>
+
+  <p class="subtitle">Developer tools, digital products, and a SaaS platform for the people who run production infrastructure without a team behind them.</p>
+
+  <!-- Product cards -->
+  <div class="products">
+    <div class="product-card">
+      <div class="product-icon stdout">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 17L10 11L4 5"/><path d="M12 19H20"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="product-name">StdOut</div>
+        <div class="product-desc">AI incident companion — your stack, your history, your answers</div>
+      </div>
+      <span class="product-badge badge-soon">coming soon</span>
+    </div>
+    <div class="product-card">
+      <div class="product-icon store">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6V20C3 20.5304 3.21071 21.0391 3.58579 21.4142C3.96086 21.7893 4.46957 22 5 22H19C19.5304 22 20.0391 21.7893 20.4142 21.4142C20.7893 21.0391 21 20.5304 21 20V6L18 2H6Z"/><path d="M3 6H21"/><path d="M16 10C16 11.0609 15.5786 12.0783 14.8284 12.8284C14.0783 13.5786 13.0609 14 12 14C10.9391 14 9.92172 13.5786 9.17157 12.8284C8.42143 12.0783 8 11.0609 8 10"/></svg>
+      </div>
+      <div class="product-info">
+        <div class="product-name">Store</div>
+        <div class="product-desc">MCP servers, context kits, and developer tooling</div>
+      </div>
+      <span class="product-badge badge-soon">coming soon</span>
+    </div>
+  </div>
+
+  <p class="existing">Already have a product? <a href="#">Stem</a> and <a href="#">Claude Context Kit</a> are available now on Lemon Squeezy.</p>
+
+  <!-- Notify form -->
+  <form class="notify-form" onsubmit="return false;">
+    <input type="email" class="notify-input" placeholder="you@example.com">
+    <button class="notify-btn">Notify me</button>
+  </form>
+
+  <div class="footer">
+    Built by <strong>Seaynic Labs LLC</strong> &middot; Clarksville, TN
+  </div>
+</div>
+
+</body>
+</html>

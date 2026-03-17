@@ -1,0 +1,31 @@
+{
+  "name": "stdout",
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "start": "node dist/server/entry.mjs",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@astrojs/node": "^9.5.4",
+    "@astrojs/sitemap": "^3.7.1",
+    "@node-rs/argon2": "^2.0.2",
+    "astro": "^5.17.1",
+    "better-sqlite3": "^12.6.2",
+    "drizzle-orm": "^0.45.1",
+    "nanoid": "^5.1.6",
+    "resend": "^6.9.3",
+    "stripe": "^20.4.1"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "drizzle-kit": "^0.31.9"
+  },
+  "overrides": {
+    "svgo": ">=4.0.1"
+  }
+}

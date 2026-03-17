@@ -1,0 +1,126 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getDb, schema } from '../../../lib/db';
+import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
+import { validateCsrf } from '../../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const db = getDb();
+const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (!validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    error = 'Invalid form submission.';
+  } else {
+    const title = (form.get('title') as string || '').trim();
+    const description = (form.get('description') as string || '').trim();
+    const severity = form.get('severity') as string || 'medium';
+    const stackId = (form.get('stackId') as string || '') || null;
+    const tags = (form.get('tags') as string || '').trim() || null;
+
+    if (!title || !description) {
+      error = 'Title and description are required.';
+    } else {
+      const id = nanoid();
+      const now = new Date();
+      db.insert(schema.incidents).values({
+        id, userId: user.id, stackId, title, description, severity, tags,
+        status: 'active', createdAt: now, updatedAt: now,
+      }).run();
+
+      // Sync to FTS
+      const rawDb = (db as any)._.session?.client;
+      if (rawDb?.prepare) {
+        rawDb.prepare('INSERT INTO incidents_fts(rowid, title, description, tags) SELECT rowid, title, description, tags FROM incidents WHERE id = ?').run(id);
+      }
+
+      return Astro.redirect(`/app/incidents/${id}`);
+    }
+  }
+}
+---
+<Layout title="New Incident — StdOut">
+  <div class="form-page">
+    <h1>Log an incident</h1>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="incident-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+
+      <label>
+        <span>Title</span>
+        <input type="text" name="title" required placeholder="e.g. nginx 502 Bad Gateway after deploy" autocomplete="off" />
+      </label>
+
+      <label>
+        <span>Description</span>
+        <textarea name="description" required rows={6} placeholder="What happened? Paste error output, describe symptoms, include any context."></textarea>
+      </label>
+
+      <div class="form-row">
+        <label class="form-half">
+          <span>Severity</span>
+          <select name="severity">
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </label>
+
+        <label class="form-half">
+          <span>Stack</span>
+          <select name="stackId">
+            <option value="">None</option>
+            {userStacks.map(s => (
+              <option value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      <label>
+        <span>Tags <span style="color:var(--text-muted); font-weight:400;">(comma-separated)</span></span>
+        <input type="text" name="tags" placeholder="docker, nginx, n8n" autocomplete="off" />
+      </label>
+
+      <button type="submit" class="btn btn-primary">Log incident</button>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .form-page { max-width: 640px; }
+  .form-page h1 { font-size: 20px; margin-bottom: 20px; }
+  .incident-form { display: flex; flex-direction: column; gap: 16px; }
+  .incident-form label { display: flex; flex-direction: column; gap: 4px; }
+  .incident-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .incident-form input, .incident-form select, .incident-form textarea {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-ui);
+    font-size: 14px;
+    padding: 10px 12px;
+    transition: border-color 150ms;
+  }
+  .incident-form textarea { font-family: var(--font-mono); font-size: 13px; resize: vertical; }
+  .incident-form input:focus, .incident-form select:focus, .incident-form textarea:focus {
+    border-color: var(--accent);
+    outline: none;
+  }
+  .form-row { display: flex; gap: 12px; }
+  .form-half { flex: 1; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+</style>

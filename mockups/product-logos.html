@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Seaynic Labs — Product Logo Variations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0A0A12;
+      --bg-surface: #12121A;
+      --border: #1E1E2E;
+      --text: #EEEEF5;
+      --text-secondary: #9090A8;
+      --text-muted: #5A5A72;
+      --teal: #00D4AA;
+      --teal-dim: rgba(0, 212, 170, 0.12);
+      --violet: #6C5CE7;
+      --violet-dim: rgba(108, 92, 231, 0.12);
+      --amber: #FFB340;
+      --amber-dim: rgba(255, 179, 64, 0.12);
+      --font-ui: 'Inter', sans-serif;
+      --font-display: 'Space Grotesk', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      padding: 60px 40px;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1 {
+      font-family: var(--font-display);
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 56px; }
+    .product-section {
+      margin-bottom: 64px;
+      padding-bottom: 64px;
+      border-bottom: 1px solid var(--border);
+    }
+    .product-section:last-of-type { border-bottom: none; }
+    .product-header {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .product-name {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .product-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .product-desc {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 28px;
+      max-width: 600px;
+      line-height: 1.6;
+    }
+    .var-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+      font-weight: 500;
+    }
+    .logo-row {
+      display: flex;
+      gap: 28px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 28px;
+    }
+    .logo-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-cell span {
+      font-size: 10px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .logo-bg {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-bg-light {
+      background: #F5F5F5;
+      border: 1px solid #E0E0E0;
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wordmark-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 28px;
+    }
+    .wordmark-cell .wm-text {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Seaynic Labs — Product Logos</h1>
+<p class="subtitle">Circle badge family. Unified dark navy base (#12121A), product-specific accent colors.</p>
+
+<!-- ============================= -->
+<!-- STEM                          -->
+<!-- ============================= -->
+<div class="product-section">
+  <div class="product-header">
+    <div class="product-name">Stem</div>
+    <div class="product-tagline">Apple Music MCP</div>
+  </div>
+  <p class="product-desc">MCP server for Apple Music. Search, queue, and control playback from Claude Code or Cursor. Music note with radiating signal arc.</p>
+
+  <div class="var-label">Variation 1 — Music note + signal arc (teal)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#stem1-ring)" stroke-width="2"/>
+          <!-- Music note -->
+          <path d="M28 20V40" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="40" r="5" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+          <path d="M28 20L38 17V24" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Signal arcs -->
+          <path d="M38 28C40 26 40 22 38 20" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+          <path d="M42 30C45 26 45 20 42 16" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <defs><linearGradient id="stem1-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px dark</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#stem1b-ring)" stroke-width="2"/>
+          <path d="M28 20V40" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="40" r="5" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+          <path d="M28 20L38 17V24" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M38 28C40 26 40 22 38 20" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+          <path d="M42 30C45 26 45 20 42 16" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <defs><linearGradient id="stem1b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg-light">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="#00D4AA" stroke-width="2" stroke-opacity="0.5"/>
+          <path d="M28 20V40" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="40" r="5" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+          <path d="M28 20L38 17V24" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M38 28C40 26 40 22 38 20" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+          <path d="M42 30C45 26 45 20 42 16" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+        </svg>
+      </div>
+      <span>64px light bg</span>
+    </div>
+    <div class="logo-cell">
+      <div class="wordmark-cell">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#stem-wm-ring)" stroke-width="2"/>
+          <path d="M28 20V40" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/>
+          <circle cx="24" cy="40" r="5" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+          <path d="M28 20L38 17V24" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M38 28C40 26 40 22 38 20" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.6"/>
+          <defs><linearGradient id="stem-wm-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+        <span class="wm-text">Stem</span>
+      </div>
+      <span>wordmark</span>
+    </div>
+  </div>
+
+  <div class="var-label">Variation 2 — Simplified waveform note (teal)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#stem2-ring)" stroke-width="2"/>
+          <!-- Simplified: stem + note head + two arcs -->
+          <rect x="26" y="18" width="2.5" height="22" rx="1.25" fill="#00D4AA"/>
+          <ellipse cx="23" cy="40" rx="5.5" ry="4" fill="#00D4AA"/>
+          <!-- Broadcast arcs -->
+          <path d="M34 26C36.5 24 36.5 20 34 18" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M39 29C43 25 43 17 39 13" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.4"/>
+          <path d="M44 32C49 26 49 14 44 8" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.2"/>
+          <defs><linearGradient id="stem2-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#stem2b-ring)" stroke-width="2.5"/>
+          <rect x="26" y="18" width="2.5" height="22" rx="1.25" fill="#00D4AA"/>
+          <ellipse cx="23" cy="40" rx="5.5" ry="4" fill="#00D4AA"/>
+          <path d="M34 26C36.5 24 36.5 20 34 18" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M39 29C43 25 43 17 39 13" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.4"/>
+          <defs><linearGradient id="stem2b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- CCK                           -->
+<!-- ============================= -->
+<div class="product-section">
+  <div class="product-header">
+    <div class="product-name">Claude Context Kit</div>
+    <div class="product-tagline">$19.99</div>
+  </div>
+  <p class="product-desc">Packaged Claude Code configuration: agents, skills, templates, and CLAUDE.md. A starter kit for AI developers. File folder with fanning document pages.</p>
+
+  <div class="var-label">Variation 1 — Stacked pages with bracket (violet)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#cck1-ring)" stroke-width="2"/>
+          <!-- Back page -->
+          <rect x="22" y="17" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.3" fill="none"/>
+          <!-- Middle page -->
+          <rect x="20" y="19" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <!-- Front page -->
+          <rect x="18" y="21" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="2" fill="#12121A"/>
+          <!-- Code lines on front page -->
+          <path d="M23 29H35" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M23 33H31" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <path d="M23 37H33" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <!-- Curly bracket accent -->
+          <path d="M42 26C44 26 45 27 45 29V31C45 32 46 33 47 33C46 33 45 34 45 35V37C45 39 44 40 42 40" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="cck1-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px dark</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#cck1b-ring)" stroke-width="2.5"/>
+          <rect x="22" y="17" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.3" fill="none"/>
+          <rect x="20" y="19" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <rect x="18" y="21" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="2" fill="#12121A"/>
+          <path d="M23 29H35" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M23 33H31" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <path d="M23 37H33" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <path d="M42 26C44 26 45 27 45 29V31C45 32 46 33 47 33C46 33 45 34 45 35V37C45 39 44 40 42 40" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="cck1b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg-light">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="#6C5CE7" stroke-width="2" stroke-opacity="0.5"/>
+          <rect x="22" y="17" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.3" fill="none"/>
+          <rect x="20" y="19" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <rect x="18" y="21" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="2" fill="#12121A"/>
+          <path d="M23 29H35" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M23 33H31" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <path d="M23 37H33" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <path d="M42 26C44 26 45 27 45 29V31C45 32 46 33 47 33C46 33 45 34 45 35V37C45 39 44 40 42 40" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span>64px light bg</span>
+    </div>
+    <div class="logo-cell">
+      <div class="wordmark-cell">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#cck-wm-ring)" stroke-width="2"/>
+          <rect x="22" y="17" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.3" fill="none"/>
+          <rect x="20" y="19" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <rect x="18" y="21" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="2" fill="#12121A"/>
+          <path d="M23 29H35" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M23 33H31" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <path d="M42 26C44 26 45 27 45 29V31C45 32 46 33 47 33C46 33 45 34 45 35V37C45 39 44 40 42 40" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="cck-wm-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+        <span class="wm-text">CCK</span>
+      </div>
+      <span>wordmark</span>
+    </div>
+  </div>
+
+  <div class="var-label">Variation 2 — Folder with sparkle (violet)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#cck2-ring)" stroke-width="2"/>
+          <!-- Folder body -->
+          <path d="M16 24H28L30 21H48V24H16Z" fill="#6C5CE7" fill-opacity="0.15"/>
+          <rect x="16" y="24" width="32" height="22" rx="3" stroke="#6C5CE7" stroke-width="2" fill="none"/>
+          <!-- Folder tab -->
+          <path d="M16 24V22a2 2 0 012-2h11l3 4" stroke="#6C5CE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Sparkle / AI star -->
+          <path d="M40 18L41 15L42 18L45 19L42 20L41 23L40 20L37 19Z" fill="#6C5CE7" fill-opacity="0.8"/>
+          <path d="M45 13L45.5 11.5L46 13L47.5 13.5L46 14L45.5 15.5L45 14L43.5 13.5Z" fill="#6C5CE7" fill-opacity="0.5"/>
+          <defs><linearGradient id="cck2-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#cck2b-ring)" stroke-width="2.5"/>
+          <path d="M16 24H28L30 21H48V24H16Z" fill="#6C5CE7" fill-opacity="0.15"/>
+          <rect x="16" y="24" width="32" height="22" rx="3" stroke="#6C5CE7" stroke-width="2" fill="none"/>
+          <path d="M16 24V22a2 2 0 012-2h11l3 4" stroke="#6C5CE7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M40 18L41 15L42 18L45 19L42 20L41 23L40 20L37 19Z" fill="#6C5CE7" fill-opacity="0.8"/>
+          <defs><linearGradient id="cck2b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- HOMELAB MCP                   -->
+<!-- ============================= -->
+<div class="product-section">
+  <div class="product-header">
+    <div class="product-name">Homelab MCP</div>
+    <div class="product-tagline">$49.99</div>
+  </div>
+  <p class="product-desc">Containerized MCP server template for managing homelab infrastructure. 37 tools, Docker Compose stack, 4-layer security architecture. Infrastructure/server motif.</p>
+
+  <div class="var-label">Variation 1 — Server rack with signal (amber)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#hm1-ring)" stroke-width="2"/>
+          <!-- Server unit 1 -->
+          <rect x="18" y="18" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="22.5" r="1.5" fill="#FFB340"/>
+          <path d="M22 22.5H32" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <!-- Server unit 2 -->
+          <rect x="18" y="29" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="33.5" r="1.5" fill="#FFB340"/>
+          <path d="M22 33.5H34" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <!-- Server unit 3 -->
+          <rect x="18" y="40" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="44.5" r="1.5" fill="#FFB340" fill-opacity="0.4"/>
+          <path d="M22 44.5H28" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.3"/>
+          <!-- Connection dot -->
+          <circle cx="32" cy="14" r="2" fill="#FFB340" fill-opacity="0.6"/>
+          <path d="M32 16V18" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.4"/>
+          <defs><linearGradient id="hm1-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px dark</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#hm1b-ring)" stroke-width="2.5"/>
+          <rect x="18" y="18" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="22.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="29" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="33.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="40" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="44.5" r="1.5" fill="#FFB340" fill-opacity="0.4"/>
+          <defs><linearGradient id="hm1b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg-light">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="#FFB340" stroke-width="2" stroke-opacity="0.5"/>
+          <rect x="18" y="18" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="22.5" r="1.5" fill="#FFB340"/>
+          <path d="M22 22.5H32" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <rect x="18" y="29" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="33.5" r="1.5" fill="#FFB340"/>
+          <path d="M22 33.5H34" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <rect x="18" y="40" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="44.5" r="1.5" fill="#FFB340" fill-opacity="0.4"/>
+        </svg>
+      </div>
+      <span>64px light bg</span>
+    </div>
+    <div class="logo-cell">
+      <div class="wordmark-cell">
+        <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#hm-wm-ring)" stroke-width="2"/>
+          <rect x="18" y="18" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="22.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="29" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="33.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="40" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="40" cy="44.5" r="1.5" fill="#FFB340" fill-opacity="0.4"/>
+          <defs><linearGradient id="hm-wm-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+        <span class="wm-text">Homelab MCP</span>
+      </div>
+      <span>wordmark</span>
+    </div>
+  </div>
+
+  <div class="var-label">Variation 2 — Network hub with nodes (amber)</div>
+  <div class="logo-row">
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#hm2-ring)" stroke-width="2"/>
+          <!-- Center hub -->
+          <rect x="26" y="26" width="12" height="12" rx="3" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="32" cy="32" r="2" fill="#FFB340"/>
+          <!-- Spokes -->
+          <path d="M32 26V16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M32 48V38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M26 32H16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M48 32H38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <!-- Corner nodes -->
+          <circle cx="32" cy="14" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="32" cy="50" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="14" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="50" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <!-- Diagonal spokes -->
+          <path d="M27 27L20 20" stroke="#FFB340" stroke-width="1" stroke-linecap="round" stroke-opacity="0.4"/>
+          <path d="M37 27L44 20" stroke="#FFB340" stroke-width="1" stroke-linecap="round" stroke-opacity="0.4"/>
+          <path d="M27 37L20 44" stroke="#FFB340" stroke-width="1" stroke-linecap="round" stroke-opacity="0.4"/>
+          <path d="M37 37L44 44" stroke="#FFB340" stroke-width="1" stroke-linecap="round" stroke-opacity="0.4"/>
+          <!-- Diagonal dots -->
+          <circle cx="19" cy="19" r="2" fill="#FFB340" fill-opacity="0.3"/>
+          <circle cx="45" cy="19" r="2" fill="#FFB340" fill-opacity="0.3"/>
+          <circle cx="19" cy="45" r="2" fill="#FFB340" fill-opacity="0.3"/>
+          <circle cx="45" cy="45" r="2" fill="#FFB340" fill-opacity="0.3"/>
+          <defs><linearGradient id="hm2-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>64px</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg">
+        <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#hm2b-ring)" stroke-width="2.5"/>
+          <rect x="26" y="26" width="12" height="12" rx="3" stroke="#FFB340" stroke-width="2" fill="none"/>
+          <circle cx="32" cy="32" r="2" fill="#FFB340"/>
+          <path d="M32 26V16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M32 48V38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M26 32H16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M48 32H38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="32" cy="14" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="32" cy="50" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="14" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <circle cx="50" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+          <defs><linearGradient id="hm2b-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span>40px</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================= -->
+<!-- FAMILY VIEW                   -->
+<!-- ============================= -->
+<div class="product-section" style="border-bottom: none;">
+  <div class="var-label" style="margin-top: 0;">Product Family — Side by Side</div>
+  <p class="product-desc">All four products together. Same circle badge format, differentiated by accent color and glyph.</p>
+  <div class="logo-row" style="gap: 40px;">
+    <div class="logo-cell">
+      <div class="logo-bg" style="padding: 24px;">
+        <!-- StdOut -->
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#fam-stdout)" stroke-width="2"/>
+          <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+          <defs><linearGradient id="fam-stdout" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FB923C"/><stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span style="color: #FB923C;">StdOut</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg" style="padding: 24px;">
+        <!-- Stem -->
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#fam-stem)" stroke-width="2"/>
+          <rect x="26" y="18" width="2.5" height="22" rx="1.25" fill="#00D4AA"/>
+          <ellipse cx="23" cy="40" rx="5.5" ry="4" fill="#00D4AA"/>
+          <path d="M34 26C36.5 24 36.5 20 34 18" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M39 29C43 25 43 17 39 13" stroke="#00D4AA" stroke-width="2" stroke-linecap="round" stroke-opacity="0.4"/>
+          <defs><linearGradient id="fam-stem" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span style="color: #00D4AA;">Stem</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg" style="padding: 24px;">
+        <!-- CCK -->
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#fam-cck)" stroke-width="2"/>
+          <rect x="22" y="17" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.3" fill="none"/>
+          <rect x="20" y="19" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="1.5" stroke-opacity="0.5" fill="none"/>
+          <rect x="18" y="21" width="22" height="28" rx="3" stroke="#6C5CE7" stroke-width="2" fill="#12121A"/>
+          <path d="M23 29H35" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.7"/>
+          <path d="M23 33H31" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.5"/>
+          <path d="M23 37H33" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.35"/>
+          <path d="M42 26C44 26 45 27 45 29V31C45 32 46 33 47 33C46 33 45 34 45 35V37C45 39 44 40 42 40" stroke="#6C5CE7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <defs><linearGradient id="fam-cck" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#6C5CE7"/><stop offset="1" stop-color="#6C5CE7" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span style="color: #6C5CE7;">CCK</span>
+    </div>
+    <div class="logo-cell">
+      <div class="logo-bg" style="padding: 24px;">
+        <!-- Homelab MCP -->
+        <svg width="56" height="56" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="32" cy="32" r="28" fill="#12121A"/>
+          <circle cx="32" cy="32" r="28" stroke="url(#fam-hm)" stroke-width="2"/>
+          <rect x="18" y="18" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="22.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="29" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="33.5" r="1.5" fill="#FFB340"/>
+          <rect x="18" y="40" width="28" height="9" rx="2" stroke="#FFB340" stroke-width="1.8" fill="none"/>
+          <circle cx="40" cy="44.5" r="1.5" fill="#FFB340" fill-opacity="0.4"/>
+          <defs><linearGradient id="fam-hm" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+        </svg>
+      </div>
+      <span style="color: #FFB340;">Homelab MCP</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

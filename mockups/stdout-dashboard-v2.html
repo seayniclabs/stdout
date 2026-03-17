@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StdOut — Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07070C;
+      --bg-surface: #0E0E18;
+      --bg-elevated: #151522;
+      --bg-hover: #1A1A2A;
+      --border: #1F1F35;
+      --border-hover: #2D2D4A;
+      --text: #EEEEF5;
+      --text-secondary: #9090A8;
+      --text-muted: #5A5A72;
+      --accent: #F97316;
+      --accent-light: #FB923C;
+      --accent-dark: #C2410C;
+      --accent-btn: #D4560A;
+      --accent-btn-hover: #E05E00;
+      --accent-dim: rgba(249, 115, 22, 0.12);
+      --accent-glow: rgba(249, 115, 22, 0.25);
+      --critical: #EF4444;
+      --critical-dim: rgba(239, 68, 68, 0.12);
+      --high: #EAB308;
+      --high-dim: rgba(234, 179, 8, 0.12);
+      --medium: #FACC15;
+      --medium-dim: rgba(250, 204, 21, 0.12);
+      --low: #22C55E;
+      --low-dim: rgba(34, 197, 94, 0.12);
+      --resolved: #55556A;
+      --resolved-dim: rgba(85, 85, 106, 0.12);
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* --- Animations --- */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideInLeft {
+      from { opacity: 0; transform: translateX(-12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInRight {
+      from { opacity: 0; transform: translateX(12px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.2); }
+      50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    }
+    @keyframes diagnosisReveal {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      width: 240px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      animation: slideInLeft 0.4s ease-out;
+      position: relative;
+    }
+    .sidebar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, rgba(249, 115, 22, 0.15) 0%, transparent 30%);
+      pointer-events: none;
+    }
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px;
+      font-weight: 700;
+      font-size: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo svg { flex-shrink: 0; }
+    .sidebar-section { padding: 12px 8px; }
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0 8px 8px;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 200ms;
+      position: relative;
+    }
+    .sidebar-item:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+    .sidebar-item.active {
+      background: var(--accent-dim);
+      color: var(--accent-light);
+    }
+    .sidebar-item.active::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 6px;
+      bottom: 6px;
+      width: 3px;
+      background: var(--accent);
+      border-radius: 0 2px 2px 0;
+    }
+    .sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .sidebar-badge {
+      margin-left: auto;
+      padding: 2px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .badge-critical {
+      background: var(--critical-dim);
+      color: var(--critical);
+      animation: pulseGlow 2.5s ease-in-out infinite;
+    }
+    .badge-count { background: var(--bg-elevated); color: var(--text-muted); }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-avatar {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--accent), #EA580C);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .sidebar-user { font-size: 12px; font-weight: 500; }
+    .sidebar-user span { display: block; font-size: 11px; color: var(--text-muted); font-weight: 400; }
+
+    /* --- Main --- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .topbar-title { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+    .topbar-spacer { flex: 1; }
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 200ms;
+    }
+    .search-box:hover { border-color: var(--border-hover); background: var(--bg-elevated); }
+    .search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+    .search-box svg { width: 14px; height: 14px; }
+    .search-box kbd {
+      padding: 2px 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+    }
+    .topbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 16px;
+      background: var(--accent-btn);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 250ms;
+      font-family: var(--font-ui);
+      position: relative;
+      overflow: hidden;
+    }
+    .topbar-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 250ms;
+    }
+    .topbar-btn:hover {
+      background: var(--accent-btn-hover);
+      box-shadow: 0 0 24px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+    .topbar-btn:hover::before { opacity: 1; }
+    .topbar-btn svg { width: 14px; height: 14px; }
+
+    /* Stats */
+    .stats-bar {
+      display: flex;
+      gap: 1px;
+      padding: 0 20px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat {
+      flex: 1;
+      padding: 16px;
+      background: var(--bg-surface);
+      transition: background 300ms;
+      position: relative;
+    }
+    .stat:hover { background: var(--bg-elevated); }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+    }
+    .stat-value.critical { color: var(--critical); }
+    .stat-value.accent { color: var(--accent-light); }
+    .stat-trend {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 10px;
+      font-family: var(--font-mono);
+      font-weight: 500;
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .trend-down {
+      color: var(--low);
+      background: var(--low-dim);
+    }
+    .trend-up {
+      color: var(--critical);
+      background: var(--critical-dim);
+    }
+
+    /* Filters */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      align-items: center;
+    }
+    .filter-chip {
+      padding: 5px 14px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 200ms;
+      background: transparent;
+      font-family: var(--font-ui);
+      font-weight: 500;
+    }
+    .filter-chip:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-chip.active {
+      border-color: var(--accent);
+      color: var(--accent-light);
+      background: var(--accent-dim);
+    }
+    .filter-sep {
+      width: 1px;
+      height: 20px;
+      background: var(--border);
+      margin: 0 4px;
+    }
+
+    /* Incident list */
+    .incident-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .incident-list::-webkit-scrollbar { width: 6px; }
+    .incident-list::-webkit-scrollbar-track { background: transparent; }
+    .incident-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .incident-list::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+    .incident-row {
+      display: grid;
+      grid-template-columns: 4px 28px 1fr 140px 100px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 200ms;
+      position: relative;
+    }
+    .incident-row::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      background: var(--accent);
+      transition: width 200ms;
+    }
+    .incident-row:hover {
+      background: var(--bg-surface);
+    }
+    .incident-row:hover::before { width: 2px; }
+    .incident-row.selected {
+      background: var(--bg-surface);
+    }
+    .incident-row.selected::before { width: 2px; background: var(--accent); }
+    .severity-bar { width: 4px; height: 34px; border-radius: 2px; transition: height 200ms; }
+    .incident-row:hover .severity-bar { height: 40px; }
+    .severity-bar.critical { background: var(--critical); }
+    .severity-bar.high { background: var(--high); }
+    .severity-bar.medium { background: var(--medium); }
+    .severity-bar.low { background: var(--low); }
+    .severity-bar.resolved { background: var(--resolved); }
+    .status-dot-wrap { display: flex; align-items: center; justify-content: center; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.active { background: var(--critical); animation: pulseGlow 2s infinite; }
+    .status-dot.investigating { background: var(--high); animation: pulseGlow 2.5s infinite; }
+    .status-dot.monitoring { background: var(--medium); }
+    .status-dot.resolved { background: var(--resolved); }
+    .incident-info { min-width: 0; }
+    .incident-title {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .incident-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .incident-tag {
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 500;
+      transition: transform 200ms;
+    }
+    .incident-tag:hover { transform: scale(1.05); }
+    .tag-docker { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+    .tag-nginx { background: rgba(34, 197, 94, 0.15); color: #4ADE80; }
+    .tag-n8n { background: rgba(234, 179, 8, 0.15); color: #FACC15; }
+    .tag-cloudflare { background: rgba(249, 115, 22, 0.12); color: #FB923C; }
+    .tag-astro { background: rgba(168, 85, 247, 0.15); color: #C084FC; }
+    .incident-duration { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); text-align: right; }
+    .incident-status { font-size: 11px; font-weight: 500; text-align: right; }
+    .status-active { color: var(--critical); }
+    .status-investigating { color: var(--high); }
+    .status-monitoring { color: var(--medium); }
+    .status-resolved { color: var(--resolved); }
+    .incident-time { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); text-align: right; }
+
+    /* --- Detail panel --- */
+    .detail-panel {
+      width: 440px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+      animation: slideInRight 0.4s ease-out;
+      position: relative;
+    }
+    .detail-panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -1px;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, rgba(249, 115, 22, 0.15) 0%, transparent 30%);
+      pointer-events: none;
+    }
+    .detail-panel::-webkit-scrollbar { width: 6px; }
+    .detail-panel::-webkit-scrollbar-track { background: transparent; }
+    .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .detail-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .detail-severity { width: 4px; height: 44px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
+    .detail-title { font-size: 15px; font-weight: 600; line-height: 1.35; margin-bottom: 6px; }
+    .detail-id { font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); }
+    .detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* AI Diagnosis */
+    .ai-diagnosis {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .ai-diagnosis::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.3), transparent);
+    }
+    .ai-badge {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      padding: 2px 10px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      border-radius: 100px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent-light);
+      letter-spacing: 0.06em;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .ai-badge .ai-dot {
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+    .diagnosis-item {
+      display: flex;
+      gap: 10px;
+      padding: 7px 0;
+      font-size: 13px;
+      line-height: 1.5;
+      opacity: 0;
+      animation: diagnosisReveal 0.4s ease-out forwards;
+    }
+    .diagnosis-item:nth-child(1) { animation-delay: 0.2s; }
+    .diagnosis-item:nth-child(2) { animation-delay: 0.5s; }
+    .diagnosis-item:nth-child(3) { animation-delay: 0.8s; }
+    .diagnosis-rank {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-light);
+      font-weight: 600;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--accent-dim);
+      border-radius: 4px;
+      margin-top: 2px;
+    }
+    .diagnosis-text { color: var(--text-secondary); }
+    .diagnosis-text strong { color: var(--text); font-weight: 500; }
+
+    .cmd-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 10px;
+      line-height: 1.8;
+      position: relative;
+      overflow: hidden;
+    }
+    .cmd-block::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--accent-dim);
+    }
+    .cmd-prompt { color: var(--accent-light); }
+    .cmd-copy {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 200ms;
+    }
+    .cmd-copy:hover { border-color: var(--border-hover); color: var(--text-secondary); }
+
+    /* Past resolution */
+    .past-resolution {
+      background: var(--low-dim);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 10px;
+      transition: all 300ms;
+    }
+    .past-resolution:hover {
+      border-color: rgba(34, 197, 94, 0.35);
+      box-shadow: 0 0 20px rgba(34, 197, 94, 0.05);
+    }
+    .past-resolution-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--low);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .past-resolution p { font-size: 12px; color: var(--text-secondary); line-height: 1.65; }
+    .past-resolution code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* Timeline */
+    .timeline-item { display: flex; gap: 12px; padding: 8px 0; }
+    .timeline-dot-col { display: flex; flex-direction: column; align-items: center; width: 16px; flex-shrink: 0; }
+    .timeline-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--border-hover);
+      flex-shrink: 0;
+      margin-top: 5px;
+      transition: all 300ms;
+    }
+    .timeline-dot.active { background: var(--critical); box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
+    .timeline-dot.accent { background: var(--accent); box-shadow: 0 0 8px rgba(249, 115, 22, 0.2); }
+    .timeline-line { width: 1px; flex: 1; background: var(--border); margin-top: 4px; }
+    .timeline-content { min-width: 0; }
+    .timeline-label { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+    .timeline-time { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); }
+
+    /* Resolution form */
+    .resolution-form { padding: 18px 20px; }
+    .resolution-textarea {
+      width: 100%;
+      min-height: 88px;
+      padding: 12px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+      transition: all 250ms;
+      line-height: 1.6;
+    }
+    .resolution-textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .resolution-textarea::placeholder { color: var(--text-muted); }
+    .resolution-actions { display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end; }
+    .btn-sm {
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 200ms;
+      font-family: var(--font-ui);
+    }
+    .btn-sm-primary {
+      background: var(--accent-btn);
+      color: #fff;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-sm-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 200ms;
+    }
+    .btn-sm-primary:hover {
+      background: var(--accent-btn-hover);
+      box-shadow: 0 0 16px var(--accent-glow);
+    }
+    .btn-sm-primary:hover::before { opacity: 1; }
+    .btn-sm-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-sm-ghost:hover { border-color: var(--border-hover); color: var(--text); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg width="26" height="26" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+      <circle cx="32" cy="32" r="28" stroke="url(#sb-ring)" stroke-width="2"/>
+      <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      <defs><linearGradient id="sb-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FB923C"/><stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/></linearGradient></defs>
+    </svg>
+    StdOut
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Navigation</div>
+    <div class="sidebar-item active">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 3h12M2 8h12M2 13h12"/></svg>
+      Incidents
+      <span class="sidebar-badge badge-critical">3</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 6h12"/></svg>
+      Stacks
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      History
+      <span class="sidebar-badge badge-count">47</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6.5 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V9.5"/><path d="M10 2h4v4M7 9l7-7"/></svg>
+      Export
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">Stacks</div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="4" rx="1"/><rect x="3" y="10" width="10" height="4" rx="1"/><path d="M8 6v4"/></svg>
+      Homelab
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="4" rx="1"/><rect x="3" y="10" width="10" height="4" rx="1"/><path d="M8 6v4"/></svg>
+      Hone (prod)
+    </div>
+  </div>
+  <div class="sidebar-spacer"></div>
+  <div class="sidebar-section">
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+      Settings
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <div class="sidebar-avatar">CS</div>
+    <div class="sidebar-user">Charlie Seay<span>Solo plan</span></div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title">Incidents</div>
+    <div class="topbar-spacer"></div>
+    <div class="search-box">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="5"/><path d="M14 14l-3.5-3.5"/></svg>
+      Search incidents...
+      <kbd>&#8984;K</kbd>
+    </div>
+    <button class="topbar-btn">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 2v10M2 7h10"/></svg>
+      New incident
+    </button>
+  </div>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Active</div>
+      <div class="stat-value critical">3</div>
+      <div class="stat-trend trend-up">+1</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">This week</div>
+      <div class="stat-value">7</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Avg resolution</div>
+      <div class="stat-value accent">23m</div>
+      <div class="stat-trend trend-down">-8m</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Total resolved</div>
+      <div class="stat-value">47</div>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <button class="filter-chip active">All</button>
+    <button class="filter-chip">Active</button>
+    <button class="filter-chip">Investigating</button>
+    <button class="filter-chip">Resolved</button>
+    <div class="filter-sep"></div>
+    <button class="filter-chip">Homelab</button>
+    <button class="filter-chip">Hone</button>
+  </div>
+
+  <div class="incident-list">
+    <div class="incident-row selected">
+      <div class="severity-bar critical"></div>
+      <div class="status-dot-wrap"><div class="status-dot active"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">n8n container OOMKilled after webhook flood</div>
+        <div class="incident-meta"><span>#INC-050</span><span class="incident-tag tag-n8n">n8n</span><span class="incident-tag tag-docker">docker</span></div>
+      </div>
+      <div class="incident-duration">1h 23m</div>
+      <div class="incident-status status-active">Active</div>
+      <div class="incident-time">14:22</div>
+    </div>
+    <div class="incident-row">
+      <div class="severity-bar high"></div>
+      <div class="status-dot-wrap"><div class="status-dot investigating"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Cloudflare Tunnel disconnected for 3 minutes</div>
+        <div class="incident-meta"><span>#INC-049</span><span class="incident-tag tag-cloudflare">cloudflare</span></div>
+      </div>
+      <div class="incident-duration">42m</div>
+      <div class="incident-status status-investigating">Investigating</div>
+      <div class="incident-time">14:58</div>
+    </div>
+    <div class="incident-row">
+      <div class="severity-bar medium"></div>
+      <div class="status-dot-wrap"><div class="status-dot monitoring"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Hone quiz score API returning 500 on retake</div>
+        <div class="incident-meta"><span>#INC-048</span><span class="incident-tag tag-astro">astro</span></div>
+      </div>
+      <div class="incident-duration">2h 10m</div>
+      <div class="incident-status status-monitoring">Monitoring</div>
+      <div class="incident-time">13:35</div>
+    </div>
+    <div class="incident-row" style="opacity: 0.55;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">nginx proxy returning 502 for hone.academy</div>
+        <div class="incident-meta"><span>#INC-047</span><span class="incident-tag tag-nginx">nginx</span></div>
+      </div>
+      <div class="incident-duration">18m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Yesterday</div>
+    </div>
+    <div class="incident-row" style="opacity: 0.55;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Authentik LDAP sync failing silently</div>
+        <div class="incident-meta"><span>#INC-046</span><span class="incident-tag tag-docker">docker</span></div>
+      </div>
+      <div class="incident-duration">45m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Yesterday</div>
+    </div>
+    <div class="incident-row" style="opacity: 0.55;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Docker subnet exhaustion on bridge network</div>
+        <div class="incident-meta"><span>#INC-045</span><span class="incident-tag tag-docker">docker</span></div>
+      </div>
+      <div class="incident-duration">1h 12m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Mar 13</div>
+    </div>
+  </div>
+</main>
+
+<!-- Detail panel -->
+<aside class="detail-panel">
+  <div class="detail-header">
+    <div class="detail-severity" style="background: var(--critical);"></div>
+    <div>
+      <div class="detail-title">n8n container OOMKilled after webhook flood</div>
+      <div class="detail-id">#INC-050 &bull; Homelab stack &bull; Opened 14:22</div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M8 2L2 8l6 6 6-6-6-6z"/></svg>
+      AI Diagnosis
+    </div>
+    <div class="ai-diagnosis">
+      <div class="ai-badge"><span class="ai-dot"></span>Sonnet</div>
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">1</span>
+        <span class="diagnosis-text"><strong>Memory limit exceeded</strong> &mdash; n8n NODE_OPTIONS lacks --max-old-space-size. Docker compose shows 1GB limit but n8n defaults to 512MB heap.</span>
+      </div>
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">2</span>
+        <span class="diagnosis-text"><strong>Webhook flood</strong> &mdash; RSS polling workflows likely overlapping. Check cron schedules for collision at the top of the hour.</span>
+      </div>
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">3</span>
+        <span class="diagnosis-text"><strong>Execution data retention</strong> &mdash; EXECUTIONS_DATA_SAVE_ON_ERROR may be accumulating error payloads without pruning.</span>
+      </div>
+    </div>
+    <div class="cmd-block">
+      <span class="cmd-copy">Copy</span>
+      <div><span class="cmd-prompt">$</span> docker logs n8n --tail 50 | grep -i "heap\|memory\|oom"</div>
+      <div><span class="cmd-prompt">$</span> docker inspect n8n | jq '.[0].HostConfig.Memory'</div>
+      <div><span class="cmd-prompt">$</span> docker stats n8n --no-stream</div>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M14 2L6 10L2 6"/></svg>
+      Similar past resolution
+    </div>
+    <div class="past-resolution">
+      <div class="past-resolution-header">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2L6 10L2 6"/></svg>
+        From #INC-031 &bull; 2 months ago
+      </div>
+      <p>Set <code>NODE_OPTIONS=--max-old-space-size=1024</code> in .env. Increased Docker memory limit to <code>2GB</code> in compose. Staggered RSS cron schedules to avoid concurrent webhook bursts.</p>
+    </div>
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 4v4l3 3"/></svg>
+      Timeline
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col"><div class="timeline-dot active"></div><div class="timeline-line"></div></div>
+      <div class="timeline-content"><div class="timeline-label">Incident created</div><div class="timeline-time">14:22 &bull; Uptime Kuma webhook</div></div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col"><div class="timeline-dot accent"></div><div class="timeline-line"></div></div>
+      <div class="timeline-content"><div class="timeline-label">AI diagnosis generated</div><div class="timeline-time">14:22 &bull; 3 root causes ranked</div></div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col"><div class="timeline-dot accent"></div><div class="timeline-line"></div></div>
+      <div class="timeline-content"><div class="timeline-label">Past resolution surfaced</div><div class="timeline-time">14:22 &bull; #INC-031 matched</div></div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col"><div class="timeline-dot"></div></div>
+      <div class="timeline-content"><div class="timeline-label" style="color: var(--text-muted);">Awaiting resolution...</div><div class="timeline-time">now</div></div>
+    </div>
+  </div>
+
+  <div class="resolution-form">
+    <div class="detail-section-title" style="margin-bottom: 10px;">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M12 3H4a1 1 0 00-1 1v8a1 1 0 001 1h8a1 1 0 001-1V4a1 1 0 00-1-1z"/><path d="M6 7h4M6 9h2"/></svg>
+      Record resolution
+    </div>
+    <textarea class="resolution-textarea" placeholder="What fixed it? (Markdown supported)"></textarea>
+    <div class="resolution-actions">
+      <button class="btn-sm btn-sm-ghost">Cancel</button>
+      <button class="btn-sm btn-sm-primary">Resolve incident</button>
+    </div>
+  </div>
+</aside>
+
+</body>
+</html>

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cascade — Dashboard Mockup</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #08080D;
+      --bg-surface: #10101A;
+      --bg-elevated: #181824;
+      --bg-hover: #1E1E2E;
+      --border: #22223A;
+      --border-hover: #33334D;
+      --text-primary: #EEEEF5;
+      --text-secondary: #8888A0;
+      --text-muted: #55556A;
+      --accent-teal: #2DD4BF;
+      --accent-teal-dim: rgba(45, 212, 191, 0.15);
+      --accent-teal-glow: rgba(45, 212, 191, 0.3);
+      --accent-blue: #3B82F6;
+      --critical: #FF4444;
+      --critical-dim: rgba(255, 68, 68, 0.12);
+      --high: #FF8C00;
+      --high-dim: rgba(255, 140, 0, 0.12);
+      --medium: #FFBB33;
+      --medium-dim: rgba(255, 187, 51, 0.12);
+      --low: #44CC88;
+      --low-dim: rgba(68, 204, 136, 0.12);
+      --resolved: #55556A;
+      --resolved-dim: rgba(85, 85, 106, 0.12);
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* --- Sidebar --- */
+    .sidebar {
+      width: 240px;
+      background: var(--bg-surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 16px 16px;
+      font-weight: 700;
+      font-size: 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .sidebar-logo svg { width: 20px; height: 20px; }
+    .sidebar-section {
+      padding: 12px 8px;
+    }
+    .sidebar-label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 0 8px 8px;
+    }
+    .sidebar-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+    .sidebar-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .sidebar-item.active { background: var(--accent-teal-dim); color: var(--accent-teal); }
+    .sidebar-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+    .sidebar-badge {
+      margin-left: auto;
+      padding: 1px 6px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .badge-critical { background: var(--critical-dim); color: var(--critical); }
+    .badge-count { background: var(--bg-elevated); color: var(--text-muted); }
+    .sidebar-spacer { flex: 1; }
+    .sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .sidebar-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: linear-gradient(135deg, var(--accent-teal), var(--accent-blue));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: #000;
+    }
+    .sidebar-user {
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .sidebar-user span {
+      display: block;
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* --- Main content --- */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .topbar-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .topbar-spacer { flex: 1; }
+    .search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 150ms;
+    }
+    .search-box:hover { border-color: var(--border-hover); }
+    .search-box svg { width: 14px; height: 14px; }
+    .search-box kbd {
+      padding: 1px 5px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+    .topbar-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      background: var(--accent-teal);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms;
+      font-family: var(--font-ui);
+    }
+    .topbar-btn:hover { background: #5EEAD4; }
+    .topbar-btn svg { width: 14px; height: 14px; }
+
+    /* Stats bar */
+    .stats-bar {
+      display: flex;
+      gap: 1px;
+      padding: 0 20px;
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stat {
+      flex: 1;
+      padding: 14px 16px;
+      background: var(--bg-surface);
+    }
+    .stat:first-child { border-radius: 0; }
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 4px;
+    }
+    .stat-value {
+      font-size: 22px;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+    }
+    .stat-value.critical { color: var(--critical); }
+    .stat-value.teal { color: var(--accent-teal); }
+
+    /* Filter bar */
+    .filter-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 20px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .filter-chip {
+      padding: 4px 12px;
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      font-size: 12px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 150ms;
+      background: transparent;
+      font-family: var(--font-ui);
+    }
+    .filter-chip:hover { border-color: var(--border-hover); color: var(--text-primary); }
+    .filter-chip.active { border-color: var(--accent-teal); color: var(--accent-teal); background: var(--accent-teal-dim); }
+
+    /* Incident list */
+    .incident-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+    .incident-list::-webkit-scrollbar { width: 6px; }
+    .incident-list::-webkit-scrollbar-track { background: transparent; }
+    .incident-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .incident-row {
+      display: grid;
+      grid-template-columns: 4px 28px 1fr 140px 100px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 150ms ease;
+    }
+    .incident-row:hover { background: var(--bg-surface); }
+
+    /* Severity left border */
+    .severity-bar {
+      width: 4px;
+      height: 32px;
+      border-radius: 2px;
+    }
+    .severity-bar.critical { background: var(--critical); }
+    .severity-bar.high { background: var(--high); }
+    .severity-bar.medium { background: var(--medium); }
+    .severity-bar.low { background: var(--low); }
+    .severity-bar.resolved { background: var(--resolved); }
+
+    /* Status dot */
+    .status-dot-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .status-dot.active { background: var(--critical); animation: pulse-dot 2s infinite; }
+    .status-dot.investigating { background: var(--high); animation: pulse-dot 2s infinite; }
+    .status-dot.monitoring { background: var(--medium); }
+    .status-dot.resolved { background: var(--resolved); }
+    @keyframes pulse-dot {
+      0%, 100% { box-shadow: 0 0 0 0 currentColor; }
+      50% { box-shadow: 0 0 0 4px rgba(255,68,68,0.2); }
+    }
+
+    .incident-info { min-width: 0; }
+    .incident-title {
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .incident-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .incident-tag {
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 500;
+    }
+    .tag-docker { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+    .tag-nginx { background: rgba(34, 197, 94, 0.15); color: #4ADE80; }
+    .tag-n8n { background: rgba(245, 158, 11, 0.15); color: #FBBF24; }
+    .tag-cloudflare { background: rgba(249, 115, 22, 0.15); color: #FB923C; }
+    .tag-astro { background: rgba(168, 85, 247, 0.15); color: #C084FC; }
+
+    .incident-duration {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-align: right;
+    }
+    .incident-status {
+      font-size: 11px;
+      font-weight: 500;
+      text-align: right;
+    }
+    .status-active { color: var(--critical); }
+    .status-investigating { color: var(--high); }
+    .status-monitoring { color: var(--medium); }
+    .status-resolved { color: var(--resolved); }
+
+    .incident-time {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* --- Detail panel (right) --- */
+    .detail-panel {
+      width: 420px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      flex-shrink: 0;
+    }
+    .detail-panel::-webkit-scrollbar { width: 6px; }
+    .detail-panel::-webkit-scrollbar-track { background: transparent; }
+    .detail-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    .detail-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .detail-severity {
+      width: 4px;
+      height: 40px;
+      border-radius: 2px;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .detail-title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .detail-id {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .detail-section {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    /* AI Diagnosis card */
+    .ai-diagnosis {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      position: relative;
+    }
+    .ai-diagnosis::before {
+      content: 'AI';
+      position: absolute;
+      top: -8px;
+      right: 12px;
+      padding: 1px 8px;
+      background: var(--accent-teal-dim);
+      border: 1px solid rgba(45, 212, 191, 0.2);
+      border-radius: 4px;
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--accent-teal);
+      letter-spacing: 0.05em;
+    }
+    .diagnosis-item {
+      display: flex;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .diagnosis-rank {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-teal);
+      font-weight: 600;
+      flex-shrink: 0;
+      width: 18px;
+    }
+    .diagnosis-text { color: var(--text-secondary); }
+    .diagnosis-text strong { color: var(--text-primary); font-weight: 500; }
+
+    /* Commands */
+    .cmd-block {
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      line-height: 1.7;
+    }
+    .cmd-prompt { color: var(--accent-teal); }
+
+    /* Timeline */
+    .timeline-item {
+      display: flex;
+      gap: 12px;
+      padding: 8px 0;
+      position: relative;
+    }
+    .timeline-dot-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 16px;
+      flex-shrink: 0;
+    }
+    .timeline-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--border-hover);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+    .timeline-dot.active { background: var(--critical); }
+    .timeline-dot.teal { background: var(--accent-teal); }
+    .timeline-line {
+      width: 1px;
+      flex: 1;
+      background: var(--border);
+      margin-top: 4px;
+    }
+    .timeline-content {
+      min-width: 0;
+    }
+    .timeline-label {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+    .timeline-time {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+    }
+
+    /* Past resolution */
+    .past-resolution {
+      background: var(--low-dim);
+      border: 1px solid rgba(68, 204, 136, 0.2);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: 8px;
+    }
+    .past-resolution-header {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--low);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .past-resolution p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+    .past-resolution code {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      background: var(--bg-primary);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: var(--text-primary);
+    }
+
+    /* Resolution form */
+    .resolution-form {
+      padding: 16px 20px;
+    }
+    .resolution-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      background: var(--bg-primary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-primary);
+      resize: vertical;
+      outline: none;
+      transition: border-color 200ms;
+    }
+    .resolution-textarea:focus { border-color: var(--accent-teal); }
+    .resolution-textarea::placeholder { color: var(--text-muted); }
+    .resolution-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      justify-content: flex-end;
+    }
+    .btn-sm {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms;
+      font-family: var(--font-ui);
+    }
+    .btn-sm-primary {
+      background: var(--accent-teal);
+      color: #000;
+      border: none;
+    }
+    .btn-sm-primary:hover { background: #5EEAD4; }
+    .btn-sm-ghost {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+    }
+    .btn-sm-ghost:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L4 7V17L12 22L20 17V7L12 2Z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      <path d="M12 8V16M8 10L12 8L16 10M8 14L12 16L16 14" stroke="var(--accent-teal)" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+    Cascade
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Navigation</div>
+    <div class="sidebar-item active">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 3h12M2 8h12M2 13h12"/></svg>
+      Incidents
+      <span class="sidebar-badge badge-critical">3</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="2" width="12" height="12" rx="2"/><path d="M2 6h12"/></svg>
+      Stacks
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      History
+      <span class="sidebar-badge badge-count">47</span>
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M6.5 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V9.5"/><path d="M10 2h4v4M7 9l7-7"/></svg>
+      Export
+    </div>
+  </div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Stacks</div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="4" rx="1"/><rect x="3" y="10" width="10" height="4" rx="1"/><path d="M8 6v4"/></svg>
+      Homelab
+    </div>
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="3" y="2" width="10" height="4" rx="1"/><rect x="3" y="10" width="10" height="4" rx="1"/><path d="M8 6v4"/></svg>
+      Hone (prod)
+    </div>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="sidebar-section">
+    <div class="sidebar-item">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="8" cy="8" r="6"/><path d="M8 5v6M5 8h6"/></svg>
+      Settings
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="sidebar-avatar">CS</div>
+    <div class="sidebar-user">
+      Charlie Seay
+      <span>Solo plan</span>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="main">
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar-title">Incidents</div>
+    <div class="topbar-spacer"></div>
+    <div class="search-box">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><circle cx="7" cy="7" r="5"/><path d="M14 14l-3.5-3.5"/></svg>
+      Search incidents...
+      <kbd>&#8984;K</kbd>
+    </div>
+    <button class="topbar-btn">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 2v10M2 7h10"/></svg>
+      New incident
+    </button>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-label">Active</div>
+      <div class="stat-value critical">3</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">This week</div>
+      <div class="stat-value">7</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Avg resolution</div>
+      <div class="stat-value teal">23m</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Total resolved</div>
+      <div class="stat-value">47</div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filter-bar">
+    <button class="filter-chip active">All</button>
+    <button class="filter-chip">Active</button>
+    <button class="filter-chip">Investigating</button>
+    <button class="filter-chip">Resolved</button>
+    <button class="filter-chip">Homelab</button>
+    <button class="filter-chip">Hone</button>
+  </div>
+
+  <!-- Incident list -->
+  <div class="incident-list">
+    <!-- Active P1 -->
+    <div class="incident-row" style="background: var(--bg-surface);">
+      <div class="severity-bar critical"></div>
+      <div class="status-dot-wrap"><div class="status-dot active"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">n8n container OOMKilled after webhook flood</div>
+        <div class="incident-meta">
+          <span>#INC-050</span>
+          <span class="incident-tag tag-n8n">n8n</span>
+          <span class="incident-tag tag-docker">docker</span>
+        </div>
+      </div>
+      <div class="incident-duration">1h 23m</div>
+      <div class="incident-status status-active">Active</div>
+      <div class="incident-time">14:22</div>
+    </div>
+
+    <!-- Active P2 -->
+    <div class="incident-row">
+      <div class="severity-bar high"></div>
+      <div class="status-dot-wrap"><div class="status-dot investigating"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Cloudflare Tunnel disconnected for 3 minutes</div>
+        <div class="incident-meta">
+          <span>#INC-049</span>
+          <span class="incident-tag tag-cloudflare">cloudflare</span>
+        </div>
+      </div>
+      <div class="incident-duration">42m</div>
+      <div class="incident-status status-investigating">Investigating</div>
+      <div class="incident-time">14:58</div>
+    </div>
+
+    <!-- Active P3 -->
+    <div class="incident-row">
+      <div class="severity-bar medium"></div>
+      <div class="status-dot-wrap"><div class="status-dot monitoring"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Hone quiz score API returning 500 on retake</div>
+        <div class="incident-meta">
+          <span>#INC-048</span>
+          <span class="incident-tag tag-astro">astro</span>
+        </div>
+      </div>
+      <div class="incident-duration">2h 10m</div>
+      <div class="incident-status status-monitoring">Monitoring</div>
+      <div class="incident-time">13:35</div>
+    </div>
+
+    <!-- Resolved -->
+    <div class="incident-row" style="opacity: 0.6;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">nginx proxy returning 502 for hone.academy</div>
+        <div class="incident-meta">
+          <span>#INC-047</span>
+          <span class="incident-tag tag-nginx">nginx</span>
+        </div>
+      </div>
+      <div class="incident-duration">18m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Yesterday</div>
+    </div>
+
+    <div class="incident-row" style="opacity: 0.6;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Authentik LDAP sync failing silently</div>
+        <div class="incident-meta">
+          <span>#INC-046</span>
+          <span class="incident-tag tag-docker">docker</span>
+        </div>
+      </div>
+      <div class="incident-duration">45m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Yesterday</div>
+    </div>
+
+    <div class="incident-row" style="opacity: 0.6;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Docker subnet exhaustion on bridge network</div>
+        <div class="incident-meta">
+          <span>#INC-045</span>
+          <span class="incident-tag tag-docker">docker</span>
+        </div>
+      </div>
+      <div class="incident-duration">1h 12m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Mar 13</div>
+    </div>
+
+    <div class="incident-row" style="opacity: 0.6;">
+      <div class="severity-bar resolved"></div>
+      <div class="status-dot-wrap"><div class="status-dot resolved"></div></div>
+      <div class="incident-info">
+        <div class="incident-title">Grafana dashboard not loading after container restart</div>
+        <div class="incident-meta">
+          <span>#INC-044</span>
+          <span class="incident-tag tag-docker">docker</span>
+        </div>
+      </div>
+      <div class="incident-duration">8m</div>
+      <div class="incident-status status-resolved">Resolved</div>
+      <div class="incident-time">Mar 12</div>
+    </div>
+  </div>
+</main>
+
+<!-- Detail panel -->
+<aside class="detail-panel">
+  <div class="detail-header">
+    <div class="detail-severity critical" style="background: var(--critical);"></div>
+    <div>
+      <div class="detail-title">n8n container OOMKilled after webhook flood</div>
+      <div class="detail-id">#INC-050 &bull; Homelab stack &bull; Opened 14:22</div>
+    </div>
+  </div>
+
+  <!-- AI Diagnosis -->
+  <div class="detail-section">
+    <div class="detail-section-title">AI Diagnosis</div>
+    <div class="ai-diagnosis">
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">1.</span>
+        <span class="diagnosis-text"><strong>Memory limit exceeded</strong> &mdash; n8n NODE_OPTIONS lacks --max-old-space-size. Docker compose shows 1GB limit but n8n defaults to 512MB heap.</span>
+      </div>
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">2.</span>
+        <span class="diagnosis-text"><strong>Webhook flood</strong> &mdash; RSS polling workflows likely overlapping. Check cron schedules for collision at the top of the hour.</span>
+      </div>
+      <div class="diagnosis-item">
+        <span class="diagnosis-rank">3.</span>
+        <span class="diagnosis-text"><strong>Execution data retention</strong> &mdash; EXECUTIONS_DATA_SAVE_ON_ERROR may be accumulating error payloads without pruning.</span>
+      </div>
+    </div>
+    <div class="cmd-block">
+      <div><span class="cmd-prompt">$</span> docker logs n8n --tail 50 | grep -i "heap\|memory\|oom"</div>
+      <div><span class="cmd-prompt">$</span> docker inspect n8n | jq '.[0].HostConfig.Memory'</div>
+      <div><span class="cmd-prompt">$</span> docker stats n8n --no-stream</div>
+    </div>
+  </div>
+
+  <!-- Past resolution -->
+  <div class="detail-section">
+    <div class="detail-section-title">Similar past resolution</div>
+    <div class="past-resolution">
+      <div class="past-resolution-header">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2L6 10L2 6"/></svg>
+        From #INC-031 &bull; 2 months ago
+      </div>
+      <p>Set <code>NODE_OPTIONS=--max-old-space-size=1024</code> in .env. Increased Docker memory limit to <code>2GB</code> in compose. Staggered RSS cron schedules to avoid concurrent webhook bursts.</p>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="detail-section">
+    <div class="detail-section-title">Timeline</div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col">
+        <div class="timeline-dot active"></div>
+        <div class="timeline-line"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-label">Incident created</div>
+        <div class="timeline-time">14:22 &bull; Uptime Kuma webhook</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col">
+        <div class="timeline-dot teal"></div>
+        <div class="timeline-line"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-label">AI diagnosis generated</div>
+        <div class="timeline-time">14:22 &bull; 3 root causes ranked</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col">
+        <div class="timeline-dot teal"></div>
+        <div class="timeline-line"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-label">Past resolution surfaced</div>
+        <div class="timeline-time">14:22 &bull; #INC-031 matched</div>
+      </div>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-dot-col">
+        <div class="timeline-dot"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-label" style="color: var(--text-muted);">Awaiting resolution...</div>
+        <div class="timeline-time">now</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Resolution form -->
+  <div class="resolution-form">
+    <div class="detail-section-title" style="margin-bottom: 10px;">Record resolution</div>
+    <textarea class="resolution-textarea" placeholder="What fixed it? (Markdown supported)"></textarea>
+    <div class="resolution-actions">
+      <button class="btn-sm btn-sm-ghost">Cancel</button>
+      <button class="btn-sm btn-sm-primary">Resolve incident</button>
+    </div>
+  </div>
+</aside>
+
+</body>
+</html>

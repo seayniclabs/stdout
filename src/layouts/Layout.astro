@@ -1,0 +1,209 @@
+---
+import '../styles/global.css';
+interface Props {
+  title?: string;
+  description?: string;
+}
+const { title = 'StdOut', description = 'AI incident companion for solo developers and self-hosters.' } = Astro.props;
+const path = Astro.url.pathname;
+const csrfToken = Astro.locals.csrfToken;
+const canonicalURL = Astro.url;
+const nav = [
+  { href: '/app', label: 'Incidents' },
+  { href: '/app/stacks', label: 'Stacks' },
+  { href: '/app/search', label: 'Search' },
+];
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <title>{title}</title>
+  <link rel="canonical" href={canonicalURL} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#F97316" />
+  <style>@import '../styles/fonts.css';</style>
+  <meta name="csrf-token" content={csrfToken} />
+</head>
+<body>
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <nav class="topnav" aria-label="Main navigation">
+    <a href="/app" class="topnav-brand">
+      <span class="logo-icon">&gt;_</span>
+      StdOut
+    </a>
+    <div class="topnav-links">
+      {nav.map(({ href, label }) => (
+        <a
+          href={href}
+          class:list={[{
+            active: href === '/app' ? path === '/app' || path === '/app/' : path.startsWith(href)
+          }]}
+        >{label}</a>
+      ))}
+    </div>
+    <div class="topnav-auth" id="authNav">
+      <a href="/app/login" class="topnav-auth-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="main" id="main-content">
+    <slot />
+  </main>
+
+  <footer style="text-align:center; padding:2rem 1rem 3rem; opacity:0.4;">
+    <div style="font-family:var(--font-mono); font-size:0.65rem; color:var(--text-muted);">
+      Built by Seaynic Labs LLC
+    </div>
+  </footer>
+
+  <div id="toastContainer" aria-live="polite" style="position:fixed; bottom:1.5rem; right:1.5rem; z-index:9999; display:flex; flex-direction:column; gap:0.5rem; pointer-events:none;"></div>
+
+  <script>
+    // Toast system
+    window.showToast = function(message: string, type: 'error' | 'success' | 'info' = 'error') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.style.cssText = `
+        pointer-events:auto; padding:0.75rem 1.25rem; border-radius:6px; font-size:0.85rem;
+        font-family:var(--font-ui); max-width:360px; opacity:0; transform:translateY(0.5rem);
+        transition:opacity 0.3s, transform 0.3s;
+      `;
+      const colors = {
+        error: 'background:#2d1215; color:#e74c3c; border:1px solid #5c2428;',
+        success: 'background:#122d15; color:#2ecc71; border:1px solid #245c28;',
+        info: 'background:#15202d; color:#3498db; border:1px solid #28405c;',
+      };
+      toast.style.cssText += colors[type];
+      toast.textContent = message;
+      container.appendChild(toast);
+      requestAnimationFrame(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; });
+      setTimeout(() => {
+        toast.style.opacity = '0'; toast.style.transform = 'translateY(0.5rem)';
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    };
+
+    // Auth-aware fetch
+    window.stdoutFetch = async function(url: string, options?: RequestInit) {
+      const res = await fetch(url, options);
+      if (res.status === 401) {
+        window.showToast('Session expired. Redirecting to login...', 'info');
+        setTimeout(() => { window.location.href = '/app/login?redirect=' + encodeURIComponent(window.location.pathname); }, 1500);
+        throw new Error('Session expired');
+      }
+      if (!res.ok) {
+        window.showToast('Something went wrong. Please try again.', 'error');
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return res;
+    };
+
+    // Auth state check
+    const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+    const csrf = csrfMeta?.getAttribute('content') || '';
+
+    fetch('/app/api/me').then(r => r.json()).then(user => {
+      const authNav = document.getElementById('authNav');
+      if (user && authNav) {
+        authNav.textContent = '';
+        const acctLink = document.createElement('a');
+        acctLink.href = '/app/account';
+        acctLink.className = 'topnav-auth-link';
+        acctLink.textContent = 'Account';
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/app/logout';
+        form.style.display = 'inline';
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = '_csrf';
+        csrfInput.value = csrf;
+        form.appendChild(csrfInput);
+        const btn = document.createElement('button');
+        btn.type = 'submit';
+        btn.className = 'topnav-auth-link';
+        btn.textContent = 'Log out';
+        btn.style.cssText = 'background:none; border:none; cursor:pointer; font:inherit; color:inherit;';
+        form.appendChild(btn);
+        authNav.append(acctLink, form);
+      }
+    }).catch(() => {});
+  </script>
+
+  <style>
+    .topnav {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-surface);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(12px);
+    }
+    .topnav-brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text);
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 26px; height: 26px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-light);
+    }
+    .topnav-links {
+      display: flex;
+      gap: 20px;
+      flex: 1;
+    }
+    .topnav-links a {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 150ms;
+    }
+    .topnav-links a:hover { color: var(--text); }
+    .topnav-links a.active { color: var(--accent-light); }
+    .topnav-auth {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .topnav-auth-link {
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: color 150ms;
+    }
+    .topnav-auth-link:hover { color: var(--text); }
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px;
+    }
+  </style>
+</body>
+</html>

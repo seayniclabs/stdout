@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StdOut — Logo Variations</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07070C;
+      --bg-surface: #0E0E18;
+      --border: #1F1F35;
+      --text: #EEEEF5;
+      --text-secondary: #9090A8;
+      --text-muted: #5A5A72;
+      --accent: #F97316;
+      --accent-light: #FB923C;
+      --accent-dark: #C2410C;
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      padding: 60px 40px;
+      -webkit-font-smoothing: antialiased;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 48px;
+    }
+    .row-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-light);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+      margin-top: 48px;
+      font-weight: 600;
+    }
+    .row-label:first-of-type { margin-top: 0; }
+    .row-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      max-width: 600px;
+    }
+    .logo-row {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .logo-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-cell span {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .logo-bg-dark {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .logo-bg-light {
+      background: #F5F5F5;
+      border: 1px solid #E0E0E0;
+      border-radius: 12px;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .wordmark-row {
+      display: flex;
+      gap: 48px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 48px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>StdOut Logo Variations</h1>
+<p class="subtitle">All variations use the Coral brand color (#F97316) with the >_ terminal prompt motif.</p>
+
+<!-- ============================================ -->
+<!-- VARIATION A: Rounded square with >_ prompt   -->
+<!-- ============================================ -->
+<div class="row-label">A — Rounded Square Icon</div>
+<p class="row-desc">Clean rounded square with the terminal prompt. The current mockup style, refined. Good for favicons, app icons, sidebar logos.</p>
+<div class="logo-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="#F97316" fill-opacity="0.12"/>
+        <rect x="4" y="4" width="56" height="56" rx="14" stroke="#F97316" stroke-opacity="0.25" stroke-width="1.5"/>
+        <path d="M20 24L28 32L20 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>64px dark</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="#F97316" fill-opacity="0.12"/>
+        <rect x="4" y="4" width="56" height="56" rx="14" stroke="#F97316" stroke-opacity="0.25" stroke-width="1.5"/>
+        <path d="M20 24L28 32L20 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>40px dark</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="24" height="24" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="#F97316" fill-opacity="0.12"/>
+        <rect x="4" y="4" width="56" height="56" rx="14" stroke="#F97316" stroke-opacity="0.25" stroke-width="1.5"/>
+        <path d="M20 24L28 32L20 40" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#FB923C" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>24px favicon</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VARIATION B: Solid coral square, dark prompt  -->
+<!-- ============================================ -->
+<div class="row-label">B — Solid Coral Icon</div>
+<p class="row-desc">Bold solid coral background with dark prompt symbol. Higher contrast, stronger presence. Works well as an app icon or standalone mark.</p>
+<div class="logo-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#grad-b)"/>
+        <path d="M20 24L28 32L20 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-b" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>64px dark bg</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-light">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#grad-b2)"/>
+        <path d="M20 24L28 32L20 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-b2" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>64px light bg</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#grad-b3)"/>
+        <path d="M20 24L28 32L20 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-b3" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>40px</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VARIATION C: Terminal window icon             -->
+<!-- ============================================ -->
+<div class="row-label">C — Terminal Window</div>
+<p class="row-desc">A miniature terminal window with title bar dots and the prompt inside. Directly references the product's developer roots.</p>
+<div class="logo-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="56" height="48" rx="8" fill="#0E0E18" stroke="#F97316" stroke-opacity="0.3" stroke-width="1.5"/>
+        <rect x="4" y="8" width="56" height="14" rx="8" fill="#151522"/>
+        <rect x="4" y="16" width="56" height="6" fill="#151522"/>
+        <line x1="4" y1="22" x2="60" y2="22" stroke="#1F1F35" stroke-width="1"/>
+        <circle cx="14" cy="15" r="2.5" fill="#EF4444" fill-opacity="0.8"/>
+        <circle cx="22" cy="15" r="2.5" fill="#EAB308" fill-opacity="0.8"/>
+        <circle cx="30" cy="15" r="2.5" fill="#22C55E" fill-opacity="0.8"/>
+        <path d="M16 31L22 37L16 43" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M27 43H40" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>64px dark</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="56" height="48" rx="8" fill="#0E0E18" stroke="#F97316" stroke-opacity="0.3" stroke-width="1.5"/>
+        <rect x="4" y="8" width="56" height="14" rx="8" fill="#151522"/>
+        <rect x="4" y="16" width="56" height="6" fill="#151522"/>
+        <line x1="4" y1="22" x2="60" y2="22" stroke="#1F1F35" stroke-width="1"/>
+        <circle cx="14" cy="15" r="2.5" fill="#EF4444" fill-opacity="0.8"/>
+        <circle cx="22" cy="15" r="2.5" fill="#EAB308" fill-opacity="0.8"/>
+        <circle cx="30" cy="15" r="2.5" fill="#22C55E" fill-opacity="0.8"/>
+        <path d="M16 31L22 37L16 43" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M27 43H40" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>40px</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-light">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="8" width="56" height="48" rx="8" fill="#07070C" stroke="#1F1F35" stroke-width="1.5"/>
+        <rect x="4" y="8" width="56" height="14" rx="8" fill="#0E0E18"/>
+        <rect x="4" y="16" width="56" height="6" fill="#0E0E18"/>
+        <line x1="4" y1="22" x2="60" y2="22" stroke="#1F1F35" stroke-width="1"/>
+        <circle cx="14" cy="15" r="2.5" fill="#EF4444"/>
+        <circle cx="22" cy="15" r="2.5" fill="#EAB308"/>
+        <circle cx="30" cy="15" r="2.5" fill="#22C55E"/>
+        <path d="M16 31L22 37L16 43" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M27 43H40" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>64px light bg</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VARIATION D: Minimal glyph mark               -->
+<!-- ============================================ -->
+<div class="row-label">D — Minimal Glyph</div>
+<p class="row-desc">Just the >_ mark with no container. Cleanest expression. Works as a standalone brand mark, watermark, or when the square context isn't needed.</p>
+<div class="logo-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 18L26 32L8 46" stroke="#F97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 46H56" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>64px dark</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 18L26 32L8 46" stroke="#F97316" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 46H56" stroke="#F97316" stroke-width="5.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>40px</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-light">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 18L26 32L8 46" stroke="#C2410C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 46H56" stroke="#C2410C" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span>64px light bg</span>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!-- VARIATION E: Circle badge                     -->
+<!-- ============================================ -->
+<div class="row-label">E — Circle Badge</div>
+<p class="row-desc">Round badge with coral gradient ring and the prompt centered. Good for avatars, social media profiles, and places where circular icons are expected.</p>
+<div class="logo-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#grad-e)" stroke-width="2"/>
+        <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-e" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>64px dark</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="40" height="40" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#grad-e2)" stroke-width="2"/>
+        <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-e2" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>40px</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-dark">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="url(#grad-e3)"/>
+        <path d="M22 24L30 32L22 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-e3" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>64px solid</span>
+  </div>
+  <div class="logo-cell">
+    <div class="logo-bg-light">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="url(#grad-e4)"/>
+        <path d="M22 24L30 32L22 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-e4" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
+    <span>64px light bg</span>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ============================================ -->
+<!-- WORDMARKS                                     -->
+<!-- ============================================ -->
+<div class="row-label">Wordmarks</div>
+<p class="row-desc">Icon + text lockups for headers, about pages, and marketing. Each pairs with the icon variation above it.</p>
+
+<div class="wordmark-row" style="margin-bottom: 32px;">
+  <div class="logo-cell">
+    <div class="logo-bg-dark" style="padding: 24px 32px; gap: 12px;">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="#F97316" fill-opacity="0.12"/>
+        <rect x="4" y="4" width="56" height="56" rx="14" stroke="#F97316" stroke-opacity="0.25" stroke-width="1.5"/>
+        <path d="M20 24L28 32L20 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #EEEEF5;">StdOut</span>
+    </div>
+    <span>A + wordmark</span>
+  </div>
+</div>
+
+<div class="wordmark-row" style="margin-bottom: 32px;">
+  <div class="logo-cell">
+    <div class="logo-bg-dark" style="padding: 24px 32px; gap: 12px;">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#grad-wm)"/>
+        <path d="M20 24L28 32L20 40" stroke="#07070C" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 40H44" stroke="#07070C" stroke-width="3.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-wm" x1="4" y1="4" x2="60" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#EA580C"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #EEEEF5;">StdOut</span>
+    </div>
+    <span>B + wordmark</span>
+  </div>
+</div>
+
+<div class="wordmark-row" style="margin-bottom: 32px;">
+  <div class="logo-cell">
+    <div class="logo-bg-dark" style="padding: 24px 32px; gap: 14px;">
+      <svg width="36" height="32" viewBox="0 0 64 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="60" height="48" rx="8" fill="#0E0E18" stroke="#F97316" stroke-opacity="0.3" stroke-width="1.5"/>
+        <rect x="2" y="4" width="60" height="14" rx="8" fill="#151522"/>
+        <rect x="2" y="12" width="60" height="6" fill="#151522"/>
+        <line x1="2" y1="18" x2="62" y2="18" stroke="#1F1F35" stroke-width="1"/>
+        <circle cx="12" cy="11" r="2.5" fill="#EF4444" fill-opacity="0.8"/>
+        <circle cx="20" cy="11" r="2.5" fill="#EAB308" fill-opacity="0.8"/>
+        <circle cx="28" cy="11" r="2.5" fill="#22C55E" fill-opacity="0.8"/>
+        <path d="M16 27L22 33L16 39" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M27 39H42" stroke="#FB923C" stroke-width="2.5" stroke-linecap="round"/>
+      </svg>
+      <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #EEEEF5;">StdOut</span>
+    </div>
+    <span>C + wordmark</span>
+  </div>
+</div>
+
+<div class="wordmark-row" style="margin-bottom: 32px;">
+  <div class="logo-cell">
+    <div class="logo-bg-dark" style="padding: 24px 32px; gap: 8px;">
+      <svg width="36" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 18L26 32L8 46" stroke="#F97316" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 46H56" stroke="#F97316" stroke-width="5" stroke-linecap="round"/>
+      </svg>
+      <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #EEEEF5;">StdOut</span>
+    </div>
+    <span>D + wordmark</span>
+  </div>
+</div>
+
+<div class="wordmark-row">
+  <div class="logo-cell">
+    <div class="logo-bg-dark" style="padding: 24px 32px; gap: 12px;">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#grad-ewm)" stroke-width="2"/>
+        <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="grad-ewm" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#FB923C"/>
+            <stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span style="font-family: 'Inter', sans-serif; font-weight: 700; font-size: 20px; letter-spacing: -0.02em; color: #EEEEF5;">StdOut</span>
+    </div>
+    <span>E + wordmark</span>
+  </div>
+</div>
+
+</body>
+</html>

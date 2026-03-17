@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StdOut — Where the answers come out</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07070C;
+      --bg-surface: #0E0E18;
+      --bg-elevated: #151522;
+      --bg-hover: #1A1A2A;
+      --border: #1F1F35;
+      --border-hover: #2D2D4A;
+      --text: #EEEEF5;
+      --text-secondary: #9090A8;
+      --text-muted: #5A5A72;
+      --accent: #F97316;
+      --accent-light: #FB923C;
+      --accent-dark: #C2410C;
+      --accent-btn: #D4560A;
+      --accent-btn-hover: #E05E00;
+      --accent-dim: rgba(249, 115, 22, 0.12);
+      --accent-glow: rgba(249, 115, 22, 0.3);
+      --accent-gradient: linear-gradient(135deg, #F97316, #EA580C);
+      --critical: #EF4444;
+      --high: #EAB308;
+      --medium: #FACC15;
+      --low: #22C55E;
+      --resolved: #55556A;
+      --font-ui: 'Inter', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font-ui);
+      background: var(--bg);
+      color: var(--text);
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* --- Dot grid background --- */
+    .dot-grid {
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(rgba(249, 115, 22, 0.07) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 100%);
+    }
+
+    /* --- Hero glow --- */
+    .hero-glow {
+      position: absolute;
+      top: -200px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 900px;
+      height: 600px;
+      background: radial-gradient(ellipse at center, rgba(249, 115, 22, 0.12) 0%, rgba(234, 88, 12, 0.04) 40%, transparent 70%);
+      pointer-events: none;
+      animation: glowPulse 6s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+      50% { opacity: 0.7; transform: translateX(-50%) scale(1.05); }
+    }
+
+    /* --- Nav --- */
+    nav {
+      position: fixed;
+      top: 12px;
+      left: 16px;
+      right: 16px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: rgba(7, 7, 12, 0.8);
+      backdrop-filter: blur(24px) saturate(1.4);
+      -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(31, 31, 53, 0.6);
+      border-radius: 14px;
+      transition: border-color 300ms;
+    }
+    nav:hover { border-color: var(--border-hover); }
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.02em;
+    }
+    .nav-logo svg { flex-shrink: 0; }
+    .nav-links { display: flex; gap: 28px; align-items: center; }
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      font-weight: 500;
+      transition: color 200ms;
+      position: relative;
+    }
+    .nav-links a:hover { color: var(--text); }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: -4px;
+      left: 0;
+      width: 0;
+      height: 1px;
+      background: var(--accent);
+      transition: width 300ms;
+    }
+    .nav-links a:hover::after { width: 100%; }
+    .nav-cta {
+      padding: 7px 18px;
+      background: var(--accent-btn);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 200ms;
+      text-decoration: none;
+    }
+    .nav-cta:hover { background: var(--accent-btn-hover); box-shadow: 0 0 24px var(--accent-glow); }
+
+    /* --- Entrance animations --- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.96); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    .animate-fade-up {
+      opacity: 0;
+      animation: fadeUp 0.7s ease-out forwards;
+    }
+    .animate-scale-in {
+      opacity: 0;
+      animation: scaleIn 0.8s ease-out forwards;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.35s; }
+    .delay-4 { animation-delay: 0.5s; }
+    .delay-5 { animation-delay: 0.65s; }
+    .delay-6 { animation-delay: 0.8s; }
+
+    /* --- Hero --- */
+    .hero {
+      position: relative;
+      padding: 160px 24px 80px;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 16px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      border-radius: 100px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--accent-light);
+      font-family: var(--font-mono);
+      margin-bottom: 28px;
+      backdrop-filter: blur(8px);
+    }
+    .hero-badge .pulse {
+      width: 6px; height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent-glow); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 8px transparent; }
+    }
+    .hero h1 {
+      font-size: clamp(38px, 5.5vw, 64px);
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+    .hero .gradient-text {
+      background: linear-gradient(135deg, #FB923C 0%, #F97316 40%, #EA580C 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      font-size: 17px;
+      color: var(--text-secondary);
+      max-width: 520px;
+      margin: 0 auto 40px;
+      line-height: 1.7;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      padding: 13px 30px;
+      background: var(--accent-btn);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 250ms;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-primary::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+      opacity: 0;
+      transition: opacity 250ms;
+    }
+    .btn-primary:hover {
+      background: var(--accent-btn-hover);
+      box-shadow: 0 0 40px var(--accent-glow), 0 8px 32px rgba(249, 115, 22, 0.2);
+      transform: translateY(-1px);
+    }
+    .btn-primary:hover::before { opacity: 1; }
+    .btn-secondary {
+      padding: 13px 30px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 250ms;
+      text-decoration: none;
+    }
+    .btn-secondary:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-surface);
+      transform: translateY(-1px);
+    }
+
+    /* --- Terminal demo --- */
+    .terminal-demo {
+      max-width: 700px;
+      margin: 64px auto 0;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      background: var(--bg-surface);
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.5),
+        0 0 120px rgba(249, 115, 22, 0.06),
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+      position: relative;
+    }
+    .terminal-demo::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 15px;
+      padding: 1px;
+      background: linear-gradient(180deg, rgba(249, 115, 22, 0.15) 0%, transparent 40%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 13px 16px;
+      background: var(--bg-elevated);
+      border-bottom: 1px solid var(--border);
+    }
+    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .terminal-dot.r { background: #FF5F57; }
+    .terminal-dot.y { background: #FEBC2E; }
+    .terminal-dot.g { background: #28C840; }
+    .terminal-title {
+      flex: 1;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+    }
+    .terminal-body {
+      padding: 20px 24px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 2;
+    }
+    .terminal-line {
+      opacity: 0;
+      animation: terminalLine 0.3s ease-out forwards;
+    }
+    @keyframes terminalLine {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .tl-1 { animation-delay: 0.8s; }
+    .tl-2 { animation-delay: 1.2s; }
+    .tl-3 { animation-delay: 1.8s; }
+    .tl-4 { animation-delay: 2.1s; }
+    .tl-5 { animation-delay: 2.6s; }
+    .tl-6 { animation-delay: 2.9s; }
+    .tl-7 { animation-delay: 3.2s; }
+    .tl-8 { animation-delay: 3.5s; }
+    .tl-9 { animation-delay: 4.0s; }
+    .tl-10 { animation-delay: 4.3s; }
+    .tl-11 { animation-delay: 4.6s; }
+    .tl-12 { animation-delay: 5.0s; }
+    .t-prompt { color: var(--accent-light); }
+    .t-cmd { color: var(--text); }
+    .t-out { color: var(--text-secondary); }
+    .t-ok { color: var(--low); }
+    .t-warn { color: var(--high); }
+    .t-dim { color: var(--text-muted); }
+    .t-cursor {
+      display: inline-block;
+      width: 8px; height: 16px;
+      background: var(--accent);
+      vertical-align: text-bottom;
+      animation: blink 1s step-end infinite;
+      border-radius: 1px;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    /* --- Stats row --- */
+    .stats-row {
+      display: flex;
+      gap: 1px;
+      max-width: 800px;
+      margin: 80px auto 0;
+      background: var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .stat-card {
+      flex: 1;
+      padding: 28px 24px;
+      background: var(--bg-surface);
+      text-align: center;
+      transition: background 300ms;
+    }
+    .stat-card:hover { background: var(--bg-elevated); }
+    .stat-number {
+      font-size: 36px;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      letter-spacing: -0.03em;
+      margin-bottom: 6px;
+    }
+    .stat-number.accent { color: var(--accent-light); }
+    .stat-number.green { color: var(--low); }
+    .stat-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 500;
+    }
+
+    /* --- Section --- */
+    section {
+      padding: 100px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-light);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      line-height: 1.15;
+    }
+    .section-desc {
+      font-size: 16px;
+      color: var(--text-secondary);
+      max-width: 540px;
+      margin-bottom: 52px;
+      line-height: 1.65;
+    }
+
+    /* --- Feature cards --- */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .feature-card {
+      padding: 28px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: all 350ms cubic-bezier(0.4, 0, 0.2, 1);
+      cursor: default;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0), transparent);
+      transition: background 350ms;
+    }
+    .feature-card:hover {
+      border-color: rgba(249, 115, 22, 0.25);
+      background: var(--bg-elevated);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3), 0 0 60px rgba(249, 115, 22, 0.04);
+    }
+    .feature-card:hover::before {
+      background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.4), transparent);
+    }
+    .feature-card.wide { grid-column: span 2; }
+    .feature-card .icon-wrap {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(249, 115, 22, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+      transition: all 300ms;
+    }
+    .feature-card:hover .icon-wrap {
+      background: rgba(249, 115, 22, 0.18);
+      border-color: rgba(249, 115, 22, 0.3);
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.15);
+    }
+    .feature-card .icon-wrap svg { width: 20px; height: 20px; color: var(--accent-light); }
+    .feature-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+    .feature-card.wide::after {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 220px;
+      height: 220px;
+      background: radial-gradient(circle, rgba(249, 115, 22, 0.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* --- Severity demo strip --- */
+    .severity-demo {
+      display: flex;
+      gap: 10px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .severity-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      font-family: var(--font-mono);
+      transition: transform 200ms;
+    }
+    .severity-pill:hover { transform: scale(1.05); }
+    .severity-pill .dot { width: 6px; height: 6px; border-radius: 50%; }
+    .sev-p1 { background: rgba(239,68,68,0.1); color: var(--critical); }
+    .sev-p1 .dot { background: var(--critical); }
+    .sev-p2 { background: rgba(234,179,8,0.1); color: var(--high); }
+    .sev-p2 .dot { background: var(--high); }
+    .sev-p3 { background: rgba(250,204,21,0.1); color: var(--medium); }
+    .sev-p3 .dot { background: var(--medium); }
+    .sev-ok { background: rgba(34,197,94,0.1); color: var(--low); }
+    .sev-ok .dot { background: var(--low); }
+
+    /* --- How it works --- */
+    .how-it-works {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-top: 52px;
+    }
+    .step-card {
+      padding: 32px 28px;
+      background: var(--bg-surface);
+      position: relative;
+      transition: background 300ms;
+    }
+    .step-card:hover { background: var(--bg-elevated); }
+    .step-number {
+      font-family: var(--font-mono);
+      font-size: 48px;
+      font-weight: 800;
+      color: rgba(249, 115, 22, 0.1);
+      line-height: 1;
+      margin-bottom: 12px;
+    }
+    .step-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .step-card p {
+      font-size: 13px;
+      color: var(--text-secondary);
+      line-height: 1.65;
+    }
+
+    /* --- Pricing --- */
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+    .price-card {
+      padding: 28px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      transition: all 350ms;
+      position: relative;
+      overflow: hidden;
+    }
+    .price-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+    }
+    .price-card.featured {
+      border-color: transparent;
+      position: relative;
+    }
+    .price-card.featured::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 13px;
+      padding: 1px;
+      background: linear-gradient(180deg, var(--accent) 0%, rgba(249, 115, 22, 0.2) 60%, transparent 100%);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+    }
+    .price-card.featured::after {
+      content: '';
+      position: absolute;
+      top: -40px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 120px;
+      background: radial-gradient(ellipse, rgba(249, 115, 22, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .price-card.featured:hover {
+      box-shadow: 0 0 60px rgba(249, 115, 22, 0.1);
+    }
+    .price-popular {
+      display: inline-block;
+      padding: 3px 10px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(249, 115, 22, 0.2);
+      border-radius: 100px;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--accent-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 14px;
+    }
+    .price-tier {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .price-card.featured .price-tier { color: var(--accent-light); }
+    .price-amount {
+      font-size: 38px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 4px;
+    }
+    .price-amount span { font-size: 14px; font-weight: 400; color: var(--text-muted); }
+    .price-desc {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+    }
+    .price-card ul { list-style: none; margin-bottom: 26px; }
+    .price-card li {
+      font-size: 13px;
+      color: var(--text-secondary);
+      padding: 6px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .price-card li::before {
+      content: '';
+      width: 4px; height: 4px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    .price-btn {
+      display: block;
+      width: 100%;
+      padding: 11px;
+      text-align: center;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 250ms;
+      text-decoration: none;
+      font-family: var(--font-ui);
+    }
+    .price-btn-primary {
+      background: var(--accent-btn);
+      color: #fff;
+      border: none;
+      position: relative;
+      overflow: hidden;
+    }
+    .price-btn-primary:hover {
+      background: var(--accent-btn-hover);
+      box-shadow: 0 0 30px var(--accent-glow);
+      transform: translateY(-1px);
+    }
+    .price-btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .price-btn-ghost:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-elevated);
+    }
+
+    /* --- Testimonial / social proof --- */
+    .social-proof {
+      text-align: center;
+      padding: 80px 24px 40px;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .social-proof blockquote {
+      font-size: 20px;
+      font-weight: 500;
+      font-style: italic;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .social-proof blockquote::before {
+      content: '"';
+      position: absolute;
+      top: -20px;
+      left: -10px;
+      font-size: 64px;
+      font-family: Georgia, serif;
+      color: rgba(249, 115, 22, 0.2);
+      font-style: normal;
+      line-height: 1;
+    }
+    .social-proof .attribution {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .social-proof .attribution strong { color: var(--text-secondary); }
+
+    /* --- CTA section --- */
+    .cta-section {
+      text-align: center;
+      padding: 80px 24px 120px;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 400px;
+      height: 200px;
+      background: radial-gradient(ellipse, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-section h2 {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 14px;
+    }
+    .cta-section p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin-bottom: 32px;
+    }
+
+    /* --- Footer --- */
+    footer {
+      padding: 40px 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    footer .left {
+      font-size: 12px;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    footer .left strong { color: var(--text-secondary); font-weight: 500; }
+    footer .right { display: flex; gap: 24px; }
+    footer a {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 200ms;
+    }
+    footer a:hover { color: var(--text-secondary); }
+
+    /* --- Responsive --- */
+    @media (max-width: 900px) {
+      .pricing-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .features { grid-template-columns: 1fr; }
+      .feature-card.wide { grid-column: span 1; }
+      .stats-row { flex-direction: column; border-radius: 12px; }
+      .how-it-works { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; max-width: 360px; margin-left: auto; margin-right: auto; }
+      nav { left: 8px; right: 8px; }
+      .nav-links { display: none; }
+      footer { flex-direction: column; gap: 16px; text-align: center; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-delay: 0ms !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="dot-grid"></div>
+<div class="hero-glow"></div>
+
+<nav>
+  <div class="nav-logo">
+    <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+      <circle cx="32" cy="32" r="28" stroke="url(#nav-ring)" stroke-width="2"/>
+      <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+      <defs><linearGradient id="nav-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FB923C"/><stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/></linearGradient></defs>
+    </svg>
+    StdOut
+  </div>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how">How it works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#">Docs</a>
+    <a href="#" class="nav-cta">Get started</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge animate-fade-up delay-1">
+    <span class="pulse"></span>
+    Now in early access
+  </div>
+  <h1 class="animate-fade-up delay-2">You've already solved this.<br><span class="gradient-text">You just don't remember.</span></h1>
+  <p class="animate-fade-up delay-3">The AI incident companion that knows your stack, remembers every fix, and turns past resolutions into future answers.</p>
+  <div class="hero-actions animate-fade-up delay-4">
+    <a href="#" class="btn-primary">
+      Start free
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </a>
+    <a href="#" class="btn-secondary">Self-host for $49</a>
+  </div>
+
+  <div class="terminal-demo animate-scale-in delay-5">
+    <div class="terminal-header">
+      <div class="terminal-dot r"></div>
+      <div class="terminal-dot y"></div>
+      <div class="terminal-dot g"></div>
+      <span class="terminal-title">stdout &mdash; incident #50</span>
+    </div>
+    <div class="terminal-body">
+      <div class="terminal-line tl-1"><span class="t-prompt">$</span> <span class="t-cmd">stdout log "n8n OOMKilled after webhook flood"</span></div>
+      <div class="terminal-line tl-2">&nbsp;</div>
+      <div class="terminal-line tl-3"><span class="t-dim">searching 47 past incidents...</span></div>
+      <div class="terminal-line tl-4"><span class="t-ok">&#10003; 2 similar resolutions found</span></div>
+      <div class="terminal-line tl-5">&nbsp;</div>
+      <div class="terminal-line tl-6"><span class="t-warn">diagnosis</span> <span class="t-dim">(using Homelab stack context):</span></div>
+      <div class="terminal-line tl-7"><span class="t-out"> 1. NODE_OPTIONS missing --max-old-space-size (default 512MB)</span></div>
+      <div class="terminal-line tl-8"><span class="t-out"> 2. RSS cron overlap flooding webhooks at :00</span></div>
+      <div class="terminal-line tl-9"><span class="t-out"> 3. Docker mem_limit=1GB, should be 2GB</span></div>
+      <div class="terminal-line tl-10">&nbsp;</div>
+      <div class="terminal-line tl-11"><span class="t-dim">from #INC-031 (Jan 15):</span></div>
+      <div class="terminal-line tl-12"><span class="t-ok">fix: NODE_OPTIONS=--max-old-space-size=1024 in .env</span><span class="t-cursor"></span></div>
+    </div>
+  </div>
+
+  <div class="stats-row animate-fade-up delay-6">
+    <div class="stat-card">
+      <div class="stat-number accent">23m</div>
+      <div class="stat-label">Avg resolution time</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number">47</div>
+      <div class="stat-label">Incidents resolved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number green">89%</div>
+      <div class="stat-label">Had a past match</div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="section-label">How it works</div>
+  <div class="section-title">Three steps to never solve the same thing twice.</div>
+  <div class="section-desc">No onboarding wizard. No 30-minute setup. Describe your stack, log what broke, and let your own history do the work.</div>
+
+  <div class="how-it-works">
+    <div class="step-card">
+      <div class="step-number">01</div>
+      <h3>Describe your stack</h3>
+      <p>Tell StdOut what you're running. Docker containers, reverse proxies, databases, monitoring tools. Free-text Markdown — not a form with 40 dropdowns.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">02</div>
+      <h3>Log the incident</h3>
+      <p>Paste the error, describe what happened. StdOut searches your history for similar incidents and surfaces past resolutions before the AI even runs.</p>
+    </div>
+    <div class="step-card">
+      <div class="step-number">03</div>
+      <h3>Get stack-aware diagnosis</h3>
+      <p>AI diagnosis injected with your full stack context and past fixes. Ranked root causes, logs to check, exact commands to run. Then record what fixed it.</p>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="section-label">Features</div>
+  <div class="section-title">Where the answers come out.</div>
+  <div class="section-desc">Describe your stack once. Log incidents as they happen. Get diagnosis from your own history first, AI second.</div>
+
+  <div class="features">
+    <div class="feature-card wide">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7L12 12L22 7L12 2Z"/><path d="M2 17L12 22L22 17"/><path d="M2 12L12 17L22 12"/></svg>
+      </div>
+      <h3>Stack-aware AI diagnosis</h3>
+      <p>Your infrastructure context is injected into every diagnosis. StdOut knows your nginx sits behind Cloudflare Tunnel, your n8n runs on port 5678, and your Docker subnet has exhausted before. Generic AI gives generic answers. StdOut gives yours.</p>
+      <div class="severity-demo">
+        <span class="severity-pill sev-p1"><span class="dot"></span>P1 Critical</span>
+        <span class="severity-pill sev-p2"><span class="dot"></span>P2 High</span>
+        <span class="severity-pill sev-p3"><span class="dot"></span>P3 Medium</span>
+        <span class="severity-pill sev-ok"><span class="dot"></span>Resolved</span>
+      </div>
+    </div>
+    <div class="feature-card">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21L16.65 16.65"/></svg>
+      </div>
+      <h3>Resolution search</h3>
+      <p>Full-text search over every incident and resolution. Your own answers, surfaced instantly before the AI even runs.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/></svg>
+      </div>
+      <h3>Webhook integrations</h3>
+      <p>Uptime Kuma, Grafana, n8n — when your monitoring fires, StdOut starts diagnosing before you open a terminal.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      </div>
+      <h3>Self-hostable</h3>
+      <p>One Docker Compose file. Your data on your machine. $49 one-time, no recurring fees, no phone-home.</p>
+    </div>
+    <div class="feature-card wide">
+      <div class="icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+      </div>
+      <h3>Export everything</h3>
+      <p>Markdown export of your full incident history. Your data, your format, zero lock-in. The runbook is yours whether you stay or go.</p>
+    </div>
+  </div>
+</section>
+
+<div class="social-proof">
+  <blockquote>I used to paste the same Docker errors into Claude every other week. Now my own past fixes show up before AI even runs. StdOut is the runbook I always meant to build.</blockquote>
+  <div class="attribution">&mdash; <strong>Solo developer</strong>, running 15+ containers on a homelab</div>
+</div>
+
+<section id="pricing">
+  <div class="section-label">Pricing</div>
+  <div class="section-title">Start free. Pay when it saves your time.</div>
+  <div class="section-desc">No credit card required. Free tier is free forever.</div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-tier">Free</div>
+      <div class="price-amount">$0</div>
+      <div class="price-desc">Try it out</div>
+      <ul>
+        <li>1 stack</li>
+        <li>10 incidents / month</li>
+        <li>Basic AI diagnosis</li>
+      </ul>
+      <a href="#" class="price-btn price-btn-ghost">Get started</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-popular">Most popular</div>
+      <div class="price-tier">Solo</div>
+      <div class="price-amount">$9 <span>/mo</span></div>
+      <div class="price-desc">For the serious operator</div>
+      <ul>
+        <li>Unlimited stacks</li>
+        <li>Unlimited incidents</li>
+        <li>Advanced AI (Sonnet)</li>
+        <li>Full history search</li>
+        <li>Webhook integrations</li>
+        <li>Markdown export</li>
+      </ul>
+      <a href="#" class="price-btn price-btn-primary">Start free trial</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Team</div>
+      <div class="price-amount">$19 <span>/mo</span></div>
+      <div class="price-desc">Small shops</div>
+      <ul>
+        <li>Up to 5 users</li>
+        <li>Shared stack context</li>
+        <li>Shared resolutions</li>
+        <li>Everything in Solo</li>
+      </ul>
+      <a href="#" class="price-btn price-btn-ghost">Contact us</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Self-Host</div>
+      <div class="price-amount">$49</div>
+      <div class="price-desc">Your infra, your data</div>
+      <ul>
+        <li>Docker Compose package</li>
+        <li>Bring your own API key</li>
+        <li>Full source access</li>
+        <li>No recurring fees</li>
+      </ul>
+      <a href="#" class="price-btn price-btn-ghost">Download</a>
+    </div>
+  </div>
+</section>
+
+<div class="cta-section">
+  <h2>Stop re-solving the same incidents.</h2>
+  <p>Your past fixes are sitting in Slack threads and forgotten notes. Put them to work.</p>
+  <div class="hero-actions">
+    <a href="#" class="btn-primary">
+      Start free
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3L11 8L6 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </a>
+    <a href="#" class="btn-secondary">View documentation</a>
+  </div>
+</div>
+
+<footer>
+  <div class="left">Built by <strong>Seaynic Labs LLC</strong></div>
+  <div class="right">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">GitHub</a>
+    <a href="#">seayniclabs.com</a>
+  </div>
+</footer>
+
+</body>
+</html>

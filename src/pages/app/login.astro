@@ -1,0 +1,89 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { getDb, schema } from '../../lib/db';
+import { verifyPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
+import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
+import { eq } from 'drizzle-orm';
+
+let error = '';
+let email = '';
+
+const rawRedirect = Astro.url.searchParams.get('redirect') || '';
+const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const csrfToken = form.get('_csrf') as string || '';
+
+  if (!validateCsrf(csrfToken, Astro.cookies)) {
+    error = 'Invalid form submission. Please try again.';
+  } else {
+    email = (form.get('email') as string || '').trim().toLowerCase();
+    const password = form.get('password') as string || '';
+    const formRedirect = (form.get('redirect') as string || '').trim();
+    const destination = (formRedirect.startsWith('/') && !formRedirect.startsWith('//')) ? formRedirect : '/app';
+
+    if (!email || !password) {
+      error = 'Email and password are required.';
+    } else {
+      const lockout = isAccountLocked(email);
+      if (lockout.locked) {
+        const minutes = Math.ceil((lockout.retryAfterSec || 0) / 60);
+        error = `Account temporarily locked. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
+      } else {
+        const user = getDb().select().from(schema.users).where(eq(schema.users.email, email)).get();
+        if (!user) {
+          recordFailedLogin(email);
+          error = 'Invalid email or password.';
+        } else {
+          const valid = await verifyPassword(user.passwordHash, password);
+          if (!valid) {
+            recordFailedLogin(email);
+            error = 'Invalid email or password.';
+          } else {
+            resetLoginAttempts(email);
+            const sessionId = await createSession(user.id);
+            Astro.cookies.set(SESSION_COOKIE, sessionId, {
+              path: '/',
+              httpOnly: true,
+              secure: true,
+              sameSite: 'lax',
+              maxAge: 30 * 24 * 60 * 60,
+              domain: import.meta.env.DEV ? undefined : '.seayniclabs.com',
+            });
+            return Astro.redirect(destination);
+          }
+        }
+      }
+    }
+  }
+}
+
+if (Astro.locals.user) return Astro.redirect('/app');
+---
+<Layout title="Log in — StdOut">
+  <div class="auth-page">
+    <h1>Welcome back</h1>
+    <p class="auth-subtitle">Log in to your incident companion.</p>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+      <input type="hidden" name="redirect" value={redirectTo} />
+      <label>
+        <span>Email</span>
+        <input type="email" name="email" value={email} required autocomplete="email" />
+      </label>
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" required autocomplete="current-password" />
+      </label>
+      <button type="submit">Log in</button>
+    </form>
+
+    <p class="auth-forgot"><a href="/app/forgot-password">Forgot your password?</a></p>
+    <p class="auth-switch">Don't have an account? <a href={`/app/register${redirectTo !== '/app' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}>Register</a></p>
+  </div>
+</Layout>
