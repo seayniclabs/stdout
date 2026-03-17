@@ -150,10 +150,12 @@ const user = Astro.locals.user;
         <div class="price-amount mono">$0</div>
         <div class="price-items">
           <div class="pi">1 stack</div>
-          <div class="pi">10 incidents/month</div>
+          <div class="pi">10 incidents / month</div>
           <div class="pi">AI diagnosis (Haiku)</div>
-          <div class="pi">100 MB docs</div>
+          <div class="pi">100 MB knowledge base</div>
           <div class="pi">Full-text search</div>
+          <div class="pi">Resolution matching</div>
+          <div class="pi">&nbsp;</div>
         </div>
         <a href="/app/register" class="btn btn-secondary" style="width:100%;">Get started</a>
       </div>
@@ -164,10 +166,10 @@ const user = Astro.locals.user;
           <div class="pi">Unlimited stacks</div>
           <div class="pi">Unlimited incidents</div>
           <div class="pi">AI diagnosis (Sonnet)</div>
-          <div class="pi">1 GB docs + knowledge base</div>
-          <div class="pi">Runbook templates</div>
-          <div class="pi">Encrypted backups (3x)</div>
-          <div class="pi">JSON + Markdown export</div>
+          <div class="pi">1 GB knowledge base</div>
+          <div class="pi">Encrypted backups</div>
+          <div class="pi">Workspace branding</div>
+          <div class="pi">Data export</div>
         </div>
         <a href="/app/register" class="btn btn-primary" style="width:100%;">Start free trial</a>
       </div>
@@ -176,24 +178,26 @@ const user = Astro.locals.user;
         <div class="price-amount mono">$24<span class="price-per">/mo</span></div>
         <div class="price-items">
           <div class="pi">Up to 5 seats</div>
-          <div class="pi">Role-based access (RBAC)</div>
-          <div class="pi">Shared stacks + knowledge base</div>
-          <div class="pi">One person fixes it, everyone learns</div>
-          <div class="pi">5 GB docs</div>
+          <div class="pi">Role-based access</div>
+          <div class="pi">Shared stacks + docs</div>
+          <div class="pi">5 GB knowledge base</div>
+          <div class="pi">Team resolution history</div>
+          <div class="pi">Email + webhook alerts</div>
           <div class="pi">Everything in Solo</div>
         </div>
         <a href="/app/register" class="btn btn-secondary" style="width:100%;">Coming soon</a>
       </div>
       <div class="price-card">
-        <div class="price-tier">Self-Host</div>
-        <div class="price-badge mono">Launch price</div>
+        <div class="price-tier">Self-Host <span class="price-badge mono">Launch</span></div>
         <div class="price-amount mono">$79<span class="price-per"> once</span></div>
         <div class="price-items">
           <div class="pi">Everything in Solo</div>
           <div class="pi">Run on your infra</div>
-          <div class="pi">Docker Compose package</div>
+          <div class="pi">Docker Compose deploy</div>
           <div class="pi">Unlimited storage</div>
-          <div class="pi">Data never leaves your network</div>
+          <div class="pi">Your data, your network</div>
+          <div class="pi">No subscription</div>
+          <div class="pi">&nbsp;</div>
         </div>
         <a href="/app/register" class="btn btn-secondary" style="width:100%;">Coming soon</a>
       </div>
@@ -286,15 +290,15 @@ const user = Astro.locals.user;
   .pricing { max-width: 1000px; margin: 0 auto; padding: 50px 24px; }
   .pricing h2 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
   .pricing-sub { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 36px; }
-  .price-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
-  .price-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; }
+  .price-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: stretch; }
+  .price-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; display: flex; flex-direction: column; }
   .price-card.featured { border-color: var(--accent); box-shadow: 0 0 40px rgba(249,115,22,0.08); }
-  .price-tier { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .price-tier { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
   .price-amount { font-size: 32px; font-weight: 800; margin-bottom: 20px; }
   .price-per { font-size: 13px; font-weight: 400; color: var(--text-muted); }
-  .price-badge { font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-bottom: 4px; }
-  .price-items { margin-bottom: 24px; }
-  .pi { font-size: 12px; color: var(--text-secondary); padding: 5px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
+  .price-badge { font-size: 9px; color: var(--accent); background: var(--accent-dim); padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .price-items { margin-bottom: 24px; flex: 1; }
+  .pi { font-size: 12px; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); min-height: 32px; display: flex; align-items: center; justify-content: center; }
   .pi:last-child { border-bottom: none; }
 
   /* Bottom CTA */
