@@ -1,0 +1,161 @@
+---
+import '../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut Privacy Policy — how we handle your data." />
+  <title>Privacy Policy — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/terms" class="ln-link">Terms</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Privacy Policy</h1>
+    <p class="updated mono">Last updated: March 17, 2026</p>
+
+    <p>Seaynic Labs LLC ("we," "us," "our") operates StdOut (the "Service"), an AI-powered incident companion available at stdout.seayniclabs.com and as a self-hosted package.</p>
+
+    <h2>1. Information We Collect</h2>
+
+    <h3>Account Information</h3>
+    <p>When you create an account, we collect your email address, display name, and a password (stored as an Argon2id hash — we never store your plaintext password).</p>
+
+    <h3>Incident & Stack Data</h3>
+    <p>You provide:</p>
+    <ul>
+      <li><strong>Stack descriptions</strong> — free-text descriptions of your infrastructure (containers, ports, services, dependencies)</li>
+      <li><strong>Incidents</strong> — error logs, symptoms, and context you paste or type</li>
+      <li><strong>Resolutions</strong> — descriptions of what fixed each incident</li>
+      <li><strong>Knowledge base documents</strong> — runbooks, post-mortems, guides, and notes</li>
+    </ul>
+
+    <h3>AI Diagnostic Data</h3>
+    <p>When you use AI Diagnosis, we send the following to Anthropic's Claude API:</p>
+    <ul>
+      <li>Your stack description (infrastructure context)</li>
+      <li>The current incident description and error output</li>
+      <li>Up to 3 matching past resolutions (for context)</li>
+    </ul>
+    <p>Anthropic processes this data under their <a href="https://www.anthropic.com/policies/privacy" target="_blank" rel="noopener">API Privacy Policy</a>. Anthropic does not use API data to train their models.</p>
+
+    <h3>Technical Data</h3>
+    <ul>
+      <li><strong>Session cookie</strong> (<code>sl_session</code>) — HttpOnly, Secure, SameSite=Lax, 30-day expiry</li>
+      <li><strong>CSRF cookie</strong> (<code>sl_csrf</code>) — HttpOnly, Secure, SameSite=Lax, 2-hour expiry</li>
+      <li><strong>IP address</strong> — logged for rate limiting, security, and audit purposes</li>
+    </ul>
+    <p>We do not use tracking pixels, third-party analytics, or advertising cookies.</p>
+
+    <h2>2. How We Use Your Data</h2>
+    <ul>
+      <li>To provide the Service (incident tracking, AI diagnosis, search, knowledge base)</li>
+      <li>To send transactional emails (password reset, email verification, notifications you configure)</li>
+      <li>To prevent abuse (rate limiting, account lockout, bot detection)</li>
+      <li>To improve the Service (aggregate, anonymized usage patterns — never individual data)</li>
+    </ul>
+    <p>We do <strong>not</strong> sell your data. We do <strong>not</strong> share it with marketing partners.</p>
+
+    <h2>3. Sub-Processors</h2>
+    <p>Your data may be processed by:</p>
+    <table>
+      <thead><tr><th>Provider</th><th>Purpose</th><th>Data shared</th></tr></thead>
+      <tbody>
+        <tr><td>Anthropic (Claude API)</td><td>AI diagnosis</td><td>Stack context + incident description (on your request only)</td></tr>
+        <tr><td>Resend</td><td>Transactional email</td><td>Email address</td></tr>
+        <tr><td>Stripe (future)</td><td>Payment processing</td><td>Payment info (tokenized, PCI DSS compliant)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>4. Data Isolation</h2>
+    <p>Each user's data is stored in a physically separate, encrypted SQLite database. Your data is not commingled with other users' data — it is isolated at the file level, not just filtered by queries.</p>
+
+    <h2>5. Encrypted Backups</h2>
+    <p>We maintain up to 3 encrypted backup snapshots of your data. Backups are encrypted with AES-256-GCM using a per-tenant derived key. You can create, list, and restore backups from your account settings.</p>
+
+    <h2>6. Data Retention & Deletion</h2>
+    <ul>
+      <li><strong>Active accounts:</strong> data retained while your account is active</li>
+      <li><strong>Account deletion:</strong> when you delete your account, it is deactivated immediately. Your data is retained for 14 days to allow for recovery (available as a paid support service), then permanently purged</li>
+      <li><strong>Sessions:</strong> expired sessions are automatically cleaned up</li>
+      <li><strong>Audit logs:</strong> retained for 1 year for security purposes</li>
+    </ul>
+
+    <h2>7. Your Rights</h2>
+    <p>You can:</p>
+    <ul>
+      <li><strong>Export</strong> all your data as JSON (Account Settings &rarr; Export)</li>
+      <li><strong>Delete</strong> your account and all associated data (Account Settings &rarr; Danger Zone)</li>
+      <li><strong>Disable AI Diagnosis</strong> to prevent data from being sent to Anthropic (simply don't use the Diagnose button)</li>
+    </ul>
+    <p>For EU/EEA users: we process your data under the legal basis of <strong>contract</strong> (necessary to provide the Service). You have rights under GDPR including access, rectification, erasure, portability, and objection. Exercise these through your account settings or by contacting us.</p>
+
+    <h2>8. International Transfers</h2>
+    <p>AI diagnosis data is processed by Anthropic, a US-based company. Transfers are governed by the EU-US Data Privacy Framework. Self-hosted users can avoid international transfers entirely.</p>
+
+    <h2>9. Children's Privacy</h2>
+    <p>StdOut is not intended for users under 13. We do not knowingly collect data from children.</p>
+
+    <h2>10. Security</h2>
+    <ul>
+      <li>HTTPS (TLS) for all data in transit</li>
+      <li>AES-256-GCM encryption for backup data at rest</li>
+      <li>Argon2id password hashing</li>
+      <li>CSRF protection on all forms</li>
+      <li>Rate limiting and account lockout on authentication endpoints</li>
+      <li>Content Security Policy headers</li>
+      <li>Audit logging of all sensitive operations</li>
+    </ul>
+
+    <h2>11. Changes</h2>
+    <p>We may update this policy as the Service evolves. Material changes will be communicated via email to registered users.</p>
+
+    <h2>12. Contact</h2>
+    <p>Questions about your data? Contact us at <a href="mailto:hello@seayniclabs.com">hello@seayniclabs.com</a>.</p>
+
+    <p class="legal-entity">Seaynic Labs LLC &middot; Clarksville, Tennessee, USA</p>
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text-secondary); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface); padding: 2px 6px; border-radius: 3px; }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal-entity { margin-top: 32px; font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>

@@ -1,0 +1,165 @@
+---
+import '../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut Terms of Service" />
+  <title>Terms of Service — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/privacy" class="ln-link">Privacy</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Terms of Service</h1>
+    <p class="updated mono">Last updated: March 17, 2026</p>
+
+    <p>These Terms of Service ("Terms") govern your use of StdOut (the "Service"), operated by Seaynic Labs LLC ("we," "us," "our"). By creating an account or using the Service, you agree to these Terms.</p>
+
+    <h2>1. The Service</h2>
+    <p>StdOut is a SaaS platform for managing infrastructure incidents with AI-assisted diagnosis. Features include:</p>
+    <ul>
+      <li>Incident logging, tracking, and search</li>
+      <li>Stack context management (infrastructure descriptions)</li>
+      <li>AI diagnosis powered by Anthropic's Claude API</li>
+      <li>Knowledge base for runbooks, post-mortems, and operational docs</li>
+      <li>Encrypted backups and data export</li>
+      <li>Email and webhook notifications</li>
+    </ul>
+    <p>The Self-Hosted tier includes a Docker Compose package for running StdOut on your own infrastructure.</p>
+
+    <h2>2. Accounts</h2>
+    <ul>
+      <li>You must provide a valid email address and create a password to use the Service</li>
+      <li>You are responsible for maintaining the security of your account credentials</li>
+      <li>You must be at least 13 years old to create an account</li>
+      <li>One person or entity per account — account sharing is not permitted</li>
+    </ul>
+
+    <h2>3. Acceptable Use</h2>
+    <p>You may <strong>not</strong> use StdOut to:</p>
+    <ul>
+      <li>Violate any applicable law or regulation</li>
+      <li>Harass, abuse, or threaten others</li>
+      <li>Attempt to access other users' data or circumvent tenant isolation</li>
+      <li>Submit malware, phishing content, or unauthorized code</li>
+      <li>Abuse the AI diagnosis feature (e.g., submitting mass requests to run up API costs)</li>
+      <li>Reverse-engineer, decompile, or attempt to extract the source code of the Service (SaaS version)</li>
+      <li>Resell access to the Service without authorization</li>
+    </ul>
+
+    <h2>4. AI Diagnosis Disclaimer</h2>
+    <p><strong>AI-generated diagnoses may contain errors.</strong> Claude API responses are suggestions, not guarantees. You are solely responsible for validating any suggested commands, configurations, or fixes before implementing them in your environment.</p>
+    <p>Seaynic Labs is not responsible for damage, data loss, or outages caused by implementing an AI-suggested resolution without proper validation.</p>
+
+    <h2>5. Data Ownership</h2>
+    <ul>
+      <li>You own your data. Stack descriptions, incidents, resolutions, docs — all yours</li>
+      <li>We do not claim intellectual property rights over your content</li>
+      <li>You grant us a limited license to process your data solely to provide the Service (including sending data to Anthropic for AI diagnosis when you request it)</li>
+      <li>You can export all your data at any time (JSON format) and delete your account</li>
+    </ul>
+
+    <h2>6. Pricing & Payment</h2>
+    <table>
+      <thead><tr><th>Tier</th><th>Price</th><th>Billing</th></tr></thead>
+      <tbody>
+        <tr><td>Free</td><td>$0</td><td>No payment required</td></tr>
+        <tr><td>Solo</td><td>$12/month</td><td>Monthly, cancel anytime</td></tr>
+        <tr><td>Shop (team)</td><td>$24/month</td><td>Monthly, cancel anytime</td></tr>
+        <tr><td>Self-Host</td><td>$79 (launch) / $99</td><td>One-time purchase</td></tr>
+      </tbody>
+    </table>
+    <p>Prices may change with 30 days' notice to existing subscribers. Your current rate is locked for as long as your subscription remains active.</p>
+
+    <h2>7. Refund Policy</h2>
+    <ul>
+      <li><strong>Free tier:</strong> no payment, no refund</li>
+      <li><strong>Paid subscriptions (Solo, Shop):</strong> 30-day money-back guarantee from first payment. After 30 days, no refunds (cancel to stop future billing)</li>
+      <li><strong>Self-Host license:</strong> non-refundable once license key is issued (you receive the full Docker Compose package immediately)</li>
+    </ul>
+
+    <h2>8. Account Deletion</h2>
+    <ul>
+      <li>You can delete your account at any time from Account Settings</li>
+      <li>Upon deletion, your account is deactivated immediately and your data is retained for 14 days</li>
+      <li>During the 14-day window, account recovery is available as a paid support service</li>
+      <li>After 14 days, all data (including backups) is permanently and irreversibly purged</li>
+    </ul>
+
+    <h2>9. Service Availability</h2>
+    <p>We provide StdOut on a best-effort basis. We do not guarantee a specific uptime percentage or SLA. We will make reasonable efforts to maintain availability and communicate planned maintenance in advance.</p>
+    <p>Self-hosted users are responsible for their own availability, backups, and infrastructure.</p>
+
+    <h2>10. Limitation of Liability</h2>
+    <p>To the fullest extent permitted by law:</p>
+    <ul>
+      <li>The Service is provided <strong>"AS IS"</strong> without warranty of any kind</li>
+      <li>We are not liable for indirect, incidental, consequential, or punitive damages</li>
+      <li>Our maximum aggregate liability is limited to the fees you paid in the 12 months preceding the claim</li>
+      <li>We are not responsible for accuracy of AI diagnoses, data loss from user error, or third-party service outages (Anthropic, Resend, Stripe)</li>
+    </ul>
+
+    <h2>11. Intellectual Property</h2>
+    <p>The StdOut name, logo, landing page design, and source code are the property of Seaynic Labs LLC. Self-Host license holders receive a perpetual, non-transferable license to run one instance of StdOut on their own infrastructure.</p>
+
+    <h2>12. Termination</h2>
+    <ul>
+      <li>You can cancel your subscription and delete your account at any time</li>
+      <li>We may suspend or terminate accounts that violate the Acceptable Use policy</li>
+      <li>Upon termination by us, you will have 14 days to export your data before purge</li>
+    </ul>
+
+    <h2>13. Governing Law</h2>
+    <p>These Terms are governed by the laws of the State of Tennessee, USA. Any disputes will be resolved in the courts of Montgomery County, Tennessee.</p>
+
+    <h2>14. Changes</h2>
+    <p>We may update these Terms as the Service evolves. Material changes will be communicated via email to registered users at least 14 days before taking effect.</p>
+
+    <h2>15. Contact</h2>
+    <p>Questions? Contact us at <a href="mailto:hello@seayniclabs.com">hello@seayniclabs.com</a>.</p>
+
+    <p class="legal-entity">Seaynic Labs LLC &middot; Clarksville, Tennessee, USA</p>
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal-entity { margin-top: 32px; font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>

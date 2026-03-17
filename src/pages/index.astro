@@ -211,6 +211,11 @@ const user = Astro.locals.user;
   </section>
 
   <footer class="lf">
+    <div class="lf-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="mailto:hello@seayniclabs.com">Contact</a>
+    </div>
     <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
   </footer>
 </body>
@@ -299,6 +304,9 @@ const user = Astro.locals.user;
 
   /* Footer */
   .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .lf-links { display: flex; justify-content: center; gap: 20px; margin-bottom: 8px; }
+  .lf-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .lf-links a:hover { color: var(--text-secondary); }
 
   /* Mobile */
   @media (max-width: 700px) {
