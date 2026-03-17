@@ -1,0 +1,271 @@
+---
+export const prerender = false;
+import Layout from '../../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
+import { validateCsrf } from '../../../../middleware';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getTenantDb(user.id);
+
+const importRecord = db.select().from(tenantSchema.stackImports)
+  .where(eq(tenantSchema.stackImports.id, id!)).get();
+
+if (!importRecord) return Astro.redirect('/app/stacks');
+
+let error = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  if (!validateCsrf(form.get('_csrf') as string, Astro.cookies)) {
+    error = 'Invalid form submission.';
+  } else {
+    const action = form.get('action') as string;
+
+    if (action === 'confirm') {
+      // Get selected containers from checkboxes
+      const selectedContainers = form.getAll('container') as string[];
+      const rawData = JSON.parse(importRecord.rawJson);
+
+      // Filter to selected containers
+      if (selectedContainers.length > 0 && rawData.containers) {
+        rawData.containers = rawData.containers.filter((c: any) =>
+          selectedContainers.includes(c.name)
+        );
+      }
+
+      // Re-render markdown with filtered containers
+      const markdown = renderFilteredMarkdown(rawData);
+
+      // Get stack name and whether to create or update
+      const stackName = (form.get('stackName') as string || 'Scanned Stack').trim();
+      const existingStackId = form.get('existingStackId') as string || '';
+
+      if (existingStackId) {
+        // Update existing stack
+        db.update(tenantSchema.stacks).set({
+          description: markdown,
+          updatedAt: new Date(),
+        }).where(eq(tenantSchema.stacks.id, existingStackId)).run();
+      } else {
+        // Create new stack
+        const stackId = nanoid();
+        const now = new Date();
+        db.insert(tenantSchema.stacks).values({
+          id: stackId, userId: user.id, name: stackName,
+          description: markdown, createdAt: now, updatedAt: now,
+        }).run();
+      }
+
+      // Mark import as confirmed
+      db.update(tenantSchema.stackImports)
+        .set({ status: 'confirmed' })
+        .where(eq(tenantSchema.stackImports.id, id!)).run();
+
+      return Astro.redirect('/app/stacks');
+    } else if (action === 'discard') {
+      db.update(tenantSchema.stackImports)
+        .set({ status: 'discarded' })
+        .where(eq(tenantSchema.stackImports.id, id!)).run();
+      return Astro.redirect('/app/stacks');
+    }
+  }
+}
+
+// Parse scan data
+let scanData: any = {};
+try { scanData = JSON.parse(importRecord.rawJson); } catch {}
+
+const containers = scanData.containers || [];
+const networks = scanData.networks || [];
+const hostInfo = scanData.host || null;
+
+// Get existing stacks for "update existing" option
+const userStacks = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+
+function renderFilteredMarkdown(data: any): string {
+  const lines: string[] = [
+    '# Infrastructure Stack',
+    `Scanned: ${data.scanned_at || new Date().toISOString()}`,
+    '',
+  ];
+
+  if (data.host) {
+    lines.push('## Host');
+    if (data.host.os) lines.push(`- OS: ${data.host.os} (${data.host.arch || 'unknown'})`);
+    if (data.host.cpu_cores) lines.push(`- CPU: ${data.host.cpu_cores} cores`);
+    if (data.host.memory_gb) lines.push(`- RAM: ${data.host.memory_gb.toFixed(1)} GB`);
+    if (data.host.disk?.length) {
+      for (const d of data.host.disk) {
+        lines.push(`- Disk ${d.mount}: ${d.used_gb.toFixed(1)}/${d.total_gb.toFixed(1)} GB used`);
+      }
+    }
+    lines.push('');
+  }
+
+  const running = (data.containers || []).filter((c: any) => c.status === 'running');
+  lines.push(`## Containers (${running.length} running)`);
+  lines.push('');
+
+  for (const c of (data.containers || [])) {
+    lines.push(`### ${c.name} (${c.image || 'unknown'})`);
+    if (c.ports?.length) {
+      const portStr = c.ports.map((p: any) => `${p.host}:${p.container}`).join(', ');
+      lines.push(`- Ports: ${portStr}`);
+    }
+    if (c.networks?.length) lines.push(`- Networks: ${c.networks.join(', ')}`);
+    if (c.health) lines.push(`- Health: ${c.health}`);
+    lines.push(`- Status: ${c.status}`);
+    if (c.compose_project) lines.push(`- Compose: ${c.compose_project}/${c.compose_service || ''}`);
+    if (c.restart_policy) lines.push(`- Restart: ${c.restart_policy}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+---
+<Layout title="Review Import — StdOut">
+  <div class="import-page">
+    <div class="import-header">
+      <a href="/app/stacks" class="back-link">&larr; Stacks</a>
+      <h1>Review scan results</h1>
+      <p class="import-meta mono">
+        {containers.length} containers found &middot; {networks.length} networks &middot; Scanned {scanData.scanned_at?.split('T')[0] || 'unknown'}
+      </p>
+    </div>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    {importRecord.status !== 'pending' ? (
+      <div class="import-done">
+        <p>This import has been {importRecord.status}.</p>
+        <a href="/app/stacks" class="btn btn-primary">Back to stacks</a>
+      </div>
+    ) : (
+      <form method="POST">
+        <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+
+        <!-- Host info -->
+        {hostInfo && (
+          <section class="section">
+            <h2>Host</h2>
+            <div class="host-info">
+              {hostInfo.os && <span class="host-tag">{hostInfo.os}</span>}
+              {hostInfo.cpu_cores && <span class="host-tag">{hostInfo.cpu_cores} cores</span>}
+              {hostInfo.memory_gb && <span class="host-tag">{hostInfo.memory_gb.toFixed(1)} GB RAM</span>}
+              {hostInfo.disk?.[0] && <span class="host-tag">{hostInfo.disk[0].used_gb.toFixed(0)}/{hostInfo.disk[0].total_gb.toFixed(0)} GB disk</span>}
+            </div>
+          </section>
+        )}
+
+        <!-- Container checklist -->
+        <section class="section">
+          <h2>Containers</h2>
+          <p class="section-desc">Uncheck containers you don't want included in your stack description.</p>
+          <div class="container-list">
+            {containers.map((c: any) => (
+              <label class="container-check">
+                <input type="checkbox" name="container" value={c.name} checked />
+                <div class="container-info">
+                  <div class="container-name">
+                    {c.name}
+                    <span class={`container-status ${c.status}`}>{c.status}</span>
+                  </div>
+                  <div class="container-detail mono">
+                    {c.image}
+                    {c.ports?.length > 0 && ` · ${c.ports.map((p: any) => `${p.host}:${p.container}`).join(', ')}`}
+                    {c.compose_project && ` · ${c.compose_project}`}
+                  </div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </section>
+
+        <!-- Stack destination -->
+        <section class="section">
+          <h2>Save to</h2>
+          <div class="save-options">
+            <label class="save-option">
+              <input type="radio" name="saveMode" value="new" checked onchange="document.getElementById('newStackName').disabled = false; document.getElementById('existingStackSelect').disabled = true;" />
+              <span>New stack</span>
+            </label>
+            <input type="text" name="stackName" id="newStackName" value="Scanned Stack" class="save-input" />
+
+            {userStacks.length > 0 && (
+              <>
+                <label class="save-option">
+                  <input type="radio" name="saveMode" value="existing" onchange="document.getElementById('newStackName').disabled = true; document.getElementById('existingStackSelect').disabled = false;" />
+                  <span>Update existing</span>
+                </label>
+                <select name="existingStackId" id="existingStackSelect" class="save-input" disabled>
+                  {userStacks.map(s => (
+                    <option value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+        </section>
+
+        <!-- Preview -->
+        <section class="section">
+          <h2>Preview</h2>
+          <pre class="preview-block">{importRecord.renderedMarkdown}</pre>
+        </section>
+
+        <!-- Actions -->
+        <div class="import-actions">
+          <button type="submit" name="action" value="confirm" class="btn btn-primary">Confirm &amp; save stack</button>
+          <button type="submit" name="action" value="discard" class="btn btn-danger">Discard</button>
+        </div>
+      </form>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .import-page { max-width: 800px; }
+  .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .back-link:hover { color: var(--text); }
+  .import-header h1 { font-size: 20px; margin: 6px 0 4px; }
+  .import-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 24px; }
+  .section { margin-bottom: 24px; }
+  .section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .section-desc { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+  .host-info { display: flex; gap: 8px; flex-wrap: wrap; }
+  .host-tag { font-size: 12px; font-family: var(--font-mono); background: var(--bg-surface); border: 1px solid var(--border); padding: 4px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); }
+  .container-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .container-check { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 150ms; }
+  .container-check:last-child { border-bottom: none; }
+  .container-check:hover { background: var(--bg-surface); }
+  .container-check input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); flex-shrink: 0; }
+  .container-info { flex: 1; min-width: 0; }
+  .container-name { font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+  .container-status { font-size: 10px; font-family: var(--font-mono); padding: 1px 6px; border-radius: 3px; }
+  .container-status.running { color: var(--low); background: var(--low-dim); }
+  .container-status.stopped { color: var(--critical); background: var(--critical-dim); }
+  .container-status.paused { color: var(--high); background: var(--high-dim); }
+  .container-detail { font-size: 11px; color: var(--text-muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .save-options { display: flex; flex-direction: column; gap: 8px; }
+  .save-option { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+  .save-option input[type="radio"] { accent-color: var(--accent); }
+  .save-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; max-width: 300px; }
+  .save-input:focus { border-color: var(--accent); outline: none; }
+  .save-input:disabled { opacity: 0.4; }
+  .preview-block { font-family: var(--font-mono); font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; color: var(--text-secondary); max-height: 300px; overflow-y: auto; }
+  .import-actions { display: flex; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .import-done { text-align: center; padding: 40px; }
+  .import-done p { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+  .mono { font-family: var(--font-mono); }
+</style>
