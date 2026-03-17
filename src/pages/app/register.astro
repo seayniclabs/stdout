@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { nanoid } from 'nanoid';
-import { getDb, schema } from '../../lib/db';
+import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
 import { hashPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
@@ -39,14 +39,14 @@ if (Astro.request.method === 'POST') {
     } else if (password !== confirm) {
       error = "Passwords don't match.";
     } else {
-      const existing = getDb().select().from(schema.users).where(eq(schema.users.email, email)).get();
+      const existing = getCentralDb().select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
       if (existing) {
         error = 'An account with that email already exists.';
       } else {
         const id = nanoid();
         const now = new Date();
         const passwordHash = await hashPassword(password);
-        getDb().insert(schema.users).values({
+        getCentralDb().insert(centralSchema.users).values({
           id,
           email,
           passwordHash,
@@ -57,6 +57,9 @@ if (Astro.request.method === 'POST') {
           updatedAt: now,
         }).run();
 
+        // Provision tenant DB (creates file + tables on first access)
+        getTenantDb(id);
+
         const sessionId = await createSession(id);
         Astro.cookies.set(SESSION_COOKIE, sessionId, {
           path: '/',
@@ -64,7 +67,7 @@ if (Astro.request.method === 'POST') {
           secure: true,
           sameSite: 'lax',
           maxAge: 30 * 24 * 60 * 60,
-          domain: import.meta.env.DEV ? undefined : '.seayniclabs.com',
+          domain: undefined,
         });
         return Astro.redirect(destination);
       }

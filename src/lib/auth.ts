@@ -1,7 +1,7 @@
 import { hash, verify } from '@node-rs/argon2';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
-import { getDb, schema } from './db';
+import { getCentralDb, centralSchema } from './db';
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -16,7 +16,7 @@ export async function verifyPassword(storedHash: string, password: string): Prom
 export async function createSession(userId: string): Promise<string> {
   const id = nanoid(32);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  getDb().insert(schema.sessions).values({ id, userId, expiresAt }).run();
+  getCentralDb().insert(centralSchema.sessions).values({ id, userId, expiresAt }).run();
   return id;
 }
 
@@ -30,25 +30,25 @@ export type SessionUser = {
 };
 
 export function validateSession(sessionId: string): SessionUser | null {
-  const row = getDb()
+  const row = getCentralDb()
     .select({
-      sessionId: schema.sessions.id,
-      expiresAt: schema.sessions.expiresAt,
-      userId: schema.users.id,
-      email: schema.users.email,
-      displayName: schema.users.displayName,
-      subscriptionStatus: schema.users.subscriptionStatus,
-      role: schema.users.role,
-      stripeCustomerId: schema.users.stripeCustomerId,
+      sessionId: centralSchema.sessions.id,
+      expiresAt: centralSchema.sessions.expiresAt,
+      userId: centralSchema.users.id,
+      email: centralSchema.users.email,
+      displayName: centralSchema.users.displayName,
+      subscriptionStatus: centralSchema.users.subscriptionStatus,
+      role: centralSchema.users.role,
+      stripeCustomerId: centralSchema.users.stripeCustomerId,
     })
-    .from(schema.sessions)
-    .innerJoin(schema.users, eq(schema.sessions.userId, schema.users.id))
-    .where(eq(schema.sessions.id, sessionId))
+    .from(centralSchema.sessions)
+    .innerJoin(centralSchema.users, eq(centralSchema.sessions.userId, centralSchema.users.id))
+    .where(eq(centralSchema.sessions.id, sessionId))
     .get();
 
   if (!row) return null;
   if (row.expiresAt < new Date()) {
-    getDb().delete(schema.sessions).where(eq(schema.sessions.id, sessionId)).run();
+    getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
     return null;
   }
 
@@ -63,7 +63,7 @@ export function validateSession(sessionId: string): SessionUser | null {
 }
 
 export function deleteSession(sessionId: string): void {
-  getDb().delete(schema.sessions).where(eq(schema.sessions.id, sessionId)).run();
+  getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
 }
 
 // Cookie name: shared across .seayniclabs.com domain

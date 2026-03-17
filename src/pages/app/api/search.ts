@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDb, schema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { getTenantDb } from '../../../lib/db';
 
 export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -12,7 +11,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const db = getDb();
+  const db = getTenantDb(locals.user.id);
   const rawDb = (db as any)._.session?.client;
   if (!rawDb?.prepare) {
     return new Response(JSON.stringify({ results: [] }), {

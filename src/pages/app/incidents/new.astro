@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getDb, schema } from '../../../lib/db';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
@@ -9,8 +9,8 @@ import { validateCsrf } from '../../../middleware';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getDb();
-const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+const db = getTenantDb(user.id);
+const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
 
 let error = '';
 
@@ -30,7 +30,7 @@ if (Astro.request.method === 'POST') {
     } else {
       const id = nanoid();
       const now = new Date();
-      db.insert(schema.incidents).values({
+      db.insert(tenantSchema.incidents).values({
         id, userId: user.id, stackId, title, description, severity, tags,
         status: 'active', createdAt: now, updatedAt: now,
       }).run();

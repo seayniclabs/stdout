@@ -1,19 +1,19 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getDb, schema } from '../../lib/db';
-import { eq, desc, sql } from 'drizzle-orm';
+import { getTenantDb, tenantSchema } from '../../lib/db';
+import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getDb();
+const db = getTenantDb(user.id);
 
 // Get user's incidents
 const userIncidents = db
   .select()
-  .from(schema.incidents)
-  .where(eq(schema.incidents.userId, user.id))
-  .orderBy(desc(schema.incidents.createdAt))
+  .from(tenantSchema.incidents)
+  .where(eq(tenantSchema.incidents.userId, user.id))
+  .orderBy(desc(tenantSchema.incidents.createdAt))
   .all();
 
 const activeCount = userIncidents.filter(i => i.status !== 'resolved').length;

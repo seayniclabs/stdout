@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getDb, schema } from '../../lib/db';
+import { getTenantDb, tenantSchema } from '../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
@@ -9,7 +9,7 @@ import { validateCsrf } from '../../middleware';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getDb();
+const db = getTenantDb(user.id);
 let error = '';
 let editingStack: any = null;
 
@@ -24,16 +24,16 @@ if (Astro.request.method === 'POST') {
     if (action === 'create' && name) {
       const id = nanoid();
       const now = new Date();
-      db.insert(schema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
+      db.insert(tenantSchema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
     } else if (action === 'update') {
       const stackId = form.get('stackId') as string;
       if (stackId && name) {
-        db.update(schema.stacks).set({ name, description, updatedAt: new Date() }).where(eq(schema.stacks.id, stackId)).run();
+        db.update(tenantSchema.stacks).set({ name, description, updatedAt: new Date() }).where(eq(tenantSchema.stacks.id, stackId)).run();
       }
     } else if (action === 'delete') {
       const stackId = form.get('stackId') as string;
       if (stackId) {
-        db.delete(schema.stacks).where(eq(schema.stacks.id, stackId)).run();
+        db.delete(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).run();
       }
     }
     return Astro.redirect('/app/stacks');
@@ -43,7 +43,7 @@ if (Astro.request.method === 'POST') {
 }
 
 const editId = Astro.url.searchParams.get('edit');
-const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
 if (editId) editingStack = userStacks.find(s => s.id === editId);
 ---
 <Layout title="Stacks — StdOut">

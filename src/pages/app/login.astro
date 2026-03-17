@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getDb, schema } from '../../lib/db';
+import { getCentralDb, centralSchema } from '../../lib/db';
 import { verifyPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
 import { eq } from 'drizzle-orm';
@@ -32,7 +32,7 @@ if (Astro.request.method === 'POST') {
         const minutes = Math.ceil((lockout.retryAfterSec || 0) / 60);
         error = `Account temporarily locked. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
       } else {
-        const user = getDb().select().from(schema.users).where(eq(schema.users.email, email)).get();
+        const user = getCentralDb().select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
         if (!user) {
           recordFailedLogin(email);
           error = 'Invalid email or password.';

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDb, schema } from '../../../lib/db';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { diagnoseIncident } from '../../../lib/diagnose';
 import { nanoid } from 'nanoid';
 import { eq, desc } from 'drizzle-orm';
@@ -17,8 +17,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const { incidentId } = body;
   if (!incidentId) return new Response('Missing incidentId', { status: 400 });
 
-  const db = getDb();
-  const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, incidentId)).get();
+  const db = getTenantDb(locals.user.id);
+  const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response('Not found', { status: 404 });
   }
@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Get stack context
   let stackContext = 'No stack description provided.';
   if (incident.stackId) {
-    const stack = db.select().from(schema.stacks).where(eq(schema.stacks.id, incident.stackId)).get();
+    const stack = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, incident.stackId)).get();
     if (stack) stackContext = stack.description;
   }
 
@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Store diagnosis
     const diagId = nanoid();
-    db.insert(schema.diagnoses).values({
+    db.insert(tenantSchema.diagnoses).values({
       id: diagId,
       incidentId,
       rootCauses: JSON.stringify(result.rootCauses),
