@@ -104,6 +104,14 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
       </section>
     )}
 
+    <!-- Similar Past Fixes -->
+    {current.status !== 'resolved' && (
+      <section class="section">
+        <h2>Past Fixes</h2>
+        <div id="similarMatches" class="similar-loading mono">Searching your history...</div>
+      </section>
+    )}
+
     <!-- AI Diagnosis -->
     <section class="section">
       <h2>AI Diagnosis</h2>
@@ -166,6 +174,50 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
 </Layout>
 
 <script>
+  // Load similar past fixes
+  const similarEl = document.getElementById('similarMatches');
+  if (similarEl) {
+    const incidentTitle = document.querySelector('.incident-header h1')?.textContent || '';
+    if (incidentTitle) {
+      fetch(`/app/api/similar?q=${encodeURIComponent(incidentTitle)}&exclude=${window.location.pathname.split('/').pop()}`)
+        .then(r => r.json())
+        .then(data => {
+          const { matches, docs } = data;
+          if ((!matches || matches.length === 0) && (!docs || docs.length === 0)) {
+            similarEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">No matching past fixes found. Try AI Diagnosis below.</div>';
+            return;
+          }
+          let html = '';
+          if (matches && matches.length > 0) {
+            html += matches.map((m: any) => `
+              <a href="/app/incidents/${m.incidentId}" class="similar-card">
+                <div class="similar-title">${esc(m.title)}</div>
+                <div class="similar-resolution">${esc(m.resolution)}</div>
+                <div class="similar-meta mono">${m.severity} &middot; ${m.tags || ''}</div>
+              </a>
+            `).join('');
+          }
+          if (docs && docs.length > 0) {
+            html += '<div class="similar-divider mono">Related docs</div>';
+            html += docs.map((d: any) => `
+              <a href="/app/docs/${d.docId}" class="similar-card">
+                <div class="similar-title">${esc(d.title)} <span class="similar-type">${d.docType}</span></div>
+                <div class="similar-resolution">${esc(d.snippet)}</div>
+              </a>
+            `).join('');
+          }
+          similarEl.innerHTML = html;
+        })
+        .catch(() => { similarEl.innerHTML = '<div style="color:var(--text-muted);font-size:13px;">Search unavailable.</div>'; });
+    } else {
+      similarEl.innerHTML = '';
+    }
+  }
+
+  function esc(s: string) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   const btn = document.getElementById('diagnoseBtn');
   const loading = document.getElementById('diagnoseLoading');
   if (btn) {
@@ -241,4 +293,12 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }
   .mono { font-family: var(--font-mono); }
+  .similar-loading { font-size: 12px; color: var(--text-muted); }
+  .similar-card { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; text-decoration: none; color: inherit; transition: border-color 150ms; }
+  .similar-card:hover { border-color: var(--accent); }
+  .similar-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .similar-type { font-size: 10px; font-family: var(--font-mono); color: var(--accent-light); background: var(--accent-dim); padding: 1px 6px; border-radius: 3px; margin-left: 6px; }
+  .similar-resolution { font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
+  .similar-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .similar-divider { font-size: 11px; color: var(--text-muted); margin: 12px 0 8px; padding-top: 8px; border-top: 1px solid var(--border); }
 </style>

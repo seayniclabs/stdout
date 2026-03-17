@@ -67,8 +67,10 @@ if (Astro.request.method === 'POST') {
 
       <label>
         <span>Title</span>
-        <input type="text" name="title" required placeholder="e.g. nginx 502 Bad Gateway after deploy" autocomplete="off" />
+        <input type="text" name="title" id="incidentTitle" required placeholder="e.g. nginx 502 Bad Gateway after deploy" autocomplete="off" />
       </label>
+
+      <div id="liveSimilar" class="live-similar" style="display:none;"></div>
 
       <label>
         <span>Description</span>
@@ -133,4 +135,44 @@ if (Astro.request.method === 'POST') {
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: var(--transition); }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }
+  .live-similar { margin: -8px 0 4px; }
+  .live-similar-card { display: block; padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 4px; text-decoration: none; color: inherit; transition: border-color 150ms; }
+  .live-similar-card:hover { border-color: var(--accent); }
+  .live-similar-title { font-size: 12px; font-weight: 500; }
+  .live-similar-fix { font-size: 11px; font-family: var(--font-mono); color: var(--accent-light); margin-top: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .live-similar-header { font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-bottom: 6px; }
 </style>
+
+<script>
+  let debounce: any;
+  const titleInput = document.getElementById('incidentTitle') as HTMLInputElement;
+  const similarDiv = document.getElementById('liveSimilar')!;
+
+  titleInput?.addEventListener('input', () => {
+    clearTimeout(debounce);
+    const q = titleInput.value.trim();
+    if (q.length < 4) { similarDiv.style.display = 'none'; return; }
+    debounce = setTimeout(async () => {
+      try {
+        const res = await fetch(`/app/api/similar?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (data.matches && data.matches.length > 0) {
+          similarDiv.style.display = 'block';
+          similarDiv.innerHTML = `<div class="live-similar-header">You may have solved this before:</div>` +
+            data.matches.slice(0, 3).map((m: any) => `
+              <a href="/app/incidents/${m.incidentId}" class="live-similar-card" target="_blank">
+                <div class="live-similar-title">${esc(m.title)}</div>
+                <div class="live-similar-fix">${esc(m.resolution)}</div>
+              </a>
+            `).join('');
+        } else {
+          similarDiv.style.display = 'none';
+        }
+      } catch { similarDiv.style.display = 'none'; }
+    }, 400);
+  });
+
+  function esc(s: string) {
+    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+</script>
