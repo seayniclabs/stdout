@@ -135,7 +135,7 @@ const user = Astro.locals.user;
           <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 15l3-3h4l3 3" stroke="#FB923C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="6" y="5" width="8" height="7" rx="1.5" stroke="#FB923C" stroke-width="1.5"/></svg>
           <h3>Self-Host</h3>
         </div>
-        <p>$59 one-time. Docker Compose, your infrastructure, your data stays on your network. Same features, no subscription.</p>
+        <p>$79 one-time. Docker Compose, your infrastructure, your data stays on your network. Same features, no subscription.</p>
       </div>
     </div>
   </section>
@@ -186,7 +186,8 @@ const user = Astro.locals.user;
       </div>
       <div class="price-card">
         <div class="price-tier">Self-Host</div>
-        <div class="price-amount mono">$59<span class="price-per"> once</span></div>
+        <div class="price-badge mono">Launch price</div>
+        <div class="price-amount mono">$79<span class="price-per"> once</span></div>
         <div class="price-items">
           <div class="pi">Everything in Solo</div>
           <div class="pi">Run on your infra</div>
@@ -286,6 +287,7 @@ const user = Astro.locals.user;
   .price-tier { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
   .price-amount { font-size: 32px; font-weight: 800; margin-bottom: 20px; }
   .price-per { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+  .price-badge { font-size: 10px; color: var(--accent); background: var(--accent-dim); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-bottom: 4px; }
   .price-items { margin-bottom: 24px; }
   .pi { font-size: 12px; color: var(--text-secondary); padding: 5px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); }
   .pi:last-child { border-bottom: none; }
