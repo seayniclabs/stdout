@@ -1,0 +1,286 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { eq, and, desc } from 'drizzle-orm';
+import { getRecentChecks, getUptimeStats, startMonitor } from '../../../lib/hud';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getTenantDb(user.id);
+
+const monitor = db.select().from(tenantSchema.monitors)
+  .where(and(eq(tenantSchema.monitors.id, id!), eq(tenantSchema.monitors.userId, user.id))).get();
+
+if (!monitor) return Astro.redirect('/app/hud');
+
+// Ensure monitor is running
+if (!monitor.paused && !monitor.maintenance) {
+  startMonitor(user.id, monitor.id);
+}
+
+const recentChecks = getRecentChecks(user.id, id!, 120);
+const uptime30 = getUptimeStats(user.id, id!, 30);
+const uptime7 = getUptimeStats(user.id, id!, 7);
+const uptime24h = getUptimeStats(user.id, id!, 1);
+
+// Related incidents
+const incidents = monitor.stackId
+  ? db.select().from(tenantSchema.incidents)
+      .where(eq(tenantSchema.incidents.stackId, monitor.stackId))
+      .orderBy(desc(tenantSchema.incidents.createdAt))
+      .limit(10).all()
+  : [];
+
+const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
+---
+<Layout title={`${monitor.name} — HUD — StdOut`}>
+  <div class="detail-page">
+    <a href="/app/hud" class="back-link">&larr; HUD</a>
+
+    <div class="detail-header">
+      <div class="detail-title-row">
+        <span class={`status-dot-lg ${statusClass}`}></span>
+        <h1>{monitor.name}</h1>
+      </div>
+      <div class="detail-meta mono">
+        {monitor.type}://{monitor.target.replace(/^https?:\/\//, '')}
+        &middot; every {monitor.intervalSeconds}s
+        &middot; {monitor.retries} retries
+      </div>
+    </div>
+
+    <!-- Key metrics -->
+    <div class="metrics-row">
+      <div class="metric">
+        <div class={`metric-value ${uptime30.uptimePercent >= 99.9 ? 'uptime-great' : uptime30.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>
+          {uptime30.uptimePercent > 0 ? uptime30.uptimePercent.toFixed(2) + '%' : '—'}
+        </div>
+        <div class="metric-label">30d uptime</div>
+      </div>
+      <div class="metric">
+        <div class={`metric-value ${uptime7.uptimePercent >= 99.9 ? 'uptime-great' : 'uptime-ok'}`}>
+          {uptime7.uptimePercent > 0 ? uptime7.uptimePercent.toFixed(2) + '%' : '—'}
+        </div>
+        <div class="metric-label">7d uptime</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">{uptime30.avgResponse > 0 ? uptime30.avgResponse + 'ms' : '—'}</div>
+        <div class="metric-label">avg response</div>
+      </div>
+      <div class="metric">
+        <div class="metric-value">{monitor.lastResponseMs ? monitor.lastResponseMs + 'ms' : '—'}</div>
+        <div class="metric-label">last check</div>
+      </div>
+    </div>
+
+    <!-- Response time chart -->
+    <div class="chart-section">
+      <h2>Response Time</h2>
+      <div class="chart-container">
+        <div class="response-chart">
+          {recentChecks.map((c: any) => {
+            const maxMs = Math.max(...recentChecks.map((r: any) => r.responseTimeMs || 0), 1);
+            const h = Math.max(2, ((c.responseTimeMs || 0) / maxMs) * 100);
+            const color = c.status === 'down' ? 'var(--critical)' : c.status === 'degraded' ? 'var(--high)' : 'var(--low)';
+            return <div class="chart-bar" style={`height:${h}%;background:${color};`} title={`${c.responseTimeMs}ms — ${c.status}`}></div>;
+          })}
+        </div>
+        <div class="chart-labels mono">
+          <span>oldest</span>
+          <span>{recentChecks.length} checks</span>
+          <span>latest</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Uptime calendar -->
+    {uptime30.days.length > 0 && (
+      <div class="chart-section">
+        <h2>Daily Uptime</h2>
+        <div class="uptime-calendar">
+          {uptime30.days.map((d: any) => {
+            const pct = d.totalChecks > 0 ? (d.successfulChecks / d.totalChecks) * 100 : 0;
+            const cls = pct >= 99.9 ? 'day-great' : pct >= 99 ? 'day-ok' : pct >= 95 ? 'day-warn' : pct > 0 ? 'day-bad' : 'day-none';
+            return <div class={`day-cell ${cls}`} title={`${d.date}: ${pct.toFixed(1)}% (${d.successfulChecks}/${d.totalChecks})`}></div>;
+          })}
+        </div>
+        <div class="cal-legend mono">
+          <span class="day-cell day-great"></span> 99.9%+
+          <span class="day-cell day-ok"></span> 99%+
+          <span class="day-cell day-warn"></span> 95%+
+          <span class="day-cell day-bad"></span> &lt;95%
+        </div>
+      </div>
+    )}
+
+    <!-- Recent check log -->
+    <div class="chart-section">
+      <h2>Recent Checks</h2>
+      <div class="check-log">
+        {recentChecks.slice().reverse().slice(0, 20).map((c: any) => (
+          <div class="check-row">
+            <span class={`check-dot ${c.status}`}></span>
+            <span class="mono check-time">{new Date(c.checkedAt).toLocaleTimeString()}</span>
+            <span class="mono">{c.responseTimeMs}ms</span>
+            {c.statusCode && <span class="mono check-code">{c.statusCode}</span>}
+            {c.error && <span class="check-error">{c.error}</span>}
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <!-- Related incidents -->
+    {incidents.length > 0 && (
+      <div class="chart-section">
+        <h2>Related Incidents</h2>
+        <div class="incident-list">
+          {incidents.map(i => (
+            <a href={`/app/incidents/${i.id}`} class="incident-row">
+              <span class={`severity-bar ${i.severity}`}></span>
+              <span class="incident-title">{i.title}</span>
+              <span class={`status-badge ${i.status}`}>{i.status}</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Controls -->
+    <div class="chart-section controls">
+      <h2>Controls</h2>
+      <div class="control-actions">
+        <button class="btn btn-ghost btn-sm" id="pauseBtn" data-paused={String(monitor.paused)}>
+          {monitor.paused ? 'Resume' : 'Pause'}
+        </button>
+        <button class="btn btn-ghost btn-sm" id="maintBtn" data-maint={String(monitor.maintenance)}>
+          {monitor.maintenance ? 'End maintenance' : 'Mark maintenance'}
+        </button>
+        <button class="btn btn-danger btn-sm" id="deleteBtn">Delete monitor</button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script define:vars={{ monitorId: id }}>
+  document.getElementById('pauseBtn')?.addEventListener('click', async function() {
+    const paused = this.dataset.paused === 'true' ? false : true;
+    await fetch('/app/api/monitors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', id: monitorId, paused }),
+    });
+    window.location.reload();
+  });
+
+  document.getElementById('maintBtn')?.addEventListener('click', async function() {
+    const maintenance = this.dataset.maint === 'true' ? false : true;
+    await fetch('/app/api/monitors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update', id: monitorId, maintenance }),
+    });
+    window.location.reload();
+  });
+
+  document.getElementById('deleteBtn')?.addEventListener('click', async () => {
+    if (!confirm('Delete this monitor and all its history?')) return;
+    await fetch('/app/api/monitors', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'delete', id: monitorId }),
+    });
+    window.location.href = '/app/hud';
+  });
+
+  // Auto-refresh
+  setTimeout(() => window.location.reload(), 15000);
+</script>
+
+<style>
+  .detail-page { max-width: 760px; margin: 0 auto; }
+  .back-link { color: var(--text-muted); text-decoration: none; font-size: 13px; }
+  .back-link:hover { color: var(--text); }
+  .detail-header { margin: 8px 0 20px; }
+  .detail-title-row { display: flex; align-items: center; gap: 12px; }
+  .detail-title-row h1 { font-size: 22px; }
+  .detail-meta { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+
+  .status-dot-lg { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot-lg.healthy { background: var(--low); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+  .status-dot-lg.degraded { background: var(--high); box-shadow: 0 0 8px rgba(249,115,22,0.5); }
+  .status-dot-lg.down { background: var(--critical); box-shadow: 0 0 8px rgba(239,68,68,0.5); animation: pulse-down 2s infinite; }
+  .status-dot-lg.maintenance { background: #3b82f6; }
+  .status-dot-lg.unknown { background: var(--text-muted); }
+
+  @keyframes pulse-down {
+    0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+    50% { box-shadow: 0 0 16px rgba(239,68,68,0.8); }
+  }
+
+  .metrics-row { display: flex; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+  .metric { flex: 1; padding: 16px 12px; background: var(--bg-surface); text-align: center; }
+  .metric-value { font-size: 22px; font-weight: 700; font-family: var(--font-mono); letter-spacing: -0.02em; }
+  .metric-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .uptime-great { color: var(--low); }
+  .uptime-ok { color: var(--text-secondary); }
+  .uptime-bad { color: var(--critical); }
+
+  .chart-section { margin-bottom: 24px; }
+  .chart-section h2 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+
+  .chart-container { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .response-chart { display: flex; align-items: flex-end; gap: 1px; height: 80px; }
+  .chart-bar { flex: 1; min-width: 2px; border-radius: 1px 1px 0 0; transition: height 300ms; }
+  .chart-bar:hover { opacity: 0.7; }
+  .chart-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); margin-top: 6px; }
+
+  .uptime-calendar { display: flex; gap: 3px; flex-wrap: wrap; margin-bottom: 8px; }
+  .day-cell { width: 14px; height: 14px; border-radius: 2px; }
+  .day-great { background: var(--low); }
+  .day-ok { background: rgba(34,197,94,0.4); }
+  .day-warn { background: var(--high); }
+  .day-bad { background: var(--critical); }
+  .day-none { background: var(--bg-surface); border: 1px solid var(--border); }
+  .cal-legend { display: flex; align-items: center; gap: 6px; font-size: 10px; color: var(--text-muted); }
+  .cal-legend .day-cell { width: 10px; height: 10px; margin-left: 8px; }
+
+  .check-log { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .check-row { display: flex; align-items: center; gap: 10px; padding: 6px 12px; border-bottom: 1px solid var(--border); font-size: 12px; }
+  .check-row:last-child { border-bottom: none; }
+  .check-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .check-dot.healthy { background: var(--low); }
+  .check-dot.degraded { background: var(--high); }
+  .check-dot.down { background: var(--critical); }
+  .check-time { color: var(--text-muted); }
+  .check-code { color: var(--text-muted); }
+  .check-error { color: var(--critical); font-size: 11px; }
+
+  .incident-list { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .incident-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; }
+  .incident-row:last-child { border-bottom: none; }
+  .incident-row:hover { background: var(--bg-surface); }
+  .severity-bar { width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0; }
+  .severity-bar.critical { background: var(--critical); }
+  .severity-bar.high { background: var(--high); }
+  .severity-bar.medium { background: var(--accent); }
+  .severity-bar.low { background: var(--low); }
+  .incident-title { flex: 1; font-size: 13px; }
+  .status-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); }
+  .status-badge.active { color: var(--critical); background: var(--critical-dim); }
+  .status-badge.resolved { color: var(--text-muted); background: rgba(85,85,106,0.12); }
+
+  .controls { margin-top: 32px; }
+  .control-actions { display: flex; gap: 8px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+  .mono { font-family: var(--font-mono); }
+</style>

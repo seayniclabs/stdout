@@ -1,0 +1,313 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+import { getRecentChecks, getUptimeStats, startMonitor } from '../../lib/hud';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const db = getTenantDb(user.id);
+const allMonitors = db.select().from(tenantSchema.monitors)
+  .where(eq(tenantSchema.monitors.userId, user.id))
+  .orderBy(desc(tenantSchema.monitors.createdAt))
+  .all();
+
+// Ensure monitors are running
+for (const m of allMonitors) {
+  if (!m.paused && !m.maintenance) {
+    startMonitor(user.id, m.id);
+  }
+}
+
+// Build data for template
+const monitorsData = allMonitors.map(m => {
+  const sparkline = getRecentChecks(user.id, m.id, 30);
+  const uptime = getUptimeStats(user.id, m.id, 30);
+  return { ...m, sparkline, uptimePercent: uptime.uptimePercent, avgResponse: uptime.avgResponse };
+});
+
+const healthy = monitorsData.filter(m => m.currentStatus === 'healthy').length;
+const degraded = monitorsData.filter(m => m.currentStatus === 'degraded').length;
+const down = monitorsData.filter(m => m.currentStatus === 'down').length;
+
+const stacks = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+---
+<Layout title="HUD — StdOut">
+  <div class="hud-page">
+    <div class="hud-header">
+      <h1>HUD</h1>
+      <button id="addMonitorBtn" class="btn btn-primary btn-sm">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+        Add monitor
+      </button>
+    </div>
+
+    {allMonitors.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">HUD</div>
+        <h3>No monitors yet</h3>
+        <p>Add an HTTP or TCP monitor to start tracking your infrastructure health.</p>
+        <button id="addMonitorBtnEmpty" class="btn btn-primary">Add your first monitor</button>
+      </div>
+    ) : (
+      <Fragment>
+        <!-- Status summary -->
+        <div class="status-summary">
+          <div class="summary-card healthy">
+            <div class="summary-value">{healthy}</div>
+            <div class="summary-label">Healthy</div>
+          </div>
+          <div class="summary-card degraded">
+            <div class="summary-value">{degraded}</div>
+            <div class="summary-label">Degraded</div>
+          </div>
+          <div class="summary-card down">
+            <div class="summary-value">{down}</div>
+            <div class="summary-label">Down</div>
+          </div>
+        </div>
+
+        <!-- Monitor table -->
+        <div class="monitor-table">
+          <div class="mt-header">
+            <span class="mt-col-name">Service</span>
+            <span class="mt-col-status">Status</span>
+            <span class="mt-col-resp">Response</span>
+            <span class="mt-col-spark">Trend</span>
+            <span class="mt-col-uptime">Uptime</span>
+          </div>
+          {monitorsData.map(m => {
+            const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
+            const statusLabel = m.maintenance ? 'maint' : m.paused ? 'paused' : m.currentStatus;
+            const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : '—';
+            const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(2)}%` : '—';
+
+            return (
+              <a href={`/app/hud/${m.id}`} class="mt-row">
+                <span class="mt-col-name">
+                  <span class={`status-dot ${statusClass}`}></span>
+                  <span class="mt-name">{m.name}</span>
+                  <span class="mt-target mono">{m.type}://{m.target.replace(/^https?:\/\//, '')}</span>
+                </span>
+                <span class={`mt-col-status mt-badge ${statusClass}`}>{statusLabel}</span>
+                <span class="mt-col-resp mono">{respText}</span>
+                <span class="mt-col-spark">
+                  <span class="sparkline">
+                    {m.sparkline.map((c: any) => {
+                      const h = Math.max(4, Math.min(20, (c.ms || 0) / 20));
+                      const color = c.status === 'down' ? 'var(--critical)' : c.status === 'degraded' ? 'var(--high)' : 'var(--low)';
+                      return <span class="spark-bar" style={`height:${h}px;background:${color};`}></span>;
+                    })}
+                  </span>
+                </span>
+                <span class={`mt-col-uptime mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>{uptimeText}</span>
+              </a>
+            );
+          })}
+        </div>
+      </Fragment>
+    )}
+
+    <!-- Add Monitor Modal -->
+    <div id="addMonitorModal" class="modal" style="display:none;">
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div class="modal-content">
+        <h2>Add Monitor</h2>
+        <div class="modal-form">
+          <label>
+            <span>Name</span>
+            <input type="text" id="monName" placeholder="e.g. n8n, Plex, Homepage" class="modal-input" />
+          </label>
+          <div class="modal-row">
+            <label style="flex:0 0 120px;">
+              <span>Type</span>
+              <select id="monType" class="modal-input">
+                <option value="http">HTTP(S)</option>
+                <option value="tcp">TCP</option>
+              </select>
+            </label>
+            <label style="flex:1;">
+              <span>Target</span>
+              <input type="text" id="monTarget" placeholder="https://example.com or host:port" class="modal-input" />
+            </label>
+          </div>
+          <div class="modal-row">
+            <label>
+              <span>Interval (sec)</span>
+              <input type="number" id="monInterval" value="60" min="30" max="3600" class="modal-input" style="width:80px;" />
+            </label>
+            <label>
+              <span>Timeout (ms)</span>
+              <input type="number" id="monTimeout" value="5000" min="1000" max="30000" class="modal-input" style="width:100px;" />
+            </label>
+            <label id="monExpectedLabel">
+              <span>Expected status</span>
+              <input type="number" id="monExpected" value="200" class="modal-input" style="width:80px;" />
+            </label>
+            <label>
+              <span>Retries</span>
+              <input type="number" id="monRetries" value="3" min="1" max="10" class="modal-input" style="width:60px;" />
+            </label>
+          </div>
+          {stacks.length > 0 && (
+            <label>
+              <span>Link to stack</span>
+              <select id="monStack" class="modal-input">
+                <option value="">None</option>
+                {stacks.map(s => <option value={s.id}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
+          <div class="modal-actions">
+            <button id="saveMonitorBtn" class="btn btn-primary">Create monitor</button>
+            <button id="cancelMonitorBtn" class="btn btn-ghost">Cancel</button>
+          </div>
+          <div id="monitorStatus" class="backup-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script>
+  const modal = document.getElementById('addMonitorModal')!;
+  const addBtns = document.querySelectorAll('#addMonitorBtn, #addMonitorBtnEmpty');
+  const cancelBtn = document.getElementById('cancelMonitorBtn')!;
+  const backdrop = document.getElementById('modalBackdrop')!;
+  const saveBtn = document.getElementById('saveMonitorBtn')!;
+  const statusEl = document.getElementById('monitorStatus')!;
+  const typeSelect = document.getElementById('monType') as HTMLSelectElement;
+  const expectedLabel = document.getElementById('monExpectedLabel')!;
+
+  addBtns.forEach(btn => btn?.addEventListener('click', () => { modal.style.display = 'flex'; }));
+  cancelBtn?.addEventListener('click', () => { modal.style.display = 'none'; });
+  backdrop?.addEventListener('click', () => { modal.style.display = 'none'; });
+
+  typeSelect?.addEventListener('change', () => {
+    expectedLabel.style.display = typeSelect.value === 'http' ? '' : 'none';
+  });
+
+  saveBtn?.addEventListener('click', async () => {
+    const name = (document.getElementById('monName') as HTMLInputElement).value.trim();
+    const type = typeSelect.value;
+    const target = (document.getElementById('monTarget') as HTMLInputElement).value.trim();
+    const interval = (document.getElementById('monInterval') as HTMLInputElement).value;
+    const timeout = (document.getElementById('monTimeout') as HTMLInputElement).value;
+    const expectedStatus = (document.getElementById('monExpected') as HTMLInputElement).value;
+    const retries = (document.getElementById('monRetries') as HTMLInputElement).value;
+    const stackId = (document.getElementById('monStack') as HTMLSelectElement)?.value || '';
+
+    if (!name || !target) {
+      statusEl.textContent = 'Name and target are required.';
+      statusEl.className = 'backup-status error';
+      return;
+    }
+
+    saveBtn.setAttribute('disabled', '');
+    statusEl.textContent = 'Creating...';
+    statusEl.className = 'backup-status';
+
+    try {
+      const res = await fetch('/app/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create', name, type, target, interval, timeout, expectedStatus, retries, stackId }),
+      });
+      const data = await res.json();
+      if (data.id) {
+        window.location.reload();
+      } else {
+        statusEl.textContent = data.error || 'Failed.';
+        statusEl.className = 'backup-status error';
+        saveBtn.removeAttribute('disabled');
+      }
+    } catch {
+      statusEl.textContent = 'Network error.';
+      statusEl.className = 'backup-status error';
+      saveBtn.removeAttribute('disabled');
+    }
+  });
+
+  // Auto-refresh every 30 seconds
+  setTimeout(() => window.location.reload(), 30000);
+</script>
+
+<style>
+  .hud-page { max-width: 900px; margin: 0 auto; }
+  .hud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .hud-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; font-family: var(--font-mono); }
+
+  .status-summary { display: flex; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
+  .summary-card { flex: 1; padding: 16px 20px; background: var(--bg-surface); text-align: center; }
+  .summary-value { font-size: 28px; font-weight: 700; font-family: var(--font-mono); letter-spacing: -0.02em; }
+  .summary-card.healthy .summary-value { color: var(--low); }
+  .summary-card.degraded .summary-value { color: var(--high); }
+  .summary-card.down .summary-value { color: var(--critical); }
+  .summary-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+
+  .monitor-table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .mt-header { display: grid; grid-template-columns: 2fr 80px 80px 120px 80px; gap: 8px; padding: 8px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .mt-row { display: grid; grid-template-columns: 2fr 80px 80px 120px 80px; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; text-decoration: none; color: inherit; transition: background 150ms; cursor: pointer; }
+  .mt-row:last-child { border-bottom: none; }
+  .mt-row:hover { background: var(--bg-surface); }
+  .mt-col-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .mt-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mt-target { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
+  .mt-row:hover .mt-target { display: inline; }
+  .mt-row:hover .mt-name { display: none; }
+  .mt-col-status, .mt-col-resp, .mt-col-uptime { font-size: 12px; text-align: center; }
+
+  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.healthy { background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .status-dot.degraded { background: var(--high); box-shadow: 0 0 6px rgba(249,115,22,0.4); }
+  .status-dot.down { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .status-dot.maintenance { background: #3b82f6; }
+  .status-dot.unknown { background: var(--text-muted); }
+
+  .mt-badge { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
+  .mt-badge.healthy { color: var(--low); }
+  .mt-badge.degraded { color: var(--high); }
+  .mt-badge.down { color: var(--critical); }
+  .mt-badge.maintenance { color: #3b82f6; }
+  .mt-badge.unknown { color: var(--text-muted); }
+
+  .sparkline { display: flex; align-items: flex-end; gap: 1px; height: 20px; }
+  .spark-bar { width: 3px; border-radius: 1px; min-height: 2px; }
+
+  .uptime-great { color: var(--low); }
+  .uptime-ok { color: var(--text-secondary); }
+  .uptime-bad { color: var(--critical); }
+
+  .empty-state { text-align: center; padding: 60px 20px; border: 1px dashed var(--border); border-radius: var(--radius); }
+  .empty-icon { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 16px; letter-spacing: 0.1em; }
+  .empty-state h3 { font-size: 16px; margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; }
+  .modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
+  .modal-content { position: relative; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 24px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
+  .modal-content h2 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+  .modal-form { display: flex; flex-direction: column; gap: 12px; }
+  .modal-form label { display: flex; flex-direction: column; gap: 4px; }
+  .modal-form label span { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .modal-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; font-family: var(--font-ui); }
+  .modal-input:focus { border-color: var(--accent); outline: none; }
+  .modal-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .modal-actions { display: flex; gap: 8px; margin-top: 4px; }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+  .backup-status { font-size: 12px; font-family: var(--font-mono); }
+  .backup-status.success { color: var(--low); }
+  .backup-status.error { color: var(--critical); }
+  .mono { font-family: var(--font-mono); }
+</style>

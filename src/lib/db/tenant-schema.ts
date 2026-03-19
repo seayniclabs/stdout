@@ -96,6 +96,54 @@ export const docs = sqliteTable('docs', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- HUD: Monitors & Check Results ---
+
+export const monitors = sqliteTable('monitors', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  type: text('type', {
+    enum: ['http', 'tcp', 'docker', 'ping', 'dns'],
+  }).notNull(),
+  target: text('target').notNull(),        // URL, host:port, container name
+  intervalSeconds: integer('interval_seconds').notNull().default(60),
+  timeoutMs: integer('timeout_ms').notNull().default(5000),
+  expectedStatus: integer('expected_status'), // HTTP: 200
+  retries: integer('retries').notNull().default(3),
+  stackId: text('stack_id'),
+  paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
+  maintenance: integer('maintenance', { mode: 'boolean' }).notNull().default(false),
+  currentStatus: text('current_status', {
+    enum: ['healthy', 'degraded', 'down', 'maintenance', 'unknown'],
+  }).notNull().default('unknown'),
+  consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+  lastResponseMs: integer('last_response_ms'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const checkResults = sqliteTable('check_results', {
+  id: text('id').primaryKey(),
+  monitorId: text('monitor_id').notNull(),
+  status: text('status', {
+    enum: ['healthy', 'degraded', 'down'],
+  }).notNull(),
+  responseTimeMs: integer('response_time_ms'),
+  statusCode: integer('status_code'),
+  error: text('error'),
+  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const uptimeDaily = sqliteTable('uptime_daily', {
+  monitorId: text('monitor_id').notNull(),
+  date: text('date').notNull(),            // YYYY-MM-DD
+  totalChecks: integer('total_checks').notNull().default(0),
+  successfulChecks: integer('successful_checks').notNull().default(0),
+  avgResponseMs: integer('avg_response_ms'),
+  p95ResponseMs: integer('p95_response_ms'),
+});
+
 // --- Scanner Schedule ---
 
 export const scannerSchedule = sqliteTable('scanner_schedule', {

@@ -189,6 +189,45 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       status TEXT NOT NULL DEFAULT 'pending',
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS monitors (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      target TEXT NOT NULL,
+      interval_seconds INTEGER NOT NULL DEFAULT 60,
+      timeout_ms INTEGER NOT NULL DEFAULT 5000,
+      expected_status INTEGER,
+      retries INTEGER NOT NULL DEFAULT 3,
+      stack_id TEXT,
+      paused INTEGER NOT NULL DEFAULT 0,
+      maintenance INTEGER NOT NULL DEFAULT 0,
+      current_status TEXT NOT NULL DEFAULT 'unknown',
+      consecutive_failures INTEGER NOT NULL DEFAULT 0,
+      last_checked_at INTEGER,
+      last_response_ms INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS check_results (
+      id TEXT PRIMARY KEY,
+      monitor_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      response_time_ms INTEGER,
+      status_code INTEGER,
+      error TEXT,
+      checked_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_check_results_monitor_time ON check_results(monitor_id, checked_at);
+    CREATE TABLE IF NOT EXISTS uptime_daily (
+      monitor_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      total_checks INTEGER NOT NULL DEFAULT 0,
+      successful_checks INTEGER NOT NULL DEFAULT 0,
+      avg_response_ms INTEGER,
+      p95_response_ms INTEGER,
+      PRIMARY KEY (monitor_id, date)
+    );
     CREATE TABLE IF NOT EXISTS scanner_schedule (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
