@@ -91,9 +91,9 @@ if (Astro.request.method === 'POST') {
         <label class="form-half">
           <span>Stack</span>
           <select name="stackId">
-            <option value="">None</option>
+            {userStacks.length !== 1 && <option value="">None</option>}
             {userStacks.map(s => (
-              <option value={s.id}>{s.name}</option>
+              <option value={s.id} selected={userStacks.length === 1}>{s.name}</option>
             ))}
           </select>
         </label>
