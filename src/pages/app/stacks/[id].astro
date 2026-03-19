@@ -1,0 +1,194 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getTenantDb(user.id);
+
+const stack = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.id, id!)).get();
+
+if (!stack || stack.userId !== user.id) return Astro.redirect('/app/stacks');
+
+const justImported = Astro.url.searchParams.get('imported') === '1';
+
+// Get incidents linked to this stack
+const stackIncidents = db.select().from(tenantSchema.incidents)
+  .where(eq(tenantSchema.incidents.stackId, id!))
+  .orderBy(desc(tenantSchema.incidents.createdAt))
+  .all();
+
+// Try to parse structured container data from the description
+// Scanner-imported stacks have markdown with "### container_name (image)" patterns
+interface ContainerInfo {
+  name: string;
+  image: string;
+  details: string[];
+}
+
+function parseContainers(markdown: string): ContainerInfo[] {
+  const containers: ContainerInfo[] = [];
+  const lines = markdown.split('\n');
+  let current: ContainerInfo | null = null;
+
+  for (const line of lines) {
+    const match = line.match(/^### (.+?) \((.+?)\)$/);
+    if (match) {
+      if (current) containers.push(current);
+      current = { name: match[1], image: match[2], details: [] };
+      continue;
+    }
+    if (current && line.startsWith('- ')) {
+      current.details.push(line.slice(2));
+    } else if (current && line.trim() === '') {
+      // End of this container's details
+    }
+  }
+  if (current) containers.push(current);
+  return containers;
+}
+
+const containers = parseContainers(stack.description);
+const hasStructuredData = containers.length > 0;
+---
+<Layout title={`${stack.name} — StdOut`}>
+  <div class="stack-detail">
+    {justImported && (
+      <div class="success-banner">
+        <span>Stack imported successfully.</span>
+        <div class="banner-actions">
+          <a href="/app/incidents/new" class="btn btn-primary btn-sm">Log an incident</a>
+          <a href="/app/docs/new" class="btn btn-ghost btn-sm">Add to knowledge base</a>
+        </div>
+      </div>
+    )}
+
+    <div class="page-header">
+      <div>
+        <h1>{stack.name}</h1>
+        <span class="updated-at mono">Updated {stack.updatedAt.toLocaleDateString()}</span>
+      </div>
+      <div class="header-actions">
+        <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-sm">Edit</a>
+        <a href={`/app/incidents/new?stack=${stack.id}`} class="btn btn-primary btn-sm">Log incident</a>
+      </div>
+    </div>
+
+    {hasStructuredData ? (
+      <Fragment>
+        <div class="container-grid">
+          {containers.map(c => {
+            const statusDetail = c.details.find(d => d.startsWith('Status:'));
+            const status = statusDetail?.split(':')[1]?.trim() || 'unknown';
+            const cpuDetail = c.details.find(d => d.startsWith('CPU:'));
+            const composeDetail = c.details.find(d => d.startsWith('Compose:'));
+            const portsDetail = c.details.find(d => d.startsWith('Ports:'));
+            const healthDetail = c.details.find(d => d.startsWith('Health:'));
+            const netDetail = c.details.find(d => d.startsWith('Net:'));
+
+            return (
+              <div class={`container-card ${status}`}>
+                <div class="cc-header">
+                  <div class={`cc-status-dot ${status}`}></div>
+                  <h3 class="cc-name">{c.name}</h3>
+                </div>
+                <div class="cc-image mono">{c.image}</div>
+                <div class="cc-details">
+                  {portsDetail && <div class="cc-detail"><span class="cc-label">Ports</span><span class="mono">{portsDetail.replace('Ports: ', '')}</span></div>}
+                  {composeDetail && <div class="cc-detail"><span class="cc-label">Compose</span><span class="mono">{composeDetail.replace('Compose: ', '')}</span></div>}
+                  {healthDetail && <div class="cc-detail"><span class="cc-label">Health</span><span class={`mono ${healthDetail.includes('healthy') ? 'healthy' : healthDetail.includes('unhealthy') ? 'unhealthy' : ''}`}>{healthDetail.replace('Health: ', '')}</span></div>}
+                  {cpuDetail && <div class="cc-detail"><span class="cc-label">Resources</span><span class="mono">{cpuDetail.replace('CPU: ', '')}</span></div>}
+                  {netDetail && <div class="cc-detail"><span class="cc-label">Network</span><span class="mono">{netDetail.replace('Net: ', '')}</span></div>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <details class="raw-toggle">
+          <summary class="mono">View raw markdown</summary>
+          <pre class="raw-markdown">{stack.description}</pre>
+        </details>
+      </Fragment>
+    ) : (
+      <pre class="stack-description">{stack.description || 'No description yet.'}</pre>
+    )}
+
+    {stackIncidents.length > 0 && (
+      <div class="related-incidents">
+        <h2>Incidents ({stackIncidents.length})</h2>
+        <div class="incident-list">
+          {stackIncidents.map(incident => (
+            <a href={`/app/incidents/${incident.id}`} class="incident-row">
+              <div class={`severity-bar ${incident.severity}`}></div>
+              <div class="incident-info">
+                <span class="incident-title">{incident.title}</span>
+                <span class={`status-badge ${incident.status}`}>{incident.status}</span>
+              </div>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .stack-detail { max-width: 900px; }
+  .success-banner { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(34,197,94,0.06); border: 1px solid rgba(34,197,94,0.3); border-radius: var(--radius); margin-bottom: 20px; font-size: 13px; color: var(--low); }
+  .banner-actions { display: flex; gap: 8px; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+  .page-header h1 { font-size: 20px; margin-bottom: 2px; }
+  .updated-at { font-size: 11px; color: var(--text-muted); }
+  .header-actions { display: flex; gap: 8px; }
+  .container-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin-bottom: 24px; }
+  .container-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .container-card.stopped { opacity: 0.5; }
+  .cc-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .cc-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .cc-status-dot.running { background: var(--low); }
+  .cc-status-dot.stopped { background: var(--text-muted); }
+  .cc-status-dot.paused { background: var(--high); }
+  .cc-status-dot.unknown { background: var(--text-muted); }
+  .cc-name { font-size: 14px; font-weight: 600; }
+  .cc-image { font-size: 11px; color: var(--text-muted); margin-bottom: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cc-details { display: flex; flex-direction: column; gap: 4px; }
+  .cc-detail { display: flex; justify-content: space-between; align-items: baseline; font-size: 12px; }
+  .cc-label { color: var(--text-muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; }
+  .cc-detail .mono { color: var(--text-secondary); font-size: 11px; text-align: right; max-width: 65%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .healthy { color: var(--low) !important; }
+  .unhealthy { color: var(--critical) !important; }
+  .raw-toggle { margin-bottom: 24px; }
+  .raw-toggle summary { font-size: 12px; color: var(--text-muted); cursor: pointer; padding: 8px 0; }
+  .raw-toggle summary:hover { color: var(--text-secondary); }
+  .raw-markdown { font-family: var(--font-mono); font-size: 11px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; word-wrap: break-word; padding: 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); margin-top: 8px; max-height: 400px; overflow-y: auto; }
+  .stack-description { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: var(--text-secondary); padding: 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; }
+  .related-incidents { border-top: 1px solid var(--border); padding-top: 20px; }
+  .related-incidents h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
+  .incident-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .incident-row { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background 150ms; }
+  .incident-row:last-child { border-bottom: none; }
+  .incident-row:hover { background: var(--bg-surface); }
+  .severity-bar { width: 4px; height: 28px; border-radius: 2px; flex-shrink: 0; }
+  .severity-bar.critical { background: var(--critical); }
+  .severity-bar.high { background: var(--high); }
+  .severity-bar.medium { background: var(--accent); }
+  .severity-bar.low { background: var(--low); }
+  .incident-info { display: flex; align-items: center; justify-content: space-between; flex: 1; }
+  .incident-title { font-size: 13px; }
+  .status-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); }
+  .status-badge.active { color: var(--critical); background: var(--critical-dim); }
+  .status-badge.resolved { color: var(--text-muted); background: rgba(85,85,106,0.12); }
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .mono { font-family: var(--font-mono); }
+</style>

@@ -45,6 +45,8 @@ if (Astro.request.method === 'POST') {
       const stackName = (form.get('stackName') as string || 'Scanned Stack').trim();
       const existingStackId = form.get('existingStackId') as string || '';
 
+      let targetStackId = existingStackId;
+
       if (existingStackId) {
         // Update existing stack
         db.update(tenantSchema.stacks).set({
@@ -53,10 +55,10 @@ if (Astro.request.method === 'POST') {
         }).where(eq(tenantSchema.stacks.id, existingStackId)).run();
       } else {
         // Create new stack
-        const stackId = nanoid();
+        targetStackId = nanoid();
         const now = new Date();
         db.insert(tenantSchema.stacks).values({
-          id: stackId, userId: user.id, name: stackName,
+          id: targetStackId, userId: user.id, name: stackName,
           description: markdown, createdAt: now, updatedAt: now,
         }).run();
       }
@@ -66,7 +68,7 @@ if (Astro.request.method === 'POST') {
         .set({ status: 'confirmed' })
         .where(eq(tenantSchema.stackImports.id, id!)).run();
 
-      return Astro.redirect('/app/stacks');
+      return Astro.redirect(`/app/stacks/${targetStackId}?imported=1`);
     } else if (action === 'discard') {
       db.update(tenantSchema.stackImports)
         .set({ status: 'discarded' })
