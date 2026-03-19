@@ -67,12 +67,32 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
     <div class="detail-header">
       <div class="detail-title-row">
         <span class={`status-dot-lg ${statusClass}`}></span>
-        <h1>{monitor.name}</h1>
+        <h1 id="monitorName">{monitor.name}</h1>
+        <button class="btn btn-ghost btn-sm" id="editBtn" style="margin-left:auto;">Edit</button>
       </div>
-      <div class="detail-meta mono">
+      <div class="detail-meta mono" id="monitorMeta">
         {monitor.type}://{monitor.target.replace(/^https?:\/\//, '')}
         &middot; every {monitor.intervalSeconds}s
         &middot; {monitor.retries} retries
+      </div>
+    </div>
+
+    <!-- Edit form (hidden) -->
+    <div id="editForm" class="edit-form" style="display:none;">
+      <div class="edit-row">
+        <label><span>Name</span><input type="text" id="editName" value={monitor.name} class="modal-input" /></label>
+        <label><span>Target</span><input type="text" id="editTarget" value={monitor.target} class="modal-input" style="flex:1;" /></label>
+      </div>
+      <div class="edit-row">
+        <label><span>Interval (sec)</span><input type="number" id="editInterval" value={monitor.intervalSeconds} min="30" max="3600" class="modal-input" style="width:80px;" /></label>
+        <label><span>Timeout (ms)</span><input type="number" id="editTimeout" value={monitor.timeoutMs} min="1000" max="30000" class="modal-input" style="width:100px;" /></label>
+        <label><span>Expected status</span><input type="number" id="editExpected" value={monitor.expectedStatus || 200} class="modal-input" style="width:80px;" /></label>
+        <label><span>Retries</span><input type="number" id="editRetries" value={monitor.retries} min="1" max="10" class="modal-input" style="width:60px;" /></label>
+      </div>
+      <div class="edit-actions">
+        <button id="saveEditBtn" class="btn btn-primary btn-sm">Save</button>
+        <button id="cancelEditBtn" class="btn btn-ghost btn-sm">Cancel</button>
+        <span id="editStatus" class="backup-status"></span>
       </div>
     </div>
 
@@ -217,6 +237,45 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
 </Layout>
 
 <script define:vars={{ monitorId: id }}>
+  // Edit form
+  const editForm = document.getElementById('editForm');
+  document.getElementById('editBtn')?.addEventListener('click', () => {
+    editForm.style.display = editForm.style.display === 'none' ? 'block' : 'none';
+  });
+  document.getElementById('cancelEditBtn')?.addEventListener('click', () => {
+    editForm.style.display = 'none';
+  });
+  document.getElementById('saveEditBtn')?.addEventListener('click', async () => {
+    const statusEl = document.getElementById('editStatus');
+    statusEl.textContent = 'Saving...';
+    try {
+      const res = await fetch('/app/api/monitors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update',
+          id: monitorId,
+          name: document.getElementById('editName').value,
+          target: document.getElementById('editTarget').value,
+          interval: document.getElementById('editInterval').value,
+          timeout: document.getElementById('editTimeout').value,
+          expectedStatus: document.getElementById('editExpected').value,
+          retries: document.getElementById('editRetries').value,
+        }),
+      });
+      const data = await res.json();
+      if (data.updated) {
+        window.location.reload();
+      } else {
+        statusEl.textContent = data.error || 'Failed';
+        statusEl.className = 'backup-status error';
+      }
+    } catch {
+      statusEl.textContent = 'Error';
+      statusEl.className = 'backup-status error';
+    }
+  });
+
   document.getElementById('pauseBtn')?.addEventListener('click', async function() {
     const paused = this.dataset.paused === 'true' ? false : true;
     await fetch('/app/api/monitors', {
@@ -334,6 +393,12 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
   .no-resolutions { padding: 16px; background: var(--bg-surface); border: 1px dashed var(--border); border-radius: var(--radius); }
   .no-resolutions p { font-size: 13px; color: var(--text-muted); }
   .no-resolutions a { color: var(--accent-light); }
+  .edit-form { background: var(--bg-surface); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px; margin-bottom: 20px; animation: fadeIn 0.2s ease-out; }
+  .edit-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .edit-row label { display: flex; flex-direction: column; gap: 4px; }
+  .edit-row label span { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .edit-actions { display: flex; gap: 8px; align-items: center; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
   .controls { margin-top: 32px; }
   .control-actions { display: flex; gap: 8px; }
 
