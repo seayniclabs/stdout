@@ -75,7 +75,13 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         <a href="/app" class="back-link">&larr; Incidents</a>
         <span class="mono" style="color:var(--text-muted);">#{current.id.slice(0, 8)}</span>
       </div>
-      <h1>{current.title}</h1>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <h1>{current.title}</h1>
+        <div class="export-btns">
+          <a href={`/app/api/incidents/export?id=${current.id}&format=markdown`} class="btn btn-ghost btn-sm" title="Export as Markdown">Export .md</a>
+          <a href={`/app/api/incidents/export?id=${current.id}&format=json`} class="btn btn-ghost btn-sm" title="Export as JSON">Export .json</a>
+        </div>
+      </div>
       <div class="header-meta">
         <span class={`severity-pill ${current.severity}`}>{current.severity}</span>
         <span class={`status-pill ${current.status}`}>{statusLabels[current.status] || current.status}</span>
