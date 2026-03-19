@@ -176,11 +176,13 @@ if (user) {
       gap: 24px;
       padding: 12px 20px;
       border-bottom: 1px solid var(--border);
-      background: var(--bg-surface);
+      background: rgba(14, 14, 24, 0.85);
       position: sticky;
       top: 0;
       z-index: 100;
-      backdrop-filter: blur(12px);
+      backdrop-filter: blur(16px) saturate(180%);
+      -webkit-backdrop-filter: blur(16px) saturate(180%);
+      box-shadow: 0 1px 8px rgba(0,0,0,0.3);
     }
     .topnav-brand {
       display: flex;

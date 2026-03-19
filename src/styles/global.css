@@ -32,8 +32,8 @@
   --bg-hover:      #1A1A2A;
   --border:        #1F1F35;
   --border-hover:  #2D2D4A;
-  --text:          #EEEEF5;
-  --text-secondary:#9090A8;
+  --text:          #F0F0F8;
+  --text-secondary:#A0A0B8;
   --text-muted:    #5A5A72;
 
   /* Brand accent — Coral */
@@ -41,6 +41,7 @@
   --accent-light:  #FB923C;
   --accent-dim:    rgba(249, 115, 22, 0.12);
   --accent-glow:   rgba(249, 115, 22, 0.25);
+  --accent-btn:    #E8650F;  /* Darker for text-on-button WCAG AA */
 
   /* Severity */
   --critical:      #EF4444;
@@ -60,7 +61,14 @@
   /* Spacing & Radius */
   --radius:        8px;
   --radius-sm:     6px;
+  --radius-lg:     12px;
   --transition:    all 0.2s ease;
+
+  /* Shadows — depth system */
+  --shadow-sm:     0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
+  --shadow-md:     0 2px 8px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-lg:     0 4px 16px rgba(0,0,0,0.5), 0 2px 6px rgba(0,0,0,0.25);
+  --shadow-glow:   0 0 20px var(--accent-glow);
 }
 
 html { scroll-behavior: smooth; }
@@ -73,8 +81,8 @@ body::before {
   z-index: -2;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(249, 115, 22, 0.02) 1px, transparent 1px);
+    linear-gradient(rgba(249, 115, 22, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(249, 115, 22, 0.015) 1px, transparent 1px);
   background-size: 60px 60px;
 }
 
@@ -91,6 +99,16 @@ body {
 a { color: var(--accent-light); text-decoration: none; }
 a:hover { color: var(--accent); }
 
+/* ── Page-level animation ────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.main > * {
+  animation: fadeIn 0.3s ease-out;
+}
+
 /* ── Buttons ─────────────────────────────────── */
 .btn {
   display: inline-flex;
@@ -102,17 +120,23 @@ a:hover { color: var(--accent); }
   font-weight: 600;
   font-family: var(--font-ui);
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.15s ease;
   text-decoration: none;
   border: none;
 }
 .btn-primary {
   background: var(--accent);
   color: #fff;
+  box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover {
   background: var(--accent-light);
-  box-shadow: 0 0 20px var(--accent-glow);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--shadow-sm);
 }
 .btn-secondary {
   background: transparent;
@@ -122,6 +146,7 @@ a:hover { color: var(--accent); }
 .btn-secondary:hover {
   border-color: var(--border-hover);
   background: var(--bg-surface);
+  transform: translateY(-1px);
 }
 .btn-danger {
   background: var(--critical);
@@ -129,6 +154,7 @@ a:hover { color: var(--accent); }
 }
 .btn-danger:hover {
   background: #DC2626;
+  transform: translateY(-1px);
 }
 
 /* ── Forms ────────────────────────────────────── */
@@ -152,7 +178,7 @@ a:hover { color: var(--accent); }
   font-size: 14px;
   color: var(--text);
   outline: none;
-  transition: border-color 200ms;
+  transition: border-color 200ms, box-shadow 200ms;
 }
 .form-input:focus {
   border-color: var(--accent);
@@ -173,15 +199,18 @@ textarea.form-input {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 20px;
-  transition: var(--transition);
+  transition: all 0.15s ease;
+  box-shadow: var(--shadow-sm);
 }
 .card:hover {
   border-color: var(--border-hover);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 
 /* ── Severity indicators ─────────────────────── */
 .severity-bar { width: 4px; border-radius: 2px; }
-.severity-bar.critical { background: var(--critical); }
+.severity-bar.critical { background: var(--critical); box-shadow: 0 0 6px var(--critical-dim); }
 .severity-bar.high { background: var(--high); }
 .severity-bar.medium { background: var(--medium); }
 .severity-bar.low { background: var(--low); }
@@ -198,6 +227,16 @@ textarea.form-input {
   font-family: var(--font-mono);
 }
 
+/* ── Status pulse animation ──────────────────── */
+@keyframes statusPulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor; }
+  50% { box-shadow: 0 0 12px currentColor; }
+}
+
+.status-pulse {
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
 /* ── Mono text ────────────────────────────────── */
 .mono { font-family: var(--font-mono); }
 
@@ -206,8 +245,9 @@ textarea.form-input {
   max-width: 400px;
   margin: 60px auto;
   text-align: center;
+  animation: fadeIn 0.4s ease-out;
 }
-.auth-page h1 { font-size: 22px; margin-bottom: 4px; }
+.auth-page h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
 .auth-subtitle { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; }
 .auth-form { display: flex; flex-direction: column; gap: 14px; text-align: left; }
 .auth-form label { display: flex; flex-direction: column; gap: 4px; }
@@ -220,6 +260,7 @@ textarea.form-input {
   font-family: var(--font-ui);
   font-size: 14px;
   padding: 10px 12px;
+  transition: border-color 200ms, box-shadow 200ms;
 }
 .auth-form input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
 .auth-form button {
@@ -227,14 +268,19 @@ textarea.form-input {
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
-  padding: 10px 20px;
+  padding: 12px 20px;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  transition: var(--transition);
+  transition: all 0.15s ease;
   margin-top: 4px;
+  box-shadow: var(--shadow-sm);
 }
-.auth-form button:hover { background: var(--accent-light); }
+.auth-form button:hover {
+  background: var(--accent-light);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-1px);
+}
 .auth-error {
   background: var(--critical-dim);
   color: var(--critical);
@@ -247,6 +293,15 @@ textarea.form-input {
 }
 .auth-forgot, .auth-switch { font-size: 13px; color: var(--text-secondary); margin-top: 12px; }
 .auth-forgot a, .auth-switch a { color: var(--accent-light); }
+
+/* ── Row hover effect (for tables/lists) ─────── */
+.row-hover {
+  transition: all 0.15s ease;
+}
+.row-hover:hover {
+  background: var(--bg-hover);
+  transform: translateX(2px);
+}
 
 /* ── Reduced motion ──────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
