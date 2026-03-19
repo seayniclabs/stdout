@@ -31,40 +31,66 @@ export const GET: APIRoute = async ({ locals }) => {
   const existingTargets = new Set(existingMonitors.map(m => m.target.toLowerCase()));
 
   const suggestions: any[] = [];
+  const seenNames = new Set<string>();
 
-  // Suggest monitors for containers with exposed ports
+  const httpPorts = new Set([80, 8080, 8888, 3000, 5000, 5678, 8100, 8101, 8102, 8103, 8104, 8105, 8106, 8107, 8108, 8109, 8110, 8111, 8112, 8113, 9090, 9925, 19999, 32400]);
+  const httpsPorts = new Set([443, 8443, 9443]);
+
+  // Suggest one monitor per container — pick the best port
   for (const container of (scanData.containers || [])) {
     if (container.status !== 'running') continue;
+    if (seenNames.has(container.name)) continue;
 
+    // Deduplicate ports (scanner reports each port binding twice on some platforms)
+    const uniquePorts = new Map<number, any>();
     for (const port of (container.ports || [])) {
-      if (!port.host || port.host === 0) continue;
-
-      // Determine check type and target
-      const isHTTPS = [443, 8443, 9443].includes(port.host);
-      const isHTTP = [80, 8080, 8888, 3000, 5000, 5678, 8100, 8101, 8102, 8103, 8104, 8105, 8106, 8107, 8108, 8109, 8110, 8111, 8112, 8113, 9090, 9925, 19999, 32400].includes(port.host);
-
-      let type = 'tcp';
-      let target = `host.docker.internal:${port.host}`;
-
-      if (isHTTPS) {
-        type = 'http';
-        target = `https://host.docker.internal:${port.host}`;
-      } else if (isHTTP) {
-        type = 'http';
-        target = `http://host.docker.internal:${port.host}`;
+      if (port.host && port.host > 0) {
+        uniquePorts.set(port.host, port);
       }
-
-      // Skip if already monitored
-      if (existingTargets.has(target.toLowerCase())) continue;
-
-      suggestions.push({
-        name: container.name,
-        type,
-        target,
-        composeProject: container.compose_project || null,
-        image: container.image,
-      });
     }
+
+    if (uniquePorts.size === 0) continue;
+
+    // Pick the best port: prefer HTTP(S) over TCP
+    let bestPort: number | null = null;
+    let type = 'tcp';
+
+    for (const [hostPort] of uniquePorts) {
+      if (httpsPorts.has(hostPort)) {
+        bestPort = hostPort;
+        type = 'http';
+        break; // HTTPS is best
+      }
+      if (httpPorts.has(hostPort)) {
+        bestPort = hostPort;
+        type = 'http';
+        // Keep looking for HTTPS
+      }
+      if (bestPort === null) {
+        bestPort = hostPort;
+      }
+    }
+
+    if (!bestPort) continue;
+
+    let target = `host.docker.internal:${bestPort}`;
+    if (type === 'http') {
+      target = httpsPorts.has(bestPort)
+        ? `https://host.docker.internal:${bestPort}`
+        : `http://host.docker.internal:${bestPort}`;
+    }
+
+    // Skip if already monitored
+    if (existingTargets.has(target.toLowerCase())) continue;
+
+    seenNames.add(container.name);
+    suggestions.push({
+      name: container.name,
+      type,
+      target,
+      composeProject: container.compose_project || null,
+      image: container.image,
+    });
   }
 
   return new Response(JSON.stringify({ suggestions }), {
