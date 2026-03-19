@@ -5,6 +5,7 @@ import { getTenantDb, tenantSchema } from '../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
+import { stackTemplates } from '../../lib/stack-templates';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -98,16 +99,29 @@ if (editId) editingStack = userStacks.find(s => s.id === editId);
     <!-- New stack form -->
     <div class="new-stack">
       <h2>Add a stack</h2>
+
+      <div class="template-section">
+        <p class="template-hint">Start from a template or describe your stack from scratch.</p>
+        <div class="template-grid">
+          {stackTemplates.map((t, i) => (
+            <button class="template-card" data-idx={i} type="button">
+              <span class="template-name">{t.name}</span>
+              <span class="template-tags mono">{t.tags}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <form method="POST" class="stack-form">
         <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
         <input type="hidden" name="action" value="create" />
         <label>
           <span>Name</span>
-          <input type="text" name="name" required placeholder="e.g. Mac Mini Lab" />
+          <input type="text" name="name" id="stackNameInput" required placeholder="e.g. Mac Mini Lab" />
         </label>
         <label>
           <span>Description</span>
-          <textarea name="description" rows={8} placeholder="Docker containers, ports, services, dependencies...&#10;&#10;Example:&#10;- nginx proxy on :8101&#10;- Node.js app on :3000 (Astro SSR)&#10;- SQLite at /app/data/app.db&#10;- Cloudflare Tunnel for public access"></textarea>
+          <textarea name="description" id="stackDescInput" rows={8} placeholder="Docker containers, ports, services, dependencies...&#10;&#10;Example:&#10;- nginx proxy on :8101&#10;- Node.js app on :3000 (Astro SSR)&#10;- SQLite at /app/data/app.db&#10;- Cloudflare Tunnel for public access"></textarea>
         </label>
         <button type="submit" class="btn btn-primary">Create stack</button>
       </form>
@@ -147,4 +161,28 @@ if (editId) editingStack = userStacks.find(s => s.id === editId);
   .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
   .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
   .btn-danger:hover { background: var(--critical-dim); }
+  .template-section { margin-bottom: 16px; }
+  .template-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .template-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; text-align: left; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 2px; }
+  .template-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .template-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .template-tags { font-size: 10px; color: var(--text-muted); }
 </style>
+
+<script define:vars={{ templates: stackTemplates }}>
+  document.querySelectorAll('.template-card').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.getAttribute('data-idx') || '0');
+      const t = templates[idx];
+      if (t) {
+        const nameInput = document.getElementById('stackNameInput');
+        const descInput = document.getElementById('stackDescInput');
+        if (nameInput) nameInput.value = t.name;
+        if (descInput) descInput.value = t.description;
+        // Scroll to form
+        nameInput?.focus();
+      }
+    });
+  });
+</script>
