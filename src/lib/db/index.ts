@@ -33,6 +33,21 @@ function initSqlite(dbPath: string): InstanceType<typeof Database> {
   return sqlite;
 }
 
+function safeAddColumn(sqlite: InstanceType<typeof Database>, table: string, column: string, type: string): void {
+  const cols = sqlite.pragma(`table_info(${table})`) as { name: string }[];
+  if (!cols.some(c => c.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+}
+
+function runMigrations(sqlite: InstanceType<typeof Database>): void {
+  // Add columns that were added after initial schema creation.
+  // Each migration is idempotent — safe to run on every startup.
+  safeAddColumn(sqlite, 'users', 'privacy_accepted_at', 'INTEGER');
+  safeAddColumn(sqlite, 'users', 'dpa_accepted_at', 'INTEGER');
+  safeAddColumn(sqlite, 'stack_imports', 'user_id', 'TEXT');
+}
+
 function runCentralDDL(sqlite: InstanceType<typeof Database>): void {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS users (
@@ -201,6 +216,7 @@ function getSelfHostDb(): BetterSQLite3Database<typeof combinedSchema> {
     const sqlite = initSqlite(SINGLE_DB_PATH);
     runCentralDDL(sqlite);
     runTenantDDL(sqlite);
+    runMigrations(sqlite);
     _selfHostDb = drizzle(sqlite, { schema: combinedSchema });
   }
   return _selfHostDb;
@@ -217,6 +233,7 @@ export function getCentralDb(): BetterSQLite3Database<typeof centralSchema> {
     const dbPath = path.join(DATA_DIR, 'central.db');
     const sqlite = initSqlite(dbPath);
     runCentralDDL(sqlite);
+    runMigrations(sqlite);
     _centralDb = drizzle(sqlite, { schema: centralSchema });
   }
   return _centralDb;

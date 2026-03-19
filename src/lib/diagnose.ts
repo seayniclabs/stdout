@@ -81,7 +81,12 @@ export async function diagnoseIncident(opts: {
 
   let parsed: { rootCauses: string[]; suggestedCommands: string[] };
   try {
-    parsed = JSON.parse(text);
+    // Strip markdown code fences if present (models sometimes add them despite instructions)
+    let jsonText = text.trim();
+    if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
+    }
+    parsed = JSON.parse(jsonText);
   } catch {
     parsed = {
       rootCauses: [text],
