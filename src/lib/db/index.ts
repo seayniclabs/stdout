@@ -189,6 +189,18 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       status TEXT NOT NULL DEFAULT 'pending',
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS scanner_schedule (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      interval TEXT NOT NULL DEFAULT 'daily',
+      hour INTEGER NOT NULL DEFAULT 3,
+      minute INTEGER NOT NULL DEFAULT 0,
+      weekday INTEGER NOT NULL DEFAULT 0,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      modules TEXT NOT NULL DEFAULT '["docker","metrics"]',
+      subnets TEXT,
+      updated_at INTEGER NOT NULL
+    );
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

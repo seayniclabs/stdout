@@ -96,6 +96,21 @@ export const docs = sqliteTable('docs', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Scanner Schedule ---
+
+export const scannerSchedule = sqliteTable('scanner_schedule', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  interval: text('interval').notNull().default('daily'), // hourly, daily, weekly, or cron expression
+  hour: integer('hour').notNull().default(3),             // 0-23
+  minute: integer('minute').notNull().default(0),         // 0-59
+  weekday: integer('weekday').notNull().default(0),       // 0=Sun, 1=Mon, ... 6=Sat
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  modules: text('modules').notNull().default('["docker","metrics"]'), // JSON array of enabled modules
+  subnets: text('subnets'),                               // JSON array, null = auto-detect
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
   rawJson: text('raw_json').notNull(),

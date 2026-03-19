@@ -72,6 +72,70 @@ if (!user) return Astro.redirect('/app/login');
       <div id="notifStatus" class="backup-status"></div>
     </section>
 
+    <!-- Scanner Schedule -->
+    <section class="section">
+      <h2>Scanner Schedule</h2>
+      <p class="section-desc">Control how often the scanner runs and what it discovers. The scanner polls this configuration automatically.</p>
+
+      <div class="scanner-form">
+        <div class="scanner-row">
+          <label>
+            <span>Frequency</span>
+            <select id="scanInterval" class="settings-input">
+              <option value="hourly">Hourly</option>
+              <option value="daily" selected>Daily</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </label>
+
+          <label id="scanWeekdayLabel" style="display:none;">
+            <span>Day</span>
+            <select id="scanWeekday" class="settings-input">
+              <option value="0">Sunday</option>
+              <option value="1">Monday</option>
+              <option value="2">Tuesday</option>
+              <option value="3">Wednesday</option>
+              <option value="4">Thursday</option>
+              <option value="5">Friday</option>
+              <option value="6">Saturday</option>
+            </select>
+          </label>
+
+          <label id="scanTimeLabel">
+            <span>Time</span>
+            <div class="time-row">
+              <input type="number" id="scanHour" min="0" max="23" value="3" class="settings-input time-input" />
+              <span class="time-sep">:</span>
+              <input type="number" id="scanMinute" min="0" max="59" value="0" class="settings-input time-input" />
+            </div>
+          </label>
+        </div>
+
+        <div class="scanner-modules">
+          <span class="module-label">Modules</span>
+          <label class="module-check"><input type="checkbox" id="modDocker" checked disabled /> Docker containers</label>
+          <label class="module-check"><input type="checkbox" id="modMetrics" checked /> Resource metrics</label>
+          <label class="module-check"><input type="checkbox" id="modNetwork" /> Network devices</label>
+          <label class="module-check"><input type="checkbox" id="modDns" /> DNS &amp; services</label>
+          <label class="module-check"><input type="checkbox" id="modAuth" /> Auth detection</label>
+        </div>
+
+        <label>
+          <span>Subnets <span style="font-weight:400;color:var(--text-muted)">(leave empty for auto-detect)</span></span>
+          <input type="text" id="scanSubnets" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
+        </label>
+
+        <div class="scanner-actions">
+          <label class="scanner-toggle">
+            <input type="checkbox" id="scanEnabled" checked />
+            <span>Scanning enabled</span>
+          </label>
+          <button id="saveScannerBtn" class="btn btn-primary btn-sm">Save schedule</button>
+        </div>
+        <div id="scannerStatus" class="backup-status"></div>
+      </div>
+    </section>
+
     <!-- Backups -->
     <section class="section">
       <h2>Backups</h2>
@@ -233,6 +297,95 @@ if (!user) return Astro.redirect('/app/login');
   });
 
   loadPreferences();
+
+  // --- Scanner Schedule ---
+  const scanInterval = document.getElementById('scanInterval') as HTMLSelectElement;
+  const scanWeekday = document.getElementById('scanWeekday') as HTMLSelectElement;
+  const scanWeekdayLabel = document.getElementById('scanWeekdayLabel')!;
+  const scanTimeLabel = document.getElementById('scanTimeLabel')!;
+  const scanHour = document.getElementById('scanHour') as HTMLInputElement;
+  const scanMinute = document.getElementById('scanMinute') as HTMLInputElement;
+  const scanSubnets = document.getElementById('scanSubnets') as HTMLInputElement;
+  const scanEnabled = document.getElementById('scanEnabled') as HTMLInputElement;
+  const saveScannerBtn = document.getElementById('saveScannerBtn')!;
+  const scannerStatusEl = document.getElementById('scannerStatus')!;
+  const modDocker = document.getElementById('modDocker') as HTMLInputElement;
+  const modMetrics = document.getElementById('modMetrics') as HTMLInputElement;
+  const modNetwork = document.getElementById('modNetwork') as HTMLInputElement;
+  const modDns = document.getElementById('modDns') as HTMLInputElement;
+  const modAuth = document.getElementById('modAuth') as HTMLInputElement;
+
+  scanInterval?.addEventListener('change', () => {
+    scanWeekdayLabel.style.display = scanInterval.value === 'weekly' ? '' : 'none';
+    scanTimeLabel.style.display = scanInterval.value === 'hourly' ? 'none' : '';
+  });
+
+  async function loadScannerSchedule() {
+    try {
+      const res = await fetch('/app/api/scanner/schedule');
+      const data = await res.json();
+      scanInterval.value = data.interval || 'daily';
+      scanHour.value = String(data.hour ?? 3);
+      scanMinute.value = String(data.minute ?? 0);
+      scanWeekday.value = String(data.weekday ?? 0);
+      scanEnabled.checked = data.enabled !== false;
+      scanWeekdayLabel.style.display = data.interval === 'weekly' ? '' : 'none';
+      scanTimeLabel.style.display = data.interval === 'hourly' ? 'none' : '';
+
+      const mods = data.modules || ['docker', 'metrics'];
+      modMetrics.checked = mods.includes('metrics');
+      modNetwork.checked = mods.includes('network');
+      modDns.checked = mods.includes('dns');
+      modAuth.checked = mods.includes('auth');
+
+      if (data.subnets && Array.isArray(data.subnets)) {
+        scanSubnets.value = data.subnets.join(', ');
+      }
+    } catch {}
+  }
+
+  saveScannerBtn?.addEventListener('click', async () => {
+    scannerStatusEl.textContent = 'Saving...';
+    scannerStatusEl.className = 'backup-status';
+
+    const modules = ['docker'];
+    if (modMetrics.checked) modules.push('metrics');
+    if (modNetwork.checked) modules.push('network');
+    if (modDns.checked) modules.push('dns');
+    if (modAuth.checked) modules.push('auth');
+
+    const subnetsRaw = scanSubnets.value.trim();
+    const subnets = subnetsRaw ? subnetsRaw.split(',').map((s: string) => s.trim()).filter(Boolean) : null;
+
+    try {
+      const res = await fetch('/app/api/scanner/schedule', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          interval: scanInterval.value,
+          hour: parseInt(scanHour.value) || 3,
+          minute: parseInt(scanMinute.value) || 0,
+          weekday: parseInt(scanWeekday.value) || 0,
+          enabled: scanEnabled.checked,
+          modules,
+          subnets,
+        }),
+      });
+      const data = await res.json();
+      if (data.updated) {
+        scannerStatusEl.textContent = 'Schedule saved. Scanner will pick up changes on next poll.';
+        scannerStatusEl.className = 'backup-status success';
+      } else {
+        scannerStatusEl.textContent = data.error || 'Failed.';
+        scannerStatusEl.className = 'backup-status error';
+      }
+    } catch {
+      scannerStatusEl.textContent = 'Network error.';
+      scannerStatusEl.className = 'backup-status error';
+    }
+  });
+
+  loadScannerSchedule();
 
   // --- Backups ---
   async function loadBackups() {
@@ -477,4 +630,20 @@ if (!user) return Astro.redirect('/app/login');
   .delete-confirm-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .delete-confirm-label span { font-size: 12px; font-weight: 600; color: var(--critical); text-transform: uppercase; letter-spacing: 0.04em; }
   .mono { font-family: var(--font-mono); }
+  .scanner-form { display: flex; flex-direction: column; gap: 14px; }
+  .scanner-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .scanner-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .scanner-row label { display: flex; flex-direction: column; gap: 4px; }
+  .time-row { display: flex; align-items: center; gap: 4px; }
+  .time-input { width: 56px; text-align: center; }
+  .time-sep { color: var(--text-muted); font-weight: 600; }
+  .scanner-modules { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .module-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 4px; }
+  .module-check { display: flex; align-items: center; gap: 4px; font-size: 13px; color: var(--text-secondary); cursor: pointer; }
+  .module-check input { accent-color: var(--accent); }
+  .module-check input:disabled { opacity: 0.5; }
+  .scanner-actions { display: flex; align-items: center; gap: 12px; }
+  .scanner-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+  .scanner-toggle input { accent-color: var(--accent); }
+  .scanner-toggle span { font-weight: 400 !important; text-transform: none !important; letter-spacing: normal !important; }
 </style>

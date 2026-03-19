@@ -1,0 +1,287 @@
+---
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut Scanner — automated infrastructure discovery for your homelab." />
+  <title>Scanner Documentation — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/docs/scanner" class="ln-link active">Scanner</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Scanner</h1>
+    <p class="updated mono">Automated infrastructure discovery for your homelab</p>
+
+    <p>The StdOut Scanner is a lightweight Go binary that discovers your infrastructure and pushes the results to your StdOut account. It runs as a Docker container alongside your other services — no agent installation, no privileged access by default.</p>
+
+    <h2>What the scanner discovers</h2>
+
+    <p>The scanner is modular. You choose what to enable based on what you want to know about your infrastructure.</p>
+
+    <table>
+      <thead>
+        <tr><th>Module</th><th>What it finds</th><th>Default</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>docker</code></td><td>Containers, images, ports, networks, compose projects, health status, restart policies, volume mounts, environment variable names (never values)</td><td>On</td></tr>
+        <tr><td><code>metrics</code></td><td>CPU %, memory usage/limit, network I/O, disk I/O, PID count per container. Host-level CPU, memory, load average, and uptime.</td><td>On</td></tr>
+        <tr><td><code>network</code></td><td>All devices on your subnet — IPs, hostnames, MAC addresses, vendor identification (80+ manufacturers), open ports, device type classification (server, NAS, router, printer, IoT, etc.)</td><td>Off</td></tr>
+        <tr><td><code>dns</code></td><td>Reverse DNS, mDNS/Bonjour service advertisements, reverse proxy detection (nginx, Traefik, Caddy, HAProxy, Envoy), TLS certificate inspection with expiry dates and SANs</td><td>Off</td></tr>
+        <tr><td><code>auth</code></td><td>Which services require login, what type of auth they use (basic, bearer, form-based), and SSO provider identification (Authentik, Keycloak, Okta, Auth0, Azure AD, Google, GitHub, Authelia, Cloudflare Access, and more)</td><td>Off</td></tr>
+      </tbody>
+    </table>
+
+    <h2>What the scanner does NOT do</h2>
+
+    <ul>
+      <li><strong>Never reads secrets.</strong> Environment variable names only — never values. No config file contents. No passwords, API keys, or tokens.</li>
+      <li><strong>Never attempts authentication.</strong> Auth detection checks response headers (401/403) and login page patterns. It never submits credentials, brute forces, or tests passwords.</li>
+      <li><strong>Never captures traffic.</strong> Network scanning uses ICMP ping and TCP connect probes. No packet sniffing, no deep packet inspection, no man-in-the-middle.</li>
+      <li><strong>Never phones home.</strong> The scanner only talks to your StdOut instance (the URL you configure). No telemetry, no analytics, no external calls.</li>
+      <li><strong>Never writes to your infrastructure.</strong> All access is read-only. The Docker socket is mounted read-only (<code>:ro</code>). No containers are started, stopped, or modified.</li>
+    </ul>
+
+    <h2>Getting the scanner</h2>
+
+    <p>The scanner is distributed as a Docker image. Pull it from GitHub Container Registry:</p>
+
+    <pre><code>docker pull ghcr.io/charlieseay/stdout-scanner:latest</code></pre>
+
+    <p>Or run it directly — Docker will pull the image automatically:</p>
+
+    <pre><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/charlieseay/stdout-scanner version</code></pre>
+
+    <h2>Quick start</h2>
+
+    <h3>1. Create an API token</h3>
+
+    <p>Go to <a href="/app/settings">Settings → API Tokens</a> and generate a new token. Copy it — it's shown only once.</p>
+
+    <h3>2. Run the interactive setup</h3>
+
+    <pre><code>docker run -it --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner init</code></pre>
+
+    <p>The setup interview walks you through:</p>
+    <ul>
+      <li>Detecting what's accessible (Docker socket, network interfaces)</li>
+      <li>Choosing which modules to enable</li>
+      <li>Configuring your StdOut URL and API token</li>
+      <li>Setting up a scan schedule (optional)</li>
+    </ul>
+
+    <p>Your configuration is saved to <code>~/.stdout/scanner.yaml</code> (or <code>/data/scanner.yaml</code> inside Docker).</p>
+
+    <h3>3. Run your first scan</h3>
+
+    <pre><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan</code></pre>
+
+    <p>The scanner discovers your infrastructure and pushes the results to StdOut. Go to your dashboard to review and confirm the import.</p>
+
+    <h2>Scan modes</h2>
+
+    <h3>One-shot scan</h3>
+
+    <p>The default. Scans once and exits. Good for manual runs or cron jobs.</p>
+
+    <pre><code># Scan and push to StdOut
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan
+
+# Scan and print markdown locally (no push)
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/charlieseay/stdout-scanner scan --output markdown
+
+# Scan and print JSON
+docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/charlieseay/stdout-scanner scan --output json</code></pre>
+
+    <h3>Delta scan</h3>
+
+    <p>Compares the current scan against the last one and reports only changes. The scanner saves state to <code>/data/last-scan.json</code>.</p>
+
+    <pre><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan --delta</code></pre>
+
+    <p>Delta scans report:</p>
+    <ul>
+      <li>New containers, removed containers, image upgrades</li>
+      <li>Status or health changes (container went unhealthy)</li>
+      <li>New or disappeared network devices</li>
+      <li>Port changes on network devices</li>
+    </ul>
+
+    <p>If nothing changed, nothing is pushed — no noise in your dashboard.</p>
+
+    <h3>Scheduled scan</h3>
+
+    <p>Run the scanner as a persistent container that scans on a schedule:</p>
+
+    <pre><code>docker run -d --name stdout-scanner \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan \
+  --schedule daily --delta \
+  --token YOUR_TOKEN --url https://your-stdout-instance.com</code></pre>
+
+    <p>Schedule options: <code>hourly</code>, <code>daily</code>, <code>daily@03:00</code>, <code>weekly@sun@03:00</code>.</p>
+
+    <p>The scanner also polls your StdOut account settings for schedule changes — so you can adjust the frequency, time, and enabled modules from the <a href="/app/settings">Settings</a> page without restarting the container.</p>
+
+    <h2>Network scanning</h2>
+
+    <p>Network discovery is optional and off by default. To enable it, the scanner needs access to your LAN:</p>
+
+    <pre><code># Option 1: Host networking (full LAN visibility)
+docker run --rm --net=host \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan \
+  --scan-network --subnets 192.168.0.0/24
+
+# Option 2: Specify in config (set during init)
+# subnets are saved in scanner.yaml</code></pre>
+
+    <p>Network scanning uses ICMP ping and TCP connect probes (not raw packet capture). It also queries SNMP (v2c, community "public") for device metadata like model names and uptime.</p>
+
+    <h3>Privacy considerations</h3>
+
+    <ul>
+      <li>The scanner only scans subnets you explicitly configure</li>
+      <li>By default, it scans only the Docker host's primary subnet</li>
+      <li>It never captures traffic content — only connection metadata (IP, port open/closed)</li>
+      <li>SNMP queries use the read-only "public" community string</li>
+    </ul>
+
+    <h2>Full module scan</h2>
+
+    <p>Enable everything at once with <code>--full</code>:</p>
+
+    <pre><code>docker run --rm --net=host \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan --full \
+  --subnets 192.168.0.0/24</code></pre>
+
+    <h2>CLI reference</h2>
+
+    <table>
+      <thead>
+        <tr><th>Command</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>init</code></td><td>Interactive setup — detects environment, configures modules and token</td></tr>
+        <tr><td><code>scan</code></td><td>Run a scan (default if no command specified)</td></tr>
+        <tr><td><code>version</code></td><td>Print version and exit</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Scan flags</h3>
+
+    <table>
+      <thead>
+        <tr><th>Flag</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>--token</code></td><td>StdOut API token (overrides config)</td></tr>
+        <tr><td><code>--url</code></td><td>StdOut instance URL (overrides config)</td></tr>
+        <tr><td><code>--output json|markdown</code></td><td>Print results locally instead of pushing to StdOut</td></tr>
+        <tr><td><code>--config /path/to/config.yaml</code></td><td>Config file path (default: auto-detected)</td></tr>
+        <tr><td><code>--full</code></td><td>Enable all discovery modules</td></tr>
+        <tr><td><code>--scan-network</code></td><td>Enable network device discovery</td></tr>
+        <tr><td><code>--subnets 192.168.0.0/24</code></td><td>Subnet(s) to scan (comma-separated)</td></tr>
+        <tr><td><code>--scan-dns</code></td><td>Enable DNS and service discovery</td></tr>
+        <tr><td><code>--scan-auth</code></td><td>Enable auth detection</td></tr>
+        <tr><td><code>--scan-snmp</code></td><td>Enable SNMP queries (default: true)</td></tr>
+        <tr><td><code>--delta</code></td><td>Compare against previous scan, report changes only</td></tr>
+        <tr><td><code>--state-file /path</code></td><td>State file for delta comparison (default: /data/last-scan.json)</td></tr>
+        <tr><td><code>--schedule daily</code></td><td>Run on schedule: hourly, daily, daily@HH:MM, weekly@day@HH:MM</td></tr>
+        <tr><td><code>--skip-host</code></td><td>Skip host info collection</td></tr>
+        <tr><td><code>--skip-metrics</code></td><td>Skip resource metrics</td></tr>
+        <tr><td><code>--dry-run</code></td><td>Scan but don't push to StdOut (prints JSON)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Self-hosted scanner</h2>
+
+    <p>The scanner is open source and works with both SaaS and self-hosted StdOut instances. Point it at any StdOut URL — there's nothing SaaS-specific about the protocol.</p>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Scanner can't connect to Docker</h3>
+    <p>Make sure the Docker socket is mounted: <code>-v /var/run/docker.sock:/var/run/docker.sock:ro</code></p>
+
+    <h3>Network scan finds no devices</h3>
+    <p>Inside Docker, the scanner sees the container's virtual network, not your LAN. Use <code>--net=host</code> to give it host networking, or run the scanner binary directly on the host.</p>
+
+    <h3>SNMP returns no data</h3>
+    <p>Most devices respond to SNMP v2c with community string "public", but some have SNMP disabled or use a different community. This is informational only — the scanner works fine without SNMP.</p>
+
+    <h3>Push fails with 401</h3>
+    <p>Your API token may be revoked or invalid. Generate a new one in <a href="/app/settings">Settings → API Tokens</a>.</p>
+
+    <h3>Delta shows the scanner container itself as added/removed</h3>
+    <p>This is expected when running the scanner as a one-shot <code>docker run --rm</code> container. The scanner container appears in one scan and disappears in the next. Use a persistent container with <code>--schedule</code> to avoid this.</p>
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-link.active { color: var(--accent-light); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text-secondary); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface); padding: 2px 6px; border-radius: 3px; }
+  .legal pre { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 12px 0; overflow-x: auto; }
+  .legal pre code { background: none; padding: 0; font-size: 12px; line-height: 1.7; }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal strong { color: var(--text); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>
