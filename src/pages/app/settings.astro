@@ -168,6 +168,10 @@ if (!user) return Astro.redirect('/app/login');
       <div id="tokenReveal" class="token-reveal" style="display:none;">
         <p class="token-warning">Copy this token now — it won't be shown again.</p>
         <code id="tokenValue" class="token-value"></code>
+        <div id="scannerCmd" class="scanner-cmd-block">
+          <p class="scanner-cmd-label">Quick start — run this on your server:</p>
+          <pre class="scanner-cmd-pre"><code id="scannerCmdValue"></code></pre>
+        </div>
       </div>
     </section>
 
@@ -524,6 +528,8 @@ if (!user) return Astro.redirect('/app/login');
       const data = await res.json();
       if (data.token) {
         tokenValue.textContent = data.token;
+        const cmdEl = document.getElementById('scannerCmdValue')!;
+        cmdEl.textContent = `docker run --rm \\\n  -v /var/run/docker.sock:/var/run/docker.sock:ro \\\n  ghcr.io/charlieseay/stdout-scanner scan \\\n  --token ${data.token} \\\n  --url ${window.location.origin}`;
         tokenReveal.style.display = 'block';
         tokenNameInput.value = '';
         loadTokens();
@@ -630,6 +636,10 @@ if (!user) return Astro.redirect('/app/login');
   .delete-confirm-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
   .delete-confirm-label span { font-size: 12px; font-weight: 600; color: var(--critical); text-transform: uppercase; letter-spacing: 0.04em; }
   .mono { font-family: var(--font-mono); }
+  .scanner-cmd-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .scanner-cmd-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .scanner-cmd-pre { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; overflow-x: auto; }
+  .scanner-cmd-pre code { font-family: var(--font-mono); font-size: 11px; color: var(--text); white-space: pre; user-select: all; }
   .scanner-form { display: flex; flex-direction: column; gap: 14px; }
   .scanner-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
   .scanner-row { display: flex; gap: 12px; flex-wrap: wrap; }

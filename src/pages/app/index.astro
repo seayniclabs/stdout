@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../lib/db';
+import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
@@ -22,6 +22,14 @@ const resolvedCount = userIncidents.filter(i => i.status === 'resolved').length;
 // Check for pending imports
 const pendingImports = db.select().from(tenantSchema.stackImports)
   .where(eq(tenantSchema.stackImports.status, 'pending')).all();
+
+// Onboarding state
+const stacks = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const tokens = getCentralDb().select().from(centralSchema.apiTokens)
+  .where(eq(centralSchema.apiTokens.userId, user.id)).all();
+const isNewUser = stacks.length === 0 && userIncidents.length === 0;
+const hasToken = tokens.length > 0;
 ---
 <Layout title="StdOut — Incidents">
   <div class="dashboard">
@@ -59,12 +67,80 @@ const pendingImports = db.select().from(tenantSchema.stackImports)
       </a>
     </div>
 
-    <!-- Incident list -->
-    {userIncidents.length === 0 ? (
+    <!-- Onboarding or incident list -->
+    {isNewUser ? (
+      <div class="onboarding">
+        <div class="onboarding-header">
+          <div class="empty-icon">&gt;_</div>
+          <h3>Welcome to StdOut</h3>
+          <p>Let's get your infrastructure documented. Three steps and you're running.</p>
+        </div>
+
+        <div class="onboarding-steps">
+          <div class={`onboard-step ${hasToken ? 'done' : 'active'}`}>
+            <div class="step-num">{hasToken ? '✓' : '1'}</div>
+            <div class="step-content">
+              <h4>Create an API token</h4>
+              {hasToken ? (
+                <p class="step-done-text">Token created — ready to scan.</p>
+              ) : (
+                <Fragment>
+                  <p>The scanner needs a token to push results to your account.</p>
+                  <a href="/app/settings" class="btn btn-primary btn-sm">Go to Settings → API Tokens</a>
+                </Fragment>
+              )}
+            </div>
+          </div>
+
+          <div class={`onboard-step ${hasToken && stacks.length === 0 ? 'active' : hasToken && stacks.length > 0 ? 'done' : ''}`}>
+            <div class="step-num">{stacks.length > 0 ? '✓' : '2'}</div>
+            <div class="step-content">
+              <h4>Run the scanner</h4>
+              {stacks.length > 0 ? (
+                <p class="step-done-text">Stack imported — your infrastructure is documented.</p>
+              ) : hasToken ? (
+                <Fragment>
+                  <p>Discover your infrastructure automatically. Run this on your server:</p>
+                  <pre class="scanner-cmd"><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/charlieseay/stdout-scanner scan \
+  --output json --dry-run</code></pre>
+                  <p class="step-hint">See the <a href="/docs/scanner">scanner docs</a> for full setup with push-to-StdOut, network scanning, and scheduling.</p>
+                </Fragment>
+              ) : (
+                <p>Create a token first, then run the scanner.</p>
+              )}
+            </div>
+          </div>
+
+          <div class={`onboard-step ${stacks.length > 0 ? 'active' : ''}`}>
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <h4>Log your first incident</h4>
+              {stacks.length > 0 ? (
+                <Fragment>
+                  <p>When something breaks, log it here. StdOut matches it against your past resolutions.</p>
+                  <a href="/app/incidents/new" class="btn btn-primary btn-sm">Log an incident</a>
+                </Fragment>
+              ) : (
+                <p>After scanning, you'll be ready to start logging incidents.</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div class="onboarding-alt">
+          <span class="alt-text">or skip setup and</span>
+          <a href="/app/incidents/new" class="alt-link">log an incident directly</a>
+          <span class="alt-text">·</span>
+          <a href="/app/stacks" class="alt-link">describe a stack manually</a>
+        </div>
+      </div>
+    ) : userIncidents.length === 0 ? (
       <div class="empty-state">
         <div class="empty-icon">&gt;_</div>
         <h3>No incidents yet</h3>
-        <p>Log your first incident to start building your runbook.</p>
+        <p>When something breaks, log it here. StdOut matches it against your past resolutions and knowledge base.</p>
         <a href="/app/incidents/new" class="btn btn-primary">Log an incident</a>
       </div>
     ) : (
@@ -210,4 +286,27 @@ const pendingImports = db.select().from(tenantSchema.stackImports)
     color: var(--text-secondary);
     margin-bottom: 20px;
   }
+  .onboarding { margin-top: 8px; }
+  .onboarding-header { text-align: center; margin-bottom: 28px; }
+  .onboarding-header h3 { font-size: 18px; margin-bottom: 6px; }
+  .onboarding-header p { font-size: 13px; color: var(--text-secondary); }
+  .onboarding-steps { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; }
+  .onboard-step { display: flex; gap: 14px; padding: 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); opacity: 0.4; }
+  .onboard-step.active { opacity: 1; border-color: var(--accent); }
+  .onboard-step.done { opacity: 0.7; }
+  .step-num { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px; font-weight: 700; font-family: var(--font-mono); background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
+  .onboard-step.active .step-num { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .onboard-step.done .step-num { background: var(--low); color: #fff; border-color: var(--low); }
+  .step-content { flex: 1; }
+  .step-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .step-content p { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+  .step-done-text { color: var(--low) !important; font-family: var(--font-mono); font-size: 12px !important; }
+  .step-hint { font-size: 12px !important; color: var(--text-muted) !important; }
+  .step-hint a { color: var(--accent-light); }
+  .scanner-cmd { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; overflow-x: auto; margin-bottom: 8px; }
+  .scanner-cmd code { font-family: var(--font-mono); font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre; }
+  .onboarding-alt { text-align: center; font-size: 12px; color: var(--text-muted); }
+  .alt-link { color: var(--accent-light); text-decoration: none; }
+  .alt-link:hover { text-decoration: underline; }
+  .alt-text { margin: 0 2px; }
 </style>
