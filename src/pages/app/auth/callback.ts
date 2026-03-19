@@ -33,8 +33,16 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   }
 
   // Get user info
-  const oidcUser = await getUserInfo(tokens.access_token);
+  console.log('OIDC callback: exchanged tokens, access_token present:', !!tokens.access_token, 'type:', tokens.token_type);
+  let oidcUser;
+  try {
+    oidcUser = await getUserInfo(tokens.access_token);
+  } catch (err) {
+    console.error('OIDC getUserInfo threw:', err);
+    return redirect('/app/login?error=userinfo_failed');
+  }
   if (!oidcUser || !oidcUser.email) {
+    console.error('OIDC userinfo returned no email:', oidcUser);
     return redirect('/app/login?error=userinfo_failed');
   }
 

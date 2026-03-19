@@ -145,10 +145,22 @@ if (user) {
       const authNav = document.getElementById('authNav');
       if (user && authNav) {
         authNav.textContent = '';
-        const acctLink = document.createElement('a');
-        acctLink.href = '/app/account';
-        acctLink.className = 'topnav-auth-link';
-        acctLink.textContent = 'Account';
+
+        // Avatar initial
+        const name = user.displayName || user.email || '?';
+        const initial = name.charAt(0).toUpperCase();
+        const avatar = document.createElement('span');
+        avatar.className = 'topnav-avatar';
+        avatar.textContent = initial;
+        avatar.title = user.email || '';
+
+        // Display name
+        const nameEl = document.createElement('a');
+        nameEl.href = '/app/account';
+        nameEl.className = 'topnav-user-name';
+        nameEl.textContent = user.displayName || user.email.split('@')[0];
+
+        // Log out form
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/app/logout';
@@ -164,7 +176,7 @@ if (user) {
         btn.textContent = 'Log out';
         btn.style.cssText = 'background:none; border:none; cursor:pointer; font:inherit; color:inherit;';
         form.appendChild(btn);
-        authNav.append(acctLink, form);
+        authNav.append(avatar, nameEl, form);
       }
     }).catch(() => {});
   </script>
@@ -233,6 +245,27 @@ if (user) {
       transition: color 150ms;
     }
     .topnav-auth-link:hover { color: var(--text); }
+    .topnav-avatar {
+      width: 26px; height: 26px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-ui);
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--bg);
+      flex-shrink: 0;
+    }
+    .topnav-user-name {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: color 150ms;
+    }
+    .topnav-user-name:hover { color: var(--accent-light); }
     .main {
       max-width: 1200px;
       margin: 0 auto;

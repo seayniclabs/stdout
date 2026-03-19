@@ -80,7 +80,9 @@ export async function exchangeCode(code: string): Promise<TokenResponse | null> 
     return null;
   }
 
-  return resp.json();
+  const tokenData = await resp.json();
+  console.log('OIDC token exchange success, scopes:', tokenData.scope);
+  return tokenData;
 }
 
 // --- Userinfo ---
@@ -100,7 +102,8 @@ export async function getUserInfo(accessToken: string): Promise<OIDCUser | null>
   });
 
   if (!resp.ok) {
-    console.error('OIDC userinfo failed:', resp.status);
+    const body = await resp.text();
+    console.error('OIDC userinfo failed:', resp.status, body);
     return null;
   }
 
