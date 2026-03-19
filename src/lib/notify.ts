@@ -6,7 +6,9 @@ export type NotifyEvent =
   | 'incident_created'
   | 'diagnosis_complete'
   | 'severity_critical'
-  | 'backup_complete';
+  | 'backup_complete'
+  | 'service_down'
+  | 'service_recovered';
 
 interface NotifyPayload {
   event: NotifyEvent;

@@ -39,10 +39,13 @@ const stacks = db.select().from(tenantSchema.stacks)
   <div class="hud-page">
     <div class="hud-header">
       <h1>HUD</h1>
-      <button id="addMonitorBtn" class="btn btn-primary btn-sm">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
-        Add monitor
-      </button>
+      <div class="hud-actions">
+        <button id="populateBtn" class="btn btn-ghost btn-sm">Populate from scanner</button>
+        <button id="addMonitorBtn" class="btn btn-primary btn-sm">
+          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+          Add monitor
+        </button>
+      </div>
     </div>
 
     {allMonitors.length === 0 ? (
@@ -231,6 +234,49 @@ const stacks = db.select().from(tenantSchema.stacks)
     }
   });
 
+  // Populate from scanner
+  document.getElementById('populateBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('populateBtn')!;
+    btn.setAttribute('disabled', '');
+    btn.textContent = 'Scanning...';
+
+    try {
+      const res = await fetch('/app/api/monitors/suggest');
+      const data = await res.json();
+
+      if (!data.suggestions || data.suggestions.length === 0) {
+        btn.textContent = 'No new services found';
+        setTimeout(() => { btn.textContent = 'Populate from scanner'; btn.removeAttribute('disabled'); }, 3000);
+        return;
+      }
+
+      // Show confirmation
+      const names = data.suggestions.map((s: any) => s.name).join(', ');
+      if (!confirm(`Create ${data.suggestions.length} monitors?\n\n${names}`)) {
+        btn.textContent = 'Populate from scanner';
+        btn.removeAttribute('disabled');
+        return;
+      }
+
+      const createRes = await fetch('/app/api/monitors/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ monitors: data.suggestions }),
+      });
+      const createData = await createRes.json();
+
+      if (createData.created) {
+        window.location.reload();
+      } else {
+        btn.textContent = createData.error || 'Failed';
+        btn.removeAttribute('disabled');
+      }
+    } catch {
+      btn.textContent = 'Error';
+      setTimeout(() => { btn.textContent = 'Populate from scanner'; btn.removeAttribute('disabled'); }, 3000);
+    }
+  });
+
   // Auto-refresh every 30 seconds
   setTimeout(() => window.location.reload(), 30000);
 </script>
@@ -239,6 +285,7 @@ const stacks = db.select().from(tenantSchema.stacks)
   .hud-page { max-width: 900px; margin: 0 auto; }
   .hud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .hud-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; font-family: var(--font-mono); }
+  .hud-actions { display: flex; gap: 8px; }
 
   .status-summary { display: flex; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; }
   .summary-card { flex: 1; padding: 16px 20px; background: var(--bg-surface); text-align: center; }

@@ -1,6 +1,7 @@
 import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from './db';
 import { eq, and, desc, gt } from 'drizzle-orm';
+import { notify } from './notify';
 import https from 'node:https';
 import http from 'node:http';
 import net from 'node:net';
@@ -164,7 +165,8 @@ async function runCheck(userId: string, monitorId: string) {
     checkedAt: now,
   }).run();
 
-  // Update monitor state
+  // Update monitor state + detect transitions
+  const previousStatus = monitor.currentStatus;
   let newFailures = monitor.consecutiveFailures;
   let newStatus = monitor.currentStatus;
 
@@ -188,6 +190,100 @@ async function runCheck(userId: string, monitorId: string) {
     lastResponseMs: result.responseTimeMs,
     updatedAt: now,
   }).where(eq(tenantSchema.monitors.id, monitorId)).run();
+
+  // --- State transition handling ---
+
+  // Healthy/Degraded → Down: auto-create incident + notify
+  if (newStatus === 'down' && previousStatus !== 'down') {
+    const incidentId = nanoid();
+    const errorDetail = result.error || `${monitor.type} check failed`;
+    const title = `${monitor.name} is down`;
+    const description = [
+      `**Service:** ${monitor.name}`,
+      `**Type:** ${monitor.type}`,
+      `**Target:** ${monitor.target}`,
+      `**Error:** ${errorDetail}`,
+      `**Last successful:** ${monitor.lastCheckedAt ? monitor.lastCheckedAt.toISOString() : 'never'}`,
+      `**Consecutive failures:** ${newFailures}`,
+      '',
+      '*Auto-created by HUD monitor.*',
+    ].join('\n');
+
+    db.insert(tenantSchema.incidents).values({
+      id: incidentId,
+      userId,
+      stackId: monitor.stackId || null,
+      title,
+      description,
+      severity: 'high',
+      status: 'active',
+      tags: `hud,${monitor.type},auto`,
+      createdAt: now,
+      updatedAt: now,
+    }).run();
+
+    // Fire notifications
+    notify(userId, {
+      event: 'service_down',
+      title,
+      body: `${monitor.name} (${monitor.type}://${monitor.target}) failed ${newFailures} consecutive checks. ${errorDetail}`,
+      url: `/app/incidents/${incidentId}`,
+    }).catch(() => {}); // non-blocking
+
+    notify(userId, {
+      event: 'incident_created',
+      title,
+      body: `Auto-created incident for ${monitor.name}. ${errorDetail}`,
+      url: `/app/incidents/${incidentId}`,
+    }).catch(() => {});
+  }
+
+  // Down → Healthy: add recovery note to most recent auto-incident + notify
+  if (newStatus === 'healthy' && previousStatus === 'down') {
+    // Find the most recent auto-created incident for this monitor
+    const recentIncident = db.select().from(tenantSchema.incidents)
+      .where(and(
+        eq(tenantSchema.incidents.userId, userId),
+        eq(tenantSchema.incidents.status, 'active'),
+      ))
+      .orderBy(desc(tenantSchema.incidents.createdAt))
+      .all()
+      .find(i => i.title === `${monitor.name} is down` && i.tags?.includes('hud'));
+
+    if (recentIncident) {
+      // Calculate downtime
+      const downSince = recentIncident.createdAt;
+      const downtimeMs = now.getTime() - downSince.getTime();
+      const downtimeMins = Math.round(downtimeMs / 60000);
+      const downtimeStr = downtimeMins >= 60
+        ? `${Math.floor(downtimeMins / 60)}h ${downtimeMins % 60}m`
+        : `${downtimeMins}m`;
+
+      // Add resolution
+      db.insert(tenantSchema.resolutions).values({
+        id: nanoid(),
+        incidentId: recentIncident.id,
+        userId,
+        content: `Service recovered automatically.\n\n**Downtime:** ${downtimeStr}\n**Recovered at:** ${now.toISOString()}\n\n*Auto-resolved by HUD monitor.*`,
+        createdAt: now,
+      }).run();
+
+      // Mark incident as resolved
+      db.update(tenantSchema.incidents).set({
+        status: 'resolved',
+        resolvedAt: now,
+        updatedAt: now,
+      }).where(eq(tenantSchema.incidents.id, recentIncident.id)).run();
+    }
+
+    // Fire recovery notification
+    notify(userId, {
+      event: 'service_recovered',
+      title: `${monitor.name} recovered`,
+      body: `${monitor.name} (${monitor.type}://${monitor.target}) is back up. Response: ${result.responseTimeMs}ms.`,
+      url: '/app/hud',
+    }).catch(() => {});
+  }
 
   // Update daily aggregation
   const dateStr = now.toISOString().split('T')[0];

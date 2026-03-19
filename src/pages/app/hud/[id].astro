@@ -26,13 +26,37 @@ const uptime30 = getUptimeStats(user.id, id!, 30);
 const uptime7 = getUptimeStats(user.id, id!, 7);
 const uptime24h = getUptimeStats(user.id, id!, 1);
 
-// Related incidents
-const incidents = monitor.stackId
+// Related incidents (by stack or by HUD auto-tag matching this monitor name)
+const incidentsByStack = monitor.stackId
   ? db.select().from(tenantSchema.incidents)
       .where(eq(tenantSchema.incidents.stackId, monitor.stackId))
       .orderBy(desc(tenantSchema.incidents.createdAt))
       .limit(10).all()
   : [];
+
+const incidentsByName = db.select().from(tenantSchema.incidents)
+  .where(eq(tenantSchema.incidents.userId, user.id))
+  .orderBy(desc(tenantSchema.incidents.createdAt))
+  .all()
+  .filter(i => i.title.toLowerCase().includes(monitor.name.toLowerCase()))
+  .slice(0, 10);
+
+// Merge and deduplicate
+const seenIds = new Set<string>();
+const incidents = [...incidentsByStack, ...incidentsByName].filter(i => {
+  if (seenIds.has(i.id)) return false;
+  seenIds.add(i.id);
+  return true;
+}).slice(0, 10);
+
+// Past resolutions for this service (from resolved incidents)
+const resolvedIncidents = incidents.filter(i => i.status === 'resolved');
+const pastResolutions = resolvedIncidents.flatMap(i => {
+  return db.select().from(tenantSchema.resolutions)
+    .where(eq(tenantSchema.resolutions.incidentId, i.id))
+    .all()
+    .map(r => ({ ...r, incidentTitle: i.title }));
+}).slice(0, 5);
 
 const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
 ---
@@ -144,6 +168,34 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
               <span class={`status-badge ${i.status}`}>{i.status}</span>
             </a>
           ))}
+        </div>
+      </div>
+    )}
+
+    <!-- Past resolutions -->
+    {pastResolutions.length > 0 && (
+      <div class="chart-section">
+        <h2>What Fixed This Before</h2>
+        <div class="resolution-list">
+          {pastResolutions.map((r: any) => (
+            <div class="resolution-card">
+              <div class="res-header">
+                <a href={`/app/incidents/${r.incidentId}`} class="res-incident-link">{r.incidentTitle}</a>
+                <span class="res-date mono">{new Date(r.createdAt).toLocaleDateString()}</span>
+              </div>
+              <pre class="res-content">{r.content}</pre>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {/* Prompt when service is down and no resolutions exist */}
+    {monitor.currentStatus === 'down' && pastResolutions.length === 0 && (
+      <div class="chart-section">
+        <h2>What Fixed This Before</h2>
+        <div class="no-resolutions">
+          <p>No past resolutions found for this service. When you fix it, <a href="/app/incidents/new">log the resolution</a> so StdOut remembers next time.</p>
         </div>
       </div>
     )}
@@ -272,6 +324,16 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
   .status-badge.active { color: var(--critical); background: var(--critical-dim); }
   .status-badge.resolved { color: var(--text-muted); background: rgba(85,85,106,0.12); }
 
+  .resolution-list { display: flex; flex-direction: column; gap: 8px; }
+  .resolution-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .res-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .res-incident-link { font-size: 12px; color: var(--accent-light); text-decoration: none; font-weight: 600; }
+  .res-incident-link:hover { text-decoration: underline; }
+  .res-date { font-size: 11px; color: var(--text-muted); }
+  .res-content { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; color: var(--text-secondary); white-space: pre-wrap; word-wrap: break-word; }
+  .no-resolutions { padding: 16px; background: var(--bg-surface); border: 1px dashed var(--border); border-radius: var(--radius); }
+  .no-resolutions p { font-size: 13px; color: var(--text-muted); }
+  .no-resolutions a { color: var(--accent-light); }
   .controls { margin-top: 32px; }
   .control-actions { display: flex; gap: 8px; }
 
