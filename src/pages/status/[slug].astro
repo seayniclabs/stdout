@@ -1,0 +1,209 @@
+---
+export const prerender = false;
+import '../../styles/global.css';
+import { getCentralDb, getTenantDb, tenantSchema, centralSchema } from '../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+import { getRecentChecks, getUptimeStats } from '../../lib/hud';
+
+const { slug } = Astro.params;
+
+// Find the status page across all users
+// In self-host mode, there's one DB. In SaaS, we'd need a lookup table.
+// For now, iterate users (fine for self-host, needs index for SaaS scale).
+let statusPage: any = null;
+let pageOwner: string = '';
+
+const allUsers = getCentralDb().select({ id: centralSchema.users.id })
+  .from(centralSchema.users).all();
+
+for (const user of allUsers) {
+  const db = getTenantDb(user.id);
+  const page = db.select().from(tenantSchema.statusPage)
+    .where(eq(tenantSchema.statusPage.slug, slug!)).get();
+  if (page && page.enabled) {
+    statusPage = page;
+    pageOwner = user.id;
+    break;
+  }
+}
+
+if (!statusPage) {
+  return new Response('Not found', { status: 404 });
+}
+
+// Load monitors for this status page
+let monitorIds: string[] = [];
+try { monitorIds = JSON.parse(statusPage.monitorIds); } catch {}
+
+const db = getTenantDb(pageOwner);
+const allMonitors = db.select().from(tenantSchema.monitors)
+  .where(eq(tenantSchema.monitors.userId, pageOwner))
+  .all()
+  .filter(m => monitorIds.includes(m.id));
+
+const monitorsData = allMonitors.map(m => {
+  const sparkline = getRecentChecks(pageOwner, m.id, 30);
+  const uptime = getUptimeStats(pageOwner, m.id, 90);
+  return { ...m, sparkline, uptimePercent: uptime.uptimePercent, avgResponse: uptime.avgResponse, days: uptime.days };
+});
+
+const healthy = monitorsData.filter(m => m.currentStatus === 'healthy').length;
+const degraded = monitorsData.filter(m => m.currentStatus === 'degraded').length;
+const down = monitorsData.filter(m => m.currentStatus === 'down').length;
+const total = monitorsData.length;
+
+let overallStatus = 'All Systems Operational';
+let overallClass = 'operational';
+if (down > 0) {
+  overallStatus = `${down} Service${down > 1 ? 's' : ''} Down`;
+  overallClass = 'outage';
+} else if (degraded > 0) {
+  overallStatus = 'Partial Degradation';
+  overallClass = 'degraded';
+}
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={`${statusPage.title} — live service status`} />
+  <title>{statusPage.title}</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+  <meta http-equiv="refresh" content="60" />
+</head>
+<body>
+  <div class="status-wrapper">
+    <header class="status-header">
+      <h1>{statusPage.title}</h1>
+      {statusPage.description && <p class="status-desc">{statusPage.description}</p>}
+    </header>
+
+    <div class={`overall-banner ${overallClass}`}>
+      <span class={`overall-dot ${overallClass}`}></span>
+      <span>{overallStatus}</span>
+    </div>
+
+    <div class="monitor-list">
+      {monitorsData.map(m => {
+        const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
+        const statusLabel = m.maintenance ? 'Maintenance' : m.currentStatus === 'healthy' ? 'Operational' : m.currentStatus === 'degraded' ? 'Degraded' : m.currentStatus === 'down' ? 'Down' : 'Unknown';
+
+        return (
+          <div class="monitor-item">
+            <div class="mi-header">
+              <div class="mi-name-row">
+                <span class={`mi-dot ${statusClass}`}></span>
+                <span class="mi-name">{m.name}</span>
+              </div>
+              <span class={`mi-status ${statusClass}`}>{statusLabel}</span>
+            </div>
+
+            {statusPage.showResponseTime && (
+              <div class="mi-sparkline">
+                {m.sparkline.map((c: any) => {
+                  const h = Math.max(3, Math.min(24, (c.ms || 0) / 15));
+                  const color = c.status === 'down' ? 'var(--critical)' : c.status === 'degraded' ? 'var(--high)' : 'var(--low)';
+                  return <span class="sp-bar" style={`height:${h}px;background:${color};`}></span>;
+                })}
+              </div>
+            )}
+
+            <div class="mi-footer">
+              {statusPage.showResponseTime && m.lastResponseMs && (
+                <span class="mi-metric mono">{m.lastResponseMs}ms</span>
+              )}
+              {statusPage.showUptime && m.uptimePercent > 0 && (
+                <span class={`mi-metric mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>
+                  {m.uptimePercent.toFixed(2)}% uptime
+                </span>
+              )}
+            </div>
+
+            {statusPage.showUptime && m.days.length > 0 && (
+              <div class="mi-calendar">
+                {m.days.slice(-90).map((d: any) => {
+                  const pct = d.totalChecks > 0 ? (d.successfulChecks / d.totalChecks) * 100 : 0;
+                  const cls = pct >= 99.9 ? 'day-great' : pct >= 99 ? 'day-ok' : pct >= 95 ? 'day-warn' : pct > 0 ? 'day-bad' : 'day-none';
+                  return <span class={`day ${cls}`} title={`${d.date}: ${pct.toFixed(1)}%`}></span>;
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+
+    <footer class="status-footer">
+      <span class="mono">Powered by <a href="https://stdout.seayniclabs.com">StdOut</a></span>
+      <span class="mono">Updated {new Date().toLocaleTimeString()}</span>
+    </footer>
+  </div>
+</body>
+</html>
+
+<style>
+  body { margin: 0; }
+  .status-wrapper { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+
+  .status-header { margin-bottom: 24px; }
+  .status-header h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .status-desc { font-size: 14px; color: var(--text-secondary); }
+
+  .overall-banner { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: var(--radius); font-size: 15px; font-weight: 600; margin-bottom: 28px; }
+  .overall-banner.operational { background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.3); color: var(--low); }
+  .overall-banner.degraded { background: rgba(249,115,22,0.08); border: 1px solid rgba(249,115,22,0.3); color: var(--high); }
+  .overall-banner.outage { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.3); color: var(--critical); }
+  .overall-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .overall-dot.operational { background: var(--low); box-shadow: 0 0 8px rgba(34,197,94,0.5); }
+  .overall-dot.degraded { background: var(--high); box-shadow: 0 0 8px rgba(249,115,22,0.5); }
+  .overall-dot.outage { background: var(--critical); box-shadow: 0 0 8px rgba(239,68,68,0.5); animation: pulse 2s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+    50% { box-shadow: 0 0 20px rgba(239,68,68,0.8); }
+  }
+
+  .monitor-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
+  .monitor-item { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+
+  .mi-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .mi-name-row { display: flex; align-items: center; gap: 10px; }
+  .mi-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .mi-dot.healthy { background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .mi-dot.degraded { background: var(--high); }
+  .mi-dot.down { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .mi-dot.maintenance { background: #3b82f6; }
+  .mi-dot.unknown { background: var(--text-muted); }
+  .mi-name { font-size: 15px; font-weight: 600; }
+
+  .mi-status { font-size: 12px; font-family: var(--font-mono); font-weight: 600; }
+  .mi-status.healthy { color: var(--low); }
+  .mi-status.degraded { color: var(--high); }
+  .mi-status.down { color: var(--critical); }
+  .mi-status.maintenance { color: #3b82f6; }
+  .mi-status.unknown { color: var(--text-muted); }
+
+  .mi-sparkline { display: flex; align-items: flex-end; gap: 1px; height: 24px; margin-bottom: 8px; }
+  .sp-bar { width: 100%; max-width: 6px; flex: 1; border-radius: 1px; min-height: 2px; }
+
+  .mi-footer { display: flex; justify-content: space-between; }
+  .mi-metric { font-size: 12px; color: var(--text-muted); }
+  .uptime-great { color: var(--low) !important; }
+  .uptime-ok { color: var(--text-secondary) !important; }
+  .uptime-bad { color: var(--critical) !important; }
+
+  .mi-calendar { display: flex; gap: 2px; flex-wrap: wrap; margin-top: 8px; }
+  .day { width: 6px; height: 6px; border-radius: 1px; }
+  .day-great { background: var(--low); }
+  .day-ok { background: rgba(34,197,94,0.4); }
+  .day-warn { background: var(--high); }
+  .day-bad { background: var(--critical); }
+  .day-none { background: var(--border); }
+
+  .status-footer { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); padding-top: 16px; border-top: 1px solid var(--border); }
+  .status-footer a { color: var(--accent-light); text-decoration: none; }
+  .status-footer a:hover { text-decoration: underline; }
+  .mono { font-family: var(--font-mono); }
+</style>

@@ -189,6 +189,19 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       status TEXT NOT NULL DEFAULT 'pending',
       created_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS status_page (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      slug TEXT NOT NULL,
+      title TEXT NOT NULL DEFAULT 'Service Status',
+      description TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      monitor_ids TEXT NOT NULL,
+      show_response_time INTEGER NOT NULL DEFAULT 1,
+      show_uptime INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS monitors (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,

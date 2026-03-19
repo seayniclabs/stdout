@@ -136,6 +136,52 @@ if (!user) return Astro.redirect('/app/login');
       </div>
     </section>
 
+    <!-- Public Status Page -->
+    <section class="section">
+      <h2>Public Status Page</h2>
+      <p class="section-desc">Share a public URL showing your service health. No login required for visitors.</p>
+
+      <div class="status-page-form">
+        <div class="sp-row">
+          <label style="flex:1;">
+            <span>URL slug</span>
+            <div class="slug-preview">
+              <span class="slug-base mono">/status/</span>
+              <input type="text" id="spSlug" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
+            </div>
+          </label>
+          <label>
+            <span>Page title</span>
+            <input type="text" id="spTitle" placeholder="Service Status" class="settings-input" />
+          </label>
+        </div>
+
+        <label>
+          <span>Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
+          <input type="text" id="spDesc" placeholder="Current status of my homelab services" class="settings-input" />
+        </label>
+
+        <div class="sp-monitors">
+          <span class="module-label">Monitors to display</span>
+          <div id="spMonitorList" class="sp-monitor-checks">
+            <div class="loading mono">Loading monitors...</div>
+          </div>
+        </div>
+
+        <div class="sp-options">
+          <label class="module-check"><input type="checkbox" id="spShowResp" checked /> Show response times</label>
+          <label class="module-check"><input type="checkbox" id="spShowUptime" checked /> Show uptime percentage</label>
+          <label class="scanner-toggle"><input type="checkbox" id="spEnabled" checked /> <span>Page enabled</span></label>
+        </div>
+
+        <div class="scanner-actions">
+          <button id="saveStatusPageBtn" class="btn btn-primary btn-sm">Save status page</button>
+          <a id="statusPageLink" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none;">View page</a>
+        </div>
+        <div id="statusPageStatus" class="backup-status"></div>
+      </div>
+    </section>
+
     <!-- Backups -->
     <section class="section">
       <h2>Backups</h2>
@@ -390,6 +436,100 @@ if (!user) return Astro.redirect('/app/login');
   });
 
   loadScannerSchedule();
+
+  // --- Status Page ---
+  const spSlug = document.getElementById('spSlug') as HTMLInputElement;
+  const spTitle = document.getElementById('spTitle') as HTMLInputElement;
+  const spDesc = document.getElementById('spDesc') as HTMLInputElement;
+  const spShowResp = document.getElementById('spShowResp') as HTMLInputElement;
+  const spShowUptime = document.getElementById('spShowUptime') as HTMLInputElement;
+  const spEnabled = document.getElementById('spEnabled') as HTMLInputElement;
+  const spMonitorList = document.getElementById('spMonitorList')!;
+  const saveStatusPageBtn = document.getElementById('saveStatusPageBtn')!;
+  const statusPageStatusEl = document.getElementById('statusPageStatus')!;
+  const statusPageLink = document.getElementById('statusPageLink') as HTMLAnchorElement;
+
+  let allMonitorIds: string[] = [];
+
+  async function loadStatusPage() {
+    // Load monitors for checkboxes
+    try {
+      const mRes = await fetch('/app/api/monitors');
+      const mData = await mRes.json();
+      if (mData.monitors && mData.monitors.length > 0) {
+        spMonitorList.innerHTML = mData.monitors.map((m: any) => {
+          allMonitorIds.push(m.id);
+          return `<label class="module-check"><input type="checkbox" value="${m.id}" class="sp-mon-check" /> ${escapeHtml(m.name)}</label>`;
+        }).join('');
+      } else {
+        spMonitorList.innerHTML = '<div class="empty mono">No monitors yet. Add monitors in HUD first.</div>';
+      }
+    } catch {}
+
+    // Load existing config
+    try {
+      const res = await fetch('/app/api/status-page');
+      const data = await res.json();
+      if (data.page) {
+        spSlug.value = data.page.slug || '';
+        spTitle.value = data.page.title || data.page.workspace_name || '';
+        spDesc.value = data.page.description || '';
+        spShowResp.checked = data.page.show_response_time !== false && data.page.showResponseTime !== false;
+        spShowUptime.checked = data.page.show_uptime !== false && data.page.showUptime !== false;
+        spEnabled.checked = data.page.enabled !== false;
+
+        // Check the right monitors
+        let ids: string[] = [];
+        try { ids = JSON.parse(data.page.monitor_ids || data.page.monitorIds || '[]'); } catch {}
+        document.querySelectorAll('.sp-mon-check').forEach((cb: any) => {
+          cb.checked = ids.includes(cb.value);
+        });
+
+        // Show link
+        statusPageLink.href = `/status/${data.page.slug}`;
+        statusPageLink.style.display = '';
+      }
+    } catch {}
+  }
+
+  saveStatusPageBtn?.addEventListener('click', async () => {
+    const monitorIds: string[] = [];
+    document.querySelectorAll('.sp-mon-check:checked').forEach((cb: any) => monitorIds.push(cb.value));
+
+    statusPageStatusEl.textContent = 'Saving...';
+    statusPageStatusEl.className = 'backup-status';
+
+    try {
+      const res = await fetch('/app/api/status-page', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: spSlug.value,
+          title: spTitle.value,
+          description: spDesc.value,
+          monitorIds,
+          showResponseTime: spShowResp.checked,
+          showUptime: spShowUptime.checked,
+          enabled: spEnabled.checked,
+        }),
+      });
+      const data = await res.json();
+      if (data.updated) {
+        statusPageStatusEl.textContent = 'Saved.';
+        statusPageStatusEl.className = 'backup-status success';
+        statusPageLink.href = `/status/${data.slug}`;
+        statusPageLink.style.display = '';
+      } else {
+        statusPageStatusEl.textContent = data.error || 'Failed.';
+        statusPageStatusEl.className = 'backup-status error';
+      }
+    } catch {
+      statusPageStatusEl.textContent = 'Network error.';
+      statusPageStatusEl.className = 'backup-status error';
+    }
+  });
+
+  loadStatusPage();
 
   // --- Backups ---
   async function loadBackups() {
@@ -656,4 +796,14 @@ if (!user) return Astro.redirect('/app/login');
   .scanner-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
   .scanner-toggle input { accent-color: var(--accent); }
   .scanner-toggle span { font-weight: 400 !important; text-transform: none !important; letter-spacing: normal !important; }
+  .status-page-form { display: flex; flex-direction: column; gap: 12px; }
+  .status-page-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .sp-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sp-row label { display: flex; flex-direction: column; gap: 4px; }
+  .slug-preview { display: flex; align-items: center; gap: 0; }
+  .slug-base { font-size: 13px; color: var(--text-muted); padding: 8px 0 8px 10px; background: var(--bg-surface); border: 1px solid var(--border); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .slug-preview .settings-input { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .sp-monitors { margin-top: 4px; }
+  .sp-monitor-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .sp-options { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 </style>

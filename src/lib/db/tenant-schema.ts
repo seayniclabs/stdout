@@ -96,6 +96,22 @@ export const docs = sqliteTable('docs', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Status Page ---
+
+export const statusPage = sqliteTable('status_page', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  slug: text('slug').notNull(),             // URL-safe identifier: /status/[slug]
+  title: text('title').notNull().default('Service Status'),
+  description: text('description'),          // Optional subtitle
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  monitorIds: text('monitor_ids').notNull(), // JSON array of monitor IDs to display
+  showResponseTime: integer('show_response_time', { mode: 'boolean' }).notNull().default(true),
+  showUptime: integer('show_uptime', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- HUD: Monitors & Check Results ---
 
 export const monitors = sqliteTable('monitors', {
