@@ -52,7 +52,7 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 function checkOrigin(request: Request): boolean {
   if (!MUTATING_METHODS.has(request.method)) return true;
   const origin = request.headers.get('origin');
-  if (!origin) return true;
+  if (!origin) return false; // Reject mutating requests with no Origin header
   return ALLOWED_ORIGINS.some(allowed => origin === allowed);
 }
 

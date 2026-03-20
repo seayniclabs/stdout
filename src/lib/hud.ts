@@ -6,6 +6,66 @@ import https from 'node:https';
 import http from 'node:http';
 import net from 'node:net';
 
+// --- SSRF Protection ---
+
+/**
+ * Validates that a URL/host does not resolve to an internal or private network address.
+ * Blocks RFC 1918, link-local, loopback, cloud metadata, and Docker internal hostnames.
+ */
+export function isBlockedTarget(target: string): boolean {
+  let hostname: string;
+  try {
+    // Handle full URLs (http/https)
+    if (target.startsWith('http://') || target.startsWith('https://')) {
+      hostname = new URL(target).hostname;
+    } else {
+      // TCP targets are host:port
+      hostname = target.split(':')[0];
+    }
+  } catch {
+    return true; // Malformed = blocked
+  }
+
+  const lower = hostname.toLowerCase();
+
+  // Block Docker internal and common internal hostnames
+  if (lower === 'host.docker.internal' || lower === 'gateway.docker.internal' ||
+      lower === 'metadata.google.internal' || lower === 'kubernetes.default.svc') {
+    return true;
+  }
+
+  // Block localhost variants
+  if (lower === 'localhost' || lower === '[::1]' || lower.endsWith('.localhost')) {
+    return true;
+  }
+
+  // Check for IP-based targets
+  const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (ipMatch) {
+    const [, a, b, c, d] = ipMatch.map(Number);
+    // 127.0.0.0/8 — loopback
+    if (a === 127) return true;
+    // 10.0.0.0/8 — RFC 1918
+    if (a === 10) return true;
+    // 172.16.0.0/12 — RFC 1918
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    // 192.168.0.0/16 — RFC 1918
+    if (a === 192 && b === 168) return true;
+    // 169.254.0.0/16 — link-local
+    if (a === 169 && b === 254) return true;
+    // 0.0.0.0
+    if (a === 0 && b === 0 && c === 0 && d === 0) return true;
+    // Cloud metadata (AWS, GCP, Azure)
+    if (a === 169 && b === 254 && c === 169 && d === 254) return true;
+    if (a === 100 && b === 100 && c === 100 && d === 200) return true; // AWS IMDSv2 alt
+  }
+
+  // Block IPv6 loopback
+  if (hostname === '::1' || hostname === '::') return true;
+
+  return false;
+}
+
 // --- Check Execution ---
 
 interface CheckResult {
@@ -16,6 +76,11 @@ interface CheckResult {
 }
 
 export async function executeCheck(monitor: typeof tenantSchema.monitors.$inferSelect): Promise<CheckResult> {
+  // SSRF protection: block requests to internal/private networks
+  if (isBlockedTarget(monitor.target)) {
+    return { status: 'down', responseTimeMs: 0, error: 'Target address is not allowed (internal/private network)' };
+  }
+
   switch (monitor.type) {
     case 'http':
       return checkHTTP(monitor.target, monitor.timeoutMs, monitor.expectedStatus || 200);

@@ -1,6 +1,7 @@
 import { getTenantDb, tenantSchema } from './db';
 import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
+import { isBlockedTarget } from './hud';
 
 export type NotifyEvent =
   | 'incident_created'
@@ -87,6 +88,12 @@ async function sendEmail(to: string, payload: NotifyPayload): Promise<void> {
 }
 
 async function sendWebhook(url: string, payload: NotifyPayload): Promise<void> {
+  // SSRF protection: block webhooks to internal/private networks
+  if (isBlockedTarget(url)) {
+    console.error(`Webhook blocked — destination is an internal/private address: ${url}`);
+    return;
+  }
+
   const appUrl = process.env.APP_URL || 'https://stdout.seaynicroute.com';
 
   await fetch(url, {

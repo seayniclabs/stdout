@@ -39,7 +39,9 @@ if (user) {
     const prefs = db.select().from(tenantSchema.tenantPreferences)
       .where(eq(tenantSchema.tenantPreferences.userId, dbOwnerId)).get();
     if (prefs?.workspaceName) workspaceName = prefs.workspaceName;
-    if (prefs?.accentColor) accentOverride = prefs.accentColor;
+    if (prefs?.accentColor && /^#[0-9a-fA-F]{3,8}$/.test(prefs.accentColor)) {
+      accentOverride = prefs.accentColor;
+    }
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
     workspaces = getUserWorkspaces(user.id);
   } catch {}

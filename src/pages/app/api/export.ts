@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import { logAudit, getClientIp } from '../../../lib/audit';
 
 export const GET: APIRoute = async ({ locals, request }) => {
@@ -20,7 +20,11 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const resolutions = db.select().from(tenantSchema.resolutions)
     .where(eq(tenantSchema.resolutions.userId, locals.user.id)).all();
 
-  const diagnoses = db.select().from(tenantSchema.diagnoses).all();
+  const userIncidentIds = incidents.map(i => i.id);
+  const diagnoses = userIncidentIds.length > 0
+    ? db.select().from(tenantSchema.diagnoses)
+        .where(inArray(tenantSchema.diagnoses.incidentId, userIncidentIds)).all()
+    : [];
 
   const docs = db.select().from(tenantSchema.docs)
     .where(eq(tenantSchema.docs.userId, locals.user.id)).all();
