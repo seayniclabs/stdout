@@ -6,12 +6,14 @@ import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
 import { notify } from '../../../lib/notify';
+import { getUserLimits, getUpgradeUrl } from '../../../lib/tiers';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getTenantDb(user.id);
 const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
+const { tier, limits } = getUserLimits(user);
 
 let error = '';
 
@@ -26,9 +28,23 @@ if (Astro.request.method === 'POST') {
     const stackId = (form.get('stackId') as string || '') || null;
     const tags = (form.get('tags') as string || '').trim() || null;
 
+    const rawDb = (db as any)._.session?.client;
+
     if (!title || !description) {
       error = 'Title and description are required.';
-    } else {
+    } else if (limits.maxIncidentsPerMonth !== Infinity) {
+      // Check monthly incident limit
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      let monthCount = 0;
+      if (rawDb?.prepare) {
+        const row = rawDb.prepare('SELECT COUNT(*) as cnt FROM incidents WHERE user_id = ? AND created_at > ?').get(user.id, thirtyDaysAgo.getTime());
+        monthCount = row?.cnt || 0;
+      }
+      if (monthCount >= limits.maxIncidentsPerMonth) {
+        error = `Incident limit reached (${limits.maxIncidentsPerMonth}/month on ${tier} plan). Upgrade to continue.`;
+      }
+    }
+    if (!error && title && description) {
       const id = nanoid();
       const now = new Date();
       db.insert(tenantSchema.incidents).values({
@@ -37,7 +53,6 @@ if (Astro.request.method === 'POST') {
       }).run();
 
       // Sync to FTS
-      const rawDb = (db as any)._.session?.client;
       if (rawDb?.prepare) {
         rawDb.prepare('INSERT INTO incidents_fts(rowid, title, description, tags) SELECT rowid, title, description, tags FROM incidents WHERE id = ?').run(id);
       }

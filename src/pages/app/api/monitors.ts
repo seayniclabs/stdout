@@ -59,6 +59,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const db = getTenantDb(locals.user.id);
 
   if (action === 'create') {
+    // Tier gate: monitor count
+    const { checkCountLimit, tierBlockedResponse } = await import('../../../lib/tier-gate');
+    const existingCount = db.select().from(tenantSchema.monitors).where(eq(tenantSchema.monitors.userId, locals.user.id)).all().length;
+    const gate = checkCountLimit(locals.user, 'maxMonitors', existingCount, 'Monitor');
+    if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
+
     const name = (body.name || '').trim();
     const type = body.type;
     const target = (body.target || '').trim();

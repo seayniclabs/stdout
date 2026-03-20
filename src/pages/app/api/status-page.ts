@@ -20,6 +20,11 @@ export const GET: APIRoute = async ({ locals }) => {
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
+  // Tier gate: public status pages
+  const { checkFeature, tierBlockedResponse } = await import('../../../lib/tier-gate');
+  const gate = checkFeature(locals.user, 'publicStatusPages');
+  if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
+
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });

@@ -31,6 +31,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
 export const POST: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
+  // Tier gate: weekly digest
+  const { checkFeature, tierBlockedResponse } = await import('../../../lib/tier-gate');
+  const gate = checkFeature(locals.user, 'weeklyDigest');
+  if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
+
   const sent = await sendWeeklyDigests();
 
   return new Response(JSON.stringify({ sent, message: `Digest sent to ${sent} user(s)` }), {

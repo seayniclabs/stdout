@@ -29,6 +29,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const action = body.action || 'create';
 
   if (action === 'create') {
+    // Tier gate: backups
+    const { checkFeature, tierBlockedResponse } = await import('../../../lib/tier-gate');
+    const gate = checkFeature(locals.user, 'backupsEnabled');
+    if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
+
     try {
       const backup = createBackup(locals.user.id);
       logAudit('backup_create', { userId: locals.user.id, ip: getClientIp(request), details: { filename: backup.filename } });

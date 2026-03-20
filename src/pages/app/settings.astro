@@ -1,9 +1,21 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
+import { getUserLimits, getUpgradeUrl, type TierName } from '../../lib/tiers';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+
+const { tier, limits } = getUserLimits(user);
+const tierLabels: Record<TierName, string> = {
+  free: 'Free',
+  solo: 'Solo ($12/mo)',
+  shop: 'Shop ($24/mo)',
+  'self-host': 'Self-Host',
+};
+const tierLabel = tierLabels[tier] || 'Free';
+const upgradeUrl = getUpgradeUrl('solo');
+const isPaid = tier !== 'free';
 ---
 <Layout title="Settings — StdOut">
   <div class="settings-page">
@@ -23,7 +35,41 @@ if (!user) return Astro.redirect('/app/login');
         </div>
         <div class="profile-row">
           <span class="label">Plan</span>
-          <span class="value">{user.subscriptionStatus === 'active' ? 'Solo' : 'Free'}</span>
+          <span class="value">{tierLabel}</span>
+          {!isPaid && <a href={upgradeUrl} class="btn btn-primary btn-sm" style="margin-left: 12px;" target="_blank" rel="noopener">Upgrade</a>}
+        </div>
+      </div>
+    </section>
+
+    <!-- Billing -->
+    <section class="section">
+      <h2>Plan & Billing</h2>
+      <div class="billing-info">
+        <div class="tier-card">
+          <div class="tier-header">
+            <span class="tier-name">{tierLabel}</span>
+            {user.subscriptionStatus === 'past_due' && <span class="tier-badge warning">Payment past due</span>}
+          </div>
+          <div class="tier-limits">
+            <div class="limit-row"><span>Stacks</span><span>{limits.maxStacks === Infinity ? 'Unlimited' : limits.maxStacks}</span></div>
+            <div class="limit-row"><span>Incidents/month</span><span>{limits.maxIncidentsPerMonth === Infinity ? 'Unlimited' : limits.maxIncidentsPerMonth}</span></div>
+            <div class="limit-row"><span>Doc storage</span><span>{limits.maxDocsStorageMB === Infinity ? 'Unlimited' : `${limits.maxDocsStorageMB}MB`}</span></div>
+            <div class="limit-row"><span>Monitors</span><span>{limits.maxMonitors === Infinity ? 'Unlimited' : limits.maxMonitors}</span></div>
+            <div class="limit-row"><span>AI model</span><span>{limits.aiModel === 'sonnet' ? 'Sonnet' : 'Haiku'}</span></div>
+            <div class="limit-row"><span>Backups</span><span>{limits.backupsEnabled ? 'Yes' : 'No'}</span></div>
+            <div class="limit-row"><span>Public status pages</span><span>{limits.publicStatusPages ? 'Yes' : 'No'}</span></div>
+            <div class="limit-row"><span>Weekly digest</span><span>{limits.weeklyDigest ? 'Yes' : 'No'}</span></div>
+          </div>
+          {!isPaid && (
+            <div class="tier-upgrade">
+              <p>Upgrade for unlimited stacks, incidents, Sonnet AI, backups, and more.</p>
+              <div class="upgrade-buttons">
+                <a href="https://store.seayniclabs.com/products/stdout-solo" class="btn btn-primary" target="_blank" rel="noopener">Solo — $12/mo</a>
+                <a href="https://store.seayniclabs.com/products/stdout-shop" class="btn btn-secondary" target="_blank" rel="noopener">Shop — $24/mo</a>
+                <a href="https://store.seayniclabs.com/products/stdout-self-host" class="btn btn-secondary" target="_blank" rel="noopener">Self-Host — $79</a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
@@ -806,4 +852,22 @@ if (!user) return Astro.redirect('/app/login');
   .sp-monitors { margin-top: 4px; }
   .sp-monitor-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   .sp-options { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  /* Billing */
+  .billing-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .tier-card { padding: 20px; }
+  .tier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .tier-name { font-size: 18px; font-weight: 700; }
+  .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .tier-badge.warning { background: #FEF3C7; color: #92400E; }
+  .tier-limits { display: grid; gap: 0; }
+  .limit-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .limit-row:last-child { border-bottom: none; }
+  .limit-row span:first-child { color: var(--text-secondary); }
+  .limit-row span:last-child { font-weight: 600; }
+  .tier-upgrade { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .tier-upgrade p { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+  .upgrade-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; text-decoration: none; cursor: pointer; }
+  .btn-secondary:hover { background: var(--bg-hover); }
 </style>

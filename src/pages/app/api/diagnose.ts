@@ -49,7 +49,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
   } catch { /* FTS may not be populated yet */ }
 
-  const tier = locals.user.subscriptionStatus === 'active' ? 'paid' : 'free';
+  const { getUserLimits } = await import('../../../lib/tiers');
+  const { limits } = getUserLimits(locals.user);
+  const tier = limits.aiModel === 'sonnet' ? 'paid' : 'free';
   const description = `Title: ${incident.title}\n\n${incident.description}`;
 
   try {

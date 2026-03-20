@@ -1,11 +1,19 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
 
 const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+
+  // Tier gate: stack count
+  const db = getTenantDb(locals.user.id);
+  const stackCount = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, locals.user.id)).all().length;
+  const gate = checkCountLimit(locals.user, 'maxStacks', stackCount, 'Stack');
+  if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 
   // Check payload size
   const contentLength = parseInt(request.headers.get('content-length') || '0');
@@ -38,7 +46,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const markdown = renderMarkdown(body);
 
   const importId = nanoid();
-  const db = getTenantDb(locals.user.id);
 
   db.insert(tenantSchema.stackImports).values({
     id: importId,

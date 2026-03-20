@@ -5,9 +5,11 @@ import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
+import { getUserLimits, getUpgradeUrl } from '../../../lib/tiers';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+const { tier, limits } = getUserLimits(user);
 
 const db = getTenantDb(user.id);
 
@@ -33,6 +35,23 @@ if (Astro.request.method === 'POST') {
     if (!title || !content) {
       error = 'Title and content are required.';
     } else {
+      const sizeBytes = new TextEncoder().encode(content).length;
+
+      // Tier gate: docs storage
+      if (limits.maxDocsStorageMB !== Infinity) {
+        const rawDb = (db as any)._.session?.client;
+        let totalBytes = 0;
+        if (rawDb?.prepare) {
+          const row = rawDb.prepare('SELECT COALESCE(SUM(size_bytes), 0) as total FROM docs WHERE user_id = ?').get(user.id);
+          totalBytes = row?.total || 0;
+        }
+        const maxBytes = limits.maxDocsStorageMB * 1024 * 1024;
+        if (totalBytes + sizeBytes > maxBytes) {
+          error = `Storage limit reached (${limits.maxDocsStorageMB}MB on ${tier} plan). Upgrade to continue.`;
+        }
+      }
+    }
+    if (!error && title && content) {
       const id = nanoid();
       const now = new Date();
       const sizeBytes = new TextEncoder().encode(content).length;
