@@ -25,6 +25,7 @@ export type SessionUser = {
   email: string;
   displayName: string | null;
   subscriptionStatus: string;
+  subscriptionTier: string | null;
   role: 'superadmin' | 'admin' | 'member';
   stripeCustomerId: string | null;
 };
@@ -38,6 +39,7 @@ export function validateSession(sessionId: string): SessionUser | null {
       email: centralSchema.users.email,
       displayName: centralSchema.users.displayName,
       subscriptionStatus: centralSchema.users.subscriptionStatus,
+      subscriptionTier: centralSchema.users.subscriptionTier,
       role: centralSchema.users.role,
       stripeCustomerId: centralSchema.users.stripeCustomerId,
     })
@@ -57,6 +59,7 @@ export function validateSession(sessionId: string): SessionUser | null {
     email: row.email,
     displayName: row.displayName,
     subscriptionStatus: row.subscriptionStatus,
+    subscriptionTier: row.subscriptionTier,
     role: row.role as SessionUser['role'],
     stripeCustomerId: row.stripeCustomerId,
   };

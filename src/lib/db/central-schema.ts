@@ -9,8 +9,12 @@ export const users = sqliteTable('users', {
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
   subscriptionStatus: text('subscription_status', {
-    enum: ['active', 'free', 'expired', 'none'],
+    enum: ['active', 'free', 'past_due', 'expired', 'none'],
   }).notNull().default('none'),
+  subscriptionTier: text('subscription_tier', {
+    enum: ['solo', 'shop', 'self-host'],
+  }),
+  subscriptionPeriodEnd: integer('subscription_period_end', { mode: 'timestamp' }),
   role: text('role', {
     enum: ['superadmin', 'admin', 'member'],
   }).notNull().default('member'),

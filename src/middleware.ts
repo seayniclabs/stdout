@@ -175,7 +175,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const tokenAuth = validateBearerToken(context.request);
     if (tokenAuth) {
       // Minimal user object for API token auth
-      context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, subscriptionStatus: 'none', role: 'member', stripeCustomerId: null };
+      context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, subscriptionStatus: 'none', subscriptionTier: null, role: 'member', stripeCustomerId: null };
     } else {
       context.locals.user = null;
     }
@@ -207,7 +207,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.csrfToken = csrfToken;
 
   // Protect /app/* routes (except login, register, forgot-password)
-  const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/auth/oidc', '/app/auth/callback'];
+  const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/api/billing-sync', '/app/auth/oidc', '/app/auth/callback'];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
   if (isAppRoute && !isPublicApp && !context.locals.user) {

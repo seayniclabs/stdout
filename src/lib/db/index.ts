@@ -46,6 +46,8 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'users', 'privacy_accepted_at', 'INTEGER');
   safeAddColumn(sqlite, 'users', 'dpa_accepted_at', 'INTEGER');
   safeAddColumn(sqlite, 'stack_imports', 'user_id', 'TEXT');
+  safeAddColumn(sqlite, 'users', 'subscription_tier', 'TEXT');
+  safeAddColumn(sqlite, 'users', 'subscription_period_end', 'INTEGER');
 }
 
 function runCentralDDL(sqlite: InstanceType<typeof Database>): void {
