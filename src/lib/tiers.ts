@@ -1,5 +1,5 @@
 // Tier definitions and limit enforcement for StdOut subscriptions.
-// Tiers: free (default), solo ($12/mo), shop ($24/mo), self-host ($79 one-time)
+// Tiers: free (default), solo ($12/mo), shop ($24/mo), self-host ($149 one-time)
 
 export type TierName = 'free' | 'solo' | 'shop' | 'self-host';
 
