@@ -48,6 +48,22 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'stack_imports', 'user_id', 'TEXT');
   safeAddColumn(sqlite, 'users', 'subscription_tier', 'TEXT');
   safeAddColumn(sqlite, 'users', 'subscription_period_end', 'INTEGER');
+
+  // Team members table (RBAC for Shop tier)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS team_members (
+      id TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      user_id TEXT REFERENCES users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'viewer',
+      status TEXT NOT NULL DEFAULT 'pending',
+      invited_at INTEGER NOT NULL,
+      accepted_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_team_members_owner ON team_members(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+  `);
 }
 
 function runCentralDDL(sqlite: InstanceType<typeof Database>): void {

@@ -69,6 +69,23 @@ export const auditLog = sqliteTable('audit_log', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Team / RBAC (Shop tier) ---
+
+export const teamMembers = sqliteTable('team_members', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // null until accepted
+  email: text('email').notNull(), // invited email
+  role: text('role', {
+    enum: ['admin', 'editor', 'viewer'],
+  }).notNull().default('viewer'),
+  status: text('status', {
+    enum: ['pending', 'accepted', 'revoked'],
+  }).notNull().default('pending'),
+  invitedAt: integer('invited_at', { mode: 'timestamp' }).notNull(),
+  acceptedAt: integer('accepted_at', { mode: 'timestamp' }),
+});
+
 export const deletions = sqliteTable('deletions', {
   id: text('id').primaryKey(),
   emailHash: text('email_hash').notNull(),
