@@ -112,7 +112,26 @@ const currentWsId = ws?.ownerId || user?.id;
     <div class="topnav-auth" id="authNav">
       <a href="/app/login" class="topnav-auth-link">Log in</a>
     </div>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <div class="nav-mobile" id="navMobile">
+    {nav.map(({ href, label }) => (
+      <a
+        href={href}
+        class:list={['nav-mobile-link', {
+          active: href === '/app' ? path === '/app' || path === '/app/' : path.startsWith(href)
+        }]}
+      >{label}</a>
+    ))}
+    <div class="nav-mobile-divider"></div>
+    <div class="nav-mobile-auth" id="mobileAuthNav">
+      <a href="/app/login" class="nav-mobile-link">Log in</a>
+    </div>
+  </div>
 
   <main class="main" id="main-content">
     <slot />
@@ -221,6 +240,57 @@ const currentWsId = ws?.ownerId || user?.id;
       url.searchParams.set('ws', wsSwitcher.value);
       window.location.href = url.toString();
     });
+
+    // Mobile nav toggle
+    const navToggle = document.getElementById('navToggle');
+    const navMobile = document.getElementById('navMobile');
+    if (navToggle && navMobile) {
+      navToggle.addEventListener('click', () => {
+        const isOpen = navMobile.classList.toggle('open');
+        navToggle.classList.toggle('active', isOpen);
+        navToggle.setAttribute('aria-expanded', String(isOpen));
+      });
+    }
+
+    // Mirror auth state into mobile nav
+    fetch('/app/api/me').then(r => r.json()).then(mobileUser => {
+      const mobileAuth = document.getElementById('mobileAuthNav');
+      if (mobileUser && mobileAuth) {
+        const name = mobileUser.displayName || mobileUser.email?.split('@')[0] || 'User';
+        mobileAuth.innerHTML = '';
+
+        const userInfo = document.createElement('div');
+        userInfo.className = 'nav-mobile-user';
+        const avatar = document.createElement('span');
+        avatar.className = 'topnav-avatar';
+        avatar.textContent = name.charAt(0).toUpperCase();
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = name;
+        userInfo.append(avatar, nameSpan);
+        mobileAuth.appendChild(userInfo);
+
+        const accountLink = document.createElement('a');
+        accountLink.href = '/app/account';
+        accountLink.className = 'nav-mobile-link';
+        accountLink.textContent = 'Account';
+        mobileAuth.appendChild(accountLink);
+
+        const logoutForm = document.createElement('form');
+        logoutForm.method = 'POST';
+        logoutForm.action = '/app/logout';
+        const csrfIn = document.createElement('input');
+        csrfIn.type = 'hidden';
+        csrfIn.name = '_csrf';
+        csrfIn.value = csrf;
+        logoutForm.appendChild(csrfIn);
+        const logoutBtn = document.createElement('button');
+        logoutBtn.type = 'submit';
+        logoutBtn.className = 'nav-mobile-link nav-mobile-logout';
+        logoutBtn.textContent = 'Log out';
+        logoutForm.appendChild(logoutBtn);
+        mobileAuth.appendChild(logoutForm);
+      }
+    }).catch(() => {});
   </script>
 
   <style>
@@ -323,6 +393,117 @@ const currentWsId = ws?.ownerId || user?.id;
       max-width: 1200px;
       margin: 0 auto;
       padding: 24px 20px;
+    }
+
+    /* ── Mobile hamburger toggle ─────────────────── */
+    .nav-toggle {
+      display: none;
+      flex-direction: column;
+      gap: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px;
+      min-height: 44px;
+      min-width: 44px;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+    }
+    .nav-toggle span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text-secondary);
+      border-radius: 1px;
+      transition: all 0.25s ease;
+    }
+    .nav-toggle.active span:nth-child(1) {
+      transform: rotate(45deg) translate(5px, 5px);
+    }
+    .nav-toggle.active span:nth-child(2) {
+      opacity: 0;
+    }
+    .nav-toggle.active span:nth-child(3) {
+      transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* ── Mobile nav panel ────────────────────────── */
+    .nav-mobile {
+      display: none;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 49px; /* below topnav */
+      z-index: 99;
+    }
+    .nav-mobile.open {
+      display: flex;
+    }
+    .nav-mobile-link {
+      display: block;
+      padding: 14px 20px;
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      border-bottom: 1px solid var(--border);
+      transition: color 150ms, background 150ms;
+    }
+    .nav-mobile-link:hover {
+      color: var(--text);
+      background: var(--bg-hover);
+    }
+    .nav-mobile-link.active {
+      color: var(--accent-light);
+    }
+    .nav-mobile-divider {
+      height: 1px;
+      background: var(--accent-dim);
+      margin: 0;
+    }
+    .nav-mobile-auth {
+      padding: 0;
+    }
+    .nav-mobile-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 20px;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-mobile-logout {
+      width: 100%;
+      text-align: left;
+      background: none;
+      border: none;
+      border-bottom: none;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      color: var(--accent-light);
+    }
+
+    /* ── Responsive breakpoint (AFTER base styles) ─ */
+    @media (max-width: 768px) {
+      .topnav-links {
+        display: none;
+      }
+      .topnav-auth {
+        display: none;
+      }
+      .ws-switcher {
+        display: none;
+      }
+      .ws-badge {
+        display: none;
+      }
+      .nav-toggle {
+        display: flex;
+      }
     }
   </style>
 </body>
