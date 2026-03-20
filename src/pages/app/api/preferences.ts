@@ -8,7 +8,7 @@ import { eq, and } from 'drizzle-orm';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   const branding = db.select().from(tenantSchema.tenantPreferences)
     .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id)).get();
@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const action = body.action;
 
   // --- Branding ---

@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const rawDb = (db as any)._.session?.client;
   if (!rawDb?.prepare) {
     return new Response(JSON.stringify({ matches: [] }), {

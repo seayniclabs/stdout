@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const rbacBlock = checkRBAC(locals, 'export_data');
   if (rbacBlock) return rbacBlock;
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   const stacks = db.select().from(tenantSchema.stacks)
     .where(eq(tenantSchema.stacks.userId, locals.user.id)).all();

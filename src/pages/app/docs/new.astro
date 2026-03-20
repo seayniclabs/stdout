@@ -14,7 +14,7 @@ const ws = Astro.locals.workspace;
 if (ws && !ws.isOwnWorkspace && !canPerform(ws.role, 'create')) return Astro.redirect('/app');
 const { tier, limits } = getUserLimits(user);
 
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 
 // Get stacks and incidents for linking
 const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();

@@ -141,6 +141,18 @@ export function rbacBlockedResponse(action: RBACAction, role: TeamRole): Respons
 }
 
 /**
+ * Get the tenant DB owner ID for the current workspace.
+ * In team workspaces, this returns the owner's ID (not the current user's).
+ * In own workspaces (or when no workspace context), returns the user's own ID.
+ */
+export function getWorkspaceOwnerId(locals: App.Locals): string {
+  if (locals.workspace && !locals.workspace.isOwnWorkspace) {
+    return locals.workspace.ownerId;
+  }
+  return locals.user!.id;
+}
+
+/**
  * Check RBAC for an API route. Returns a 403 Response if blocked, null if allowed.
  * Usage: const blocked = checkRBAC(locals, 'create'); if (blocked) return blocked;
  */

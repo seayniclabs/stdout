@@ -8,7 +8,7 @@ import { startMonitor } from '../../../../lib/hud';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   // Find most recent confirmed import
   const lastImport = db.select().from(tenantSchema.stackImports)
@@ -112,7 +112,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'No monitors provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const now = new Date();
   const created: string[] = [];
 

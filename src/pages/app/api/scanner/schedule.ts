@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const schedule = db.select().from(tenantSchema.scannerSchedule)
     .where(eq(tenantSchema.scannerSchedule.userId, locals.user.id)).get();
 
@@ -73,7 +73,7 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     ? body.subnets
     : null;
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const existing = db.select().from(tenantSchema.scannerSchedule)
     .where(eq(tenantSchema.scannerSchedule.userId, locals.user.id)).get();
 

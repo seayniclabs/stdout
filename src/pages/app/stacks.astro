@@ -11,7 +11,7 @@ import { canPerform } from '../../lib/rbac';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 const ws = Astro.locals.workspace;
 let error = '';
 let editingStack: any = null;

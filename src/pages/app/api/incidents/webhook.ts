@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   // Validate stack if provided
   if (stackId) {
-    const db = getTenantDb(locals.user.id);
+    const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
     const stack = db.select().from(tenantSchema.stacks)
       .where(eq(tenantSchema.stacks.id, stackId)).get();
     if (!stack) {
@@ -63,7 +63,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const id = nanoid();
   const now = new Date();
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   db.insert(tenantSchema.incidents).values({
     id,

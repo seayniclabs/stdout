@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (rbacBlock) return rbacBlock;
 
   // Tier gate: stack count
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const stackCount = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, locals.user.id)).all().length;
   const gate = checkCountLimit(locals.user, 'maxStacks', stackCount, 'Stack');
   if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);

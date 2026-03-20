@@ -7,7 +7,7 @@ import { eq, desc } from 'drizzle-orm';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 const userDocs = db.select().from(tenantSchema.docs)
   .where(eq(tenantSchema.docs.userId, user.id))
   .orderBy(desc(tenantSchema.docs.updatedAt))

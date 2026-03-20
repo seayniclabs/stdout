@@ -8,7 +8,7 @@ import { getRecentChecks, getUptimeStats, startMonitor } from '../../lib/hud';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 const allMonitors = db.select().from(tenantSchema.monitors)
   .where(eq(tenantSchema.monitors.userId, user.id))
   .orderBy(desc(tenantSchema.monitors.createdAt))

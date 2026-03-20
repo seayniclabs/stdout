@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const incidentId = url.searchParams.get('id');
   const format = url.searchParams.get('format') || 'markdown';
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   // Single incident export
   if (incidentId) {

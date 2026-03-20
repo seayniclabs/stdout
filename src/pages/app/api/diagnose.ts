@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const { incidentId } = body;
   if (!incidentId) return new Response('Missing incidentId', { status: 400 });
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response('Not found', { status: 404 });

@@ -6,7 +6,7 @@ import { eq, desc } from 'drizzle-orm';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 
 // Get user's incidents
 const userIncidents = db

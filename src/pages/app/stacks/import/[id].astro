@@ -10,7 +10,7 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(user.id);
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 
 const importRecord = db.select().from(tenantSchema.stackImports)
   .where(eq(tenantSchema.stackImports.id, id!)).get();

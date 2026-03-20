@@ -8,7 +8,7 @@ import { startMonitor, stopMonitor, getRecentChecks, getUptimeStats } from '../.
 export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const monitorId = url.searchParams.get('id');
 
   if (monitorId) {
@@ -59,7 +59,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const action = body.action || 'create';
-  const db = getTenantDb(locals.user.id);
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
 
   if (action === 'create') {
     // Tier gate: monitor count
