@@ -5,6 +5,9 @@ import { logAudit, getClientIp } from '../../../lib/audit';
 
 export const GET: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'export_data');
+  if (rbacBlock) return rbacBlock;
 
   const db = getTenantDb(locals.user.id);
 

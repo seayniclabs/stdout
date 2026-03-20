@@ -139,3 +139,14 @@ export function rbacBlockedResponse(action: RBACAction, role: TeamRole): Respons
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+/**
+ * Check RBAC for an API route. Returns a 403 Response if blocked, null if allowed.
+ * Usage: const blocked = checkRBAC(locals, 'create'); if (blocked) return blocked;
+ */
+export function checkRBAC(locals: App.Locals, action: RBACAction): Response | null {
+  if (!locals.workspace) return null; // no workspace = own workspace, always allowed
+  if (locals.workspace.isOwnWorkspace) return null; // owner always allowed
+  if (canPerform(locals.workspace.role, action)) return null;
+  return rbacBlockedResponse(action, locals.workspace.role);
+}

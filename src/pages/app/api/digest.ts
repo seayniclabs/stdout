@@ -31,6 +31,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
 export const POST: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
+  // RBAC gate
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
+
   // Tier gate: weekly digest
   const { checkFeature, tierBlockedResponse } = await import('../../../lib/tier-gate');
   const gate = checkFeature(locals.user, 'weeklyDigest');

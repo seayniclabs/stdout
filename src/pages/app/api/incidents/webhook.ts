@@ -27,6 +27,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
   }
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   let body: any;
   try { body = await request.json(); } catch {

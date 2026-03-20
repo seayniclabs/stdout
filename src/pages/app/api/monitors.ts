@@ -49,6 +49,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
 // POST — create or update a monitor
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_monitors');
+  if (rbacBlock) return rbacBlock;
 
   let body: any;
   try { body = await request.json(); } catch {

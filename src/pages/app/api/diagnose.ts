@@ -8,6 +8,9 @@ import { eq, desc } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   let body: any;
   try {

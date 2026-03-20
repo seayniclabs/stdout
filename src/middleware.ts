@@ -1,6 +1,7 @@
 import { defineMiddleware } from 'astro:middleware';
 import { validateSession, getSessionFromCookies, SESSION_COOKIE } from './lib/auth';
 import { getCentralDb, centralSchema } from './lib/db';
+import { getWorkspaceContext } from './lib/rbac';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
 
@@ -187,6 +188,21 @@ export const onRequest = defineMiddleware(async (context, next) => {
     } else {
       context.locals.user = null;
     }
+  }
+
+  // Resolve workspace context (own workspace or team workspace)
+  if (context.locals.user) {
+    const wsParam = context.url.searchParams.get('ws') || context.cookies.get('sl_workspace')?.value;
+    context.locals.workspace = getWorkspaceContext(context.locals.user, wsParam || undefined);
+
+    // Persist workspace selection in cookie
+    if (wsParam && wsParam !== context.locals.user.id) {
+      context.cookies.set('sl_workspace', wsParam, {
+        path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60,
+      });
+    }
+  } else {
+    context.locals.workspace = null;
   }
 
   // Nonce for CSP

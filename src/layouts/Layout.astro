@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import { getTenantDb, tenantSchema } from '../lib/db';
+import { getUserWorkspaces } from '../lib/rbac';
 import { eq } from 'drizzle-orm';
 
 interface Props {
@@ -20,21 +21,31 @@ const nav = [
   { href: '/app/settings', label: 'Settings' },
 ];
 
-// Load tenant branding if logged in
+// Load tenant branding — use workspace owner's DB if in a team workspace
 let workspaceName = 'StdOut';
 let accentOverride = '';
 let logoOverride = '';
 const user = Astro.locals.user;
+const ws = Astro.locals.workspace;
+const wsOwnerId = ws?.ownerId || user?.id;
+
+// Workspace switcher data
+let workspaces: { own: any; teams: any[] } = { own: null, teams: [] };
+
 if (user) {
   try {
-    const db = getTenantDb(user.id);
+    const dbOwnerId = wsOwnerId || user.id;
+    const db = getTenantDb(dbOwnerId);
     const prefs = db.select().from(tenantSchema.tenantPreferences)
-      .where(eq(tenantSchema.tenantPreferences.userId, user.id)).get();
+      .where(eq(tenantSchema.tenantPreferences.userId, dbOwnerId)).get();
     if (prefs?.workspaceName) workspaceName = prefs.workspaceName;
     if (prefs?.accentColor) accentOverride = prefs.accentColor;
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
+    workspaces = getUserWorkspaces(user.id);
   } catch {}
 }
+const hasMultipleWorkspaces = workspaces.teams.length > 0;
+const currentWsId = ws?.ownerId || user?.id;
 ---
 <!doctype html>
 <html lang="en">
@@ -75,6 +86,27 @@ if (user) {
         >{label}</a>
       ))}
     </div>
+    {hasMultipleWorkspaces && (
+      <div class="ws-switcher">
+        <select id="wsSwitcher" class="ws-select" aria-label="Switch workspace">
+          {workspaces.own && (
+            <option value={workspaces.own.id} selected={currentWsId === workspaces.own.id}>
+              {workspaces.own.name} (yours)
+            </option>
+          )}
+          {workspaces.teams.map(t => (
+            <option value={t.id} selected={currentWsId === t.id}>
+              {t.name} ({t.role})
+            </option>
+          ))}
+        </select>
+      </div>
+    )}
+    {ws && !ws.isOwnWorkspace && (
+      <div class="ws-badge" title={`Viewing as ${ws.role}`}>
+        {ws.role}
+      </div>
+    )}
     <div class="topnav-auth" id="authNav">
       <a href="/app/login" class="topnav-auth-link">Log in</a>
     </div>
@@ -179,6 +211,14 @@ if (user) {
         authNav.append(avatar, nameEl, form);
       }
     }).catch(() => {});
+
+    // Workspace switcher
+    const wsSwitcher = document.getElementById('wsSwitcher') as HTMLSelectElement;
+    wsSwitcher?.addEventListener('change', () => {
+      const url = new URL(window.location.href);
+      url.searchParams.set('ws', wsSwitcher.value);
+      window.location.href = url.toString();
+    });
   </script>
 
   <style>
@@ -245,6 +285,17 @@ if (user) {
       transition: color 150ms;
     }
     .topnav-auth-link:hover { color: var(--text); }
+    .ws-switcher { margin-left: auto; margin-right: 8px; }
+    .ws-select {
+      background: var(--bg-surface); border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text-secondary); font-size: 11px; padding: 4px 8px;
+      font-family: var(--font-mono); cursor: pointer;
+    }
+    .ws-badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 4px;
+      background: #DBEAFE; color: #1E40AF; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.04em; margin-right: 8px;
+    }
     .topnav-avatar {
       width: 26px; height: 26px;
       background: var(--accent);

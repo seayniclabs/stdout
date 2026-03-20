@@ -20,6 +20,9 @@ export const GET: APIRoute = async ({ locals }) => {
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create_backup');
+  if (rbacBlock) return rbacBlock;
 
   let body: any = {};
   try {

@@ -3,11 +3,14 @@ import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
+import { checkRBAC } from '../../../../lib/rbac';
 
 const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   // Tier gate: stack count
   const db = getTenantDb(locals.user.id);
