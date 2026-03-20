@@ -8,8 +8,10 @@ import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
 import { sendVerificationEmail } from '../../lib/email';
+import { isRegistrationFrozen, canRegister } from '../../lib/freeze';
 import crypto from 'node:crypto';
 
+const frozen = isRegistrationFrozen();
 let error = '';
 let email = '';
 let displayName = '';
@@ -41,6 +43,8 @@ if (Astro.request.method === 'POST') {
       error = 'Password must be at least 8 characters.';
     } else if (password !== confirm) {
       error = "Passwords don't match.";
+    } else if (!canRegister(email)) {
+      error = 'Registration is currently closed. Check back soon.';
     } else {
       const existing = getCentralDb().select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
       if (existing) {
@@ -97,6 +101,7 @@ if (Astro.locals.user) return Astro.redirect('/app');
     <h1>Create an account</h1>
     <p class="auth-subtitle">Start logging incidents and building your runbook.</p>
 
+    {frozen && <div class="auth-error">Registration is currently closed. Check back soon.</div>}
     {error && <div class="auth-error">{error}</div>}
 
     <form method="POST" class="auth-form">

@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import { getCentralDb, centralSchema } from './db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { canRegister } from './freeze';
 
 // --- OIDC Configuration ---
 // These come from env vars, set in docker-compose.yml
@@ -112,15 +113,20 @@ export async function getUserInfo(accessToken: string): Promise<OIDCUser | null>
 
 // --- Find or Create Local User ---
 
-export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: string; displayName: string } {
+export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: string; displayName: string } | null {
   const db = getCentralDb();
 
-  // Look up by email first
+  // Look up by email first — existing users always pass through
   let user = db.select().from(centralSchema.users)
     .where(eq(centralSchema.users.email, oidcUser.email)).get();
 
   if (user) {
     return { id: user.id, email: user.email, displayName: user.displayName || oidcUser.name || '' };
+  }
+
+  // Block new account creation when registration is frozen
+  if (!canRegister(oidcUser.email)) {
+    return null;
   }
 
   // Create new user — no password since auth is via OIDC

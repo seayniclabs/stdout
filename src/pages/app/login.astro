@@ -11,6 +11,11 @@ import { eq } from 'drizzle-orm';
 let error = '';
 let email = '';
 
+const oidcError = Astro.url.searchParams.get('error');
+if (oidcError === 'registration_closed') {
+  error = 'Registration is currently closed. Check back soon.';
+}
+
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
 const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
 

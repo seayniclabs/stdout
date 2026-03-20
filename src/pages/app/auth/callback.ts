@@ -46,8 +46,11 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
     return redirect('/app/login?error=userinfo_failed');
   }
 
-  // Find or create local user
+  // Find or create local user (null if registration frozen for new users)
   const localUser = findOrCreateUser(oidcUser);
+  if (!localUser) {
+    return redirect('/app/login?error=registration_closed');
+  }
 
   // Ensure tenant DB exists
   getTenantDb(localUser.id);
