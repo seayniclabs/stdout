@@ -43,6 +43,8 @@ if (Astro.request.method === 'POST') {
         if (!user) {
           recordFailedLogin(email);
           error = 'Invalid email or password.';
+        } else if (!user.passwordHash) {
+          error = 'This account uses Seaynic Labs authentication. Use the "Sign in with Seaynic Labs" button.';
         } else {
           const valid = await verifyPassword(user.passwordHash, password);
           if (!valid) {
