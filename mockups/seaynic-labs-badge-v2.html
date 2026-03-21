@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Seaynic Labs Badge — SL + Network Hub Hybrid</title>
+<style>
+  body {
+    background: #0a0a0f;
+    color: #e0e0e0;
+    font-family: 'Inter', -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+    gap: 60px;
+  }
+  h1 { color: #fff; font-size: 24px; font-weight: 600; margin: 0; }
+  h2 { color: #999; font-size: 14px; font-weight: 400; text-transform: uppercase; letter-spacing: 2px; margin: 0; }
+  .section-desc { color: #666; font-size: 13px; max-width: 560px; text-align: center; line-height: 1.6; margin-top: 4px; }
+  .row {
+    display: flex;
+    gap: 48px;
+    align-items: flex-end;
+  }
+  .badge-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .badge-group span {
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .comparison {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    background: #12121a;
+    padding: 32px 40px;
+    border-radius: 16px;
+    border: 1px solid #222;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .comparison .label {
+    font-size: 11px;
+    color: #555;
+    text-align: center;
+    margin-top: 8px;
+  }
+  .comparison .item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .divider {
+    width: 1px;
+    height: 80px;
+    background: #333;
+    margin: 0 16px;
+  }
+  .btn-demo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 360px;
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(20, 184, 166, 0.04));
+    border: 1px solid rgba(20, 184, 166, 0.35);
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<h1>Seaynic Labs — SL Network Monogram</h1>
+<h2>M1 Clean SL + Homelab Hub Nodes Hybrid</h2>
+<p class="section-desc">The SL letterform IS the network. Nodes sit at letter terminals and intersections. The letters are the connections.</p>
+
+<!-- H1: SL with nodes at every terminal -->
+<div>
+  <h2 style="text-align:center; margin-bottom: 8px;">H1 — Terminal Nodes</h2>
+  <p class="section-desc">Every endpoint of the S and L gets a node. The letter strokes are the network lines.</p>
+  <div class="row" style="margin-top: 16px;">
+    <div class="badge-group">
+      <svg width="128" height="128" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h1a)" stroke-width="2"/>
+        <!-- S stroke -->
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <!-- L stroke -->
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- Nodes at terminals -->
+        <circle cx="30" cy="20" r="2.5" fill="#14B8A6"/><!-- S top -->
+        <circle cx="17" cy="42" r="2.5" fill="#14B8A6"/><!-- S bottom -->
+        <circle cx="37" cy="20" r="2.5" fill="#14B8A6"/><!-- L top -->
+        <circle cx="48" cy="42" r="2.5" fill="#14B8A6"/><!-- L foot -->
+        <!-- Cross-connection: S-top to L-top -->
+        <line x1="30" y1="20" x2="37" y2="20" stroke="#14B8A6" stroke-width="1" opacity="0.4"/>
+        <!-- Cross-connection: S-bottom to L-foot -->
+        <line x1="17" y1="42" x2="48" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="h1a" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>128px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h1b)" stroke-width="2"/>
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="30" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="17" cy="42" r="2.5" fill="#14B8A6"/>
+        <circle cx="37" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="48" cy="42" r="2.5" fill="#14B8A6"/>
+        <line x1="30" y1="20" x2="37" y2="20" stroke="#14B8A6" stroke-width="1" opacity="0.4"/>
+        <line x1="17" y1="42" x2="48" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="h1b" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>64px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="3" opacity="0.4"/>
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="30" cy="20" r="3" fill="#14B8A6"/>
+        <circle cx="37" cy="20" r="3" fill="#14B8A6"/>
+        <circle cx="17" cy="42" r="3" fill="#14B8A6"/>
+        <circle cx="48" cy="42" r="3" fill="#14B8A6"/>
+      </svg>
+      <span>32px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="4" opacity="0.4"/>
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>16px</span>
+    </div>
+  </div>
+</div>
+
+<!-- H2: SL with center hub node -->
+<div>
+  <h2 style="text-align:center; margin-bottom: 8px;">H2 — Center Hub</h2>
+  <p class="section-desc">A central hub node sits between the S and L. Spokes radiate out to each letter terminal. The hub is the brand, the letters are the network.</p>
+  <div class="row" style="margin-top: 16px;">
+    <div class="badge-group">
+      <svg width="128" height="128" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h2a)" stroke-width="2"/>
+        <!-- S stroke -->
+        <path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <!-- L stroke -->
+        <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- Center hub -->
+        <circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/>
+        <circle cx="34" cy="30" r="1.5" fill="#14B8A6"/>
+        <!-- Hub spokes to letter terminals -->
+        <line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <!-- Terminal nodes -->
+        <circle cx="28" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="16" cy="41" r="2" fill="#14B8A6"/>
+        <circle cx="40" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="50" cy="41" r="2" fill="#14B8A6"/>
+        <defs><linearGradient id="h2a" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>128px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h2b)" stroke-width="2"/>
+        <path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/>
+        <circle cx="34" cy="30" r="1.5" fill="#14B8A6"/>
+        <line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <circle cx="28" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="16" cy="41" r="2" fill="#14B8A6"/>
+        <circle cx="40" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="50" cy="41" r="2" fill="#14B8A6"/>
+        <defs><linearGradient id="h2b" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>64px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="3" opacity="0.4"/>
+        <path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="34" cy="30" r="3" fill="#14B8A6"/>
+      </svg>
+      <span>32px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="4" opacity="0.4"/>
+        <path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="5" stroke-linecap="round" fill="none"/>
+        <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>16px</span>
+    </div>
+  </div>
+</div>
+
+<!-- H3: Connected SL (M2) with nodes -->
+<div>
+  <h2 style="text-align:center; margin-bottom: 8px;">H3 — Connected SL + Nodes</h2>
+  <p class="section-desc">The M2 connected monogram (shared vertical) with hub nodes at key intersections. Where the S meets the L spine becomes a junction node.</p>
+  <div class="row" style="margin-top: 16px;">
+    <div class="badge-group">
+      <svg width="128" height="128" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h3a)" stroke-width="2"/>
+        <!-- S wrapping around the shared vertical -->
+        <path d="M33 26 C33 22, 27 19, 23 19 C19 19, 15 22, 15 26 C15 31, 33 30, 33 35 C33 39, 27 42, 23 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <!-- L vertical (shared with S right edge) + base -->
+        <path d="M33 17 L33 44 L46 44" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- Junction nodes where S meets L vertical -->
+        <circle cx="33" cy="26" r="2.5" fill="#14B8A6"/><!-- S top meets L -->
+        <circle cx="33" cy="35" r="2.5" fill="#14B8A6"/><!-- S bottom meets L -->
+        <!-- Terminal nodes -->
+        <circle cx="23" cy="19" r="2" fill="#14B8A6" opacity="0.7"/><!-- S top end -->
+        <circle cx="23" cy="42" r="2" fill="#14B8A6" opacity="0.7"/><!-- S bottom end -->
+        <circle cx="33" cy="17" r="2" fill="#14B8A6" opacity="0.7"/><!-- L top -->
+        <circle cx="46" cy="44" r="2" fill="#14B8A6" opacity="0.7"/><!-- L foot -->
+        <!-- Cross-connections from junctions -->
+        <line x1="33" y1="26" x2="23" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <line x1="33" y1="35" x2="23" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="h3a" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>128px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#h3b)" stroke-width="2"/>
+        <path d="M33 26 C33 22, 27 19, 23 19 C19 19, 15 22, 15 26 C15 31, 33 30, 33 35 C33 39, 27 42, 23 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M33 17 L33 44 L46 44" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="33" cy="26" r="2.5" fill="#14B8A6"/>
+        <circle cx="33" cy="35" r="2.5" fill="#14B8A6"/>
+        <circle cx="23" cy="19" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="23" cy="42" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="33" cy="17" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="46" cy="44" r="2" fill="#14B8A6" opacity="0.7"/>
+        <line x1="33" y1="26" x2="23" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <line x1="33" y1="35" x2="23" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="h3b" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <span>64px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="32" height="32" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="3" opacity="0.4"/>
+        <path d="M33 26 C33 22, 27 19, 23 19 C19 19, 15 22, 15 26 C15 31, 33 30, 33 35 C33 39, 27 42, 23 42" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+        <path d="M33 17 L33 44 L46 44" stroke="#14B8A6" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="33" cy="26" r="3" fill="#14B8A6"/>
+        <circle cx="33" cy="35" r="3" fill="#14B8A6"/>
+      </svg>
+      <span>32px</span>
+    </div>
+    <div class="badge-group">
+      <svg width="16" height="16" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="#14B8A6" stroke-width="4" opacity="0.4"/>
+        <path d="M33 26 C33 22, 27 19, 23 19 C19 19, 15 22, 15 26 C15 31, 33 30, 33 35 C33 39, 27 42, 23 42" stroke="#14B8A6" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+        <path d="M33 17 L33 44 L46 44" stroke="#14B8A6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+      <span>16px</span>
+    </div>
+  </div>
+</div>
+
+<!-- Family comparison -->
+<div>
+  <h2 style="text-align:center; margin-bottom: 24px;">Family Lineup</h2>
+  <div class="comparison">
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-stdout)" stroke-width="2"/>
+        <path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/>
+        <defs><linearGradient id="fam-stdout" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FB923C"/><stop offset="1" stop-color="#C2410C" stop-opacity="0.4"/></linearGradient></defs>
+      </svg>
+      <div class="label">StdOut</div>
+    </div>
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-stem)" stroke-width="2"/>
+        <path d="M28 20V40" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round"/>
+        <circle cx="24" cy="40" r="5" stroke="#00D4AA" stroke-width="2.5" fill="none"/>
+        <path d="M28 20L38 17V24" stroke="#00D4AA" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M38 28C40 26 40 22 38 20" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+        <path d="M42 30C45 26 45 20 42 16" stroke="#00D4AA" stroke-width="1.5" stroke-linecap="round" opacity="0.35"/>
+        <defs><linearGradient id="fam-stem" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#00D4AA"/><stop offset="1" stop-color="#00D4AA" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <div class="label">Stem</div>
+    </div>
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#12121A"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-hm)" stroke-width="2"/>
+        <rect x="26" y="26" width="12" height="12" rx="3" stroke="#FFB340" stroke-width="2" fill="none"/>
+        <circle cx="32" cy="32" r="2" fill="#FFB340"/>
+        <path d="M32 26V16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M32 48V38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M26 32H16" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M48 32H38" stroke="#FFB340" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="32" cy="14" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+        <circle cx="32" cy="50" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+        <circle cx="14" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+        <circle cx="50" cy="32" r="3" stroke="#FFB340" stroke-width="1.5" fill="none"/>
+        <defs><linearGradient id="fam-hm" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#FFB340"/><stop offset="1" stop-color="#FFB340" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <div class="label">Homelab MCP</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-h1)" stroke-width="2"/>
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="30" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="17" cy="42" r="2.5" fill="#14B8A6"/>
+        <circle cx="37" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="48" cy="42" r="2.5" fill="#14B8A6"/>
+        <line x1="30" y1="20" x2="37" y2="20" stroke="#14B8A6" stroke-width="1" opacity="0.4"/>
+        <line x1="17" y1="42" x2="48" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="fam-h1" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <div class="label">H1 Terminal</div>
+    </div>
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-h2)" stroke-width="2"/>
+        <path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/>
+        <circle cx="34" cy="30" r="1.5" fill="#14B8A6"/>
+        <line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/>
+        <circle cx="28" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="16" cy="41" r="2" fill="#14B8A6"/>
+        <circle cx="40" cy="19" r="2" fill="#14B8A6"/>
+        <circle cx="50" cy="41" r="2" fill="#14B8A6"/>
+        <defs><linearGradient id="fam-h2" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <div class="label">H2 Hub</div>
+    </div>
+    <div class="item">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#fam-h3)" stroke-width="2"/>
+        <path d="M33 26 C33 22, 27 19, 23 19 C19 19, 15 22, 15 26 C15 31, 33 30, 33 35 C33 39, 27 42, 23 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M33 17 L33 44 L46 44" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="33" cy="26" r="2.5" fill="#14B8A6"/>
+        <circle cx="33" cy="35" r="2.5" fill="#14B8A6"/>
+        <circle cx="23" cy="19" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="23" cy="42" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="33" cy="17" r="2" fill="#14B8A6" opacity="0.7"/>
+        <circle cx="46" cy="44" r="2" fill="#14B8A6" opacity="0.7"/>
+        <line x1="33" y1="26" x2="23" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <line x1="33" y1="35" x2="23" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="fam-h3" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      <div class="label">H3 Connected</div>
+    </div>
+  </div>
+</div>
+
+<!-- Button preview -->
+<div>
+  <h2 style="text-align:center; margin-bottom: 24px;">OIDC Button Preview (H1)</h2>
+  <div style="background: #16161e; padding: 24px; border-radius: 12px; border: 1px solid #222;">
+    <div class="btn-demo">
+      <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="28" fill="#0E0E18"/>
+        <circle cx="32" cy="32" r="28" stroke="url(#btn-h1)" stroke-width="2"/>
+        <path d="M30 20 C22 20, 17 23, 17 27 C17 32, 30 30, 30 35 C30 39, 22 42, 17 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+        <path d="M37 20 L37 42 L48 42" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="30" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="17" cy="42" r="2.5" fill="#14B8A6"/>
+        <circle cx="37" cy="20" r="2.5" fill="#14B8A6"/>
+        <circle cx="48" cy="42" r="2.5" fill="#14B8A6"/>
+        <line x1="30" y1="20" x2="37" y2="20" stroke="#14B8A6" stroke-width="1" opacity="0.4"/>
+        <line x1="17" y1="42" x2="48" y2="42" stroke="#14B8A6" stroke-width="1" opacity="0.3"/>
+        <defs><linearGradient id="btn-h1" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs>
+      </svg>
+      Sign in with Seaynic Labs
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

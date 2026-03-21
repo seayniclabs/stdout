@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg version="1.2" baseProfile="tiny-ps" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <title>Seaynic Labs</title>
+  <circle cx="32" cy="32" r="32" fill="#0E0E18"/>
+  <circle cx="32" cy="32" r="28" fill="#0E0E18" stroke="#14B8A6" stroke-width="2" stroke-opacity="0.6"/>
+  <path d="M28 19 C21 19 16 22 16 26 C16 31 28 29 28 34 C28 38 21 41 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  <path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/>
+  <circle cx="34" cy="30" r="1.5" fill="#14B8A6"/>
+  <line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="2 2"/>
+  <line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="2 2"/>
+  <line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="2 2"/>
+  <line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="2 2"/>
+  <circle cx="28" cy="19" r="2" fill="#14B8A6"/>
+  <circle cx="16" cy="41" r="2" fill="#14B8A6"/>
+  <circle cx="40" cy="19" r="2" fill="#14B8A6"/>
+  <circle cx="50" cy="41" r="2" fill="#14B8A6"/>
+</svg>

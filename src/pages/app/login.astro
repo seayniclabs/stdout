@@ -85,7 +85,7 @@ const oidcEnabled = isOIDCEnabled();
     {oidcEnabled && (
       <div class="oidc-section">
         <a href="/app/auth/oidc" class="btn-oidc">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="#0E0E18"/><circle cx="32" cy="32" r="28" stroke="url(#sl-ring)" stroke-width="2"/><path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/><circle cx="34" cy="30" r="1.5" fill="#14B8A6"/><line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><circle cx="28" cy="19" r="2" fill="#14B8A6"/><circle cx="16" cy="41" r="2" fill="#14B8A6"/><circle cx="40" cy="19" r="2" fill="#14B8A6"/><circle cx="50" cy="41" r="2" fill="#14B8A6"/><defs><linearGradient id="sl-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs></svg>
           Sign in with Seaynic Labs
         </a>
         <div class="oidc-divider">
@@ -119,25 +119,25 @@ const oidcEnabled = isOIDCEnabled();
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
-    padding: 12px 20px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
+    padding: 14px 20px;
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(20, 184, 166, 0.04));
+    border: 1px solid rgba(20, 184, 166, 0.35);
     border-radius: var(--radius-sm);
     color: var(--text);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 600;
     text-decoration: none;
     transition: all 0.15s ease;
     cursor: pointer;
   }
   .btn-oidc:hover {
-    border-color: var(--accent);
-    background: var(--bg-hover);
+    border-color: rgba(20, 184, 166, 0.6);
+    background: linear-gradient(135deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.08));
     color: var(--text);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15);
   }
   .oidc-divider {
     display: flex;
