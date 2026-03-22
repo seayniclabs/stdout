@@ -65,20 +65,22 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
     expiresAt: expires,
   }).run();
 
-  // Set session cookie
-  cookies.set('sl_session', sessionId, {
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 30 * 24 * 60 * 60,
-  });
-
   logAudit('login', {
     userId: localUser.id,
     ip: getClientIp(request),
     details: { method: 'oidc', email: oidcUser.email, sub: oidcUser.sub },
   });
 
-  return redirect('/app');
+  console.log('OIDC callback: session created', { sessionId: sessionId.substring(0, 8) + '...', userId: localUser.id, email: oidcUser.email });
+
+  const maxAge = 30 * 24 * 60 * 60;
+  const setCookie = `sl_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+
+  return new Response(null, {
+    status: 302,
+    headers: {
+      'Location': '/app',
+      'Set-Cookie': setCookie,
+    },
+  });
 };

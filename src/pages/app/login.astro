@@ -1,120 +1,44 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getCentralDb, centralSchema } from '../../lib/db';
-import { verifyPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { isOIDCEnabled } from '../../lib/oidc';
-import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
-import { logAudit, getClientIp } from '../../lib/audit';
-import { eq } from 'drizzle-orm';
-
-let error = '';
-let email = '';
-
-const oidcError = Astro.url.searchParams.get('error');
-if (oidcError === 'registration_closed') {
-  error = 'Registration is currently closed. Check back soon.';
-}
 
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
 const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
 
-if (Astro.request.method === 'POST') {
-  const form = await Astro.request.formData();
-  const csrfToken = form.get('_csrf') as string || '';
+// Already logged in — go to app
+if (Astro.locals.user) return Astro.redirect(redirectTo);
 
-  if (!validateCsrf(csrfToken, Astro.cookies)) {
-    error = 'Invalid form submission. Please try again.';
-  } else {
-    email = (form.get('email') as string || '').trim().toLowerCase();
-    const password = form.get('password') as string || '';
-    const formRedirect = (form.get('redirect') as string || '').trim();
-    const destination = (formRedirect.startsWith('/') && !formRedirect.startsWith('//')) ? formRedirect : '/app';
-
-    if (!email || !password) {
-      error = 'Email and password are required.';
-    } else {
-      const lockout = isAccountLocked(email);
-      if (lockout.locked) {
-        const minutes = Math.ceil((lockout.retryAfterSec || 0) / 60);
-        error = `Account temporarily locked. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
-      } else {
-        const user = getCentralDb().select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
-        if (!user) {
-          recordFailedLogin(email);
-          error = 'Invalid email or password.';
-        } else if (!user.passwordHash) {
-          error = 'This account uses Seaynic Labs authentication. Use the "Sign in with Seaynic Labs" button.';
-        } else {
-          const valid = await verifyPassword(user.passwordHash, password);
-          if (!valid) {
-            recordFailedLogin(email);
-            logAudit('login_failed', { userId: user.id, ip: getClientIp(Astro.request) });
-            error = 'Invalid email or password.';
-          } else {
-            resetLoginAttempts(email);
-            const sessionId = await createSession(user.id);
-            logAudit('login', { userId: user.id, ip: getClientIp(Astro.request) });
-            Astro.cookies.set(SESSION_COOKIE, sessionId, {
-              path: '/',
-              httpOnly: true,
-              secure: true,
-              sameSite: 'lax',
-              maxAge: 30 * 24 * 60 * 60,
-              domain: undefined,
-            });
-            return Astro.redirect(destination);
-          }
-        }
-      }
-    }
-  }
+// OIDC is the only auth path — auto-redirect unless there's an error to show
+const oidcError = Astro.url.searchParams.get('error');
+if (isOIDCEnabled() && !oidcError) {
+  return Astro.redirect('/app/auth/oidc');
 }
 
-if (Astro.locals.user) return Astro.redirect('/app');
-
-const oidcEnabled = isOIDCEnabled();
+let error = '';
+if (oidcError === 'registration_closed') {
+  error = 'Registration is currently closed. Contact support for access.';
+} else if (oidcError === 'oidc_not_configured') {
+  error = 'Authentication is not configured. Contact the administrator.';
+} else if (oidcError) {
+  error = 'Authentication failed. Please try again.';
+}
 ---
-<Layout title="Log in — StdOut">
+<Layout title="Sign in — StdOut">
   <div class="auth-page">
     <h1>Welcome back</h1>
     <p class="auth-subtitle">Log in to your incident companion.</p>
 
     {error && <div class="auth-error">{error}</div>}
 
-    {oidcEnabled && (
-      <div class="oidc-section">
-        <a href="/app/auth/oidc" class="btn-oidc">
-          <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="#0E0E18"/><circle cx="32" cy="32" r="28" stroke="url(#sl-ring)" stroke-width="2"/><path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/><circle cx="34" cy="30" r="1.5" fill="#14B8A6"/><line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><circle cx="28" cy="19" r="2" fill="#14B8A6"/><circle cx="16" cy="41" r="2" fill="#14B8A6"/><circle cx="40" cy="19" r="2" fill="#14B8A6"/><circle cx="50" cy="41" r="2" fill="#14B8A6"/><defs><linearGradient id="sl-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs></svg>
-          Sign in with Seaynic Labs
-        </a>
-        <div class="oidc-divider">
-          <span>or use email</span>
-        </div>
-      </div>
-    )}
-
-    <form method="POST" class="auth-form">
-      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
-      <input type="hidden" name="redirect" value={redirectTo} />
-      <label>
-        <span>Email</span>
-        <input type="email" name="email" value={email} required autocomplete="email" />
-      </label>
-      <label>
-        <span>Password</span>
-        <input type="password" name="password" required autocomplete="current-password" />
-      </label>
-      <button type="submit">Log in</button>
-    </form>
-
-    <p class="auth-forgot"><a href="/app/forgot-password">Forgot your password?</a></p>
-    <p class="auth-switch">Don't have an account? <a href={`/app/register${redirectTo !== '/app' ? `?redirect=${encodeURIComponent(redirectTo)}` : ''}`}>Register</a></p>
+    <a href="/app/auth/oidc" class="btn-oidc">
+      <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="#0E0E18"/><circle cx="32" cy="32" r="28" stroke="url(#sl-ring)" stroke-width="2"/><path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/><circle cx="34" cy="30" r="1.5" fill="#14B8A6"/><line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><circle cx="28" cy="19" r="2" fill="#14B8A6"/><circle cx="16" cy="41" r="2" fill="#14B8A6"/><circle cx="40" cy="19" r="2" fill="#14B8A6"/><circle cx="50" cy="41" r="2" fill="#14B8A6"/><defs><linearGradient id="sl-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs></svg>
+      Sign in with Seaynic Labs
+    </a>
   </div>
 </Layout>
 
 <style>
-  .oidc-section { margin-bottom: 8px; }
   .btn-oidc {
     display: flex;
     align-items: center;
@@ -122,6 +46,7 @@ const oidcEnabled = isOIDCEnabled();
     gap: 12px;
     width: 100%;
     padding: 14px 20px;
+    margin-top: 24px;
     background: linear-gradient(135deg, rgba(20, 184, 166, 0.12), rgba(20, 184, 166, 0.04));
     border: 1px solid rgba(20, 184, 166, 0.35);
     border-radius: var(--radius-sm);
@@ -138,19 +63,5 @@ const oidcEnabled = isOIDCEnabled();
     color: var(--text);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(20, 184, 166, 0.15);
-  }
-  .oidc-divider {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin: 16px 0;
-    color: var(--text-muted);
-    font-size: 12px;
-  }
-  .oidc-divider::before, .oidc-divider::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--border);
   }
 </style>
