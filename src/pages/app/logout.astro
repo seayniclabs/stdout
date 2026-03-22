@@ -2,6 +2,7 @@
 export const prerender = false;
 import { deleteSession, getSessionFromCookies, SESSION_COOKIE } from '../../lib/auth';
 import { validateCsrf } from '../../middleware';
+import { isOIDCEnabled, getLogoutURL } from '../../lib/oidc';
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
@@ -12,6 +13,11 @@ if (Astro.request.method === 'POST') {
   if (validateCsrf(csrfToken, Astro.cookies)) {
     const sessionId = getSessionFromCookies(Astro.cookies);
     if (sessionId) deleteSession(sessionId);
+  }
+
+  // End Authentik session too (single logout)
+  if (isOIDCEnabled()) {
+    return Astro.redirect(getLogoutURL());
   }
   return Astro.redirect('/');
 }

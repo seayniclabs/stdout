@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
 
   if (error) {
     console.error('OIDC error:', error, url.searchParams.get('error_description'));
-    return redirect(`/app/login?error=${error}`);
+    return redirect(`/app/login?error=${encodeURIComponent(error)}`);
   }
 
   if (!code || !state) {
@@ -33,7 +33,6 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   }
 
   // Get user info
-  console.log('OIDC callback: exchanged tokens, access_token present:', !!tokens.access_token, 'type:', tokens.token_type);
   let oidcUser;
   try {
     oidcUser = await getUserInfo(tokens.access_token);
@@ -71,10 +70,8 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
     details: { method: 'oidc', email: oidcUser.email, sub: oidcUser.sub },
   });
 
-  console.log('OIDC callback: session created', { sessionId: sessionId.substring(0, 8) + '...', userId: localUser.id, email: oidcUser.email });
-
   const maxAge = 30 * 24 * 60 * 60;
-  const setCookie = `sl_session=${sessionId}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
+  const setCookie = `sl_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
   return new Response(null, {
     status: 302,

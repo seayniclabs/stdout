@@ -20,6 +20,7 @@ export const users = sqliteTable('users', {
   }).notNull().default('member'),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   emailVerifiedAt: integer('email_verified_at', { mode: 'timestamp' }),
+  oidcSub: text('oidc_sub'),
   stripeCustomerId: text('stripe_customer_id'),
   privacyAcceptedAt: integer('privacy_accepted_at', { mode: 'timestamp' }),
   dpaAcceptedAt: integer('dpa_accepted_at', { mode: 'timestamp' }),

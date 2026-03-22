@@ -116,9 +116,18 @@ export async function getUserInfo(accessToken: string): Promise<OIDCUser | null>
 export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: string; displayName: string } | null {
   const db = getCentralDb();
 
-  // Look up by email first — existing users always pass through
-  let user = db.select().from(centralSchema.users)
-    .where(eq(centralSchema.users.email, oidcUser.email)).get();
+  // Look up by OIDC sub first (stable identifier), then fall back to email
+  let user = oidcUser.sub
+    ? db.select().from(centralSchema.users).where(eq(centralSchema.users.oidcSub, oidcUser.sub)).get()
+    : undefined;
+
+  if (!user) {
+    user = db.select().from(centralSchema.users).where(eq(centralSchema.users.email, oidcUser.email)).get();
+    // Backfill sub on existing email-matched user
+    if (user && oidcUser.sub) {
+      db.update(centralSchema.users).set({ oidcSub: oidcUser.sub }).where(eq(centralSchema.users.id, user.id)).run();
+    }
+  }
 
   if (user) {
     return { id: user.id, email: user.email, displayName: user.displayName || oidcUser.name || '' };
@@ -129,7 +138,7 @@ export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: strin
     return null;
   }
 
-  // Create new user — no password since auth is via OIDC
+  // Create new user
   const id = nanoid();
   const now = new Date();
   const displayName = oidcUser.name || oidcUser.preferred_username || oidcUser.email.split('@')[0];
@@ -137,11 +146,12 @@ export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: strin
   db.insert(centralSchema.users).values({
     id,
     email: oidcUser.email,
-    passwordHash: '', // OIDC user — no local password
+    passwordHash: '',
     displayName,
+    oidcSub: oidcUser.sub,
     subscriptionStatus: 'free',
     role: 'member',
-    emailVerified: true, // Authentik already verified
+    emailVerified: true,
     createdAt: now,
     updatedAt: now,
   }).run();

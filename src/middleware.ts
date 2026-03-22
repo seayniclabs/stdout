@@ -183,10 +183,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
   } else {
     // Session validation (cookie-based)
     const sessionId = getSessionFromCookies(context.cookies);
-    if (pathname === '/app' || pathname === '/app/') {
-      const rawCookie = context.request.headers.get('cookie') || '(none)';
-      console.log('MW /app:', { hasSession: !!sessionId, rawCookie: rawCookie.substring(0, 200) });
-    }
     if (sessionId) {
       context.locals.user = validateSession(sessionId);
     } else {
