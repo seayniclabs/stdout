@@ -71,13 +71,14 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   });
 
   const maxAge = 30 * 24 * 60 * 60;
-  const setCookie = `sl_session=${sessionId}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 
-  return new Response(null, {
-    status: 302,
-    headers: {
-      'Location': '/app',
-      'Set-Cookie': setCookie,
-    },
+  cookies.set('sl_session', sessionId, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge,
   });
+
+  return redirect('/app');
 };
