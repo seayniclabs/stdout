@@ -48,6 +48,7 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'stack_imports', 'user_id', 'TEXT');
   safeAddColumn(sqlite, 'users', 'subscription_tier', 'TEXT');
   safeAddColumn(sqlite, 'users', 'subscription_period_end', 'INTEGER');
+  safeAddColumn(sqlite, 'users', 'oidc_sub', 'TEXT');
 
   // Team members table (RBAC for Shop tier)
   sqlite.exec(`
@@ -77,6 +78,7 @@ function runCentralDDL(sqlite: InstanceType<typeof Database>): void {
       role TEXT NOT NULL DEFAULT 'member',
       email_verified INTEGER NOT NULL DEFAULT 0,
       email_verified_at INTEGER,
+      oidc_sub TEXT,
       stripe_customer_id TEXT,
       privacy_accepted_at INTEGER,
       dpa_accepted_at INTEGER,

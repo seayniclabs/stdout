@@ -10,7 +10,7 @@ export const GET: APIRoute = async ({ cookies }) => {
   const state = generateState();
 
   // Clear any stale session cookie before starting OIDC flow
-  const deleteSession = 'sl_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0';
+  const deleteSession = 'sl_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
   const setState = `sl_oidc_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
 
   const url = getAuthorizationURL(state);

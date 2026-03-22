@@ -223,7 +223,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.csrfToken = csrfToken;
 
   // Protect /app/* routes (except login, register, forgot-password)
-  const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/api/billing-sync', '/app/auth/oidc', '/app/auth/callback'];
+  const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/api/billing-sync', '/app/auth/oidc', '/app/auth/callback', '/app/api/me'];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
   if (isAppRoute && !isPublicApp && !context.locals.user) {
@@ -236,6 +236,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const response = await next();
+
+  // Don't process redirects — return them as-is to preserve mobile Safari behavior
+  if (response.status >= 300 && response.status < 400) return response;
 
   const contentType = response.headers.get('content-type') || '';
   if (!contentType.includes('text/html')) return response;
