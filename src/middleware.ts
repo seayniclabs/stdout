@@ -38,14 +38,23 @@ function validateBearerToken(request: Request): { userId: string } | null {
 }
 
 // --- CSRF Origin Check ---
-const ALLOWED_ORIGINS = [
-  'https://stdout.seaynicroute.com',
-  'https://stdout.seayniclabs.com',
-  'https://seayniclabs.com',
-];
-if (import.meta.env.DEV) {
-  ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000');
+const ALLOWED_ORIGINS: string[] = [];
+
+// SaaS mode: allow the production domains
+if (!process.env.STDOUT_MODE || process.env.STDOUT_MODE === 'saas') {
+  ALLOWED_ORIGINS.push(
+    'https://stdout.seayniclabs.com',
+    'https://seayniclabs.com',
+  );
 }
+
+// Self-hosted mode: allow the configured APP_URL
+if (process.env.APP_URL) {
+  ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
+}
+
+// Always allow localhost for dev
+ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000');
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
-const APP_URL = process.env.APP_URL || 'https://stdout.seaynicroute.com';
-const FROM = 'StdOut <noreply@stdout.seayniclabs.com>';
+const APP_URL = process.env.APP_URL || 'http://localhost:3000';
+const FROM = process.env.EMAIL_FROM || 'StdOut <noreply@stdout.app>';
 
 function getApiKey(): string {
   try {

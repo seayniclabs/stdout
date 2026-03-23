@@ -5,7 +5,7 @@ import sitemap from '@astrojs/sitemap';
 
 // https://astro.build/config
 export default defineConfig({
-  site: 'https://stdout.seayniclabs.com',
+  site: process.env.APP_URL || 'https://stdout.seayniclabs.com',
   output: 'server',
   security: {
     checkOrigin: false, // Custom origin check in middleware (proxy chain sees HTTP, not HTTPS)

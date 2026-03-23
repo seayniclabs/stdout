@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+.astro
+.DS_Store
+.vscode
+.env
+.env.*
+*.db
+data/
+node_modules/
+dist/
+mockups/
+assets/
+CLAUDE.md
+README.md

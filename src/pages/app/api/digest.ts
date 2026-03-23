@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const appUrl = process.env.APP_URL || 'https://stdout.seaynicroute.com';
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const html = renderDigestHTML(data, appUrl);
 
   // If ?json=1, return raw data

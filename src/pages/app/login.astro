@@ -15,6 +15,8 @@ if (isOIDCEnabled() && !oidcError) {
   return Astro.redirect('/app/auth/oidc');
 }
 
+const oidcProviderName = process.env.OIDC_PROVIDER_NAME || 'SSO';
+
 let error = '';
 if (oidcError === 'registration_closed') {
   error = 'Registration is currently closed. Contact support for access.';
@@ -33,7 +35,7 @@ if (oidcError === 'registration_closed') {
 
     <a href="/app/auth/oidc" class="btn-oidc">
       <svg width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="32" cy="32" r="28" fill="#0E0E18"/><circle cx="32" cy="32" r="28" stroke="url(#sl-ring)" stroke-width="2"/><path d="M28 19 C21 19, 16 22, 16 26 C16 31, 28 29, 28 34 C28 38, 21 41, 16 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" fill="none"/><path d="M40 19 L40 41 L50 41" stroke="#14B8A6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="34" cy="30" r="3.5" stroke="#14B8A6" stroke-width="1.5" fill="#0E0E18"/><circle cx="34" cy="30" r="1.5" fill="#14B8A6"/><line x1="34" y1="30" x2="28" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="16" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="40" y2="19" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><line x1="34" y1="30" x2="50" y2="41" stroke="#14B8A6" stroke-width="1" opacity="0.35" stroke-dasharray="2 2"/><circle cx="28" cy="19" r="2" fill="#14B8A6"/><circle cx="16" cy="41" r="2" fill="#14B8A6"/><circle cx="40" cy="19" r="2" fill="#14B8A6"/><circle cx="50" cy="41" r="2" fill="#14B8A6"/><defs><linearGradient id="sl-ring" x1="32" y1="4" x2="32" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#14B8A6"/><stop offset="1" stop-color="#14B8A6" stop-opacity="0.2"/></linearGradient></defs></svg>
-      Sign in with Seaynic Labs
+      Sign in with {oidcProviderName}
     </a>
   </div>
 </Layout>

@@ -61,7 +61,8 @@ async function sendEmail(to: string, payload: NotifyPayload): Promise<void> {
 
   if (!apiKey) return;
 
-  const appUrl = process.env.APP_URL || 'https://stdout.seaynicroute.com';
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
+  const emailFrom = process.env.EMAIL_FROM || 'StdOut <noreply@stdout.app>';
 
   const html = `
     <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
@@ -79,7 +80,7 @@ async function sendEmail(to: string, payload: NotifyPayload): Promise<void> {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'StdOut <notifications@stdout.seayniclabs.com>',
+      from: emailFrom,
       to: [to],
       subject: `[StdOut] ${payload.title}`,
       html,
@@ -94,7 +95,7 @@ async function sendWebhook(url: string, payload: NotifyPayload): Promise<void> {
     return;
   }
 
-  const appUrl = process.env.APP_URL || 'https://stdout.seaynicroute.com';
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
 
   await fetch(url, {
     method: 'POST',

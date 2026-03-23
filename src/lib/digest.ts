@@ -213,7 +213,7 @@ export async function sendWeeklyDigests(): Promise<number> {
     return 0;
   }
 
-  const appUrl = process.env.APP_URL || 'https://stdout.seaynicroute.com';
+  const appUrl = process.env.APP_URL || 'http://localhost:3000';
   const allUsers = getCentralDb().select().from(centralSchema.users).all();
   let sent = 0;
 
@@ -246,7 +246,7 @@ export async function sendWeeklyDigests(): Promise<number> {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: 'StdOut <digest@stdout.seayniclabs.com>',
+          from: process.env.EMAIL_FROM || 'StdOut <noreply@stdout.app>',
           to: [emailDest],
           subject: `[StdOut] Weekly Digest — ${data.period}`,
           html,

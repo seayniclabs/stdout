@@ -12,11 +12,11 @@ function getConfig() {
   return {
     clientId: readSecret('OIDC_CLIENT_ID'),
     clientSecret: readSecret('OIDC_CLIENT_SECRET'),
-    issuer: process.env.OIDC_ISSUER || 'https://auth.seayniclabs.com/application/o/stdout',
-    authorizeUrl: process.env.OIDC_AUTHORIZE_URL || 'https://auth.seayniclabs.com/application/o/authorize/',
-    tokenUrl: process.env.OIDC_TOKEN_URL || 'https://auth.seayniclabs.com/application/o/token/',
-    userinfoUrl: process.env.OIDC_USERINFO_URL || 'https://auth.seayniclabs.com/application/o/userinfo/',
-    endSessionUrl: process.env.OIDC_END_SESSION_URL || 'https://auth.seayniclabs.com/application/o/stdout/end-session/',
+    issuer: process.env.OIDC_ISSUER || '',
+    authorizeUrl: process.env.OIDC_AUTHORIZE_URL || '',
+    tokenUrl: process.env.OIDC_TOKEN_URL || '',
+    userinfoUrl: process.env.OIDC_USERINFO_URL || '',
+    endSessionUrl: process.env.OIDC_END_SESSION_URL || '',
     redirectUri: process.env.OIDC_REDIRECT_URI || '',
     enabled: !!(process.env.OIDC_CLIENT_ID || readSecret('OIDC_CLIENT_ID')),
   };
@@ -38,8 +38,17 @@ export function isOIDCEnabled(): boolean {
 
 // --- Authorization URL ---
 
+function validateConfig(config: ReturnType<typeof getConfig>): void {
+  const required = ['authorizeUrl', 'tokenUrl', 'userinfoUrl'] as const;
+  const missing = required.filter(k => !config[k]);
+  if (missing.length > 0) {
+    throw new Error(`OIDC is enabled but missing required URL configuration: ${missing.join(', ')}. Set the corresponding OIDC_*_URL environment variables.`);
+  }
+}
+
 export function getAuthorizationURL(state: string): string {
   const config = getConfig();
+  validateConfig(config);
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: config.clientId,
@@ -61,6 +70,7 @@ interface TokenResponse {
 
 export async function exchangeCode(code: string): Promise<TokenResponse | null> {
   const config = getConfig();
+  validateConfig(config);
 
   const body = new URLSearchParams({
     grant_type: 'authorization_code',
@@ -97,6 +107,7 @@ interface OIDCUser {
 
 export async function getUserInfo(accessToken: string): Promise<OIDCUser | null> {
   const config = getConfig();
+  validateConfig(config);
 
   const resp = await fetch(config.userinfoUrl, {
     headers: { Authorization: `Bearer ${accessToken}` },
