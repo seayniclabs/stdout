@@ -258,6 +258,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const newHeaders = new Headers(response.headers);
   newHeaders.set('Content-Security-Policy', csp);
+  newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  newHeaders.set('X-Content-Type-Options', 'nosniff');
+  newHeaders.set('X-Frame-Options', 'DENY');
+  newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   newHeaders.delete('content-length');
 
   return new Response(nonced, {

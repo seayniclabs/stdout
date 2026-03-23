@@ -6,6 +6,53 @@ import { notify } from '../../../lib/notify';
 import { nanoid } from 'nanoid';
 import { eq, desc } from 'drizzle-orm';
 
+// --- Per-user rate limiting for AI diagnosis ---
+const DIAGNOSE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const DIAGNOSE_LIMIT_FREE = 5;
+const DIAGNOSE_LIMIT_PAID = 20;
+const diagnoseRateMap = new Map<string, number[]>(); // userId → timestamps
+
+// Cleanup stale entries every 10 minutes
+setInterval(() => {
+  const cutoff = Date.now() - DIAGNOSE_WINDOW_MS;
+  for (const [key, timestamps] of diagnoseRateMap) {
+    const valid = timestamps.filter(t => t > cutoff);
+    if (valid.length === 0) {
+      diagnoseRateMap.delete(key);
+    } else {
+      diagnoseRateMap.set(key, valid);
+    }
+  }
+}, 10 * 60 * 1000);
+
+function checkDiagnoseRateLimit(userId: string, isPaid: boolean): Response | null {
+  const now = Date.now();
+  const cutoff = now - DIAGNOSE_WINDOW_MS;
+  const limit = isPaid ? DIAGNOSE_LIMIT_PAID : DIAGNOSE_LIMIT_FREE;
+
+  let timestamps = diagnoseRateMap.get(userId) || [];
+  timestamps = timestamps.filter(t => t > cutoff);
+
+  if (timestamps.length >= limit) {
+    const oldestValid = timestamps[0];
+    const retryAfter = Math.ceil((oldestValid + DIAGNOSE_WINDOW_MS - now) / 1000);
+    return new Response(JSON.stringify({
+      error: `Rate limit exceeded. ${isPaid ? 'Paid' : 'Free'} tier allows ${limit} diagnoses per hour. Try again in ${Math.ceil(retryAfter / 60)} minutes.`,
+      retryable: true,
+    }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfter),
+      },
+    });
+  }
+
+  timestamps.push(now);
+  diagnoseRateMap.set(userId, timestamps);
+  return null;
+}
+
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
   const { checkRBAC } = await import('../../../lib/rbac');
@@ -55,6 +102,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const { getUserLimits } = await import('../../../lib/tiers');
   const { limits } = getUserLimits(locals.user);
   const tier = limits.aiModel === 'sonnet' ? 'paid' : 'free';
+  const isPaid = tier === 'paid';
+
+  // Check per-user rate limit before calling AI
+  const rateLimitResponse = checkDiagnoseRateLimit(locals.user.id, isPaid);
+  if (rateLimitResponse) return rateLimitResponse;
+
   const description = `Title: ${incident.title}\n\n${incident.description}`;
 
   try {

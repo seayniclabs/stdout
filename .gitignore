@@ -4,3 +4,5 @@ data/
 .astro/
 *.db
 hone
+.env
+.env.*

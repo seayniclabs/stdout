@@ -3,6 +3,7 @@ import { getCentralDb, centralSchema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 
 export const prerender = false;
 
@@ -31,9 +32,14 @@ export const POST: APIRoute = async ({ request }) => {
     return new Response('Server configuration error', { status: 500 });
   }
 
-  // Verify shared secret
+  // Verify shared secret (timing-safe comparison)
   const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ') || authHeader.slice(7) !== syncSecret) {
+  if (!authHeader?.startsWith('Bearer ')) {
+    return new Response('Unauthorized', { status: 401 });
+  }
+  const providedToken = authHeader.slice(7);
+  if (providedToken.length !== syncSecret.length ||
+      !crypto.timingSafeEqual(Buffer.from(providedToken), Buffer.from(syncSecret))) {
     return new Response('Unauthorized', { status: 401 });
   }
 
