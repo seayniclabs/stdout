@@ -7,10 +7,10 @@ const user = Astro.locals.user;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="AI incident companion for developers and self-hosters. Log incidents, get AI diagnosis, build a searchable runbook and knowledge base." />
+  <meta name="description" content="Self-hosted incident companion for homelab builders and solo DevOps. AI diagnosis, living runbooks, stack auto-discovery. $149 one-time, own it forever." />
   <title>StdOut — You've already solved this</title>
-  <meta property="og:title" content="StdOut — AI Incident Companion" />
-  <meta property="og:description" content="Stop solving the same incident twice. StdOut remembers your stack, your past fixes, and helps you diagnose what's broken." />
+  <meta property="og:title" content="StdOut — Self-Hosted Incident Companion" />
+  <meta property="og:description" content="Your incident memory. When something breaks at 2am, StdOut pulls up how you fixed it last time. Self-host for $149, own it forever." />
   <meta property="og:type" content="website" />
   <meta name="theme-color" content="#F97316" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -25,6 +25,7 @@ const user = Astro.locals.user;
     </a>
     <div class="ln-links">
       <a href="#how" class="ln-link">How it works</a>
+      <a href="#features" class="ln-link">Features</a>
       <a href="#pricing" class="ln-link">Pricing</a>
       <a href="/docs/scanner" class="ln-link">Docs</a>
       {user ? (
@@ -32,7 +33,7 @@ const user = Astro.locals.user;
       ) : (
         <>
           <a href="/app/login" class="ln-link">Log in</a>
-          <a href="/app/register" class="btn btn-primary btn-sm">Get started</a>
+          <a href="/app/register" class="btn btn-primary btn-sm">Self-Host $149</a>
         </>
       )}
     </div>
@@ -43,6 +44,7 @@ const user = Astro.locals.user;
 
   <div class="ln-mobile" id="lnMobile">
     <a href="#how" class="ln-mobile-link">How it works</a>
+    <a href="#features" class="ln-mobile-link">Features</a>
     <a href="#pricing" class="ln-mobile-link">Pricing</a>
     <a href="/docs/scanner" class="ln-mobile-link">Docs</a>
     {user ? (
@@ -50,174 +52,182 @@ const user = Astro.locals.user;
     ) : (
       <>
         <a href="/app/login" class="ln-mobile-link">Log in</a>
-        <a href="/app/register" class="ln-mobile-link ln-mobile-cta">Get started</a>
+        <a href="/app/register" class="ln-mobile-link ln-mobile-cta">Self-Host $149</a>
       </>
     )}
   </div>
 
   <!-- Hero -->
   <section class="hero">
-    <div class="hero-terminal">
-      <div class="term-bar">
-        <span class="term-dot"></span><span class="term-dot"></span><span class="term-dot"></span>
-        <span class="term-title mono">stdout</span>
-      </div>
-      <div class="term-body mono">
-        <div class="term-line"><span class="term-prompt">$</span> nginx returns 502 after deploy</div>
-        <div class="term-line dim">searching 47 past incidents...</div>
-        <div class="term-line dim">found 3 matching resolutions</div>
-        <div class="term-line accent">root cause: upstream container restarted before health check passed</div>
-        <div class="term-line accent">fix: add depends_on with service_healthy condition</div>
-        <div class="term-line dim">resolution recorded 2024-11-03 &mdash; you solved this before.</div>
-      </div>
-    </div>
-    <h1>You've already solved this.</h1>
-    <p class="hero-sub">StdOut is an incident companion that knows your stack, remembers your fixes, and diagnoses what's broken — so you don't have to solve the same problem twice.</p>
+    <div class="hero-badge mono">INCIDENT MEMORY FOR YOUR INFRASTRUCTURE</div>
+    <h1>You've already solved this.<br /><span class="hero-dim">You just don't remember.</span></h1>
+    <p class="hero-sub">StdOut is your incident companion. When something breaks at 2am, it pulls up how you fixed it last time &mdash; your stack, your past resolutions, your runbooks. Stop solving the same problem twice.</p>
     <div class="hero-cta">
-      <a href="/app/register" class="btn btn-primary btn-lg">Start logging incidents</a>
-      <span class="hero-note mono">Free tier. No credit card.</span>
+      <a href="/app/register" class="btn btn-primary btn-lg btn-glow">Self-Host for $149</a>
+      <a href="/app/register" class="btn btn-ghost">Try Free on Cloud</a>
+    </div>
+    <p class="hero-note mono">$149 one-time. Docker image. Your infra, your data, forever.</p>
+
+    <!-- Scanner HUD -->
+    <div class="hud">
+      <div class="hud-bar">
+        <div class="hud-status">
+          <span class="hud-dot"></span>
+          <span class="mono">SCANNING</span>
+        </div>
+        <span class="hud-label mono">stdout scanner v2</span>
+      </div>
+      <div class="hud-body mono">
+        <div class="hud-line"><span class="hud-ts">00:00.12</span> Connecting to Docker socket...</div>
+        <div class="hud-line"><span class="hud-ts">00:00.34</span> Discovered <span class="hud-accent">53 containers</span> across 12 compose projects</div>
+        <div class="hud-line"><span class="hud-ts">00:00.51</span> Mapped 47 exposed ports, 8 networks, 3 volumes</div>
+        <div class="hud-line"><span class="hud-ts">00:01.03</span> TLS cert check: 14 certs valid, <span class="hud-warn">2 expiring &lt;30d</span></div>
+        <div class="hud-line"><span class="hud-ts">00:01.28</span> Network scan: 6 SNMP devices, 2 switches, 1 AP</div>
+        <div class="hud-line hud-result"><span class="hud-ts">00:01.44</span> Stack fingerprint complete &mdash; <span class="hud-accent">ready for incident matching</span></div>
+      </div>
     </div>
   </section>
 
   <!-- How it works -->
   <section class="how" id="how">
-    <h2>Four steps. One runbook.</h2>
+    <h2>How it works</h2>
     <div class="pipeline">
       <div class="pipe-step">
+        <div class="pipe-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" stroke="#FB923C" stroke-width="2" stroke-linecap="round"/></svg>
+        </div>
         <div class="pipe-num mono">01</div>
         <div class="pipe-label">Discover</div>
-        <p>Run the scanner. It finds your containers, ports, and networks automatically. Review what it found, confirm, done. Or describe your stack by hand.</p>
+        <p>Run the scanner. It auto-discovers your Docker containers, network devices, TLS certs, and compose projects. One command, full stack map.</p>
       </div>
-      <div class="pipe-arrow mono">&rarr;</div>
+      <div class="pipe-connector"><div class="pipe-line"></div></div>
       <div class="pipe-step">
+        <div class="pipe-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 8v4l3 3M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
         <div class="pipe-num mono">02</div>
         <div class="pipe-label">Log</div>
-        <p>Something breaks. Paste the error, tag the severity, link the stack. 30 seconds.</p>
+        <p>Something breaks. Log the incident &mdash; paste the error, tag the severity. AI matches it against your resolution history. 30 seconds.</p>
       </div>
-      <div class="pipe-arrow mono">&rarr;</div>
+      <div class="pipe-connector"><div class="pipe-line"></div></div>
       <div class="pipe-step">
+        <div class="pipe-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l.146.146A2 2 0 0116 19H8a2 2 0 01-1.414-.586l.146-.146z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
         <div class="pipe-num mono">03</div>
         <div class="pipe-label">Diagnose</div>
-        <p>Claude analyzes against your stack + past fixes. Ranked root causes, commands to run, logs to check.</p>
+        <p>AI analyzes against your specific stack context and past fixes. Ranked root causes, commands to run, logs to check. Not generic &mdash; yours.</p>
       </div>
-      <div class="pipe-arrow mono">&rarr;</div>
+      <div class="pipe-connector"><div class="pipe-line"></div></div>
       <div class="pipe-step">
+        <div class="pipe-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
         <div class="pipe-num mono">04</div>
-        <div class="pipe-label">Resolve</div>
-        <p>Record the fix. Write it up. Next time it breaks, StdOut finds it before the AI even runs.</p>
+        <div class="pipe-label">Remember</div>
+        <p>Record the resolution. Build your runbook. Next time it breaks, StdOut finds the fix before the AI even runs. Your knowledge compounds.</p>
       </div>
     </div>
   </section>
 
-  <!-- Capabilities -->
-  <section class="caps">
+  <!-- Features -->
+  <section class="features" id="features">
     <h2>What you get</h2>
-    <div class="cap-grid">
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 64 64" fill="none"><path d="M22 24L30 32L22 40" stroke="#FB923C" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M34 40H44" stroke="#FB923C" stroke-width="3" stroke-linecap="round"/></svg>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" stroke="#FB923C" stroke-width="2" stroke-linecap="round"/></svg>
+          <h3>Stack Scanner</h3>
+        </div>
+        <p>Auto-discovers Docker containers, compose projects, ports, networks, TLS certs, and SNMP devices. One command maps your entire infrastructure.</p>
+      </div>
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l.146.146A2 2 0 0116 19H8a2 2 0 01-1.414-.586l.146-.146z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <h3>AI Diagnosis</h3>
         </div>
-        <p>Claude analyzes your incident against your stack context and resolution history. Not generic answers — answers that know your infrastructure.</p>
+        <p>Claude analyzes your incident against your stack context and resolution history. Not generic answers &mdash; answers that know your infrastructure.</p>
       </div>
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 7h14M3 10h10M3 13h12" stroke="#FB923C" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <h3>Knowledge Base</h3>
         </div>
-        <p>Turn resolutions into runbook pages, post-mortems, and operational docs. Searchable, linkable, and referenced by the AI in future diagnoses.</p>
+        <p>Turn resolutions into runbook pages, postmortems, and operational docs. Full-text search across everything you've ever written.</p>
       </div>
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke="#FB923C" stroke-width="1.5"/><path d="M10 6v4l2.5 2.5" stroke="#FB923C" stroke-width="1.5" stroke-linecap="round"/></svg>
-          <h3>Full-Text Search</h3>
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="#FB923C" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="#FB923C" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="#FB923C" stroke-width="2"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="#FB923C" stroke-width="2"/></svg>
+          <h3>HUD Monitoring</h3>
         </div>
-        <p>FTS5-powered search across every incident, resolution, and doc you've written. Find that fix from 3 months ago in under a second.</p>
+        <p>Uptime monitoring for every service in your stack. Auto-creates incidents on downtime. A control room for your infrastructure.</p>
       </div>
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="3" width="14" height="14" rx="2" stroke="#FB923C" stroke-width="1.5"/><path d="M7 7h6M7 10h4M7 13h5" stroke="#FB923C" stroke-width="1.2" stroke-linecap="round" stroke-opacity="0.6"/></svg>
-          <h3>Stack Discovery</h3>
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2h1a2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Public Status Page</h3>
         </div>
-        <p>One command. It maps your Docker containers, ports, networks, and compose projects. You review a checklist, uncheck what you don't want, and confirm. No manual typing.</p>
+        <p>Give your users a status page that updates automatically from your HUD. No separate service, no extra config.</p>
       </div>
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10h14" stroke="#FB923C" stroke-width="1.5" stroke-linecap="round" stroke-opacity="0.3"/><rect x="4" y="4" width="5" height="5" rx="1" stroke="#FB923C" stroke-width="1.5"/><rect x="11" y="11" width="5" height="5" rx="1" stroke="#FB923C" stroke-width="1.5"/></svg>
-          <h3>Tenant Isolation</h3>
+      <div class="feat">
+        <div class="feat-head">
+          <svg class="feat-icon" width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <h3>Weekly Digest</h3>
         </div>
-        <p>Each user gets their own encrypted SQLite database. Physically separated data — not rows filtered by a WHERE clause.</p>
-      </div>
-      <div class="cap">
-        <div class="cap-head">
-          <svg class="cap-icon" width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M5 15l3-3h4l3 3" stroke="#FB923C" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="6" y="5" width="8" height="7" rx="1.5" stroke="#FB923C" stroke-width="1.5"/></svg>
-          <h3>Self-Host</h3>
-        </div>
-        <p>$149 one-time. Docker Compose, your infrastructure, your data stays on your network. Same features, no subscription.</p>
+        <p>A weekly email summarizing incidents, resolutions, and stack health. Stay on top of your infrastructure without watching a dashboard.</p>
       </div>
     </div>
   </section>
 
   <!-- Pricing -->
   <section class="pricing" id="pricing">
-    <h2>Pricing</h2>
-    <p class="pricing-sub">Free to start. Scale when you need to.</p>
+    <h2>Own it. Run it. Keep it.</h2>
+    <p class="pricing-sub">Your infrastructure, your data. No subscription required.</p>
     <div class="price-grid">
-      <div class="price-card">
-        <div class="price-tier">Free</div>
-        <div class="price-amount mono">$0</div>
-        <div class="price-items">
-          <div class="pi">1 stack</div>
-          <div class="pi">10 incidents / month</div>
-          <div class="pi">AI diagnosis (Haiku)</div>
-          <div class="pi">100 MB knowledge base</div>
-          <div class="pi">Full-text search</div>
-          <div class="pi">Resolution matching</div>
-          <div class="pi">&nbsp;</div>
-        </div>
-        <a href="/app/register" class="btn btn-secondary" style="width:100%;">Get started</a>
-      </div>
       <div class="price-card featured">
-        <div class="price-tier">Solo</div>
-        <div class="price-amount mono">$12<span class="price-per">/mo</span></div>
-        <div class="price-items">
-          <div class="pi">Unlimited stacks</div>
-          <div class="pi">Unlimited incidents</div>
-          <div class="pi">AI diagnosis (Sonnet)</div>
-          <div class="pi">1 GB knowledge base</div>
-          <div class="pi">Encrypted backups</div>
-          <div class="pi">Workspace branding</div>
-          <div class="pi">Data export</div>
-        </div>
-        <a href="/app/register" class="btn btn-primary" style="width:100%;">Upgrade to Solo</a>
-      </div>
-      <div class="price-card">
-        <div class="price-tier">Shop</div>
-        <div class="price-amount mono">$24<span class="price-per">/mo</span></div>
-        <div class="price-items">
-          <div class="pi">Up to 5 seats</div>
-          <div class="pi">Role-based access</div>
-          <div class="pi">Shared stacks + docs</div>
-          <div class="pi">5 GB knowledge base</div>
-          <div class="pi">Team resolution history</div>
-          <div class="pi">Email + webhook alerts</div>
-          <div class="pi">Everything in Solo</div>
-        </div>
-        <a href="/app/register" class="btn btn-secondary" style="width:100%;">Coming soon</a>
-      </div>
-      <div class="price-card">
-        <div class="price-tier">Self-Host</div>
+        <div class="price-badge mono">RECOMMENDED</div>
+        <div class="price-tier">Self-Hosted</div>
         <div class="price-amount mono">$149<span class="price-per"> once</span></div>
+        <p class="price-desc">Your infra, your data, forever. Ships as a Docker image you deploy on your own hardware.</p>
         <div class="price-items">
-          <div class="pi">Everything in Solo</div>
-          <div class="pi">Run on your infra</div>
-          <div class="pi">Docker Compose deploy</div>
-          <div class="pi">Unlimited storage</div>
-          <div class="pi">Your data, your network</div>
-          <div class="pi">No subscription</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Everything &mdash; no feature gates</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Docker Compose deploy</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Unlimited stacks &amp; incidents</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Unlimited storage</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Your data stays on your network</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> No subscription, ever</div>
+          <div class="pi"><span class="pi-check">&#10003;</span> Bring your own API key</div>
+        </div>
+        <a href="/app/register" class="btn btn-primary btn-glow" style="width:100%;">Get Self-Hosted</a>
+      </div>
+      <div class="price-card">
+        <div class="price-tier">Free Cloud</div>
+        <div class="price-amount mono">$0</div>
+        <p class="price-desc">Try StdOut on our cloud. No credit card, no commitment.</p>
+        <div class="price-items">
+          <div class="pi"><span class="pi-check dim">&#10003;</span> 1 stack</div>
+          <div class="pi"><span class="pi-check dim">&#10003;</span> 10 incidents / month</div>
+          <div class="pi"><span class="pi-check dim">&#10003;</span> AI diagnosis</div>
+          <div class="pi"><span class="pi-check dim">&#10003;</span> 100 MB knowledge base</div>
+          <div class="pi"><span class="pi-check dim">&#10003;</span> Full-text search</div>
+          <div class="pi"><span class="pi-check dim">&#10003;</span> Resolution matching</div>
           <div class="pi">&nbsp;</div>
         </div>
-        <a href="/app/register" class="btn btn-secondary" style="width:100%;">Coming soon</a>
+        <a href="/app/register" class="btn btn-secondary" style="width:100%;">Start Free</a>
+      </div>
+    </div>
+    <p class="pricing-saas mono">Cloud subscriptions also available for teams that prefer managed hosting. <a href="mailto:hello@seayniclabs.com">Contact us</a></p>
+  </section>
+
+  <!-- Trust / Builder -->
+  <section class="trust">
+    <div class="trust-inner">
+      <div class="trust-badge mono">BUILT BY A BUILDER</div>
+      <h2>Built by a solo engineer who runs 53 containers on a Mac Mini.</h2>
+      <p>StdOut isn't theoretical. It's the tool I built to manage my own homelab &mdash; the same infrastructure that runs production workloads, media servers, monitoring, and a dozen side projects. Every feature exists because I needed it at 2am when something broke.</p>
+      <div class="trust-links">
+        <a href="https://charlieseay.com" class="btn btn-ghost btn-sm">charlieseay.com</a>
+        <a href="https://charlieseay.com/blog" class="btn btn-ghost btn-sm">Read the blog</a>
       </div>
     </div>
   </section>
@@ -228,7 +238,10 @@ const user = Astro.locals.user;
       <img src="/logo.svg" alt="" width="48" height="48" style="margin-bottom: 20px; opacity: 0.8;" />
       <h2>Stop solving the same incident twice.</h2>
       <p class="mono" style="color: var(--text-muted); margin-bottom: 24px;">Your future self will thank you.</p>
-      <a href="/app/register" class="btn btn-primary btn-lg">Get started free</a>
+      <div class="cta-buttons">
+        <a href="/app/register" class="btn btn-primary btn-lg btn-glow">Self-Host for $149</a>
+        <a href="/app/register" class="btn btn-ghost">Or try free on cloud</a>
+      </div>
     </div>
   </section>
 
@@ -236,6 +249,7 @@ const user = Astro.locals.user;
     <div class="lf-links">
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
+      <a href="/docs/scanner">Docs</a>
       <a href="mailto:hello@seayniclabs.com">Contact</a>
     </div>
     <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
@@ -244,93 +258,462 @@ const user = Astro.locals.user;
 </html>
 
 <style>
-  /* Nav */
+  /* ── Nav ────────────────────────────────────── */
   .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 1100px; margin: 0 auto; }
   .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
   .ln-links { display: flex; align-items: center; gap: 20px; }
   .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
   .ln-link:hover { color: var(--text); }
   .btn-sm { padding: 7px 16px; font-size: 12px; }
-  .btn-lg { padding: 12px 28px; font-size: 14px; }
+  .btn-lg { padding: 14px 32px; font-size: 15px; }
 
-  /* Hero */
-  .hero { text-align: center; padding: 60px 24px 50px; max-width: 780px; margin: 0 auto; }
-  .hero h1 { font-size: clamp(26px, 4.5vw, 40px); font-weight: 800; line-height: 1.2; letter-spacing: -0.03em; margin-bottom: 16px; }
-  .hero-sub { font-size: 15px; line-height: 1.7; color: var(--text-secondary); max-width: 560px; margin: 0 auto 28px; }
-  .hero-cta { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-  .hero-note { font-size: 11px; color: var(--text-muted); }
+  /* ── Glow button ───────────────────────────── */
+  .btn-glow {
+    box-shadow: 0 0 20px var(--accent-glow), var(--shadow-sm);
+  }
+  .btn-glow:hover {
+    box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(249, 115, 22, 0.1), var(--shadow-md);
+  }
 
-  /* Terminal mock */
-  .hero-terminal {
-    max-width: 520px;
-    margin: 0 auto 36px;
+  /* ── Ghost button ──────────────────────────── */
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-ghost:hover {
+    color: var(--text);
+    border-color: var(--border-hover);
+    background: var(--bg-surface);
+    transform: translateY(-1px);
+  }
+
+  /* ── Hero ───────────────────────────────────── */
+  .hero {
+    text-align: center;
+    padding: 80px 24px 60px;
+    max-width: 860px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .hero-badge {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--accent-light);
+    margin-bottom: 20px;
+    font-weight: 600;
+  }
+  .hero h1 {
+    font-size: clamp(30px, 5vw, 48px);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+  .hero-dim { color: var(--text-muted); }
+  .hero-sub {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    max-width: 600px;
+    margin: 0 auto 32px;
+  }
+  .hero-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .hero-note {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 48px;
+  }
+
+  /* ── Scanner HUD ───────────────────────────── */
+  .hud {
+    max-width: 600px;
+    margin: 0 auto;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
     text-align: left;
+    background: var(--bg);
+    box-shadow: 0 0 60px rgba(249, 115, 22, 0.06), var(--shadow-lg);
   }
-  .term-bar {
+  .hud-bar {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 12px;
+    justify-content: space-between;
+    padding: 10px 16px;
     background: var(--bg-surface);
     border-bottom: 1px solid var(--border);
   }
-  .term-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border-hover); }
-  .term-title { margin-left: auto; font-size: 10px; color: var(--text-muted); }
-  .term-body { padding: 16px; font-size: 12px; line-height: 1.8; background: var(--bg); }
-  .term-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .term-line.dim { color: var(--text-muted); }
-  .term-line.accent { color: var(--accent-light); }
-  .term-prompt { color: var(--accent); margin-right: 8px; }
+  .hud-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: var(--accent-light);
+    letter-spacing: 0.08em;
+  }
+  .hud-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--accent); }
+    50% { opacity: 0.5; box-shadow: 0 0 8px var(--accent-glow); }
+  }
+  .hud-label {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+  .hud-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 2;
+  }
+  .hud-line {
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hud-line.hud-result { color: var(--text-secondary); }
+  .hud-ts {
+    color: var(--text-muted);
+    opacity: 0.5;
+    margin-right: 12px;
+    font-size: 10px;
+  }
+  .hud-accent { color: var(--accent-light); }
+  .hud-warn { color: #EAB308; }
 
-  /* How */
-  .how { max-width: 1000px; margin: 0 auto; padding: 50px 24px; }
-  .how h2 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 36px; letter-spacing: -0.02em; }
-  .pipeline { display: flex; align-items: flex-start; gap: 0; justify-content: center; flex-wrap: wrap; }
-  .pipe-step { flex: 0 1 200px; padding: 20px; }
-  .pipe-num { font-size: 24px; font-weight: 800; color: var(--accent); opacity: 0.5; margin-bottom: 6px; }
-  .pipe-label { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
-  .pipe-step p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
-  .pipe-arrow { color: var(--border-hover); font-size: 20px; padding-top: 28px; flex-shrink: 0; }
+  /* ── Scanline animation on HUD ─────────────── */
+  .hud::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+    animation: scanline 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes scanline {
+    0% { top: 0; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
 
-  /* Capabilities */
-  .caps { max-width: 1000px; margin: 0 auto; padding: 50px 24px; }
-  .caps h2 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 36px; letter-spacing: -0.02em; }
-  .cap-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .cap { padding: 24px; background: var(--bg); }
-  .cap-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .cap h3 { font-size: 14px; font-weight: 600; }
-  .cap p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+  /* ── How it works ──────────────────────────── */
+  .how {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+  .how h2 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 48px;
+    letter-spacing: -0.02em;
+  }
+  .pipeline {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .pipe-step {
+    flex: 0 1 200px;
+    padding: 0 16px;
+    text-align: center;
+  }
+  .pipe-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(249, 115, 22, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .pipe-num {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--accent);
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .pipe-label {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .pipe-step p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .pipe-connector {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    padding-top: 24px;
+    width: 40px;
+  }
+  .pipe-line {
+    width: 100%;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), var(--accent-dim), var(--border));
+  }
 
-  /* Pricing */
-  .pricing { max-width: 1000px; margin: 0 auto; padding: 50px 24px; }
-  .pricing h2 { text-align: center; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
-  .pricing-sub { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 36px; }
-  .price-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; align-items: stretch; }
-  .price-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; display: flex; flex-direction: column; }
-  .price-card.featured { border-color: var(--accent); box-shadow: 0 0 40px rgba(249,115,22,0.08); }
-  .price-tier { font-size: 14px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-  .price-amount { font-size: 32px; font-weight: 800; margin-bottom: 20px; }
-  .price-per { font-size: 13px; font-weight: 400; color: var(--text-muted); }
-  .price-badge { font-size: 9px; color: var(--accent); background: var(--accent-dim); padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .price-items { margin-bottom: 24px; flex: 1; }
-  .pi { font-size: 12px; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border); font-family: var(--font-mono); min-height: 32px; display: flex; align-items: center; justify-content: center; }
-  .pi:last-child { border-bottom: none; }
+  /* ── Features ──────────────────────────────── */
+  .features {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+  .features h2 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 48px;
+    letter-spacing: -0.02em;
+  }
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .feat {
+    padding: 28px;
+    background: var(--bg);
+    transition: background 0.15s ease;
+  }
+  .feat:hover {
+    background: var(--bg-surface);
+  }
+  .feat-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .feat h3 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .feat p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
 
-  /* Bottom CTA */
-  .bottom-cta { padding: 50px 24px 60px; }
-  .cta-inner { text-align: center; max-width: 500px; margin: 0 auto; padding: 40px 28px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-surface); }
-  .cta-inner h2 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+  /* ── Pricing ───────────────────────────────── */
+  .pricing {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 80px 24px;
+  }
+  .pricing h2 {
+    text-align: center;
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+  .pricing-sub {
+    text-align: center;
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 40px;
+  }
+  .price-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .price-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 32px 24px;
+    display: flex;
+    flex-direction: column;
+  }
+  .price-card.featured {
+    border-color: var(--accent);
+    box-shadow: 0 0 60px rgba(249, 115, 22, 0.08), 0 0 120px rgba(249, 115, 22, 0.04);
+    position: relative;
+  }
+  .price-badge {
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .price-tier {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .price-amount {
+    font-size: 40px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+  .price-per {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+  .price-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+  .price-items {
+    margin-bottom: 24px;
+    flex: 1;
+  }
+  .pi {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 7px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .pi-check {
+    color: var(--accent-light);
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .pi-check.dim {
+    color: var(--text-muted);
+  }
+  .pricing-saas {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 24px;
+  }
+  .pricing-saas a {
+    color: var(--text-secondary);
+  }
 
-  /* Footer */
-  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  /* ── Trust ─────────────────────────────────── */
+  .trust {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+  .trust-inner {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 48px 40px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .trust-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-dim), var(--accent-glow), var(--accent-dim), transparent);
+  }
+  .trust-badge {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--accent-light);
+    margin-bottom: 16px;
+    font-weight: 600;
+  }
+  .trust h2 {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    max-width: 500px;
+    margin: 0 auto 16px;
+  }
+  .trust p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.7;
+    max-width: 560px;
+    margin: 0 auto 24px;
+  }
+  .trust-links {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  /* ── Bottom CTA ────────────────────────────── */
+  .bottom-cta { padding: 0 24px 80px; }
+  .cta-inner {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 48px 32px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: var(--bg-surface);
+  }
+  .cta-inner h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .cta-buttons {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* ── Footer ────────────────────────────────── */
+  .lf { text-align: center; padding: 24px; border-top: 1px solid var(--border); }
   .lf-links { display: flex; justify-content: center; gap: 20px; margin-bottom: 8px; }
   .lf-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
   .lf-links a:hover { color: var(--text-secondary); }
 
-  /* ── Mobile hamburger toggle ─────────────────── */
+  /* ── Mobile hamburger toggle ───────────────── */
   .ln-toggle {
     display: none;
     flex-direction: column;
@@ -352,17 +735,11 @@ const user = Astro.locals.user;
     border-radius: 1px;
     transition: all 0.25s ease;
   }
-  .ln-toggle.active span:nth-child(1) {
-    transform: rotate(45deg) translate(5px, 5px);
-  }
-  .ln-toggle.active span:nth-child(2) {
-    opacity: 0;
-  }
-  .ln-toggle.active span:nth-child(3) {
-    transform: rotate(-45deg) translate(5px, -5px);
-  }
+  .ln-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .ln-toggle.active span:nth-child(2) { opacity: 0; }
+  .ln-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
 
-  /* ── Mobile nav panel ────────────────────────── */
+  /* ── Mobile nav panel ──────────────────────── */
   .ln-mobile {
     display: none;
     flex-direction: column;
@@ -372,9 +749,7 @@ const user = Astro.locals.user;
     top: 0;
     z-index: 99;
   }
-  .ln-mobile.open {
-    display: flex;
-  }
+  .ln-mobile.open { display: flex; }
   .ln-mobile-link {
     display: block;
     padding: 14px 24px;
@@ -386,27 +761,29 @@ const user = Astro.locals.user;
     border-bottom: 1px solid var(--border);
     transition: color 150ms, background 150ms;
   }
-  .ln-mobile-link:hover {
-    color: var(--text);
-    background: var(--bg-hover);
-  }
-  .ln-mobile-cta {
-    color: var(--accent-light);
-    font-weight: 600;
-  }
+  .ln-mobile-link:hover { color: var(--text); background: var(--bg-hover); }
+  .ln-mobile-cta { color: var(--accent-light); font-weight: 600; }
 
-  /* Mobile */
+  /* ── Responsive ────────────────────────────── */
   @media (max-width: 700px) {
     .ln-link { display: none; }
-    .btn-sm { display: none; }
+    .ln-links .btn-sm { display: none; }
     .ln-toggle { display: flex; }
-    .hero { padding: 40px 16px 30px; }
-    .pipeline { flex-direction: column; align-items: center; }
-    .pipe-arrow { transform: rotate(90deg); padding: 8px 0; }
-    .cap-grid { grid-template-columns: 1fr; }
+    .hero { padding: 50px 16px 40px; }
+    .hero h1 { font-size: clamp(26px, 7vw, 36px); }
+    .pipeline { flex-direction: column; align-items: center; gap: 0; }
+    .pipe-connector { width: 1px; height: 30px; padding: 0; }
+    .pipe-connector .pipe-line { width: 1px; height: 100%; }
+    .pipe-step { flex: none; width: 100%; max-width: 320px; padding: 16px; }
+    .feat-grid { grid-template-columns: 1fr; }
     .price-grid { grid-template-columns: 1fr; }
-    .hero-terminal { margin: 0 auto 24px; }
-    .term-line { font-size: 11px; }
+    .hud { margin: 0 auto; }
+    .hud-line { font-size: 11px; }
+    .trust-inner { padding: 32px 20px; }
+    .how, .features, .pricing { padding: 60px 16px; }
+  }
+  @media (min-width: 701px) and (max-width: 950px) {
+    .feat-grid { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 
@@ -419,7 +796,6 @@ const user = Astro.locals.user;
       lnToggle.classList.toggle('active', isOpen);
       lnToggle.setAttribute('aria-expanded', String(isOpen));
     });
-    // Close mobile nav when clicking an anchor link
     lnMobile.querySelectorAll('a[href^="#"]').forEach(link => {
       link.addEventListener('click', () => {
         lnMobile.classList.remove('open');
@@ -428,4 +804,17 @@ const user = Astro.locals.user;
       });
     });
   }
+
+  /* Staggered reveal for HUD lines */
+  const hudLines = document.querySelectorAll('.hud-line');
+  hudLines.forEach((line, i) => {
+    const el = line as HTMLElement;
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px)';
+    el.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    setTimeout(() => {
+      el.style.opacity = '1';
+      el.style.transform = 'translateY(0)';
+    }, 600 + i * 200);
+  });
 </script>
