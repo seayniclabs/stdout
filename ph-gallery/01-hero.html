@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1270">
+<title>StdOut — Hero</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1270px;
+    height: 760px;
+    overflow: hidden;
+    background: #07070C;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #F0F0F8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249, 115, 22, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Top glow */
+  body::after {
+    content: '';
+    position: absolute;
+    top: -200px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;
+    height: 500px;
+    background: radial-gradient(ellipse, rgba(249, 115, 22, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    max-width: 900px;
+    padding: 0 40px;
+  }
+
+  .logo {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #F97316, #E8650F);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 36px;
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.25), 0 0 80px rgba(249, 115, 22, 0.1);
+  }
+
+  .logo span {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 700;
+    font-size: 28px;
+    color: #fff;
+    letter-spacing: -1px;
+  }
+
+  .tagline {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -1.5px;
+    margin-bottom: 24px;
+    background: linear-gradient(180deg, #F0F0F8 30%, #A0A0B8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    font-size: 22px;
+    font-weight: 400;
+    color: #A0A0B8;
+    margin-bottom: 48px;
+    letter-spacing: -0.3px;
+  }
+
+  .subtitle em {
+    color: #FB923C;
+    font-style: normal;
+    font-weight: 500;
+  }
+
+  .pricing-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 15px;
+    color: #5A5A72;
+  }
+
+  .pricing-bar .item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pricing-bar .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #F97316;
+    box-shadow: 0 0 8px rgba(249, 115, 22, 0.4);
+  }
+
+  .pricing-bar .highlight {
+    color: #F0F0F8;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><span>&gt;_</span></div>
+    <h1 class="tagline">You've already solved this.<br>You just don't remember.</h1>
+    <p class="subtitle"><em>AI-powered</em> incident companion for self-hosters</p>
+    <div class="pricing-bar">
+      <div class="item"><span class="dot"></span><span class="highlight">$149 one-time</span></div>
+      <div class="item"><span class="dot"></span><span>Self-hosted</span></div>
+      <div class="item"><span class="dot"></span><span>Your data stays yours</span></div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1270">
+<title>StdOut — HUD Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1270px;
+    height: 760px;
+    overflow: hidden;
+    background: #07070C;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #F0F0F8;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249, 115, 22, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding-top: 36px;
+    margin-bottom: 32px;
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .dashboard {
+    position: relative;
+    z-index: 1;
+    padding: 0 60px;
+    display: flex;
+    gap: 32px;
+  }
+
+  /* Left side — gauge dials */
+  .gauges {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex-shrink: 0;
+    width: 400px;
+  }
+
+  .gauge-card {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .gauge {
+    position: relative;
+    width: 120px;
+    height: 70px;
+    margin: 0 auto 12px;
+    overflow: hidden;
+  }
+
+  .gauge-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 8px solid #1F1F35;
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    transform: rotate(225deg);
+  }
+
+  .gauge-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 8px solid transparent;
+    border-top-color: var(--color);
+    border-right-color: var(--color);
+    border-bottom-color: transparent;
+    border-left-color: transparent;
+    transform: rotate(225deg);
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .gauge-fill.pct-100 { transform: rotate(225deg); border-bottom-color: var(--color); border-left-color: var(--color); }
+  .gauge-fill.pct-99 { transform: rotate(225deg); border-bottom-color: var(--color); clip-path: polygon(0 0, 100% 0, 100% 95%, 0 95%); }
+  .gauge-fill.pct-75 { transform: rotate(225deg); }
+  .gauge-fill.pct-50 { transform: rotate(225deg); border-right-color: transparent; }
+
+  .gauge-value {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    text-align: center;
+  }
+
+  .gauge-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #5A5A72;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Right side — services + incidents */
+  .right-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Service list */
+  .service-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .service-row {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .svc-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .svc-dot.up { background: #22C55E; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+  .svc-dot.warn { background: #EAB308; box-shadow: 0 0 6px rgba(234, 179, 8, 0.4); }
+  .svc-dot.down { background: #EF4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.4); }
+
+  .svc-name {
+    font-size: 13px;
+    font-weight: 600;
+    width: 130px;
+    flex-shrink: 0;
+  }
+
+  .svc-sparkline {
+    flex: 1;
+    height: 28px;
+    position: relative;
+  }
+
+  .svc-sparkline svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+
+  .spark-line {
+    fill: none;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .spark-line.green { stroke: #22C55E; filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6)); }
+  .spark-line.yellow { stroke: #EAB308; filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.6)); }
+
+  .spark-area {
+    opacity: 0.1;
+  }
+  .spark-area.green { fill: #22C55E; }
+  .spark-area.yellow { fill: #EAB308; }
+
+  .svc-uptime {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    width: 55px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .svc-uptime.good { color: #22C55E; }
+  .svc-uptime.ok { color: #EAB308; }
+
+  .svc-latency {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #5A5A72;
+    width: 45px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Recent incidents */
+  .incidents {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+
+  .incidents-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 10px;
+  }
+
+  .incident-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+  }
+
+  .incident-item + .incident-item {
+    border-top: 1px solid #1A1A2E;
+  }
+
+  .inc-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .inc-dot.resolved { background: #22C55E; }
+  .inc-dot.active { background: #EF4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+
+  .inc-text {
+    font-size: 12px;
+    color: #A0A0B8;
+    flex: 1;
+  }
+
+  .inc-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #5A5A72;
+    flex-shrink: 0;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="label">HUD</div>
+    <h2 class="title">One dashboard for your entire infrastructure</h2>
+  </div>
+
+  <div class="dashboard">
+    <!-- Left: Gauge dials -->
+    <div class="gauges">
+      <div class="gauge-card">
+        <div class="gauge">
+          <div class="gauge-bg"></div>
+          <div class="gauge-fill pct-100" style="--color: #22C55E;"></div>
+          <div class="gauge-value" style="color: #22C55E;">51</div>
+        </div>
+        <div class="gauge-label">Services Up</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge">
+          <div class="gauge-bg"></div>
+          <div class="gauge-fill pct-50" style="--color: #F97316;"></div>
+          <div class="gauge-value" style="color: #F97316;">2</div>
+        </div>
+        <div class="gauge-label">Warnings</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge">
+          <div class="gauge-bg"></div>
+          <div class="gauge-fill pct-99" style="--color: #60A5FA;"></div>
+          <div class="gauge-value" style="color: #60A5FA;">99.7%</div>
+        </div>
+        <div class="gauge-label">30d Uptime</div>
+      </div>
+
+      <div class="gauge-card">
+        <div class="gauge">
+          <div class="gauge-bg"></div>
+          <div class="gauge-fill pct-50" style="--color: #EF4444;"></div>
+          <div class="gauge-value" style="color: #EF4444;">3</div>
+        </div>
+        <div class="gauge-label">Incidents (7d)</div>
+      </div>
+    </div>
+
+    <!-- Right: Service list + Incidents -->
+    <div class="right-panel">
+      <div class="service-list">
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">Nginx Proxy</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,6 L18,3 L36,5 L54,2 L72,4 L90,3 L108,0 L126,2 L144,3 L162,5 L180,3 L200,4 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,6 L18,3 L36,5 L54,2 L72,4 L90,3 L108,0 L126,2 L144,3 L162,5 L180,3 L200,4"/></svg></div>
+          <span class="svc-uptime good">100%</span>
+          <span class="svc-latency">12ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">Grafana</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,9 L18,6 L36,12 L54,18 L72,4 L90,3 L108,4 L126,2 L144,5 L162,3 L180,2 L200,5 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,9 L18,6 L36,12 L54,18 L72,4 L90,3 L108,4 L126,2 L144,5 L162,3 L180,2 L200,5"/></svg></div>
+          <span class="svc-uptime good">99.8%</span>
+          <span class="svc-latency">45ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">Plex</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,3 L18,5 L36,2 L54,4 L72,3 L90,3 L108,5 L126,2 L144,3 L162,4 L180,3 L200,3 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,3 L18,5 L36,2 L54,4 L72,3 L90,3 L108,5 L126,2 L144,3 L162,4 L180,3 L200,3"/></svg></div>
+          <span class="svc-uptime good">100%</span>
+          <span class="svc-latency">38ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot warn"></span>
+          <span class="svc-name">Vaultwarden</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area yellow" d="M0,5 L18,7 L36,16 L54,18 L72,10 L90,7 L108,15 L126,9 L144,7 L162,17 L180,10 L200,7 L200,28 L0,28 Z"/><path class="spark-line yellow" d="M0,5 L18,7 L36,16 L54,18 L72,10 L90,7 L108,15 L126,9 L144,7 L162,17 L180,10 L200,7"/></svg></div>
+          <span class="svc-uptime ok">98.2%</span>
+          <span class="svc-latency">120ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">Authentik</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,2 L18,3 L36,4 L54,3 L72,3 L90,2 L108,4 L126,3 L144,3 L162,2 L180,3 L200,4 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,2 L18,3 L36,4 L54,3 L72,3 L90,2 L108,4 L126,3 L144,3 L162,2 L180,3 L200,4"/></svg></div>
+          <span class="svc-uptime good">100%</span>
+          <span class="svc-latency">65ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">n8n</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,4 L18,5 L36,3 L54,3 L72,4 L90,5 L108,3 L126,2 L144,4 L162,3 L180,3 L200,4 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,4 L18,5 L36,3 L54,3 L72,4 L90,5 L108,3 L126,2 L144,4 L162,3 L180,3 L200,4"/></svg></div>
+          <span class="svc-uptime good">99.9%</span>
+          <span class="svc-latency">52ms</span>
+        </div>
+        <div class="service-row">
+          <span class="svc-dot up"></span>
+          <span class="svc-name">Sonarr</span>
+          <div class="svc-sparkline"><svg viewBox="0 0 200 28"><path class="spark-area green" d="M0,3 L18,4 L36,3 L54,5 L72,3 L90,4 L108,3 L126,3 L144,5 L162,3 L180,4 L200,3 L200,28 L0,28 Z"/><path class="spark-line green" d="M0,3 L18,4 L36,3 L54,5 L72,3 L90,4 L108,3 L126,3 L144,5 L162,3 L180,4 L200,3"/></svg></div>
+          <span class="svc-uptime good">100%</span>
+          <span class="svc-latency">42ms</span>
+        </div>
+      </div>
+
+      <!-- Recent incidents -->
+      <div class="incidents">
+        <div class="incidents-title">Recent Incidents</div>
+        <div class="incident-item">
+          <span class="inc-dot resolved"></span>
+          <span class="inc-text">Grafana OOM — auto-restarted, memory limit increased</span>
+          <span class="inc-time">2h ago</span>
+        </div>
+        <div class="incident-item">
+          <span class="inc-dot resolved"></span>
+          <span class="inc-text">Cloudflare tunnel reconnect — DNS propagation delay</span>
+          <span class="inc-time">18h ago</span>
+        </div>
+        <div class="incident-item">
+          <span class="inc-dot resolved"></span>
+          <span class="inc-text">SSL cert renewal — switched to DNS challenge</span>
+          <span class="inc-time">3d ago</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

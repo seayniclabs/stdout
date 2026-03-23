@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1270">
+<title>StdOut — Knowledge Base</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1270px;
+    height: 760px;
+    overflow: hidden;
+    background: #07070C;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #F0F0F8;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding-top: 48px;
+    margin-bottom: 32px;
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .kb-container {
+    position: relative;
+    z-index: 1;
+    margin: 0 60px;
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.4);
+  }
+
+  .kb-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #1F1F35;
+    background: #0A0A14;
+  }
+
+  .search-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #151522;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    padding: 10px 16px;
+  }
+
+  .search-box svg { flex-shrink: 0; }
+
+  .search-text {
+    font-size: 14px;
+    color: #F0F0F8;
+  }
+
+  .search-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 16px;
+    background: #F97316;
+    animation: blink 1s infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+  }
+
+  .pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid #1F1F35;
+    color: #5A5A72;
+    background: transparent;
+  }
+  .pill.active {
+    border-color: #F97316;
+    color: #F97316;
+    background: rgba(249, 115, 22, 0.08);
+  }
+
+  .kb-list {
+    padding: 8px 0;
+  }
+
+  .kb-entry {
+    display: flex;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid #1F1F35;
+    gap: 16px;
+    transition: background 0.15s;
+  }
+
+  .kb-entry:last-child { border-bottom: none; }
+
+  .kb-entry:nth-child(2) {
+    background: rgba(249, 115, 22, 0.04);
+  }
+
+  .entry-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 18px;
+  }
+  .entry-icon.runbook { background: rgba(249, 115, 22, 0.1); border: 1px solid rgba(249, 115, 22, 0.2); }
+  .entry-icon.postmortem { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); }
+  .entry-icon.guide { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); }
+
+  .entry-content { flex: 1; }
+
+  .entry-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .entry-excerpt {
+    font-size: 13px;
+    color: #5A5A72;
+    line-height: 1.4;
+  }
+
+  .entry-tags {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #151522;
+    border: 1px solid #1F1F35;
+    color: #A0A0B8;
+  }
+
+  .entry-date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #5A5A72;
+    flex-shrink: 0;
+    width: 80px;
+    text-align: right;
+  }
+
+  .kb-footer {
+    padding: 12px 24px;
+    border-top: 1px solid #1F1F35;
+    background: #0A0A14;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #5A5A72;
+  }
+
+  .kb-footer .count { color: #F97316; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="label">Knowledge Base</div>
+    <h2 class="title">Every fix becomes a searchable runbook</h2>
+  </div>
+
+  <div class="kb-container">
+    <div class="kb-toolbar">
+      <div class="search-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A5A72" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <span class="search-text">nginx 502 upstream</span>
+        <span class="search-cursor"></span>
+      </div>
+      <div class="filter-pills">
+        <div class="pill active">All</div>
+        <div class="pill">Runbooks</div>
+        <div class="pill">Postmortems</div>
+        <div class="pill">Guides</div>
+      </div>
+    </div>
+
+    <div class="kb-list">
+      <div class="kb-entry">
+        <div class="entry-icon runbook">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F97316"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">Nginx 502 — Upstream Connection Refused</div>
+          <div class="entry-excerpt">Container restart causes stale upstream cache. Reload nginx config after Docker restarts.</div>
+        </div>
+        <div class="entry-tags">
+          <span class="tag">nginx</span>
+          <span class="tag">proxy</span>
+        </div>
+        <div class="entry-date">Mar 11</div>
+      </div>
+
+      <div class="kb-entry">
+        <div class="entry-icon postmortem">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01" stroke="#0E0E18" stroke-width="2"/></svg>
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">Grafana OOM — Memory Limit Too Low</div>
+          <div class="entry-excerpt">Default 256MB limit insufficient with 12+ dashboards. Increased to 512MB, added alert rule.</div>
+        </div>
+        <div class="entry-tags">
+          <span class="tag">grafana</span>
+          <span class="tag">docker</span>
+          <span class="tag">memory</span>
+        </div>
+        <div class="entry-date">Mar 11</div>
+      </div>
+
+      <div class="kb-entry">
+        <div class="entry-icon guide">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#22C55E"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">Docker Compose Healthchecks — Best Practices</div>
+          <div class="entry-excerpt">Configure proper healthcheck intervals and retries to prevent false-positive restarts.</div>
+        </div>
+        <div class="entry-tags">
+          <span class="tag">docker</span>
+          <span class="tag">healthcheck</span>
+        </div>
+        <div class="entry-date">Mar 8</div>
+      </div>
+
+      <div class="kb-entry">
+        <div class="entry-icon runbook">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F97316"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">Cloudflare Tunnel Reconnect Procedure</div>
+          <div class="entry-excerpt">When tunnel drops, check cloudflared logs first. Usually a DNS propagation delay after CF update.</div>
+        </div>
+        <div class="entry-tags">
+          <span class="tag">cloudflare</span>
+          <span class="tag">tunnel</span>
+        </div>
+        <div class="entry-date">Mar 5</div>
+      </div>
+
+      <div class="kb-entry">
+        <div class="entry-icon postmortem">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#EF4444"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4M12 17h.01" stroke="#0E0E18" stroke-width="2"/></svg>
+        </div>
+        <div class="entry-content">
+          <div class="entry-title">SSL Cert Renewal Failure — Let's Encrypt Rate Limit</div>
+          <div class="entry-excerpt">Hit rate limit after 5 failed attempts. Switched to DNS challenge, added monitoring.</div>
+        </div>
+        <div class="entry-tags">
+          <span class="tag">ssl</span>
+          <span class="tag">letsencrypt</span>
+        </div>
+        <div class="entry-date">Feb 28</div>
+      </div>
+    </div>
+
+    <div class="kb-footer">
+      <span><span class="count">47</span> documents &middot; <span class="count">12</span> runbooks &middot; <span class="count">8</span> postmortems</span>
+      <span>Full-text search powered by FTS5</span>
+    </div>
+  </div>
+</body>
+</html>

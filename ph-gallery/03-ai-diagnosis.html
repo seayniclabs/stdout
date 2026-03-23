@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1270">
+<title>StdOut — AI Diagnosis</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1270px;
+    height: 760px;
+    overflow: hidden;
+    background: #07070C;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #F0F0F8;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .header {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding-top: 48px;
+    margin-bottom: 36px;
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+
+  .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -1px;
+  }
+
+  .panels {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 24px;
+    padding: 0 60px;
+    height: 500px;
+  }
+
+  .panel {
+    flex: 1;
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid #1F1F35;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .panel-header .icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .panel-header .icon.red { background: #EF4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.4); }
+  .panel-header .icon.green { background: #22C55E; box-shadow: 0 0 8px rgba(34, 197, 94, 0.4); }
+  .panel-header .icon.orange { background: #F97316; box-shadow: 0 0 8px rgba(249, 115, 22, 0.4); }
+
+  .panel-body {
+    padding: 24px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  .incident-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  .incident-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #5A5A72;
+    margin-bottom: 20px;
+  }
+
+  .severity {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .severity.critical { background: rgba(239, 68, 68, 0.12); color: #EF4444; }
+  .severity.resolved { background: rgba(34, 197, 94, 0.12); color: #22C55E; }
+
+  .log-block {
+    background: #0A0A14;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    padding: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    margin-bottom: 20px;
+  }
+
+  .log-err { color: #EF4444; }
+  .log-dim { color: #5A5A72; }
+  .log-warn { color: #EAB308; }
+
+  .match-banner {
+    background: rgba(249, 115, 22, 0.08);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+
+  .match-banner .match-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .match-banner .match-pct {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #F97316;
+    margin-bottom: 4px;
+  }
+
+  .match-banner .match-detail {
+    font-size: 13px;
+    color: #A0A0B8;
+  }
+
+  .fix-block {
+    background: rgba(34, 197, 94, 0.06);
+    border: 1px solid rgba(34, 197, 94, 0.15);
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  .fix-block h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #22C55E;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .fix-step {
+    font-size: 13px;
+    color: #A0A0B8;
+    line-height: 1.6;
+    padding-left: 16px;
+    margin-bottom: 6px;
+  }
+
+  .fix-cmd {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #F0F0F8;
+    background: #0A0A14;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 8px 0;
+  }
+
+  /* Connection arrow between panels */
+  .arrow-bridge {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+    width: 48px;
+    height: 48px;
+    background: #0E0E18;
+    border: 1px solid #F97316;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
+  }
+
+  .arrow-bridge svg {
+    width: 20px;
+    height: 20px;
+    fill: #F97316;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="label">AI Diagnosis</div>
+    <h2 class="title">AI matches incidents to past fixes</h2>
+  </div>
+
+  <div class="panels" style="position: relative;">
+    <!-- Left: Current Incident -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon red"></span>
+        Current Incident
+      </div>
+      <div class="panel-body">
+        <div class="incident-title">Nginx proxy returning 502</div>
+        <div class="incident-meta">
+          <span class="severity critical">critical</span> &middot; nginx-proxy &middot; 2 min ago
+        </div>
+        <div class="log-block">
+          <div class="log-dim">[03:14:22]</div>
+          <div class="log-err">upstream connect error: connection refused</div>
+          <div class="log-dim">[03:14:22]</div>
+          <div class="log-err">no live upstreams while connecting</div>
+          <div class="log-dim">[03:14:23]</div>
+          <div class="log-warn">health check failed for grafana:3000</div>
+          <div class="log-dim">[03:14:24]</div>
+          <div class="log-err">502 Bad Gateway — grafana.lab.local</div>
+        </div>
+        <div style="font-size: 13px; color: #5A5A72;">
+          Affected services: Grafana, Prometheus
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow bridge -->
+    <div class="arrow-bridge">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7"/></svg>
+    </div>
+
+    <!-- Right: Past Resolution -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="icon green"></span>
+        Previous Fix Found
+      </div>
+      <div class="panel-body">
+        <div class="match-banner">
+          <div class="match-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#F97316"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Resolution Match
+          </div>
+          <div class="match-pct">94% similar</div>
+          <div class="match-detail">Matched from 12 days ago &middot; nginx-proxy</div>
+        </div>
+        <div class="fix-block">
+          <h4>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="#22C55E"><path d="M20 6L9 17l-5-5"/></svg>
+            Applied Resolution
+          </h4>
+          <div class="fix-step">1. Grafana container ran out of memory</div>
+          <div class="fix-step">2. Docker restarted it but nginx cache was stale</div>
+          <div class="fix-cmd">docker restart nginx-proxy</div>
+          <div class="fix-step">3. Clear upstream cache and reload config</div>
+          <div class="fix-cmd">nginx -s reload</div>
+          <div class="fix-step" style="color: #22C55E; margin-top: 12px; font-weight: 500;">Resolved in 3 minutes</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

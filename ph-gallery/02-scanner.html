@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1270">
+<title>StdOut — Scanner Discovery</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    width: 1270px;
+    height: 760px;
+    overflow: hidden;
+    background: #07070C;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    color: #F0F0F8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(249, 115, 22, 0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(249, 115, 22, 0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .layout {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: 60px;
+    align-items: center;
+    padding: 0 80px;
+    width: 100%;
+  }
+
+  .left {
+    flex: 0 0 360px;
+  }
+
+  .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #F97316;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+  }
+
+  .title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 38px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -1px;
+    margin-bottom: 16px;
+  }
+
+  .desc {
+    font-size: 16px;
+    color: #A0A0B8;
+    line-height: 1.6;
+  }
+
+  .right {
+    flex: 1;
+  }
+
+  .terminal {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.5), 0 0 60px rgba(249, 115, 22, 0.06);
+  }
+
+  .terminal-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #0A0A14;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  .terminal-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .terminal-dot.r { background: #EF4444; }
+  .terminal-dot.y { background: #EAB308; }
+  .terminal-dot.g { background: #22C55E; }
+
+  .terminal-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: #5A5A72;
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 20px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.8;
+  }
+
+  .prompt { color: #F97316; }
+  .cmd { color: #F0F0F8; }
+  .comment { color: #5A5A72; }
+  .success { color: #22C55E; }
+  .info { color: #FB923C; }
+  .dim { color: #5A5A72; }
+
+  .container-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 3px 0;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .status-dot.up { background: #22C55E; box-shadow: 0 0 6px rgba(34, 197, 94, 0.4); }
+  .status-dot.warn { background: #EAB308; box-shadow: 0 0 6px rgba(234, 179, 8, 0.4); }
+
+  .c-name { color: #F0F0F8; flex: 1; }
+  .c-port { color: #5A5A72; }
+  .c-status { color: #22C55E; font-size: 11px; }
+  .c-status.warning { color: #EAB308; }
+
+  .counter {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #1F1F35;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .counter-num {
+    font-size: 28px;
+    font-weight: 700;
+    font-family: 'Space Grotesk', sans-serif;
+    color: #F97316;
+  }
+
+  .counter-label {
+    font-size: 12px;
+    color: #5A5A72;
+  }
+</style>
+</head>
+<body>
+  <div class="layout">
+    <div class="left">
+      <div class="label">Scanner</div>
+      <h2 class="title">Auto-discover your entire stack</h2>
+      <p class="desc">One command scans your Docker host, maps containers, ports, networks, and health status. No config files needed.</p>
+    </div>
+    <div class="right">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="terminal-dot r"></div>
+          <div class="terminal-dot y"></div>
+          <div class="terminal-dot g"></div>
+          <span class="terminal-title">stdout-scanner --full</span>
+        </div>
+        <div class="terminal-body">
+          <div><span class="prompt">$</span> <span class="cmd">stdout-scanner --full</span></div>
+          <div class="comment">// Scanning Docker socket...</div>
+          <div>&nbsp;</div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">nginx-proxy</span>
+            <span class="c-port">:443</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">grafana</span>
+            <span class="c-port">:3000</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">plex-media</span>
+            <span class="c-port">:32400</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot warn"></span>
+            <span class="c-name">vaultwarden</span>
+            <span class="c-port">:8222</span>
+            <span class="c-status warning">high mem</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">n8n-automation</span>
+            <span class="c-port">:5678</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">authentik-server</span>
+            <span class="c-port">:9010</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="status-dot up"></span>
+            <span class="c-name">homepage</span>
+            <span class="c-port">:8888</span>
+            <span class="c-status">healthy</span>
+          </div>
+          <div class="container-row">
+            <span class="dim">... and 46 more</span>
+          </div>
+          <div class="counter">
+            <div>
+              <div class="counter-num">53</div>
+              <div class="counter-label">containers discovered</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="counter-num" style="color: #22C55E;">52</div>
+              <div class="counter-label">healthy</div>
+            </div>
+            <div style="text-align: right;">
+              <div class="counter-num" style="color: #EAB308;">1</div>
+              <div class="counter-label">warning</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
