@@ -1,0 +1,113 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/seayniclabs/stdout
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+            ${{ env.IMAGE_NAME }}:latest
+
+      - name: Build image for export
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}
+
+      - name: Export Docker image as tarball
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          docker save "${{ env.IMAGE_NAME }}:${VERSION}" | gzip > "stdout-${VERSION}.tar.gz"
+          sha256sum "stdout-${VERSION}.tar.gz" > "stdout-${VERSION}.tar.gz.sha256"
+          echo "TARBALL=stdout-${VERSION}.tar.gz" >> "$GITHUB_ENV"
+          echo "SHA256_FILE=stdout-${VERSION}.tar.gz.sha256" >> "$GITHUB_ENV"
+
+      - name: Install AWS CLI
+        run: |
+          curl -sL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Upload tarball to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET_NAME: ${{ secrets.R2_BUCKET_NAME }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          ENDPOINT="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          aws s3 cp "${TARBALL}" \
+            "s3://${R2_BUCKET_NAME}/products/stdout-self-host/${VERSION}/stdout-self-host-${VERSION}.tar.gz" \
+            --endpoint-url "${ENDPOINT}"
+
+          aws s3 cp "${SHA256_FILE}" \
+            "s3://${R2_BUCKET_NAME}/products/stdout-self-host/${VERSION}/stdout-self-host-${VERSION}.tar.gz.sha256" \
+            --endpoint-url "${ENDPOINT}"
+
+      - name: Publish version to store API
+        env:
+          STORE_ADMIN_TOKEN: ${{ secrets.STORE_ADMIN_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256=$(cut -d' ' -f1 "${SHA256_FILE}")
+          FILE_SIZE=$(stat --printf="%s" "${TARBALL}")
+
+          # Register this version in the store
+          # This calls the admin publish-version endpoint to create the DB record
+          # The r2Key for docker tarballs follows the convention:
+          #   products/stdout-self-host/{version}/stdout-self-host-{version}.tar.gz
+          curl -sf -X POST "https://store.seayniclabs.com/api/ci/publish-version" \
+            -H "Authorization: Bearer ${STORE_ADMIN_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"product_slug\": \"stdout-self-host\",
+              \"version\": \"${VERSION}\",
+              \"channel\": \"stable\",
+              \"artifact_type\": \"docker\",
+              \"r2_key\": \"products/stdout-self-host/${VERSION}/stdout-self-host-${VERSION}.tar.gz\",
+              \"sha256_hash\": \"${SHA256}\",
+              \"file_size\": ${FILE_SIZE}
+            }"
+
+          echo "Published stdout-self-host v${VERSION} to store"
