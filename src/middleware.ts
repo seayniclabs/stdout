@@ -235,23 +235,45 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/api/billing-sync', '/app/auth/oidc', '/app/auth/callback', '/app/api/me'];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
+  // These redirects fall through to security-header injection below
+  let response: Response;
+
   if (isAppRoute && !isPublicApp && !context.locals.user) {
-    return context.redirect(`/app/login?redirect=${encodeURIComponent(pathname)}`);
+    response = context.redirect(`/app/login?redirect=${encodeURIComponent(pathname)}`);
+  } else if (pathname.startsWith('/app/admin') && context.locals.user?.role !== 'superadmin') {
+    response = context.redirect('/app');
+  } else {
+    response = await next();
   }
 
-  // Admin routes
-  if (pathname.startsWith('/app/admin') && context.locals.user?.role !== 'superadmin') {
-    return context.redirect('/app');
+  // Security headers apply to ALL responses — redirects, HTML, API, etc.
+  const newHeaders = new Headers(response.headers);
+  newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  newHeaders.set('X-Content-Type-Options', 'nosniff');
+  newHeaders.set('X-Frame-Options', 'DENY');
+  newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+  // Redirects: return with security headers but skip CSP nonce injection
+  if (response.status >= 300 && response.status < 400) {
+    return new Response(null, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
   }
 
-  const response = await next();
-
-  // Don't process redirects — return them as-is to preserve mobile Safari behavior
-  if (response.status >= 300 && response.status < 400) return response;
-
+  // Non-HTML responses: return with security headers, no CSP nonce needed
   const contentType = response.headers.get('content-type') || '';
-  if (!contentType.includes('text/html')) return response;
+  if (!contentType.includes('text/html')) {
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: newHeaders,
+    });
+  }
 
+  // HTML responses: inject nonce into script tags and add full CSP
   const html = await response.text();
   const nonced = html.replace(/<script/g, `<script nonce="${nonce}"`);
 
@@ -265,13 +287,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     "frame-ancestors 'none'",
   ].join('; ');
 
-  const newHeaders = new Headers(response.headers);
   newHeaders.set('Content-Security-Policy', csp);
-  newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  newHeaders.set('X-Content-Type-Options', 'nosniff');
-  newHeaders.set('X-Frame-Options', 'DENY');
-  newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   newHeaders.delete('content-length');
 
   return new Response(nonced, {
