@@ -26,6 +26,7 @@ const user = Astro.locals.user;
     <div class="ln-links">
       <a href="#how" class="ln-link">How it works</a>
       <a href="#pricing" class="ln-link">Pricing</a>
+      <a href="/docs/scanner" class="ln-link">Docs</a>
       {user ? (
         <a href="/app" class="btn btn-primary btn-sm">Dashboard</a>
       ) : (
@@ -35,7 +36,24 @@ const user = Astro.locals.user;
         </>
       )}
     </div>
+    <button class="ln-toggle" id="lnToggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
   </nav>
+
+  <div class="ln-mobile" id="lnMobile">
+    <a href="#how" class="ln-mobile-link">How it works</a>
+    <a href="#pricing" class="ln-mobile-link">Pricing</a>
+    <a href="/docs/scanner" class="ln-mobile-link">Docs</a>
+    {user ? (
+      <a href="/app" class="ln-mobile-link ln-mobile-cta">Dashboard</a>
+    ) : (
+      <>
+        <a href="/app/login" class="ln-mobile-link">Log in</a>
+        <a href="/app/register" class="ln-mobile-link ln-mobile-cta">Get started</a>
+      </>
+    )}
+  </div>
 
   <!-- Hero -->
   <section class="hero">
@@ -312,9 +330,76 @@ const user = Astro.locals.user;
   .lf-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
   .lf-links a:hover { color: var(--text-secondary); }
 
+  /* ── Mobile hamburger toggle ─────────────────── */
+  .ln-toggle {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    min-height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+  }
+  .ln-toggle span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    background: var(--text-secondary);
+    border-radius: 1px;
+    transition: all 0.25s ease;
+  }
+  .ln-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+  .ln-toggle.active span:nth-child(2) {
+    opacity: 0;
+  }
+  .ln-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(5px, -5px);
+  }
+
+  /* ── Mobile nav panel ────────────────────────── */
+  .ln-mobile {
+    display: none;
+    flex-direction: column;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  }
+  .ln-mobile.open {
+    display: flex;
+  }
+  .ln-mobile-link {
+    display: block;
+    padding: 14px 24px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    font-family: var(--font-mono);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: color 150ms, background 150ms;
+  }
+  .ln-mobile-link:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+  }
+  .ln-mobile-cta {
+    color: var(--accent-light);
+    font-weight: 600;
+  }
+
   /* Mobile */
   @media (max-width: 700px) {
     .ln-link { display: none; }
+    .btn-sm { display: none; }
+    .ln-toggle { display: flex; }
     .hero { padding: 40px 16px 30px; }
     .pipeline { flex-direction: column; align-items: center; }
     .pipe-arrow { transform: rotate(90deg); padding: 8px 0; }
@@ -324,3 +409,23 @@ const user = Astro.locals.user;
     .term-line { font-size: 11px; }
   }
 </style>
+
+<script>
+  const lnToggle = document.getElementById('lnToggle');
+  const lnMobile = document.getElementById('lnMobile');
+  if (lnToggle && lnMobile) {
+    lnToggle.addEventListener('click', () => {
+      const isOpen = lnMobile.classList.toggle('open');
+      lnToggle.classList.toggle('active', isOpen);
+      lnToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+    // Close mobile nav when clicking an anchor link
+    lnMobile.querySelectorAll('a[href^="#"]').forEach(link => {
+      link.addEventListener('click', () => {
+        lnMobile.classList.remove('open');
+        lnToggle.classList.remove('active');
+        lnToggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
+</script>
