@@ -1,0 +1,68 @@
+1
+00:00:00,100 --> 00:00:02,347
+You've already solved this.
+
+2
+00:00:02,297 --> 00:00:04,464
+You just don't remember.
+
+3
+00:00:04,464 --> 00:00:09,321
+StdOut is an incident companion for solo developers and self-hosters.
+
+4
+00:00:09,321 --> 00:00:13,678
+When something breaks at 2 AM, it pulls up how you fixed it last time.
+
+5
+00:00:13,678 --> 00:00:18,523
+Point the scanner at your Docker host, and it auto-discovers your entire stack.
+
+6
+00:00:18,523 --> 00:00:21,976
+Containers, ports, networks, health status.
+
+7
+00:00:21,976 --> 00:00:26,678
+On a real Mac Mini homelab, it found 53 containers in seconds.
+
+8
+00:00:26,678 --> 00:00:31,047
+When something breaks, StdOut walks through diagnosis with AI.
+
+9
+00:00:31,047 --> 00:00:37,083
+It matches your current incident against past resolutions, and surfaces the fix before you start guessing.
+
+10
+00:00:37,083 --> 00:00:40,392
+Every fix becomes a searchable runbook entry.
+
+11
+00:00:40,392 --> 00:00:45,892
+Your knowledge base grows with every incident, tied to the actual services in your infrastructure.
+
+12
+00:00:45,892 --> 00:00:48,952
+The HUD gives you one dashboard for everything.
+
+13
+00:00:48,952 --> 00:00:53,678
+Service health, uptime sparklines, recent incidents, all in one view.
+
+14
+00:00:53,678 --> 00:00:55,464
+Self-hosted.
+
+15
+00:00:55,464 --> 00:00:58,083
+One hundred and forty nine dollars.
+
+16
+00:00:58,083 --> 00:00:59,714
+One time.
+
+17
+00:00:59,714 --> 00:01:02,523
+Your infra, your data, forever.
+

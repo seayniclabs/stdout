@@ -1,0 +1,13 @@
+You've already solved this. You just don't remember.
+
+StdOut is an incident companion for solo developers and self-hosters. When something breaks at 2 AM, it pulls up how you fixed it last time.
+
+Point the scanner at your Docker host, and it auto-discovers your entire stack. Containers, ports, networks, health status. On a real Mac Mini homelab, it found 53 containers in seconds.
+
+When something breaks, StdOut walks through diagnosis with AI. It matches your current incident against past resolutions, and surfaces the fix before you start guessing.
+
+Every fix becomes a searchable runbook entry. Your knowledge base grows with every incident, tied to the actual services in your infrastructure.
+
+The HUD gives you one dashboard for everything. Service health, uptime sparklines, recent incidents, all in one view.
+
+Self-hosted. One hundred and forty nine dollars. One time. Your infra, your data, forever.
