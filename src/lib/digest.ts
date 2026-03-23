@@ -187,7 +187,7 @@ export function renderDigestHTML(data: DigestData, appUrl: string): string {
       ` : ''}
 
       <div style="margin-top:28px;text-align:center;">
-        <a href="${appUrl}/app" style="display:inline-block;padding:10px 24px;background:#F97316;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Open StdOut</a>
+        <a href="${appUrl}/app" style="display:inline-block;padding:10px 24px;background:#C2410C;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;font-size:13px;">Open StdOut</a>
       </div>
 
       <div style="margin-top:32px;text-align:center;font-family:monospace;font-size:10px;color:#5A5A72;">

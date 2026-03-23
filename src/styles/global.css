@@ -41,7 +41,7 @@
   --accent-light:  #FB923C;
   --accent-dim:    rgba(249, 115, 22, 0.12);
   --accent-glow:   rgba(249, 115, 22, 0.25);
-  --accent-btn:    #E8650F;  /* Darker for text-on-button WCAG AA */
+  --accent-btn:    #C2410C;  /* Darker for text-on-button WCAG AA (~4.7:1 with white) */
 
   /* Severity */
   --critical:      #EF4444;
@@ -125,12 +125,12 @@ a:hover { color: var(--accent); }
   border: none;
 }
 .btn-primary {
-  background: var(--accent);
+  background: var(--accent-btn);
   color: #fff;
   box-shadow: var(--shadow-sm);
 }
 .btn-primary:hover {
-  background: var(--accent-light);
+  background: var(--accent);
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
 }
@@ -264,7 +264,7 @@ textarea.form-input {
 }
 .auth-form input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
 .auth-form button {
-  background: var(--accent);
+  background: var(--accent-btn);
   color: #fff;
   border: none;
   border-radius: var(--radius-sm);
@@ -277,7 +277,7 @@ textarea.form-input {
   box-shadow: var(--shadow-sm);
 }
 .auth-form button:hover {
-  background: var(--accent-light);
+  background: var(--accent);
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
 }

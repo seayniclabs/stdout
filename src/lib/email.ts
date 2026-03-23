@@ -60,7 +60,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
     <p style="font-size: 14px; color: #9090A8; line-height: 1.6; margin: 0 0 20px;">
       Someone requested a password reset for your StdOut account. Click the button below to choose a new password. This link expires in 1 hour.
     </p>
-    <a href="${escapeHtml(resetUrl)}" style="display: inline-block; padding: 10px 24px; background: #F97316; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Reset password</a>
+    <a href="${escapeHtml(resetUrl)}" style="display: inline-block; padding: 10px 24px; background: #C2410C; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Reset password</a>
     <p style="font-size: 12px; color: #5A5A72; margin-top: 16px;">
       Or copy this link: <span style="font-family: monospace; word-break: break-all;">${escapeHtml(resetUrl)}</span>
     </p>
@@ -75,7 +75,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
     <p style="font-size: 14px; color: #9090A8; line-height: 1.6; margin: 0 0 20px;">
       Welcome to StdOut. Click the button below to verify your email address.
     </p>
-    <a href="${escapeHtml(verifyUrl)}" style="display: inline-block; padding: 10px 24px; background: #F97316; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Verify email</a>
+    <a href="${escapeHtml(verifyUrl)}" style="display: inline-block; padding: 10px 24px; background: #C2410C; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Verify email</a>
   `);
   return send(to, '[StdOut] Verify your email', html);
 }

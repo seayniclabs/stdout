@@ -69,7 +69,7 @@ async function sendEmail(to: string, payload: NotifyPayload): Promise<void> {
       <div style="font-size: 11px; color: #9090A8; font-family: monospace; margin-bottom: 16px;">StdOut</div>
       <h2 style="font-size: 16px; margin: 0 0 8px;">${escapeHtml(payload.title)}</h2>
       <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 16px;">${escapeHtml(payload.body)}</p>
-      ${payload.url ? `<a href="${appUrl}${payload.url}" style="display: inline-block; padding: 8px 16px; background: #F97316; color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">View in StdOut</a>` : ''}
+      ${payload.url ? `<a href="${appUrl}${payload.url}" style="display: inline-block; padding: 8px 16px; background: #C2410C; color: #fff; text-decoration: none; border-radius: 6px; font-size: 13px; font-weight: 600;">View in StdOut</a>` : ''}
     </div>
   `;
 
