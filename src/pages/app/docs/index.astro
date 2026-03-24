@@ -370,6 +370,12 @@ function formatDate(date: Date) {
       applyFilters();
     });
   }
+
+  // Auto-select filter from URL param (e.g., /app/docs?filter=stdout)
+  const urlFilter = new URLSearchParams(window.location.search).get('filter');
+  if (urlFilter && filterLabels[urlFilter]) {
+    setFilter(urlFilter);
+  }
 </script>
 
 <style>

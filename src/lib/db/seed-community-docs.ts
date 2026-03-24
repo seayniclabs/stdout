@@ -14,9 +14,423 @@ export interface SeedDoc {
   tags: string;
 }
 
-export const SEED_VERSION = 1;
+export const SEED_VERSION = 2;
 
 export const seedDocs: SeedDoc[] = [
+  // ── Getting Started Onboarding Guides ──────────────────────────────
+  {
+    id: 'community_onboarding_001',
+    title: 'Getting Started with StdOut',
+    content: `## What Is StdOut?
+
+StdOut is an AI-assisted incident companion for self-hosters and solo developers. It turns your past fixes into future answers — a living runbook that knows your stack.
+
+## The Core Workflow
+
+Every interaction in StdOut follows a four-step loop:
+
+1. **Detect** — The scanner discovers your containers, networks, and services. The HUD monitors them for health changes.
+2. **Diagnose** — When something breaks, AI analyzes the incident against your stack context and suggests root causes.
+3. **Resolve** — You log what actually fixed it. Resolutions are saved with full context.
+4. **Learn** — Next time a similar issue appears, StdOut surfaces your past resolutions automatically. Your knowledge compounds.
+
+## The Five Main Areas
+
+| Area | What It Does |
+|------|-------------|
+| **Dashboard** | At-a-glance view of your infrastructure — service health gauges, recent incidents, and import status |
+| **Incidents** | Create, diagnose, and resolve incidents. AI matches similar past fixes automatically |
+| **HUD** | Real-time health monitoring with HTTP/TCP checks, sparklines, uptime calendars, and auto-incident creation |
+| **Stacks** | Your infrastructure inventory — containers, services, and their relationships grouped by stack |
+| **Knowledge Base** | Runbooks, postmortems, guides, and notes. Community docs ship out of the box; yours grow over time |
+
+## What to Set Up First
+
+1. **Name your workspace** — give it an identity (Settings > Workspace)
+2. **Generate an API token** — needed for the scanner (Settings > API Tokens)
+3. **Run the scanner** — discover your infrastructure automatically
+4. **Set up notifications** — know when something goes down (Settings > Notifications)
+
+Each of these steps has its own guide in this Knowledge Base. Start with "Set Up Your Workspace" next.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,onboarding',
+  },
+  {
+    id: 'community_onboarding_002',
+    title: 'Set Up Your Workspace',
+    content: `## Overview
+
+Your workspace is your StdOut identity. It controls the name, accent color, and logo that appear throughout the interface. Setting this up first makes StdOut feel like yours.
+
+## Find the Settings
+
+1. Click the **gear icon** in the top navigation bar
+2. Select **Settings**
+3. You'll land on the **Workspace** section
+
+## Name Your Workspace
+
+The workspace name appears in the navigation bar and on your public status page (if enabled). Pick something that identifies your environment:
+
+- \`homelab\` — for a single home server
+- \`production\` — for a live deployment
+- Your server's hostname — e.g., \`mini-m4\`, \`nuc-01\`
+
+Type the name in the **Workspace Name** field and click **Save**.
+
+## Set Your Accent Color
+
+The accent color controls buttons, links, active states, and highlights throughout the UI. Click the color picker next to **Accent Color** to choose your color. The change previews immediately.
+
+Good defaults:
+- **Coral** (\`#F97316\`) — the StdOut default, high visibility
+- **Teal** (\`#14B8A6\`) — calmer, good for always-on dashboards
+- **Indigo** (\`#6366F1\`) — if you prefer cooler tones
+
+## Upload a Logo
+
+The logo appears in the top-left of the navigation bar, replacing the default StdOut icon. Upload a square PNG or SVG, ideally at least 128x128px. Transparent backgrounds work best against the dark UI.
+
+1. Click **Choose File** under Logo
+2. Select your image
+3. Click **Save**
+
+## What's Next
+
+With your workspace configured, move on to **Configure Email and Webhook Alerts** to set up notifications.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,setup,workspace',
+  },
+  {
+    id: 'community_onboarding_003',
+    title: 'Configure Email and Webhook Alerts',
+    content: `## Overview
+
+Notifications tell you when something needs attention — a service went down, an incident was created, or your weekly digest is ready. StdOut supports email and webhook notifications.
+
+## Find Notification Settings
+
+1. Click the **gear icon** in the top navigation bar
+2. Select **Settings**
+3. Click the **Notifications** tab
+
+## Email Notifications
+
+Email is the simplest notification channel. Enable it by toggling **Email Notifications** on.
+
+**What triggers an email:**
+- A monitored service goes **down** (health check failure)
+- A monitored service **recovers** (health check passes after being down)
+- An incident is **auto-created** by the HUD
+- Your **weekly digest** is ready (summary of incidents, uptime, and patterns)
+
+Emails go to your account email address. Make sure it's correct in **Settings > Account**.
+
+## Webhook Notifications
+
+Webhooks send a JSON payload to any URL you specify — perfect for Slack, Discord, Microsoft Teams, or custom automation.
+
+### Setup
+
+1. Enter your webhook URL in the **Webhook URL** field
+2. Click **Test Webhook** to verify delivery
+3. Toggle **Webhook Notifications** on
+4. Click **Save**
+
+### Payload Format
+
+\`\`\`json
+{
+  "event": "service_down",
+  "service": "nginx-proxy",
+  "stack": "infrastructure",
+  "timestamp": "2026-03-24T14:30:00Z",
+  "message": "HTTP check failed: connection refused on port 80"
+}
+\`\`\`
+
+### Platform-Specific URLs
+
+| Platform | Where to Get the URL |
+|----------|---------------------|
+| **Slack** | Apps > Incoming Webhooks > Add New Webhook |
+| **Discord** | Server Settings > Integrations > Webhooks > New Webhook |
+| **Teams** | Channel > Connectors > Incoming Webhook |
+
+## What's Next
+
+Set up your API token so you can run the scanner — see **Create an API Token for the Scanner**.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,notifications,email,webhook',
+  },
+  {
+    id: 'community_onboarding_004',
+    title: 'Create an API Token for the Scanner',
+    content: `## Overview
+
+The scanner needs an API token to authenticate with your StdOut instance. Tokens are scoped to your account and can be revoked at any time.
+
+## Generate a Token
+
+1. Click the **gear icon** in the top navigation bar
+2. Select **Settings**
+3. Click the **API Tokens** tab
+4. Click **Generate New Token**
+5. Give it a descriptive name — e.g., \`scanner-macmini\` or \`homelab-scanner\`
+6. Click **Create**
+
+## Copy and Save the Token
+
+The token is displayed **once**. Copy it immediately and store it securely:
+
+\`\`\`
+stdout_tk_a1b2c3d4e5f6...
+\`\`\`
+
+**Storage options:**
+- A password manager (Vaultwarden, 1Password, Bitwarden)
+- A \`.env\` file on the host where the scanner will run
+- A Docker secret or config file
+
+If you lose the token, revoke it and generate a new one. There is no way to retrieve an existing token after creation.
+
+## Token Permissions
+
+Your API token grants the following access:
+
+| Capability | Access |
+|-----------|--------|
+| Submit scan results | Yes |
+| Read scanner schedule | Yes |
+| Read stacks/incidents | No |
+| Modify settings | No |
+| Delete data | No |
+
+Tokens are designed for machine-to-machine authentication. They cannot access the web UI or modify account settings.
+
+## Revoking a Token
+
+If a token is compromised or no longer needed:
+
+1. Go to **Settings > API Tokens**
+2. Find the token by name
+3. Click **Revoke**
+4. The token is immediately invalidated — any scanner using it will receive 401 errors
+
+## What's Next
+
+With your token ready, move on to **Install and Run the Scanner** to discover your infrastructure.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,api,tokens,security',
+  },
+  {
+    id: 'community_onboarding_005',
+    title: 'Install and Run the Scanner',
+    content: `## Overview
+
+The StdOut scanner is a Go-based Docker sidecar that discovers your containers, networks, metrics, and services. It reports what it finds back to your StdOut instance via the API.
+
+## Prerequisites
+
+- Docker installed and running
+- An API token (see "Create an API Token for the Scanner")
+- Your StdOut instance URL
+
+## Interactive Setup
+
+The fastest way to get started is the interactive \`init\` command:
+
+\`\`\`bash
+docker run -it --rm \\
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  -v ~/.stdout:/data \\
+  ghcr.io/charlieseay/stdout-scanner init
+\`\`\`
+
+This walks you through module selection, token configuration, and creates a config file at \`~/.stdout/scanner.yaml\`.
+
+## Run Your First Scan
+
+After init, run a full scan:
+
+\`\`\`bash
+docker run --rm --net=host \\
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  -v ~/.stdout:/data \\
+  ghcr.io/charlieseay/stdout-scanner scan --full
+\`\`\`
+
+The scanner discovers:
+- **Containers** — names, images, ports, networks, health status, compose projects
+- **Metrics** — CPU, memory, network I/O, and disk usage per container and host
+- **Network devices** — hosts on your subnet via ICMP/TCP discovery
+- **DNS** — reverse DNS, mDNS/Bonjour, reverse proxy detection, TLS certificates
+- **Auth** — HTTP auth types (basic, bearer, form, SSO) on discovered services
+
+## Import Results
+
+After the scan completes, go to your StdOut **Dashboard**. You'll see an import banner showing the scan results. Click **Review Import** to:
+
+1. See the list of discovered containers
+2. Check/uncheck which ones to import
+3. Assign them to a new or existing stack
+4. Click **Save** to add them to your inventory
+
+## Set Up Recurring Scans
+
+Run the scanner as a persistent container with a schedule:
+
+\`\`\`bash
+docker run -d --name stdout-scanner \\
+  --net=host \\
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  -v ~/.stdout:/data \\
+  ghcr.io/charlieseay/stdout-scanner scan \\
+  --schedule daily --delta \\
+  --token YOUR_TOKEN \\
+  --url https://your-stdout-instance.com
+\`\`\`
+
+The \`--delta\` flag means only changes since the last scan are reported — added containers, removed services, changed configurations.
+
+You can also control the schedule from the StdOut UI: **Settings > Scanner** lets you set the interval and modules without touching the container.
+
+## What's Next
+
+With your infrastructure discovered, move on to **Create and Diagnose Your First Incident**.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,scanner,docker,setup',
+  },
+  {
+    id: 'community_onboarding_006',
+    title: 'Create and Diagnose Your First Incident',
+    content: `## Overview
+
+Incidents are the core of StdOut. They capture what broke, why, and how you fixed it — building a knowledge base that makes you faster over time.
+
+## Two Ways Incidents Get Created
+
+### 1. Manually
+
+Click **Incidents** in the navigation bar, then **New Incident**. Fill in:
+
+- **Title** — a clear, searchable description (e.g., "Nginx 502 after Docker restart")
+- **Stack** — which stack is affected (selected from your imported stacks)
+- **Description** — what you observed, error messages, when it started
+- **Severity** — info, warning, or critical
+
+As you type the title and description, StdOut searches for **similar past resolutions** in real time. If something matches, it appears in a panel on the right — you may already have the answer.
+
+### 2. Automatically from the HUD
+
+When the HUD detects a monitored service has gone down (health check failures exceed the threshold), it creates an incident automatically. The incident is linked to the service and includes:
+
+- The failing health check details
+- When the failure was first detected
+- The monitor's recent response history
+
+You'll get a notification (if configured) and see the incident on your dashboard.
+
+## AI Diagnosis
+
+On any incident detail page, click **Diagnose with AI**. StdOut sends the incident context — title, description, stack information, and any error details — to Claude for analysis.
+
+The AI returns:
+
+- **Probable root cause** — based on the symptoms and your stack context
+- **Suggested fix** — actionable steps to resolve the issue
+- **Related patterns** — links to similar issues if they exist in your knowledge base
+
+AI diagnosis is available on all tiers (Haiku on Free, Sonnet on paid tiers).
+
+## Adding a Resolution
+
+Once you've fixed the issue:
+
+1. Click **Add Resolution** on the incident detail page
+2. Describe **what you actually did** to fix it — the specific commands, config changes, or actions
+3. Click **Save**
+
+The resolution is now part of your knowledge base. Next time a similar incident appears, StdOut surfaces this resolution automatically via similarity matching.
+
+## What's Next
+
+Learn how to turn resolutions into reusable documentation — see **Create Your First Runbook**.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,incidents,ai,diagnosis',
+  },
+  {
+    id: 'community_onboarding_007',
+    title: 'Create Your First Runbook',
+    content: `## Overview
+
+The Knowledge Base is where your institutional memory lives. It starts with community docs (like this one) and grows with every incident you resolve. Runbooks are the most valuable doc type — step-by-step procedures you can follow at 2 AM when you're half awake.
+
+## Document Types
+
+| Type | When to Use |
+|------|-------------|
+| **Runbook** | Step-by-step procedure for a recurring task or known failure mode |
+| **Postmortem** | After-action analysis of a significant incident |
+| **Guide** | How-to for setup, configuration, or best practices |
+| **Note** | Anything else — quick references, links, context |
+
+## Create a Runbook from a Resolved Incident
+
+The fastest way to create a runbook is from an incident you've already resolved:
+
+1. Go to the resolved incident's detail page
+2. Review the resolution you logged
+3. Click **Incidents** > think about what general procedure this represents
+4. Go to **Knowledge Base** > **New Document**
+5. Set the type to **Runbook**
+
+## Writing a Good Runbook
+
+Structure your runbook with these sections:
+
+\`\`\`markdown
+## Pattern
+What situation triggers this runbook? How do you recognize it?
+
+## Symptoms
+What do you see in logs, dashboards, or error messages?
+
+## Steps
+1. First, verify the symptom: \`command here\`
+2. Check the root cause: \`command here\`
+3. Apply the fix: \`command here\`
+4. Verify recovery: \`command here\`
+
+## Prevention
+How to avoid this in the future.
+\`\`\`
+
+**Good runbook habits:**
+- Include the exact commands — don't paraphrase
+- Note which containers, services, or paths are involved
+- Add expected output so you know the step worked
+- Write it for future-you who has forgotten the context
+
+## Tags
+
+Tag your documents so they're discoverable. Use comma-separated tags:
+
+- Stack names: \`nginx\`, \`docker\`, \`postgresql\`
+- Categories: \`networking\`, \`backup\`, \`security\`
+- Severity context: \`outage\`, \`degraded\`, \`maintenance\`
+
+Tags power the sidebar filters and search. Consistent tagging makes your knowledge base navigable.
+
+## Community Docs
+
+StdOut ships with community-contributed docs covering common homelab patterns — Docker DNS issues, proxy chain debugging, SQLite tuning, backup strategies, and more. Browse them in the Knowledge Base under the community source filter.
+
+Over time, your own docs will outnumber the community ones. That's the goal — a knowledge base that's specifically tuned to your infrastructure and your patterns.`,
+    docType: 'guide',
+    tags: 'stdout,getting-started,knowledge-base,runbook,docs',
+  },
+  // ── Operational Pattern Docs ───────────────────────────────────────
   {
     id: 'community_seed_001',
     title: 'Docker DNS Resolution Failures After Network Restart',

@@ -17,7 +17,8 @@ let email = '';
 let displayName = '';
 
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
-const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
+// New users go to Knowledge Base → StdOut guides for onboarding
+const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app/docs?filter=stdout';
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();

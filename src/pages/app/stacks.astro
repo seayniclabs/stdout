@@ -3,7 +3,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getTenantDb, tenantSchema } from '../../lib/db';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { stackTemplates } from '../../lib/stack-templates';
 import { canPerform } from '../../lib/rbac';
@@ -15,6 +15,7 @@ const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 const ws = Astro.locals.workspace;
 let error = '';
 let editingStack: any = null;
+let showCreateForm = Astro.url.searchParams.has('new');
 
 // Handle POST: create or update
 if (Astro.request.method === 'POST') {
@@ -56,129 +57,575 @@ if (Astro.request.method === 'POST') {
 
 const editId = Astro.url.searchParams.get('edit');
 const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
-if (editId) editingStack = userStacks.find(s => s.id === editId);
----
-<Layout title="Stacks — StdOut">
-  <div class="stacks-page">
-    <div class="page-header">
-      <h1>Your Stacks</h1>
-    </div>
+if (editId) {
+  editingStack = userStacks.find(s => s.id === editId);
+  showCreateForm = false;
+}
 
-    <p class="page-desc">Describe your infrastructure so StdOut can give better diagnoses. Include services, ports, dependencies, and anything an on-call engineer would need to know.</p>
+// Get pending imports
+const pendingImports = db.select().from(tenantSchema.stackImports)
+  .where(eq(tenantSchema.stackImports.status, 'pending')).all();
+
+// Get the most recent import (confirmed or pending) for "Last scan" timestamp
+const recentImports = db.select().from(tenantSchema.stackImports)
+  .orderBy(desc(tenantSchema.stackImports.createdAt))
+  .limit(1).all();
+const lastScanTime = recentImports.length > 0 ? recentImports[0].createdAt : null;
+
+// Get incidents per stack
+const allIncidents = db.select().from(tenantSchema.incidents)
+  .where(eq(tenantSchema.incidents.userId, user.id)).all();
+const incidentsByStack = new Map<string, number>();
+const activeIncidentsByStack = new Map<string, number>();
+for (const inc of allIncidents) {
+  if (inc.stackId) {
+    incidentsByStack.set(inc.stackId, (incidentsByStack.get(inc.stackId) || 0) + 1);
+    if (inc.status !== 'resolved') {
+      activeIncidentsByStack.set(inc.stackId, (activeIncidentsByStack.get(inc.stackId) || 0) + 1);
+    }
+  }
+}
+
+// Parse containers from stack descriptions (scanner-imported format)
+interface ContainerInfo {
+  name: string;
+  image: string;
+  status: string;
+  ports: string;
+  health: string;
+}
+
+function parseContainers(markdown: string): ContainerInfo[] {
+  const containers: ContainerInfo[] = [];
+  const lines = markdown.split('\n');
+  let current: { name: string; image: string; details: string[] } | null = null;
+
+  for (const line of lines) {
+    const match = line.match(/^### (.+?) \((.+?)\)$/);
+    if (match) {
+      if (current) {
+        containers.push(extractContainer(current));
+      }
+      current = { name: match[1], image: match[2], details: [] };
+      continue;
+    }
+    if (current && line.startsWith('- ')) {
+      current.details.push(line.slice(2));
+    }
+  }
+  if (current) containers.push(extractContainer(current));
+  return containers;
+}
+
+function extractContainer(c: { name: string; image: string; details: string[] }): ContainerInfo {
+  const statusDetail = c.details.find(d => d.startsWith('Status:'));
+  const portsDetail = c.details.find(d => d.startsWith('Ports:'));
+  const healthDetail = c.details.find(d => d.startsWith('Health:'));
+  return {
+    name: c.name,
+    image: c.image,
+    status: statusDetail?.split(':')[1]?.trim() || 'unknown',
+    ports: portsDetail?.replace('Ports: ', '') || '',
+    health: healthDetail?.replace('Health: ', '') || '',
+  };
+}
+
+// Build stack card data
+interface StackCard {
+  id: string;
+  name: string;
+  description: string;
+  containers: ContainerInfo[];
+  running: number;
+  stopped: number;
+  unhealthy: number;
+  updatedAt: Date;
+  incidentCount: number;
+  activeIncidents: number;
+}
+
+const stackCards: StackCard[] = userStacks.map(stack => {
+  const containers = parseContainers(stack.description);
+  const running = containers.filter(c => c.status === 'running').length;
+  const stopped = containers.filter(c => c.status === 'stopped' || c.status === 'exited').length;
+  const unhealthy = containers.filter(c => c.health === 'unhealthy').length;
+  return {
+    id: stack.id,
+    name: stack.name,
+    description: stack.description,
+    containers,
+    running,
+    stopped,
+    unhealthy,
+    updatedAt: stack.updatedAt,
+    incidentCount: incidentsByStack.get(stack.id) || 0,
+    activeIncidents: activeIncidentsByStack.get(stack.id) || 0,
+  };
+});
+
+function timeAgo(date: Date) {
+  const ms = Date.now() - date.getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+---
+<Layout title="Infrastructure — StdOut">
+  <div class="infra-page">
+    {/* Pending import banner */}
+    {pendingImports.length > 0 && (
+      <a href={`/app/stacks/import/${pendingImports[0].id}`} class="import-banner">
+        <span class="import-banner-icon mono">&gt;_</span>
+        <span>New scan results available — <strong>{pendingImports.length} pending import{pendingImports.length > 1 ? 's' : ''}</strong></span>
+        <span class="import-banner-arrow">&rarr;</span>
+      </a>
+    )}
+
+    {/* Page Header */}
+    <div class="page-header">
+      <div class="header-left">
+        <h1>Infrastructure</h1>
+        <p class="page-subtitle">Your services organized by stack. Imported from scanner, managed here.</p>
+      </div>
+      <div class="header-right">
+        <div class="scanner-status mono">
+          {lastScanTime ? (
+            <span class="scan-time">
+              <span class="scan-dot"></span>
+              Last scan: {timeAgo(lastScanTime)}
+            </span>
+          ) : (
+            <span class="scan-time no-scan">No scans yet</span>
+          )}
+        </div>
+        {!showCreateForm && !editingStack && (
+          <a href="/app/stacks?new" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Stack
+          </a>
+        )}
+      </div>
+    </div>
 
     {error && <div class="auth-error">{error}</div>}
 
-    <!-- Stack list -->
-    {userStacks.length > 0 && (
-      <div class="stack-list">
-        {userStacks.map(stack => (
-          <div class={`stack-card ${editingStack?.id === stack.id ? 'editing' : ''}`}>
-            {editingStack?.id === stack.id ? (
-              <form method="POST" class="stack-edit-form">
-                <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
-                <input type="hidden" name="action" value="update" />
-                <input type="hidden" name="stackId" value={stack.id} />
-                <input type="text" name="name" value={stack.name} required class="stack-name-input" />
-                <textarea name="description" rows={10} class="stack-desc-input">{stack.description}</textarea>
-                <div class="stack-actions">
-                  <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                  <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
-                </div>
-              </form>
-            ) : (
-              <>
-                <div class="stack-header">
-                  <h3>{stack.name}</h3>
-                  <div class="stack-controls">
-                    <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-sm">Edit</a>
-                    <form method="POST" style="display:inline;">
-                      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
-                      <input type="hidden" name="action" value="delete" />
-                      <input type="hidden" name="stackId" value={stack.id} />
-                      <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this stack?')">Delete</button>
-                    </form>
-                  </div>
-                </div>
-                <pre class="stack-description">{stack.description || 'No description yet.'}</pre>
-              </>
+    {/* Edit form (shown when editing) */}
+    {editingStack && (
+      <div class="form-panel">
+        <div class="form-panel-header">
+          <h2>Edit Stack</h2>
+          <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
+        </div>
+        <form method="POST" class="stack-form">
+          <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+          <input type="hidden" name="action" value="update" />
+          <input type="hidden" name="stackId" value={editingStack.id} />
+          <label>
+            <span>Name</span>
+            <input type="text" name="name" value={editingStack.name} required />
+          </label>
+          <label>
+            <span>Description</span>
+            <textarea name="description" rows={10}>{editingStack.description}</textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    )}
+
+    {/* Create form (shown when ?new) */}
+    {showCreateForm && (
+      <div class="form-panel">
+        <div class="form-panel-header">
+          <h2>Add a Stack</h2>
+          <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
+        </div>
+
+        <div class="template-section">
+          <p class="template-hint">Start from a template or describe your stack from scratch.</p>
+          <div class="template-grid">
+            {stackTemplates.map((t, i) => (
+              <button class="template-card" data-idx={i} type="button">
+                <span class="template-name">{t.name}</span>
+                <span class="template-tags mono">{t.tags}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <form method="POST" class="stack-form">
+          <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+          <input type="hidden" name="action" value="create" />
+          <label>
+            <span>Name</span>
+            <input type="text" name="name" id="stackNameInput" required placeholder="e.g. Mac Mini Lab" />
+          </label>
+          <label>
+            <span>Description</span>
+            <textarea name="description" id="stackDescInput" rows={8} placeholder="Docker containers, ports, services, dependencies...&#10;&#10;Example:&#10;- nginx proxy on :8101&#10;- Node.js app on :3000 (Astro SSR)&#10;- SQLite at /app/data/app.db&#10;- Cloudflare Tunnel for public access"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Stack</button>
+          </div>
+        </form>
+      </div>
+    )}
+
+    {/* Stack Cards Grid */}
+    {!showCreateForm && !editingStack && stackCards.length > 0 && (
+      <div class="stack-grid">
+        {stackCards.map(stack => (
+          <div class="stack-card">
+            <div class="stack-card-header">
+              <a href={`/app/stacks/${stack.id}`} class="stack-name-link">
+                <h3>{stack.name}</h3>
+              </a>
+              <div class="stack-badges">
+                {stack.containers.length > 0 && (
+                  <span class="badge badge-count mono">{stack.containers.length} containers</span>
+                )}
+                {stack.activeIncidents > 0 && (
+                  <span class="badge badge-incident mono">{stack.activeIncidents} active</span>
+                )}
+              </div>
+            </div>
+
+            {/* Health summary */}
+            {stack.containers.length > 0 && (
+              <div class="health-summary">
+                {stack.running > 0 && (
+                  <span class="health-item">
+                    <span class="status-dot running"></span>
+                    <span class="mono">{stack.running} up</span>
+                  </span>
+                )}
+                {stack.stopped > 0 && (
+                  <span class="health-item">
+                    <span class="status-dot stopped"></span>
+                    <span class="mono">{stack.stopped} down</span>
+                  </span>
+                )}
+                {stack.unhealthy > 0 && (
+                  <span class="health-item">
+                    <span class="status-dot unhealthy"></span>
+                    <span class="mono">{stack.unhealthy} unhealthy</span>
+                  </span>
+                )}
+              </div>
             )}
+
+            {/* Container tiles */}
+            {stack.containers.length > 0 ? (
+              <div class="container-tiles">
+                {stack.containers.map(c => (
+                  <div class={`container-tile ${c.status}`}>
+                    <span class={`ct-dot ${c.status} ${c.health === 'unhealthy' ? 'unhealthy' : ''}`}></span>
+                    <span class="ct-name" title={c.name}>{c.name}</span>
+                    {c.ports && <span class="ct-port mono">{c.ports.split(',')[0]?.trim()}</span>}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div class="no-containers">
+                <span class="mono">No structured container data</span>
+              </div>
+            )}
+
+            {/* Card footer */}
+            <div class="stack-card-footer">
+              <span class="updated-at mono">Updated {timeAgo(stack.updatedAt)}</span>
+              <div class="stack-actions">
+                <a href={`/app/stacks/${stack.id}`} class="btn btn-ghost btn-xs">Details</a>
+                {stack.incidentCount > 0 && (
+                  <a href={`/app/incidents?stack=${stack.id}`} class="btn btn-ghost btn-xs">
+                    {stack.incidentCount} incident{stack.incidentCount !== 1 ? 's' : ''}
+                  </a>
+                )}
+                <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-xs">Edit</a>
+                <form method="POST" style="display:inline;">
+                  <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                  <input type="hidden" name="action" value="delete" />
+                  <input type="hidden" name="stackId" value={stack.id} />
+                  <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Delete this stack and all its data?')">Delete</button>
+                </form>
+              </div>
+            </div>
           </div>
         ))}
       </div>
     )}
 
-    <!-- New stack form -->
-    <div class="new-stack">
-      <h2>Add a stack</h2>
-
-      <div class="template-section">
-        <p class="template-hint">Start from a template or describe your stack from scratch.</p>
-        <div class="template-grid">
-          {stackTemplates.map((t, i) => (
-            <button class="template-card" data-idx={i} type="button">
-              <span class="template-name">{t.name}</span>
-              <span class="template-tags mono">{t.tags}</span>
-            </button>
-          ))}
+    {/* Empty State */}
+    {!showCreateForm && !editingStack && stackCards.length === 0 && (
+      <div class="empty-state">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+            <line x1="8" y1="21" x2="16" y2="21"/>
+            <line x1="12" y1="17" x2="12" y2="21"/>
+          </svg>
+        </div>
+        <h3>No stacks imported yet</h3>
+        <p>Run the scanner to discover your infrastructure, or add a stack manually.</p>
+        <pre class="scanner-cmd"><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  ghcr.io/charlieseay/stdout-scanner scan \
+  --output json --dry-run</code></pre>
+        <div class="empty-actions">
+          <a href="/app/settings" class="btn btn-primary">Create API Token</a>
+          <a href="/app/stacks?new" class="btn btn-ghost">Add Stack Manually</a>
         </div>
       </div>
-
-      <form method="POST" class="stack-form">
-        <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
-        <input type="hidden" name="action" value="create" />
-        <label>
-          <span>Name</span>
-          <input type="text" name="name" id="stackNameInput" required placeholder="e.g. Mac Mini Lab" />
-        </label>
-        <label>
-          <span>Description</span>
-          <textarea name="description" id="stackDescInput" rows={8} placeholder="Docker containers, ports, services, dependencies...&#10;&#10;Example:&#10;- nginx proxy on :8101&#10;- Node.js app on :3000 (Astro SSR)&#10;- SQLite at /app/data/app.db&#10;- Cloudflare Tunnel for public access"></textarea>
-        </label>
-        <button type="submit" class="btn btn-primary">Create stack</button>
-      </form>
-    </div>
+    )}
   </div>
 </Layout>
 
 <style>
-  .stacks-page { max-width: 700px; margin: 0 auto; }
-  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .page-header h1 { font-size: 20px; }
-  .page-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 24px; line-height: 1.6; }
-  .stack-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 32px; }
-  .stack-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  .stack-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-  .stack-header h3 { font-size: 15px; }
-  .stack-controls { display: flex; gap: 6px; }
-  .stack-description { font-family: var(--font-mono); font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; color: var(--text-secondary); }
-  .stack-edit-form { display: flex; flex-direction: column; gap: 10px; }
-  .stack-name-input, .stack-desc-input { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 8px 10px; }
-  .stack-desc-input { resize: vertical; }
-  .stack-name-input:focus, .stack-desc-input:focus { border-color: var(--accent); outline: none; }
-  .stack-actions { display: flex; gap: 8px; }
-  .new-stack { border-top: 1px solid var(--border); padding-top: 24px; }
-  .new-stack h2 { font-size: 16px; margin-bottom: 12px; }
+  .infra-page { max-width: 1100px; margin: 0 auto; }
+
+  /* Import banner */
+  .import-banner { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius); margin-bottom: 16px; text-decoration: none; color: var(--accent-light); font-size: 13px; transition: background 150ms; }
+  .import-banner:hover { background: var(--accent-glow); }
+  .import-banner-icon { font-size: 14px; }
+  .import-banner-arrow { margin-left: auto; }
+
+  /* Page header */
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; }
+  .header-left h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .page-subtitle { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+  .scanner-status { font-size: 11px; color: var(--text-muted); }
+  .scan-time { display: flex; align-items: center; gap: 6px; }
+  .scan-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .no-scan { color: var(--text-muted); }
+
+  /* Stack cards grid */
+  .stack-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(480px, 1fr));
+    gap: 16px;
+  }
+
+  .stack-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.15s ease;
+  }
+  .stack-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+  }
+
+  .stack-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .stack-name-link { text-decoration: none; color: inherit; }
+  .stack-name-link:hover h3 { color: var(--accent-light); }
+  .stack-name-link h3 { font-size: 16px; font-weight: 700; transition: color 0.15s; }
+
+  .stack-badges { display: flex; gap: 6px; flex-shrink: 0; }
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .badge-count { color: var(--text-secondary); background: rgba(160,160,184,0.1); border: 1px solid var(--border); }
+  .badge-incident { color: var(--critical); background: var(--critical-dim); }
+
+  /* Health summary */
+  .health-summary {
+    display: flex;
+    gap: 16px;
+    padding: 0 2px;
+  }
+  .health-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  /* Status dots */
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.running { background: #22C55E; box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .status-dot.stopped { background: #EF4444; box-shadow: 0 0 6px rgba(239,68,68,0.3); }
+  .status-dot.unhealthy { background: #EAB308; box-shadow: 0 0 6px rgba(234,179,8,0.3); }
+
+  /* Container tiles */
+  .container-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .container-tile {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    transition: all 0.15s ease;
+  }
+  .container-tile:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-hover);
+  }
+  .container-tile.stopped { opacity: 0.5; }
+
+  .ct-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .ct-dot.running { background: #22C55E; }
+  .ct-dot.stopped, .ct-dot.exited { background: #EF4444; }
+  .ct-dot.unknown { background: var(--text-muted); }
+  .ct-dot.unhealthy { background: #EAB308; }
+
+  .ct-name {
+    font-weight: 500;
+    color: var(--text);
+    max-width: 140px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .ct-port {
+    font-size: 10px;
+    color: var(--text-muted);
+    padding-left: 4px;
+    border-left: 1px solid var(--border);
+  }
+
+  .no-containers {
+    padding: 12px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Card footer */
+  .stack-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .updated-at { font-size: 10px; color: var(--text-muted); }
+  .stack-actions { display: flex; gap: 6px; align-items: center; }
+
+  /* Form panel */
+  .form-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+  }
+  .form-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .form-panel-header h2 { font-size: 16px; font-weight: 600; }
+
+  /* Stack form */
   .stack-form { display: flex; flex-direction: column; gap: 12px; }
   .stack-form label { display: flex; flex-direction: column; gap: 4px; }
   .stack-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
-  .stack-form input, .stack-form textarea { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; }
+  .stack-form input, .stack-form textarea { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 10px 12px; }
   .stack-form textarea { resize: vertical; }
   .stack-form input:focus, .stack-form textarea:focus { border-color: var(--accent); outline: none; }
+  .form-actions { display: flex; gap: 8px; padding-top: 4px; }
+
+  /* Templates */
+  .template-section { margin-bottom: 16px; }
+  .template-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .template-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; text-align: left; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 2px; }
+  .template-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .template-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .template-tags { font-size: 10px; color: var(--text-muted); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 24px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-lg);
+    max-width: 600px;
+    margin: 40px auto;
+  }
+  .empty-icon {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  .empty-state h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .empty-state p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.5; }
+  .scanner-cmd {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    overflow-x: auto;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  .scanner-cmd code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.6;
+    white-space: pre;
+  }
+  .empty-actions { display: flex; gap: 10px; justify-content: center; }
+
+  /* Buttons */
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-xs { padding: 3px 8px; font-size: 10px; }
   .btn-primary { background: var(--accent-btn); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }
   .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
   .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
   .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
   .btn-danger:hover { background: var(--critical-dim); }
-  .template-section { margin-bottom: 16px; }
-  .template-hint { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
-  .template-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 16px; }
-  .template-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; cursor: pointer; text-align: left; transition: all 0.15s ease; display: flex; flex-direction: column; gap: 2px; }
-  .template-card:hover { border-color: var(--accent); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-  .template-name { font-size: 13px; font-weight: 600; color: var(--text); }
-  .template-tags { font-size: 10px; color: var(--text-muted); }
+
+  .mono { font-family: var(--font-mono); }
+  .auth-error { background: var(--critical-dim); border: 1px solid var(--critical); color: var(--critical); padding: 10px 14px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .stack-grid { grid-template-columns: 1fr; }
+    .page-header { flex-direction: column; gap: 12px; }
+    .header-right { align-self: stretch; justify-content: space-between; }
+  }
+  @media (max-width: 500px) {
+    .stack-card-footer { flex-direction: column; gap: 8px; align-items: flex-start; }
+    .health-summary { flex-wrap: wrap; gap: 10px; }
+    .template-grid { grid-template-columns: 1fr; }
+  }
 </style>
 
 <script define:vars={{ templates: stackTemplates }}>
@@ -191,7 +638,6 @@ if (editId) editingStack = userStacks.find(s => s.id === editId);
         const descInput = document.getElementById('stackDescInput');
         if (nameInput) nameInput.value = t.name;
         if (descInput) descInput.value = t.description;
-        // Scroll to form
         nameInput?.focus();
       }
     });
