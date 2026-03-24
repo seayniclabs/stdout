@@ -251,7 +251,7 @@ function timeAgo(date: Date) {
           <span style="font-size:0.8em; color:var(--text-muted); font-family:var(--font-mono);">Markdown format — imported by scanner</span>
           <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
         </div>
-        <form method="POST" class="stack-form" onsubmit="return confirm('Save changes? This will overwrite the current stack description. You can undo this from the stack card afterwards.')">
+        <form method="POST" class="stack-form stack-edit-form">
           <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
           <input type="hidden" name="action" value="update" />
           <input type="hidden" name="stackId" value={editingStack.id} />
@@ -387,14 +387,14 @@ function timeAgo(date: Date) {
                     <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
                     <input type="hidden" name="action" value="restore" />
                     <input type="hidden" name="stackId" value={stack.id} />
-                    <button type="submit" class="btn btn-ghost btn-xs" style="color:var(--accent-light);" onclick="return confirm('Restore the previous version of this stack description?')">Undo</button>
+                    <button type="submit" class="btn btn-ghost btn-xs" style="color:var(--accent-light);" class="undo-btn">Undo</button>
                   </form>
                 )}
                 <form method="POST" style="display:inline;">
                   <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
                   <input type="hidden" name="action" value="delete" />
                   <input type="hidden" name="stackId" value={stack.id} />
-                  <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Delete this stack and all its data?')">Delete</button>
+                  <button type="submit" class="btn btn-danger btn-xs" >Delete</button>
                 </form>
               </div>
             </div>
@@ -681,6 +681,46 @@ function timeAgo(date: Date) {
         if (nameInput) nameInput.value = t.name;
         if (descInput) descInput.value = t.description;
         nameInput?.focus();
+      }
+    });
+  });
+</script>
+
+<script>
+  // Stack edit: confirm + validate before saving
+  const editForm = document.querySelector('.stack-edit-form');
+  if (editForm) {
+    editForm.addEventListener('submit', (e) => {
+      const desc = (editForm.querySelector('textarea[name="description"]') as HTMLTextAreaElement)?.value || '';
+      const hasContainers = /^### .+ \(.+\)/m.test(desc);
+
+      if (!hasContainers && desc.trim().length > 0) {
+        if (!confirm('Warning: This description doesn\'t contain any container definitions (### ContainerName (image) format). The container grid will show "No structured container data."\n\nSave anyway?')) {
+          e.preventDefault();
+          return;
+        }
+      }
+
+      if (!confirm('Save changes? You can undo this from the stack card afterwards.')) {
+        e.preventDefault();
+      }
+    });
+  }
+
+  // Delete buttons: confirm
+  document.querySelectorAll('.btn-danger').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (!confirm('Delete this stack and all its data? This cannot be undone.')) {
+        e.preventDefault();
+      }
+    });
+  });
+
+  // Undo buttons: confirm
+  document.querySelectorAll('.undo-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      if (!confirm('Restore the previous version of this stack description?')) {
+        e.preventDefault();
       }
     });
   });

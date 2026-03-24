@@ -47,6 +47,8 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'docs', 'source', "TEXT NOT NULL DEFAULT 'user'");
   safeAddColumn(sqlite, 'docs', 'community_doc_id', 'TEXT');
   safeAddColumn(sqlite, 'docs', 'community_version', 'INTEGER');
+  // Stack edit undo (2026-03-24)
+  safeAddColumn(sqlite, 'stacks', 'previous_description', 'TEXT');
 }
 
 function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {
