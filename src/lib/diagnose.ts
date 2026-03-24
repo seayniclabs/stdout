@@ -60,7 +60,7 @@ export async function diagnoseIncident(opts: {
   pastResolutions: string[];
   tier: 'free' | 'paid';
 }): Promise<DiagnosisResult> {
-  const model = opts.tier === 'paid' ? 'claude-sonnet-4-5-20250514' : 'claude-haiku-4-5-20251001';
+  const model = opts.tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001';
 
   const pastResolutionsBlock = opts.pastResolutions.length > 0
     ? `\n\nPast resolutions for similar incidents:\n${opts.pastResolutions.map((r, i) => `${i + 1}. ${r}`).join('\n')}`

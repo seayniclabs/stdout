@@ -13,7 +13,8 @@ const path = Astro.url.pathname;
 const csrfToken = Astro.locals.csrfToken;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://stdout.seayniclabs.com');
 const nav = [
-  { href: '/app', label: 'Incidents' },
+  { href: '/app', label: 'Dashboard' },
+  { href: '/app/incidents', label: 'Incidents' },
   { href: '/app/hud', label: 'HUD' },
   { href: '/app/stacks', label: 'Stacks' },
   { href: '/app/docs', label: 'Docs' },
