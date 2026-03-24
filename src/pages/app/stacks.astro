@@ -41,7 +41,35 @@ if (Astro.request.method === 'POST') {
     } else if (!error && action === 'update') {
       const stackId = form.get('stackId') as string;
       if (stackId && name) {
-        db.update(tenantSchema.stacks).set({ name, description, updatedAt: new Date() }).where(eq(tenantSchema.stacks.id, stackId)).run();
+        // Save previous description for undo
+        const existing = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).get();
+        if (existing) {
+          // Validate: warn if new description doesn't parse to containers
+          const testContainers = description.match(/^### .+ \(.+\)$/m);
+          if (existing.description && !testContainers && description.length > 0) {
+            // Description has content but no valid container headers — save anyway but flag
+            console.warn(`Stack ${stackId} edited with non-parseable description`);
+          }
+          db.update(tenantSchema.stacks).set({
+            name,
+            description,
+            previousDescription: existing.description,
+            updatedAt: new Date(),
+          }).where(eq(tenantSchema.stacks.id, stackId)).run();
+        }
+      }
+    } else if (!error && action === 'restore') {
+      // Undo: restore previous description
+      const stackId = form.get('stackId') as string;
+      if (stackId) {
+        const existing = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).get();
+        if (existing?.previousDescription) {
+          db.update(tenantSchema.stacks).set({
+            description: existing.previousDescription,
+            previousDescription: null,
+            updatedAt: new Date(),
+          }).where(eq(tenantSchema.stacks.id, stackId)).run();
+        }
       }
     } else if (!error && action === 'delete') {
       const stackId = form.get('stackId') as string;
@@ -135,6 +163,7 @@ interface StackCard {
   id: string;
   name: string;
   description: string;
+  previousDescription: string | null;
   containers: ContainerInfo[];
   running: number;
   stopped: number;
@@ -153,6 +182,7 @@ const stackCards: StackCard[] = userStacks.map(stack => {
     id: stack.id,
     name: stack.name,
     description: stack.description,
+    previousDescription: stack.previousDescription || null,
     containers,
     running,
     stopped,
@@ -221,7 +251,7 @@ function timeAgo(date: Date) {
           <span style="font-size:0.8em; color:var(--text-muted); font-family:var(--font-mono);">Markdown format — imported by scanner</span>
           <a href="/app/stacks" class="btn btn-ghost btn-sm">Cancel</a>
         </div>
-        <form method="POST" class="stack-form">
+        <form method="POST" class="stack-form" onsubmit="return confirm('Save changes? This will overwrite the current stack description. You can undo this from the stack card afterwards.')">
           <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
           <input type="hidden" name="action" value="update" />
           <input type="hidden" name="stackId" value={editingStack.id} />
@@ -352,6 +382,14 @@ function timeAgo(date: Date) {
                   </a>
                 )}
                 <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-xs">Edit</a>
+                {stack.previousDescription && (
+                  <form method="POST" style="display:inline;">
+                    <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                    <input type="hidden" name="action" value="restore" />
+                    <input type="hidden" name="stackId" value={stack.id} />
+                    <button type="submit" class="btn btn-ghost btn-xs" style="color:var(--accent-light);" onclick="return confirm('Restore the previous version of this stack description?')">Undo</button>
+                  </form>
+                )}
                 <form method="POST" style="display:inline;">
                   <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
                   <input type="hidden" name="action" value="delete" />

@@ -10,6 +10,7 @@ export const stacks = sqliteTable('stacks', {
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(), // Markdown — services, ports, dependencies, quirks
+  previousDescription: text('previous_description'), // Saved before edit for undo
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
