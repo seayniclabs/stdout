@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getTenantDb, tenantSchema } from '../../lib/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, gt, and } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats, startMonitor } from '../../lib/hud';
 
 const user = Astro.locals.user;
@@ -32,6 +32,28 @@ const healthy = monitorsData.filter(m => m.currentStatus === 'healthy').length;
 const degraded = monitorsData.filter(m => m.currentStatus === 'degraded').length;
 const down = monitorsData.filter(m => m.currentStatus === 'down').length;
 
+// Aggregate 30d uptime across all monitors
+const totalUptime = monitorsData.length > 0
+  ? monitorsData.reduce((sum, m) => sum + m.uptimePercent, 0) / monitorsData.length
+  : 0;
+
+// 7d incident count
+const sevenDaysAgo = new Date();
+sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+const recentIncidents = db.select().from(tenantSchema.incidents)
+  .where(and(
+    eq(tenantSchema.incidents.userId, user.id),
+    gt(tenantSchema.incidents.createdAt, sevenDaysAgo),
+  ))
+  .orderBy(desc(tenantSchema.incidents.createdAt))
+  .all();
+const incidentCount7d = recentIncidents.length;
+
+// Gauge fill percentage helpers
+function gaugePercent(value: number, max: number) {
+  return Math.min(100, Math.max(0, (value / max) * 100));
+}
+
 const stacks = db.select().from(tenantSchema.stacks)
   .where(eq(tenantSchema.stacks.userId, user.id)).all();
 ---
@@ -58,59 +80,116 @@ const stacks = db.select().from(tenantSchema.stacks)
       </div>
     ) : (
       <Fragment>
-        <!-- Status summary -->
-        <div class="status-summary">
-          <div class="summary-card healthy">
-            <div class="summary-value">{healthy}</div>
-            <div class="summary-label">Healthy</div>
-          </div>
-          <div class="summary-card degraded">
-            <div class="summary-value">{degraded}</div>
-            <div class="summary-label">Degraded</div>
-          </div>
-          <div class="summary-card down">
-            <div class="summary-value">{down}</div>
-            <div class="summary-label">Down</div>
-          </div>
-        </div>
+        <div class="hud-dashboard">
+          <!-- Left: Gauge dials -->
+          <div class="gauges">
+            <div class="gauge-card">
+              <div class="gauge-ring">
+                <svg viewBox="0 0 120 70" class="gauge-svg">
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" />
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--low)" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray={`${gaugePercent(healthy, allMonitors.length) * 2.2} 999`} />
+                </svg>
+                <span class="gauge-value" style="color: var(--low);">{healthy}</span>
+              </div>
+              <div class="gauge-label">Services Up</div>
+            </div>
 
-        <!-- Monitor table -->
-        <div class="monitor-table">
-          <div class="mt-header">
-            <span class="mt-col-name">Service</span>
-            <span class="mt-col-status">Status</span>
-            <span class="mt-col-resp">Response</span>
-            <span class="mt-col-spark">Trend</span>
-            <span class="mt-col-uptime">Uptime</span>
-          </div>
-          {monitorsData.map(m => {
-            const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
-            const statusLabel = m.maintenance ? 'maint' : m.paused ? 'paused' : m.currentStatus;
-            const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : '—';
-            const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(2)}%` : '—';
+            <div class="gauge-card">
+              <div class="gauge-ring">
+                <svg viewBox="0 0 120 70" class="gauge-svg">
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" />
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#F97316" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray={`${gaugePercent(degraded, Math.max(allMonitors.length, 1)) * 2.2} 999`} />
+                </svg>
+                <span class="gauge-value" style="color: #F97316;">{degraded}</span>
+              </div>
+              <div class="gauge-label">Warnings</div>
+            </div>
 
-            return (
-              <a href={`/app/hud/${m.id}`} class="mt-row">
-                <span class="mt-col-name">
-                  <span class={`status-dot ${statusClass}`}></span>
-                  <span class="mt-name">{m.name}</span>
-                  <span class="mt-target mono">{m.type}://{m.target.replace(/^https?:\/\//, '')}</span>
-                </span>
-                <span class={`mt-col-status mt-badge ${statusClass}`}>{statusLabel}</span>
-                <span class="mt-col-resp mono">{respText}</span>
-                <span class="mt-col-spark">
-                  <span class="sparkline">
-                    {m.sparkline.map((c: any) => {
-                      const h = Math.max(4, Math.min(20, (c.ms || 0) / 20));
-                      const color = c.status === 'down' ? 'var(--critical)' : c.status === 'degraded' ? 'var(--high)' : 'var(--low)';
-                      return <span class="spark-bar" style={`height:${h}px;background:${color};`}></span>;
-                    })}
-                  </span>
-                </span>
-                <span class={`mt-col-uptime mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>{uptimeText}</span>
-              </a>
-            );
-          })}
+            <div class="gauge-card">
+              <div class="gauge-ring">
+                <svg viewBox="0 0 120 70" class="gauge-svg">
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" />
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray={`${totalUptime * 2.2 / 100 * 100} 999`} />
+                </svg>
+                <span class="gauge-value" style="color: #60A5FA;">{totalUptime > 0 ? `${totalUptime.toFixed(1)}%` : '—'}</span>
+              </div>
+              <div class="gauge-label">30d Uptime</div>
+            </div>
+
+            <div class="gauge-card">
+              <div class="gauge-ring">
+                <svg viewBox="0 0 120 70" class="gauge-svg">
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--border)" stroke-width="8" stroke-linecap="round" />
+                  <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="var(--critical)" stroke-width="8" stroke-linecap="round"
+                    stroke-dasharray={`${gaugePercent(incidentCount7d, Math.max(incidentCount7d + 5, 10)) * 2.2} 999`} />
+                </svg>
+                <span class="gauge-value" style={`color: ${incidentCount7d > 0 ? 'var(--critical)' : 'var(--low)'};`}>{incidentCount7d}</span>
+              </div>
+              <div class="gauge-label">Incidents (7d)</div>
+            </div>
+          </div>
+
+          <!-- Right: Service list + Incidents -->
+          <div class="right-panel">
+            <div class="service-list">
+              {monitorsData.map(m => {
+                const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
+                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : '—';
+                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : '—';
+
+                // Build SVG sparkline path from check history
+                const points = m.sparkline.map((c: any, i: number) => {
+                  const x = (i / Math.max(m.sparkline.length - 1, 1)) * 200;
+                  const ms = c.ms || 0;
+                  const maxMs = Math.max(...m.sparkline.map((s: any) => s.ms || 0), 1);
+                  const y = 26 - Math.min(24, (ms / maxMs) * 24);
+                  return `${x},${y}`;
+                });
+                const linePath = points.length > 1 ? `M${points.join(' L')}` : '';
+                const areaPath = points.length > 1 ? `M${points.join(' L')} L200,28 L0,28 Z` : '';
+                const sparkColor = m.currentStatus === 'degraded' ? 'yellow' : m.currentStatus === 'down' ? 'red' : 'green';
+
+                return (
+                  <a href={`/app/hud/${m.id}`} class="service-row">
+                    <span class={`svc-dot ${statusClass}`}></span>
+                    <span class="svc-name">{m.name}</span>
+                    <div class="svc-sparkline">
+                      {linePath && (
+                        <svg viewBox="0 0 200 28" preserveAspectRatio="none">
+                          <path class={`spark-area ${sparkColor}`} d={areaPath} />
+                          <path class={`spark-line ${sparkColor}`} d={linePath} />
+                        </svg>
+                      )}
+                    </div>
+                    <span class={`svc-uptime mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>{uptimeText}</span>
+                    <span class="svc-latency mono">{respText}</span>
+                  </a>
+                );
+              })}
+            </div>
+
+            <!-- Recent incidents -->
+            {recentIncidents.length > 0 && (
+              <div class="incidents-panel">
+                <div class="incidents-title">Recent Incidents</div>
+                {recentIncidents.slice(0, 5).map(inc => {
+                  const isResolved = inc.status === 'resolved';
+                  const ago = Math.round((Date.now() - inc.createdAt.getTime()) / 3600000);
+                  const agoText = ago < 1 ? 'just now' : ago < 24 ? `${ago}h ago` : `${Math.round(ago / 24)}d ago`;
+                  return (
+                    <div class="incident-item">
+                      <span class={`inc-dot ${isResolved ? 'resolved' : 'active'}`}></span>
+                      <span class="inc-text">{inc.title}</span>
+                      <span class="inc-time mono">{agoText}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
       </Fragment>
     )}
@@ -283,51 +362,67 @@ const stacks = db.select().from(tenantSchema.stacks)
 </script>
 
 <style>
-  .hud-page { max-width: 900px; margin: 0 auto; }
+  .hud-page { max-width: 1100px; margin: 0 auto; }
   .hud-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
   .hud-header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.08em; font-family: var(--font-mono); }
   .hud-actions { display: flex; gap: 8px; }
 
-  .status-summary { display: flex; gap: 1px; background: var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; box-shadow: var(--shadow-md); }
-  .summary-card { flex: 1; padding: 20px 20px; background: var(--bg-surface); text-align: center; }
-  .summary-value { font-size: 36px; font-weight: 700; font-family: var(--font-mono); letter-spacing: -0.03em; line-height: 1; }
-  .summary-card.healthy .summary-value { color: var(--low); }
-  .summary-card.degraded .summary-value { color: var(--high); }
-  .summary-card.down .summary-value { color: var(--critical); }
-  .summary-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  /* Dashboard layout: gauges left, services right */
+  .hud-dashboard { display: flex; gap: 24px; height: calc(100vh - 120px); }
 
-  .monitor-table { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm); }
-  .mt-header { display: grid; grid-template-columns: 2fr 80px 80px 120px 80px; gap: 8px; padding: 8px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border); font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
-  .mt-row { display: grid; grid-template-columns: 2fr 80px 80px 120px 80px; gap: 8px; padding: 12px 16px; border-bottom: 1px solid var(--border); align-items: center; text-decoration: none; color: inherit; transition: background 150ms; cursor: pointer; }
-  .mt-row:last-child { border-bottom: none; }
-  .mt-row:hover { background: var(--bg-hover); transform: translateX(2px); }
-  .mt-col-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
-  .mt-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .mt-target { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: none; }
-  .mt-row:hover .mt-target { display: inline; }
-  .mt-row:hover .mt-name { display: none; }
-  .mt-col-status, .mt-col-resp, .mt-col-uptime { font-size: 12px; text-align: center; }
+  /* Gauge dials — 2x2 grid, sticky */
+  .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex-shrink: 0; width: 280px; align-content: start; position: sticky; top: 0; }
+  .gauge-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 12px 12px; text-align: center; }
+  .gauge-ring { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .gauge-svg { width: 100px; height: 58px; }
+  .gauge-value { font-family: var(--font-heading, var(--font-ui)); font-size: 22px; font-weight: 700; margin-top: -4px; }
+  .gauge-label { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 6px; }
 
-  .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .status-dot.healthy { background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
-  .status-dot.degraded { background: var(--high); box-shadow: 0 0 6px rgba(249,115,22,0.4); }
-  .status-dot.down { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
-  .status-dot.maintenance { background: #3b82f6; }
-  .status-dot.unknown { background: var(--text-muted); }
+  /* Right panel — scrollable */
+  .right-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; padding-right: 4px; }
 
-  .mt-badge { font-family: var(--font-mono); font-size: 11px; font-weight: 600; }
-  .mt-badge.healthy { color: var(--low); }
-  .mt-badge.degraded { color: var(--high); }
-  .mt-badge.down { color: var(--critical); }
-  .mt-badge.maintenance { color: #3b82f6; }
-  .mt-badge.unknown { color: var(--text-muted); }
+  /* Service rows */
+  .service-list { display: flex; flex-direction: column; gap: 4px; }
+  .service-row { display: flex; align-items: center; gap: 10px; padding: 8px 14px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); text-decoration: none; color: inherit; transition: background 150ms, transform 150ms; cursor: pointer; }
+  .service-row:hover { background: var(--bg-hover); transform: translateX(2px); }
 
-  .sparkline { display: flex; align-items: flex-end; gap: 1px; height: 20px; }
-  .spark-bar { width: 3px; border-radius: 1px; min-height: 2px; }
+  .svc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .svc-dot.healthy { background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
+  .svc-dot.degraded { background: var(--high); box-shadow: 0 0 6px rgba(249,115,22,0.4); }
+  .svc-dot.down { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  .svc-dot.maintenance { background: #3b82f6; }
+  .svc-dot.unknown { background: var(--text-muted); }
+
+  .svc-name { font-size: 13px; font-weight: 600; width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .svc-sparkline { flex: 1; height: 28px; min-width: 80px; }
+  .svc-sparkline svg { width: 100%; height: 100%; overflow: visible; }
+  .spark-line { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+  .spark-line.green { stroke: var(--low); filter: drop-shadow(0 0 4px rgba(34,197,94,0.6)); }
+  .spark-line.yellow { stroke: #EAB308; filter: drop-shadow(0 0 4px rgba(234,179,8,0.6)); }
+  .spark-line.red { stroke: var(--critical); filter: drop-shadow(0 0 4px rgba(239,68,68,0.6)); }
+  .spark-area { opacity: 0.1; }
+  .spark-area.green { fill: var(--low); }
+  .spark-area.yellow { fill: #EAB308; }
+  .spark-area.red { fill: var(--critical); }
+
+  .svc-uptime { font-size: 12px; font-weight: 500; width: 50px; text-align: right; flex-shrink: 0; }
+  .svc-latency { font-size: 11px; color: var(--text-muted); width: 50px; text-align: right; flex-shrink: 0; }
 
   .uptime-great { color: var(--low); }
   .uptime-ok { color: var(--text-secondary); }
   .uptime-bad { color: var(--critical); }
+
+  /* Incidents panel */
+  .incidents-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 18px; }
+  .incidents-title { font-family: var(--font-mono); font-size: 10px; color: #F97316; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+  .incident-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .incident-item + .incident-item { border-top: 1px solid var(--border); }
+  .inc-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .inc-dot.resolved { background: var(--low); }
+  .inc-dot.active { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+  .inc-text { font-size: 12px; color: var(--text-secondary); flex: 1; }
+  .inc-time { font-size: 10px; color: var(--text-muted); flex-shrink: 0; }
 
   .empty-state { text-align: center; padding: 60px 20px; border: 1px dashed var(--border); border-radius: var(--radius); }
   .empty-icon { font-family: var(--font-mono); font-size: 28px; font-weight: 700; color: var(--accent); margin-bottom: 16px; letter-spacing: 0.1em; }

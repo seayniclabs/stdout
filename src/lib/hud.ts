@@ -76,8 +76,10 @@ interface CheckResult {
 }
 
 export async function executeCheck(monitor: typeof tenantSchema.monitors.$inferSelect): Promise<CheckResult> {
-  // SSRF protection: block requests to internal/private networks
-  if (isBlockedTarget(monitor.target)) {
+  // SSRF protection: block requests to internal/private networks in SaaS mode.
+  // Self-host operators own the network — monitoring internal targets is the point.
+  const isSelfHost = process.env.STDOUT_MODE === 'selfhost';
+  if (!isSelfHost && isBlockedTarget(monitor.target)) {
     return { status: 'down', responseTimeMs: 0, error: 'Target address is not allowed (internal/private network)' };
   }
 

@@ -69,6 +69,7 @@
     gap: 20px;
     flex-shrink: 0;
     width: 400px;
+    align-content: start;
   }
 
   .gauge-card {
@@ -79,57 +80,22 @@
     text-align: center;
   }
 
-  .gauge {
-    position: relative;
-    width: 120px;
-    height: 70px;
-    margin: 0 auto 12px;
-    overflow: hidden;
+  .gauge-ring {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  .gauge-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 8px solid #1F1F35;
-    border-bottom-color: transparent;
-    border-left-color: transparent;
-    transform: rotate(225deg);
+  .gauge-svg {
+    width: 140px;
+    height: 82px;
   }
-
-  .gauge-fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
-    border: 8px solid transparent;
-    border-top-color: var(--color);
-    border-right-color: var(--color);
-    border-bottom-color: transparent;
-    border-left-color: transparent;
-    transform: rotate(225deg);
-    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-  }
-
-  .gauge-fill.pct-100 { transform: rotate(225deg); border-bottom-color: var(--color); border-left-color: var(--color); }
-  .gauge-fill.pct-99 { transform: rotate(225deg); border-bottom-color: var(--color); clip-path: polygon(0 0, 100% 0, 100% 95%, 0 95%); }
-  .gauge-fill.pct-75 { transform: rotate(225deg); }
-  .gauge-fill.pct-50 { transform: rotate(225deg); border-right-color: transparent; }
 
   .gauge-value {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
     font-family: 'Space Grotesk', sans-serif;
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 700;
-    text-align: center;
+    margin-top: -4px;
   }
 
   .gauge-label {
@@ -138,6 +104,7 @@
     color: #5A5A72;
     text-transform: uppercase;
     letter-spacing: 1px;
+    margin-top: 8px;
   }
 
   /* Right side — services + incidents */
@@ -204,9 +171,7 @@
   .spark-line.green { stroke: #22C55E; filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6)); }
   .spark-line.yellow { stroke: #EAB308; filter: drop-shadow(0 0 4px rgba(234, 179, 8, 0.6)); }
 
-  .spark-area {
-    opacity: 0.1;
-  }
+  .spark-area { opacity: 0.1; }
   .spark-area.green { fill: #22C55E; }
   .spark-area.yellow { fill: #EAB308; }
 
@@ -288,40 +253,52 @@
   </div>
 
   <div class="dashboard">
-    <!-- Left: Gauge dials -->
+    <!-- Left: SVG Gauge dials -->
     <div class="gauges">
       <div class="gauge-card">
-        <div class="gauge">
-          <div class="gauge-bg"></div>
-          <div class="gauge-fill pct-100" style="--color: #22C55E;"></div>
-          <div class="gauge-value" style="color: #22C55E;">51</div>
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 70" class="gauge-svg">
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#1F1F35" stroke-width="8" stroke-linecap="round" />
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#22C55E" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="220 999" />
+          </svg>
+          <span class="gauge-value" style="color: #22C55E;">51</span>
         </div>
         <div class="gauge-label">Services Up</div>
       </div>
 
       <div class="gauge-card">
-        <div class="gauge">
-          <div class="gauge-bg"></div>
-          <div class="gauge-fill pct-50" style="--color: #F97316;"></div>
-          <div class="gauge-value" style="color: #F97316;">2</div>
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 70" class="gauge-svg">
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#1F1F35" stroke-width="8" stroke-linecap="round" />
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#F97316" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="17 999" />
+          </svg>
+          <span class="gauge-value" style="color: #F97316;">2</span>
         </div>
         <div class="gauge-label">Warnings</div>
       </div>
 
       <div class="gauge-card">
-        <div class="gauge">
-          <div class="gauge-bg"></div>
-          <div class="gauge-fill pct-99" style="--color: #60A5FA;"></div>
-          <div class="gauge-value" style="color: #60A5FA;">99.7%</div>
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 70" class="gauge-svg">
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#1F1F35" stroke-width="8" stroke-linecap="round" />
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#60A5FA" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="217 999" />
+          </svg>
+          <span class="gauge-value" style="color: #60A5FA;">99.7%</span>
         </div>
         <div class="gauge-label">30d Uptime</div>
       </div>
 
       <div class="gauge-card">
-        <div class="gauge">
-          <div class="gauge-bg"></div>
-          <div class="gauge-fill pct-50" style="--color: #EF4444;"></div>
-          <div class="gauge-value" style="color: #EF4444;">3</div>
+        <div class="gauge-ring">
+          <svg viewBox="0 0 120 70" class="gauge-svg">
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#1F1F35" stroke-width="8" stroke-linecap="round" />
+            <path d="M 15 60 A 45 45 0 1 1 105 60" fill="none" stroke="#EF4444" stroke-width="8" stroke-linecap="round"
+              stroke-dasharray="66 999" />
+          </svg>
+          <span class="gauge-value" style="color: #EF4444;">3</span>
         </div>
         <div class="gauge-label">Incidents (7d)</div>
       </div>
