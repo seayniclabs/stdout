@@ -89,6 +89,47 @@ export const GET: APIRoute = async ({ locals, url }) => {
     }
   } catch { /* FTS may fail on complex queries */ }
 
+  // Search stacks
+  try {
+    const likeQ = `%${q}%`;
+    const stackRows = rawDb.prepare(`
+      SELECT id, name, description
+      FROM stacks
+      WHERE user_id = ? AND (name LIKE ? OR description LIKE ?)
+      LIMIT 10
+    `).all(locals.user.id, likeQ, likeQ);
+
+    for (const row of stackRows) {
+      results.push({
+        type: 'stack',
+        stackId: row.id,
+        title: row.name,
+        snippet: (row.description || '').substring(0, 120),
+      });
+    }
+  } catch { /* stacks table may not have description column */ }
+
+  // Search monitors
+  try {
+    const likeQ = `%${q}%`;
+    const monitorRows = rawDb.prepare(`
+      SELECT id, name, url, monitor_type
+      FROM monitors
+      WHERE user_id = ? AND (name LIKE ? OR url LIKE ?)
+      LIMIT 10
+    `).all(locals.user.id, likeQ, likeQ);
+
+    for (const row of monitorRows) {
+      results.push({
+        type: 'monitor',
+        monitorId: row.id,
+        title: row.name,
+        snippet: row.url || '',
+        monitorType: row.monitor_type,
+      });
+    }
+  } catch { /* monitors table may vary */ }
+
   return new Response(JSON.stringify({ results }), {
     headers: { 'Content-Type': 'application/json' },
   });

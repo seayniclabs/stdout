@@ -28,120 +28,839 @@ const typeLabels: Record<string, string> = {
   guide: 'Guide',
   note: 'Note',
 };
-function formatSize(bytes: number): string {
-  if (!bytes) return '0 B';
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / 1048576).toFixed(1) + ' MB';
-}
 
 const typeColors: Record<string, string> = {
-  runbook: 'var(--accent-light)',
-  postmortem: 'var(--critical)',
-  guide: 'var(--low)',
-  note: 'var(--text-muted)',
+  runbook: '#3B82F6',
+  postmortem: '#EF4444',
+  guide: '#22C55E',
+  note: '#5A5A72',
 };
+
+const typeDimColors: Record<string, string> = {
+  runbook: 'rgba(59, 130, 246, 0.12)',
+  postmortem: 'rgba(239, 68, 68, 0.12)',
+  guide: 'rgba(34, 197, 94, 0.12)',
+  note: 'rgba(90, 90, 114, 0.12)',
+};
+
+// Community gets purple
+const communityColor = '#A855F7';
+const communityDimColor = 'rgba(168, 85, 247, 0.12)';
+
+// Count docs by type (user docs only)
+const typeCounts: Record<string, number> = { runbook: 0, postmortem: 0, guide: 0, note: 0 };
+for (const doc of userDocs) {
+  if (typeCounts[doc.docType] !== undefined) typeCounts[doc.docType]++;
+}
+
+// Recently updated (last 5 from all docs)
+const recentlyUpdated = [...allDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
+
+// Featured: community docs + most recently updated non-community docs (up to 4 total)
+const featured = [
+  ...communityDocs.slice(0, 2),
+  ...userDocs.filter(d => !communityDocs.some(c => c.id === d.id)).slice(0, 2),
+].slice(0, 4);
+
+function truncate(str: string, max: number) {
+  if (!str) return '';
+  const clean = str.replace(/[#*_`\[\]]/g, '').replace(/\n/g, ' ').trim();
+  return clean.length > max ? clean.slice(0, max) + '...' : clean;
+}
+
+function timeAgo(date: Date) {
+  const ms = Date.now() - date.getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function formatDate(date: Date) {
+  return date.toISOString().split('T')[0];
+}
 ---
 <Layout title="Knowledge Base — StdOut">
-  <div class="docs-page">
-    <div class="page-header">
-      <h1>Knowledge Base</h1>
-      <a href="/app/docs/new" class="btn btn-primary">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 2v10M2 7h10"/></svg>
-        New doc
-      </a>
-    </div>
-
-    {userDocs.length === 0 && communityDocs.length === 0 ? (
-      <div class="empty-state">
-        <div class="empty-icon mono">{ }</div>
-        <h3>No docs yet</h3>
-        <p>Create runbooks, post-mortems, guides, and operational notes. The AI references these in future diagnoses.</p>
-        <a href="/app/docs/new" class="btn btn-primary">Create your first doc</a>
+  <div class="kb-layout">
+    <!-- Sidebar -->
+    <aside class="kb-sidebar">
+      <div class="sidebar-section">
+        <div class="sidebar-label">Categories</div>
+        <button class="sidebar-item active" data-filter="all">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+          <span>All Docs</span>
+          <span class="sidebar-count mono">{allDocs.length}</span>
+        </button>
+        <button class="sidebar-item" data-filter="runbook">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+          <span>Runbooks</span>
+          <span class="sidebar-count mono">{typeCounts.runbook}</span>
+        </button>
+        <button class="sidebar-item" data-filter="postmortem">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          <span>Post-Mortems</span>
+          <span class="sidebar-count mono">{typeCounts.postmortem}</span>
+        </button>
+        <button class="sidebar-item" data-filter="guide">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Guides</span>
+          <span class="sidebar-count mono">{typeCounts.guide}</span>
+        </button>
+        <button class="sidebar-item" data-filter="note">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          <span>Notes</span>
+          <span class="sidebar-count mono">{typeCounts.note}</span>
+        </button>
+        <button class="sidebar-item" data-filter="community">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <span>Community</span>
+          <span class="sidebar-count mono">{communityDocs.length}</span>
+        </button>
       </div>
-    ) : null}
 
-    {userDocs.length > 0 && (
-      <div class="doc-list">
-        {userDocs.map(doc => (
-          <a href={`/app/docs/${doc.id}`} class="doc-row">
-            <div class="doc-info">
-              <div class="doc-title">
-                {doc.source === 'fork' && <span class="source-badge fork-badge">Fork</span>}
-                {doc.title}
-              </div>
-              <div class="doc-meta">
-                <span class="doc-type" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeLabels[doc.docType] || doc.docType}</span>
-                {doc.tags && doc.tags.split(',').map(tag => (
-                  <span class="tag">{tag.trim()}</span>
-                ))}
-                <span class="mono" style="color: var(--text-muted);">{formatSize(doc.sizeBytes)}</span>
-              </div>
-            </div>
-            <div class="doc-date mono">{doc.updatedAt.toISOString().split('T')[0]}</div>
-          </a>
-        ))}
-      </div>
-    )}
-
-    {communityDocs.length > 0 && (
-      <div class="community-section">
-        <div class="section-header">
-          <h2>Community Library</h2>
-          <span class="community-count mono">{communityDocs.length} docs</span>
-        </div>
-        <div class="doc-list">
-          {communityDocs.map(doc => (
-            <a href={`/app/docs/${doc.id}`} class="doc-row">
-              <div class="doc-info">
-                <div class="doc-title">
-                  <span class="source-badge community-badge">Community</span>
-                  {doc.title}
-                </div>
-                <div class="doc-meta">
-                  <span class="doc-type" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeLabels[doc.docType] || doc.docType}</span>
-                  {doc.tags && doc.tags.split(',').map(tag => (
-                    <span class="tag">{tag.trim()}</span>
-                  ))}
-                </div>
-              </div>
-              <div class="doc-date mono">{doc.updatedAt.toISOString().split('T')[0]}</div>
+      {recentlyUpdated.length > 0 && (
+        <div class="sidebar-section">
+          <div class="sidebar-label">Recently Updated</div>
+          {recentlyUpdated.map(doc => (
+            <a href={`/app/docs/${doc.id}`} class="sidebar-recent">
+              <span class="recent-title">{doc.title}</span>
+              <span class="recent-time mono">{timeAgo(doc.updatedAt)}</span>
             </a>
           ))}
         </div>
+      )}
+    </aside>
+
+    <!-- Main content -->
+    <main class="kb-main">
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <div class="page-title-row">
+            <h1>Knowledge Base</h1>
+            <span class="count-badge mono">{allDocs.length}</span>
+          </div>
+          <p class="page-subtitle">Runbooks, guides, and lessons from every incident</p>
+        </div>
+        <div class="page-header-actions">
+          <div class="search-box">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="doc-search" class="search-input" placeholder="Search docs..." />
+          </div>
+          <a href="/app/docs/new" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+            New Doc
+          </a>
+        </div>
       </div>
-    )}
+
+      <!-- Mobile category tabs -->
+      <div class="mobile-tabs">
+        <button class="mobile-tab active" data-filter="all">All</button>
+        <button class="mobile-tab" data-filter="runbook">Runbooks</button>
+        <button class="mobile-tab" data-filter="postmortem">Post-Mortems</button>
+        <button class="mobile-tab" data-filter="guide">Guides</button>
+        <button class="mobile-tab" data-filter="note">Notes</button>
+        <button class="mobile-tab" data-filter="community">Community</button>
+      </div>
+
+      {allDocs.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">&gt;_</div>
+          <h3>Your knowledge base is empty</h3>
+          <p>Start by creating a runbook for your most common issue, or explore community docs.</p>
+          <a href="/app/docs/new" class="btn btn-primary">Create your first doc</a>
+        </div>
+      ) : (
+        <div id="docs-container">
+          {/* Featured section */}
+          {featured.length > 0 && (
+            <div class="featured-section" data-section="featured">
+              <div class="section-header">
+                <h2>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  Featured
+                </h2>
+              </div>
+              <div class="featured-cards">
+                {featured.map(doc => (
+                  <a href={`/app/docs/${doc.id}`} class="featured-card" data-type={doc.docType} data-source={doc.source}>
+                    <div class="featured-card-top">
+                      <span class="type-badge" style={`color: ${doc.source === 'community' ? communityColor : typeColors[doc.docType] || '#5A5A72'}; background: ${doc.source === 'community' ? communityDimColor : typeDimColors[doc.docType] || 'rgba(90,90,114,0.12)'}`}>
+                        {doc.source === 'community' ? 'Community' : typeLabels[doc.docType] || doc.docType}
+                      </span>
+                    </div>
+                    <div class="featured-card-title">{doc.title}</div>
+                    <div class="featured-card-snippet">{truncate(doc.content, 80)}</div>
+                    <div class="featured-card-meta">
+                      <span class="mono">{formatDate(doc.updatedAt)}</span>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* All docs grid */}
+          <div class="docs-section">
+            <div class="section-header">
+              <h2 id="section-title">All Documents</h2>
+              <span class="section-count mono" id="section-count">{allDocs.length}</span>
+            </div>
+            <div class="doc-grid" id="doc-grid">
+              {allDocs.map(doc => (
+                <a href={`/app/docs/${doc.id}`}
+                   class="doc-card"
+                   data-type={doc.docType}
+                   data-source={doc.source}
+                   data-title={doc.title.toLowerCase()}
+                   data-tags={doc.tags?.toLowerCase() || ''}
+                   data-content={truncate(doc.content, 200).toLowerCase()}>
+                  <div class="doc-card-header">
+                    <div class="doc-card-icon" style={`color: ${doc.source === 'community' ? communityColor : typeColors[doc.docType] || '#5A5A72'}`}>
+                      {doc.docType === 'runbook' && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
+                      )}
+                      {doc.docType === 'postmortem' && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                      )}
+                      {doc.docType === 'guide' && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                      )}
+                      {doc.docType === 'note' && (
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                      )}
+                    </div>
+                    <div class="doc-card-badges">
+                      <span class="type-badge" style={`color: ${typeColors[doc.docType] || '#5A5A72'}; background: ${typeDimColors[doc.docType] || 'rgba(90,90,114,0.12)'}`}>
+                        {typeLabels[doc.docType] || doc.docType}
+                      </span>
+                      {doc.source === 'community' && (
+                        <span class="type-badge" style={`color: ${communityColor}; background: ${communityDimColor}`}>Community</span>
+                      )}
+                      {doc.source === 'fork' && (
+                        <span class="type-badge" style="color: var(--accent-light); background: var(--accent-dim);">Fork</span>
+                      )}
+                    </div>
+                  </div>
+                  <div class="doc-card-title">{doc.title}</div>
+                  <div class="doc-card-snippet">{truncate(doc.content, 100)}</div>
+                  {doc.tags && (
+                    <div class="doc-card-tags">
+                      {doc.tags.split(',').slice(0, 4).map(tag => (
+                        <span class="tag">{tag.trim()}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div class="doc-card-footer">
+                    <span class="doc-card-date mono">{formatDate(doc.updatedAt)}</span>
+                  </div>
+                </a>
+              ))}
+            </div>
+            <div class="no-results" id="no-results" style="display:none;">
+              <p>No docs match your search or filter.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   </div>
 </Layout>
 
-<style>
-  .docs-page { max-width: 800px; margin: 0 auto; }
-  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-  .page-header h1 { font-size: 20px; }
-  .doc-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .doc-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background 150ms; }
-  .doc-row:last-child { border-bottom: none; }
-  .doc-row:hover { background: var(--bg-surface); }
-  .doc-info { flex: 1; min-width: 0; }
-  .doc-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px; }
-  .doc-meta { display: flex; gap: 8px; align-items: center; font-size: 11px; }
-  .doc-type { font-weight: 600; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
-  .doc-date { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
-  .tag { padding: 1px 6px; border-radius: 3px; font-size: 10px; font-weight: 500; background: var(--accent-dim); color: var(--accent-light); }
-  .empty-state { text-align: center; padding: 60px 20px; border: 1px dashed var(--border); border-radius: var(--radius); }
-  .empty-icon { font-size: 28px; color: var(--accent); margin-bottom: 16px; }
-  .empty-state h3 { font-size: 16px; margin-bottom: 8px; }
-  .empty-state p { font-size: 13px; color: var(--text-secondary); margin-bottom: 20px; max-width: 400px; margin-left: auto; margin-right: auto; }
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
-  .btn-primary { background: var(--accent-btn); color: #fff; }
-  .btn-primary:hover { background: var(--accent-light); }
-  .mono { font-family: var(--font-mono); }
-  .community-section { margin-top: 32px; }
-  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .section-header h2 { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
-  .community-count { font-size: 11px; color: var(--text-muted); }
-  .source-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 6px; vertical-align: middle; }
-  .community-badge { background: rgba(0, 212, 170, 0.12); color: var(--low); }
-  .fork-badge { background: var(--accent-dim); color: var(--accent-light); }
-</style>
+<script>
+  // Sidebar + mobile tab filtering
+  const sidebarItems = document.querySelectorAll<HTMLButtonElement>('.sidebar-item');
+  const mobileTabs = document.querySelectorAll<HTMLButtonElement>('.mobile-tab');
+  const docCards = document.querySelectorAll<HTMLAnchorElement>('.doc-card');
+  const searchInput = document.getElementById('doc-search') as HTMLInputElement | null;
+  const sectionTitle = document.getElementById('section-title');
+  const sectionCount = document.getElementById('section-count');
+  const noResults = document.getElementById('no-results');
+  const featuredSection = document.querySelector('.featured-section') as HTMLElement | null;
+  const docGrid = document.getElementById('doc-grid');
 
+  let currentFilter = 'all';
+  let currentSearch = '';
+
+  const filterLabels: Record<string, string> = {
+    all: 'All Documents',
+    runbook: 'Runbooks',
+    postmortem: 'Post-Mortems',
+    guide: 'Guides',
+    note: 'Notes',
+    community: 'Community Library',
+  };
+
+  function applyFilters() {
+    let visible = 0;
+    docCards.forEach(card => {
+      const type = card.dataset.type || '';
+      const source = card.dataset.source || '';
+      const title = card.dataset.title || '';
+      const tags = card.dataset.tags || '';
+      const content = card.dataset.content || '';
+
+      let matchFilter = currentFilter === 'all'
+        || (currentFilter === 'community' && source === 'community')
+        || type === currentFilter;
+
+      let matchSearch = !currentSearch
+        || title.includes(currentSearch)
+        || tags.includes(currentSearch)
+        || content.includes(currentSearch);
+
+      if (matchFilter && matchSearch) {
+        card.style.display = '';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    if (sectionTitle) sectionTitle.textContent = filterLabels[currentFilter] || 'All Documents';
+    if (sectionCount) sectionCount.textContent = String(visible);
+    if (noResults) noResults.style.display = visible === 0 && docCards.length > 0 ? '' : 'none';
+    if (featuredSection) featuredSection.style.display = currentFilter === 'all' && !currentSearch ? '' : 'none';
+  }
+
+  function setFilter(filter: string) {
+    currentFilter = filter;
+    sidebarItems.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
+    mobileTabs.forEach(btn => btn.classList.toggle('active', btn.dataset.filter === filter));
+    applyFilters();
+  }
+
+  sidebarItems.forEach(btn => {
+    btn.addEventListener('click', () => setFilter(btn.dataset.filter || 'all'));
+  });
+
+  mobileTabs.forEach(btn => {
+    btn.addEventListener('click', () => setFilter(btn.dataset.filter || 'all'));
+  });
+
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      currentSearch = searchInput.value.toLowerCase().trim();
+      applyFilters();
+    });
+  }
+</script>
+
+<style>
+  /* Two-column layout */
+  .kb-layout {
+    display: flex;
+    gap: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* Sidebar */
+  .kb-sidebar {
+    width: 250px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .sidebar-section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .sidebar-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    padding: 4px 8px 8px;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+  .sidebar-item:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+  .sidebar-item.active {
+    background: var(--accent-dim);
+    color: var(--accent-light);
+  }
+  .sidebar-item svg {
+    flex-shrink: 0;
+    opacity: 0.7;
+  }
+  .sidebar-item.active svg {
+    opacity: 1;
+  }
+  .sidebar-item span:first-of-type {
+    flex: 1;
+  }
+  .sidebar-count {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+  .sidebar-item.active .sidebar-count {
+    background: var(--accent-dim);
+    border-color: transparent;
+    color: var(--accent-light);
+  }
+
+  /* Recently updated sidebar links */
+  .sidebar-recent {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.15s ease;
+  }
+  .sidebar-recent:hover {
+    background: var(--bg-hover);
+  }
+  .recent-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .recent-time {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Main area */
+  .kb-main {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Page header */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .count-badge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--accent-dim);
+    color: var(--accent-light);
+  }
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+  .page-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Search box */
+  .search-box {
+    position: relative;
+  }
+  .search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .search-input {
+    padding: 8px 12px 8px 32px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-size: 12px;
+    font-family: var(--font-ui);
+    width: 200px;
+    transition: all 0.2s ease;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+    width: 260px;
+  }
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* Mobile tabs (hidden on desktop) */
+  .mobile-tabs {
+    display: none;
+    gap: 4px;
+    padding: 8px 0;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .mobile-tab {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .mobile-tab:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-hover);
+  }
+  .mobile-tab.active {
+    background: var(--accent-dim);
+    color: var(--accent-light);
+    border-color: transparent;
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    transition: var(--transition);
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--accent-btn);
+    color: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-primary:hover {
+    background: var(--accent);
+    box-shadow: var(--shadow-glow);
+  }
+
+  /* Section headers */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+  }
+  .section-count {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* Featured section */
+  .featured-section {
+    margin-bottom: 28px;
+  }
+  .featured-section .section-header h2 {
+    color: var(--accent-light);
+  }
+  .featured-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+  }
+  .featured-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .featured-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+    opacity: 0.5;
+  }
+  .featured-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .featured-card-top {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .featured-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .featured-card-snippet {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    flex: 1;
+  }
+  .featured-card-meta {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* Docs grid */
+  .docs-section {
+    margin-bottom: 24px;
+  }
+  .doc-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .doc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+  }
+  .doc-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .doc-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .doc-card-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    background: var(--bg-hover);
+  }
+  .doc-card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .doc-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .doc-card-snippet {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+  .doc-card-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--accent-dim);
+    color: var(--accent-light);
+  }
+  .doc-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+  .doc-card-date {
+    font-size: 10px;
+    color: var(--text-muted);
+  }
+
+  /* No results */
+  .no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+  }
+  .empty-icon {
+    font-size: 28px;
+    font-family: var(--font-mono);
+    color: var(--accent);
+    margin-bottom: 16px;
+  }
+  .empty-state h3 {
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .empty-state p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    max-width: 420px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .mono { font-family: var(--font-mono); }
+
+  /* Responsive: collapse sidebar to horizontal tabs on mobile */
+  @media (max-width: 768px) {
+    .kb-layout {
+      flex-direction: column;
+      gap: 0;
+    }
+    .kb-sidebar {
+      display: none;
+    }
+    .mobile-tabs {
+      display: flex;
+    }
+    .page-header {
+      flex-direction: column;
+      gap: 12px;
+    }
+    .page-header-actions {
+      width: 100%;
+    }
+    .search-input {
+      flex: 1;
+      width: auto;
+    }
+    .search-input:focus {
+      width: auto;
+    }
+    .featured-cards {
+      grid-template-columns: 1fr;
+    }
+    .doc-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 1024px) and (min-width: 769px) {
+    .kb-sidebar {
+      width: 200px;
+    }
+  }
+</style>

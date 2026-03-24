@@ -1,20 +1,156 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../lib/db';
+import { eq, desc, or } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+
+const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+
+// Fetch docs for sidebar
+const allDocs = db.select().from(tenantSchema.docs)
+  .where(or(
+    eq(tenantSchema.docs.userId, user.id),
+    eq(tenantSchema.docs.source, 'community')
+  ))
+  .orderBy(desc(tenantSchema.docs.updatedAt))
+  .all();
+
+// Category counts
+const categoryCounts: Record<string, number> = {};
+for (const doc of allDocs) {
+  const t = doc.docType || 'note';
+  categoryCounts[t] = (categoryCounts[t] || 0) + 1;
+}
+
+// Community docs (pinned section)
+const communityDocs = allDocs.filter(d => d.source === 'community').slice(0, 5);
+
+// Recent docs
+const recentDocs = allDocs.slice(0, 5);
+
+const typeLabels: Record<string, string> = {
+  runbook: 'Runbook',
+  postmortem: 'Post-Mortem',
+  guide: 'Guide',
+  note: 'Note',
+};
+
+const typeColors: Record<string, string> = {
+  runbook: 'var(--accent-light)',
+  postmortem: 'var(--critical)',
+  guide: 'var(--low)',
+  note: 'var(--text-muted)',
+};
+
+const typeIcons: Record<string, string> = {
+  runbook: 'R',
+  postmortem: 'P',
+  guide: 'G',
+  note: 'N',
+};
+
+const q = Astro.url.searchParams.get('q') || '';
 ---
 <Layout title="Search — StdOut">
-  <div class="search-page">
-    <h1>Search</h1>
-    <p class="search-desc">Search your past incidents and resolutions.</p>
+  <div class="search-layout">
+    <!-- Main search area -->
+    <div class="search-main">
+      <form class="search-hero" action="/app/search" method="get" role="search">
+        <div class="search-input-wrap">
+          <svg class="search-input-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="8.5" cy="8.5" r="5.5" /><line x1="13" y1="13" x2="18" y2="18" />
+          </svg>
+          <input
+            type="text"
+            name="q"
+            id="searchInput"
+            class="search-input"
+            placeholder="Search incidents, resolutions, docs..."
+            autocomplete="off"
+            autofocus
+            value={q}
+          />
+          <kbd class="search-kbd mono">/</kbd>
+        </div>
+      </form>
 
-    <div class="search-box">
-      <input type="text" id="searchInput" placeholder="e.g. nginx 502, docker restart, SSL cert..." autocomplete="off" autofocus />
+      <div id="searchMeta" class="search-meta"></div>
+      <div id="searchResults" class="search-results"></div>
+
+      <!-- Empty state when no query -->
+      <div id="searchEmpty" class="search-landing" style={q ? 'display:none' : ''}>
+        <div class="landing-icon">
+          <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" width="48" height="48">
+            <circle cx="20" cy="20" r="14" opacity="0.3" />
+            <circle cx="20" cy="20" r="14" stroke-dasharray="4 4" />
+            <line x1="30" y1="30" x2="42" y2="42" opacity="0.5" />
+          </svg>
+        </div>
+        <h2>Search your ops knowledge</h2>
+        <p>Find incidents, resolutions, runbooks, and docs across your workspace.</p>
+        <div class="landing-hints mono">
+          <span>nginx 502</span>
+          <span>SSL cert</span>
+          <span>docker restart</span>
+          <span>memory leak</span>
+        </div>
+      </div>
     </div>
 
-    <div id="searchResults" class="search-results"></div>
+    <!-- Sidebar: Knowledge Base -->
+    <aside class="search-sidebar">
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Knowledge Base</h3>
+        <div class="category-list">
+          {Object.entries(categoryCounts).map(([type, count]) => (
+            <a href={`/app/docs?type=${type}`} class="category-row">
+              <span class="category-icon mono" style={`color: ${typeColors[type] || 'var(--text-muted)'}`}>{typeIcons[type] || type.charAt(0).toUpperCase()}</span>
+              <span class="category-name">{typeLabels[type] || type}</span>
+              <span class="category-count mono">{count}</span>
+            </a>
+          ))}
+          {Object.keys(categoryCounts).length === 0 && (
+            <p class="sidebar-empty">No docs yet</p>
+          )}
+        </div>
+      </div>
+
+      {communityDocs.length > 0 && (
+        <div class="sidebar-section">
+          <h3 class="sidebar-title">
+            <span class="community-dot"></span>
+            Community Docs
+          </h3>
+          <div class="sidebar-doc-list">
+            {communityDocs.map(doc => (
+              <a href={`/app/docs/${doc.id}`} class="sidebar-doc">
+                <span class="sidebar-doc-icon mono" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeIcons[doc.docType] || 'D'}</span>
+                <span class="sidebar-doc-title">{doc.title}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div class="sidebar-section">
+        <h3 class="sidebar-title">Recent Docs</h3>
+        <div class="sidebar-doc-list">
+          {recentDocs.length > 0 ? recentDocs.map(doc => (
+            <a href={`/app/docs/${doc.id}`} class="sidebar-doc">
+              <span class="sidebar-doc-icon mono" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeIcons[doc.docType] || 'D'}</span>
+              <span class="sidebar-doc-title">{doc.title}</span>
+            </a>
+          )) : (
+            <p class="sidebar-empty">No docs yet</p>
+          )}
+        </div>
+      </div>
+
+      <a href="/app/docs" class="sidebar-viewall">View All Docs &rarr;</a>
+    </aside>
   </div>
 </Layout>
 
@@ -22,43 +158,215 @@ if (!user) return Astro.redirect('/app/login');
   let debounce: any;
   const input = document.getElementById('searchInput') as HTMLInputElement;
   const results = document.getElementById('searchResults')!;
+  const meta = document.getElementById('searchMeta')!;
+  const landing = document.getElementById('searchEmpty')!;
 
-  // Pre-populate from URL query param (nav search bar submission)
-  const urlQ = new URLSearchParams(window.location.search).get('q');
-  if (urlQ && input) {
-    input.value = urlQ;
-    input.dispatchEvent(new Event('input'));
+  // Keyboard shortcut: "/" focuses search
+  document.addEventListener('keydown', (e) => {
+    if (e.key === '/' && document.activeElement !== input) {
+      e.preventDefault();
+      input?.focus();
+    }
+  });
+
+  function highlightMatch(text: string, query: string): string {
+    if (!query || !text) return escapeHtml(text);
+    const escaped = escapeHtml(text);
+    const words = query.split(/\s+/).filter(w => w.length >= 2);
+    if (!words.length) return escaped;
+    const pattern = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(${pattern})`, 'gi');
+    return escaped.replace(regex, '<mark>$1</mark>');
   }
 
-  input?.addEventListener('input', () => {
+  function severityClass(sev: string): string {
+    return sev === 'critical' || sev === 'high' || sev === 'medium' || sev === 'low' ? sev : 'low';
+  }
+
+  function runSearch(q: string) {
+    if (q.length < 2) {
+      results.innerHTML = '';
+      meta.innerHTML = '';
+      landing.style.display = '';
+      return;
+    }
+    landing.style.display = 'none';
+
     clearTimeout(debounce);
-    const q = input.value.trim();
-    if (q.length < 2) { results.innerHTML = ''; return; }
     debounce = setTimeout(async () => {
       try {
         const res = await fetch(`/app/api/search?q=${encodeURIComponent(q)}`);
-        if (!res.ok) { results.innerHTML = '<p class="search-empty">Search failed.</p>'; return; }
-        const data = await res.json();
-        if (!data.results || data.results.length === 0) {
-          results.innerHTML = '<p class="search-empty">No results found.</p>';
+        if (!res.ok) {
+          meta.innerHTML = '';
+          results.innerHTML = '<p class="search-no-results">Search failed. Try again.</p>';
           return;
         }
-        results.innerHTML = data.results.map((r: any) => {
-          const href = r.type === 'doc' ? `/app/docs/${r.docId}` : `/app/incidents/${r.incidentId}`;
-          return `
-          <a href="${href}" class="search-result">
-            <div class="result-type ${r.type}">${r.type}</div>
-            <div class="result-content">
-              <div class="result-title">${escapeHtml(r.title || '')}</div>
-              <div class="result-snippet">${escapeHtml(r.snippet || '')}</div>
-            </div>
-          </a>`;
-        }).join('');
+        const data = await res.json();
+        if (!data.results || data.results.length === 0) {
+          meta.innerHTML = `<span class="meta-count">0 results for &lsquo;${escapeHtml(q)}&rsquo;</span>`;
+          results.innerHTML = `
+            <div class="search-no-results">
+              <p>No results for &lsquo;<strong>${escapeHtml(q)}</strong>&rsquo;</p>
+              <p class="no-results-hint">Try a different search or <a href="/app/docs/new">create a new doc</a>.</p>
+            </div>`;
+          return;
+        }
+
+        const total = data.results.length;
+        meta.innerHTML = `<span class="meta-count">${total} result${total !== 1 ? 's' : ''} for &lsquo;${escapeHtml(q)}&rsquo;</span>`;
+
+        // Group results by type
+        const incidents = data.results.filter((r: any) => r.type === 'incident');
+        const resolutions = data.results.filter((r: any) => r.type === 'resolution');
+        const docs = data.results.filter((r: any) => r.type === 'doc');
+        const stacks = data.results.filter((r: any) => r.type === 'stack');
+        const monitors = data.results.filter((r: any) => r.type === 'monitor');
+
+        let html = '';
+
+        if (incidents.length > 0) {
+          html += `<div class="result-group">
+            <div class="group-header">
+              <span class="group-icon incident-icon"></span>
+              <span class="group-label">Incidents</span>
+              <span class="group-count mono">${incidents.length}</span>
+            </div>`;
+          for (const r of incidents) {
+            const href = `/app/incidents/${r.incidentId}`;
+            const sevClass = severityClass(r.severity || 'low');
+            html += `
+            <a href="${href}" class="result-card">
+              <div class="result-severity-bar ${sevClass}"></div>
+              <div class="result-body">
+                <div class="result-card-header">
+                  <span class="result-title">${highlightMatch(r.title || '', q)}</span>
+                  ${r.severity ? `<span class="result-badge severity-${sevClass}">${escapeHtml(r.severity)}</span>` : ''}
+                  ${r.status ? `<span class="result-badge status-badge">${escapeHtml(r.status)}</span>` : ''}
+                </div>
+                <div class="result-snippet">${highlightMatch(r.snippet || '', q)}</div>
+              </div>
+            </a>`;
+          }
+          html += '</div>';
+        }
+
+        if (resolutions.length > 0) {
+          html += `<div class="result-group">
+            <div class="group-header">
+              <span class="group-icon resolution-icon"></span>
+              <span class="group-label">Resolutions</span>
+              <span class="group-count mono">${resolutions.length}</span>
+            </div>`;
+          for (const r of resolutions) {
+            const href = `/app/incidents/${r.incidentId}`;
+            html += `
+            <a href="${href}" class="result-card">
+              <div class="result-severity-bar resolved"></div>
+              <div class="result-body">
+                <div class="result-card-header">
+                  <span class="result-title">${highlightMatch(r.title || '', q)}</span>
+                  <span class="result-badge resolution-type">Resolution</span>
+                </div>
+                <div class="result-snippet">${highlightMatch(r.snippet || '', q)}</div>
+              </div>
+            </a>`;
+          }
+          html += '</div>';
+        }
+
+        if (docs.length > 0) {
+          html += `<div class="result-group">
+            <div class="group-header">
+              <span class="group-icon doc-icon"></span>
+              <span class="group-label">Docs</span>
+              <span class="group-count mono">${docs.length}</span>
+            </div>`;
+          for (const r of docs) {
+            const href = `/app/docs/${r.docId}`;
+            const typeLabel = r.docType ? (r.docType === 'postmortem' ? 'Post-Mortem' : r.docType.charAt(0).toUpperCase() + r.docType.slice(1)) : 'Doc';
+            html += `
+            <a href="${href}" class="result-card">
+              <div class="result-severity-bar doc-bar"></div>
+              <div class="result-body">
+                <div class="result-card-header">
+                  <span class="result-title">${highlightMatch(r.title || '', q)}</span>
+                  <span class="result-badge doc-type">${escapeHtml(typeLabel)}</span>
+                  ${r.source === 'community' ? '<span class="result-badge community-type">Community</span>' : ''}
+                </div>
+                <div class="result-snippet">${highlightMatch(r.snippet || '', q)}</div>
+              </div>
+            </a>`;
+          }
+          html += '</div>';
+        }
+
+        if (stacks.length > 0) {
+          html += `<div class="result-group">
+            <div class="group-header">
+              <span class="group-icon stack-icon"></span>
+              <span class="group-label">Stacks</span>
+              <span class="group-count mono">${stacks.length}</span>
+            </div>`;
+          for (const r of stacks) {
+            const href = `/app/stacks`;
+            html += `
+            <a href="${href}" class="result-card">
+              <div class="result-severity-bar stack-bar"></div>
+              <div class="result-body">
+                <div class="result-card-header">
+                  <span class="result-title">${highlightMatch(r.title || '', q)}</span>
+                  <span class="result-badge stack-type">Stack</span>
+                </div>
+                <div class="result-snippet">${highlightMatch(r.snippet || '', q)}</div>
+              </div>
+            </a>`;
+          }
+          html += '</div>';
+        }
+
+        if (monitors.length > 0) {
+          html += `<div class="result-group">
+            <div class="group-header">
+              <span class="group-icon monitor-icon"></span>
+              <span class="group-label">Monitors</span>
+              <span class="group-count mono">${monitors.length}</span>
+            </div>`;
+          for (const r of monitors) {
+            const href = `/app/hud/monitors/${r.monitorId}`;
+            html += `
+            <a href="${href}" class="result-card">
+              <div class="result-severity-bar monitor-bar"></div>
+              <div class="result-body">
+                <div class="result-card-header">
+                  <span class="result-title">${highlightMatch(r.title || '', q)}</span>
+                  <span class="result-badge monitor-type">${escapeHtml(r.monitorType || 'Monitor')}</span>
+                </div>
+                <div class="result-snippet">${highlightMatch(r.snippet || '', q)}</div>
+              </div>
+            </a>`;
+          }
+          html += '</div>';
+        }
+
+        results.innerHTML = html;
       } catch {
-        results.innerHTML = '<p class="search-empty">Network error.</p>';
+        meta.innerHTML = '';
+        results.innerHTML = '<p class="search-no-results">Network error. Check your connection.</p>';
       }
     }, 300);
+  }
+
+  // Live search on input
+  input?.addEventListener('input', () => {
+    runSearch(input.value.trim());
   });
+
+  // Trigger search if ?q= is present on load
+  const urlQ = new URLSearchParams(window.location.search).get('q');
+  if (urlQ && input) {
+    input.value = urlQ;
+    runSearch(urlQ);
+  }
 
   function escapeHtml(s: string) {
     return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
@@ -66,48 +374,424 @@ if (!user) return Astro.redirect('/app/login');
 </script>
 
 <style>
-  .search-page { max-width: 700px; margin: 0 auto; }
-  .search-page h1 { font-size: 20px; margin-bottom: 4px; }
-  .search-desc { color: var(--text-secondary); font-size: 13px; margin-bottom: 20px; }
-  .search-box input {
+  /* ── Two-column layout ────────────────────────── */
+  .search-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 32px;
+    max-width: 1100px;
+    margin: 0 auto;
+    align-items: start;
+  }
+
+  /* ── Search hero input ────────────────────────── */
+  .search-hero {
+    margin-bottom: 20px;
+  }
+  .search-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-input-icon {
+    position: absolute;
+    left: 16px;
+    width: 18px;
+    height: 18px;
+    color: var(--text-muted);
+    pointer-events: none;
+  }
+  .search-input {
     width: 100%;
+    padding: 14px 50px 14px 46px;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 14px;
-    padding: 12px 16px;
+    font-family: var(--font-ui);
+    font-size: 15px;
+    outline: none;
+    transition: border-color 200ms, box-shadow 200ms;
   }
-  .search-box input:focus { border-color: var(--accent); outline: none; }
-  .search-results { margin-top: 16px; }
-  .search-result {
+  .search-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim), var(--shadow-glow);
+  }
+  .search-input::placeholder {
+    color: var(--text-muted);
+  }
+  .search-kbd {
+    position: absolute;
+    right: 14px;
+    padding: 2px 8px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 11px;
+    pointer-events: none;
+  }
+
+  /* ── Search meta ──────────────────────────────── */
+  .search-meta {
+    margin-bottom: 16px;
+    min-height: 20px;
+  }
+  .meta-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: var(--font-ui);
+  }
+
+  /* ── Result groups ────────────────────────────── */
+  .result-group {
+    margin-bottom: 24px;
+  }
+  .group-header {
     display: flex;
-    gap: 12px;
-    align-items: flex-start;
-    padding: 12px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .group-icon {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .incident-icon { background: var(--critical); }
+  .resolution-icon { background: var(--low); }
+  .doc-icon { background: var(--high); }
+  .group-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+  }
+  .group-count {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+
+  /* ── Result cards ─────────────────────────────── */
+  .result-card {
+    display: flex;
+    gap: 0;
+    text-decoration: none;
+    color: inherit;
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     margin-bottom: 8px;
-    text-decoration: none;
-    color: inherit;
-    transition: var(--transition);
+    overflow: hidden;
+    transition: all 0.15s ease;
   }
-  .search-result:hover { border-color: var(--accent); background: var(--bg-surface); }
-  .result-type {
+  .result-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-surface);
+    box-shadow: var(--shadow-sm);
+    transform: translateX(2px);
+  }
+  .result-severity-bar {
+    width: 4px;
+    flex-shrink: 0;
+  }
+  .result-severity-bar.critical { background: var(--critical); }
+  .result-severity-bar.high { background: var(--high); }
+  .result-severity-bar.medium { background: var(--medium); }
+  .result-severity-bar.low { background: var(--low); }
+  .result-severity-bar.resolved { background: var(--resolved); }
+  .result-severity-bar.doc-bar { background: var(--high); }
+  .result-severity-bar.stack-bar { background: #38bdf8; }
+  .result-severity-bar.monitor-bar { background: #a78bfa; }
+
+  .result-body {
+    padding: 12px 16px;
+    min-width: 0;
+    flex: 1;
+  }
+  .result-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+  }
+  .result-title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .result-badge {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 3px;
     font-size: 10px;
     font-weight: 600;
     font-family: var(--font-mono);
-    padding: 2px 6px;
-    border-radius: 3px;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
     flex-shrink: 0;
-    margin-top: 2px;
   }
-  .result-type.incident { color: var(--accent-light); background: var(--accent-dim); }
-  .result-type.resolution { color: var(--low); background: var(--low-dim); }
-  .result-type.doc { color: var(--high); background: var(--high-dim); }
-  .result-title { font-size: 14px; font-weight: 500; margin-bottom: 2px; }
-  .result-snippet { font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); }
-  .search-empty { color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px 0; }
+  .severity-critical { color: var(--critical); background: var(--critical-dim); }
+  .severity-high { color: var(--high); background: var(--high-dim); }
+  .severity-medium { color: var(--medium); background: var(--medium-dim); }
+  .severity-low { color: var(--low); background: var(--low-dim); }
+  .status-badge { color: var(--text-muted); background: var(--bg-elevated); }
+  .resolution-type { color: var(--low); background: var(--low-dim); }
+  .stack-type { color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+  .monitor-type { color: #a78bfa; background: rgba(167, 139, 250, 0.1); }
+  .doc-type { color: var(--high); background: var(--high-dim); }
+  .community-type { color: var(--low); background: var(--low-dim); }
+
+  .result-snippet {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    line-height: 1.5;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .result-snippet :global(mark) {
+    background: var(--accent-dim);
+    color: var(--accent-light);
+    border-radius: 2px;
+    padding: 0 2px;
+  }
+
+  /* ── No results / empty state ─────────────────── */
+  .search-no-results {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .no-results-hint {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  .no-results-hint a {
+    color: var(--accent-light);
+  }
+
+  /* ── Landing state (no query) ─────────────────── */
+  .search-landing {
+    text-align: center;
+    padding: 48px 20px;
+  }
+  .landing-icon {
+    color: var(--text-muted);
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+  .search-landing h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text);
+  }
+  .search-landing p {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 20px;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .landing-hints {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .landing-hints span {
+    padding: 4px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .landing-hints span:hover {
+    border-color: var(--accent);
+    color: var(--accent-light);
+    background: var(--accent-dim);
+  }
+
+  /* ── Sidebar ──────────────────────────────────── */
+  .search-sidebar {
+    position: sticky;
+    top: 80px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-surface);
+    padding: 0;
+    overflow: hidden;
+  }
+  .sidebar-section {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-section:last-of-type {
+    border-bottom: none;
+  }
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .community-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--low);
+    flex-shrink: 0;
+  }
+
+  /* Category list */
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .category-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+  }
+  .category-row:hover {
+    background: var(--bg-hover);
+  }
+  .category-icon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    background: var(--bg-elevated);
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .category-name {
+    font-size: 13px;
+    color: var(--text);
+    flex: 1;
+  }
+  .category-count {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  /* Sidebar doc list */
+  .sidebar-doc-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .sidebar-doc {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+  }
+  .sidebar-doc:hover {
+    background: var(--bg-hover);
+  }
+  .sidebar-doc-icon {
+    font-size: 9px;
+    font-weight: 700;
+    width: 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .sidebar-doc-title {
+    font-size: 12px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sidebar-doc:hover .sidebar-doc-title {
+    color: var(--text);
+  }
+  .sidebar-empty {
+    font-size: 12px;
+    color: var(--text-muted);
+    padding: 4px 8px;
+  }
+  .sidebar-viewall {
+    display: block;
+    padding: 12px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-light);
+    text-decoration: none;
+    text-align: center;
+    border-top: 1px solid var(--border);
+    transition: all 0.15s ease;
+  }
+  .sidebar-viewall:hover {
+    background: var(--accent-dim);
+    color: var(--accent);
+  }
+
+  /* ── Responsive ───────────────────────────────── */
+  @media (max-width: 768px) {
+    .search-layout {
+      grid-template-columns: 1fr;
+      gap: 24px;
+    }
+    .search-sidebar {
+      position: static;
+    }
+    .search-input {
+      font-size: 16px; /* Prevent iOS zoom */
+    }
+    .search-kbd {
+      display: none;
+    }
+    .landing-hints {
+      gap: 6px;
+    }
+  }
 </style>
+
+<script>
+  // Clicking a landing hint fills the search and triggers it
+  document.querySelectorAll('.landing-hints span').forEach(el => {
+    el.addEventListener('click', () => {
+      const input = document.getElementById('searchInput') as HTMLInputElement;
+      if (input) {
+        input.value = el.textContent || '';
+        input.dispatchEvent(new Event('input'));
+        input.focus();
+      }
+    });
+  });
+</script>
