@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from '../../../lib/db';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
@@ -16,34 +16,115 @@ const userIncidents = db
   .orderBy(desc(tenantSchema.incidents.createdAt))
   .all();
 
-const activeCount = userIncidents.filter(i => i.status !== 'resolved').length;
-const resolvedCount = userIncidents.filter(i => i.status === 'resolved').length;
+// Get stacks for service name lookup
+const allStacks = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const stackMap = Object.fromEntries(allStacks.map(s => [s.id, s.name]));
+
+// Get diagnoses for AI diagnosis indicator
+const allDiagnoses = db.select().from(tenantSchema.diagnoses).all();
+const diagnosedIncidentIds = new Set(allDiagnoses.map(d => d.incidentId));
+
+// Get resolutions for resolution preview
+const allResolutions = db.select().from(tenantSchema.resolutions).all();
+const resolutionMap = Object.fromEntries(allResolutions.map(r => [r.incidentId, r.content]));
+
+// Partition incidents
+const activeIncidents = userIncidents.filter(i => i.status !== 'resolved');
+const resolvedIncidents = userIncidents.filter(i => i.status === 'resolved');
+
+// Group resolved incidents by date
+const now = new Date();
+const todayStr = now.toDateString();
+const yesterday = new Date(now);
+yesterday.setDate(yesterday.getDate() - 1);
+const yesterdayStr = yesterday.toDateString();
+const weekAgo = new Date(now);
+weekAgo.setDate(weekAgo.getDate() - 7);
+
+interface GroupedIncidents {
+  label: string;
+  incidents: typeof resolvedIncidents;
+  defaultOpen: boolean;
+}
+
+const groups: GroupedIncidents[] = [];
+const todayGroup = resolvedIncidents.filter(i => i.resolvedAt && i.resolvedAt.toDateString() === todayStr);
+const yesterdayGroup = resolvedIncidents.filter(i => i.resolvedAt && i.resolvedAt.toDateString() === yesterdayStr);
+const weekGroup = resolvedIncidents.filter(i => i.resolvedAt && i.resolvedAt.toDateString() !== todayStr && i.resolvedAt.toDateString() !== yesterdayStr && i.resolvedAt >= weekAgo);
+const olderGroup = resolvedIncidents.filter(i => !i.resolvedAt || i.resolvedAt < weekAgo).filter(i => {
+  // Exclude those already in today/yesterday/week
+  if (!i.resolvedAt) return true;
+  const ds = i.resolvedAt.toDateString();
+  return ds !== todayStr && ds !== yesterdayStr;
+}).filter(i => !i.resolvedAt || i.resolvedAt < weekAgo);
+
+if (todayGroup.length > 0) groups.push({ label: 'Today', incidents: todayGroup, defaultOpen: true });
+if (yesterdayGroup.length > 0) groups.push({ label: 'Yesterday', incidents: yesterdayGroup, defaultOpen: true });
+if (weekGroup.length > 0) groups.push({ label: 'This Week', incidents: weekGroup, defaultOpen: false });
+if (olderGroup.length > 0) groups.push({ label: 'Older', incidents: olderGroup, defaultOpen: false });
+
+function timeAgo(date: Date) {
+  const ms = Date.now() - date.getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+function truncate(str: string, max: number) {
+  if (!str) return '';
+  // Strip markdown formatting for preview
+  const clean = str.replace(/[#*_`\[\]]/g, '').replace(/\n/g, ' ').trim();
+  return clean.length > max ? clean.slice(0, max) + '...' : clean;
+}
 ---
-<Layout title="Incidents — StdOut">
+<Layout title="Incidents - StdOut">
   <div class="incidents-page">
-    <!-- Stats -->
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-value" style={activeCount > 0 ? 'color: var(--critical)' : ''}>{activeCount}</div>
-        <div class="stat-label">Active</div>
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <div class="page-title-row">
+          <h1>Incidents</h1>
+          <span class="count-badge mono">{userIncidents.length}</span>
+        </div>
+        <p class="page-subtitle">Track, diagnose, and resolve infrastructure issues</p>
       </div>
-      <div class="stat-card">
-        <div class="stat-value">{userIncidents.length}</div>
-        <div class="stat-label">Total</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" style="color: var(--accent-light);">{resolvedCount}</div>
-        <div class="stat-label">Resolved</div>
-      </div>
+      <a href="/app/incidents/new" class="btn btn-primary">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+        New Incident
+      </a>
     </div>
 
-    <!-- Actions -->
-    <div class="actions-row">
-      <h2>Incidents</h2>
-      <a href="/app/incidents/new" class="btn btn-primary">
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 2v10M2 7h10"/></svg>
-        New incident
-      </a>
+    <!-- Filters Bar -->
+    <div class="filters-bar">
+      <div class="filter-group">
+        <span class="filter-label">Status</span>
+        <div class="toggle-group" data-filter="status">
+          <button class="toggle-btn active" data-value="all">All</button>
+          <button class="toggle-btn" data-value="active">Active</button>
+          <button class="toggle-btn" data-value="resolved">Resolved</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Severity</span>
+        <div class="toggle-group" data-filter="severity">
+          <button class="toggle-btn active" data-value="all">All</button>
+          <button class="toggle-btn" data-value="critical">Critical</button>
+          <button class="toggle-btn" data-value="high">Warning</button>
+          <button class="toggle-btn" data-value="low">Info</button>
+        </div>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Sort</span>
+        <div class="toggle-group" data-filter="sort">
+          <button class="toggle-btn active" data-value="newest">Newest</button>
+          <button class="toggle-btn" data-value="oldest">Oldest</button>
+        </div>
+      </div>
     </div>
 
     {userIncidents.length === 0 ? (
@@ -54,118 +135,339 @@ const resolvedCount = userIncidents.filter(i => i.status === 'resolved').length;
         <a href="/app/incidents/new" class="btn btn-primary">Log an incident</a>
       </div>
     ) : (
-      <div class="incident-list">
-        {userIncidents.map(incident => (
-          <a href={`/app/incidents/${incident.id}`} class="incident-row">
-            <div class={`severity-bar ${incident.severity}`} style="height: 36px;"></div>
-            <div class="incident-info">
-              <div class="incident-title">{incident.title}</div>
-              <div class="incident-meta">
-                <span class="mono">#{incident.id.slice(0, 8)}</span>
-                {incident.tags && incident.tags.split(',').map(tag => (
-                  <span class="tag">{tag.trim()}</span>
-                ))}
-              </div>
+      <div id="incidents-container">
+        <!-- Active Incidents Section -->
+        <div class="section active-section" data-section="active">
+          <div class="section-header">
+            <h2>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Active
+            </h2>
+            <span class="section-count mono">{activeIncidents.length}</span>
+          </div>
+
+          {activeIncidents.length === 0 ? (
+            <div class="all-clear">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              <span>All clear — no active incidents</span>
             </div>
-            <div class="incident-status-col">
-              <span class={`status-badge ${incident.status}`}>{incident.status}</span>
+          ) : (
+            <div class="active-cards">
+              {activeIncidents.map(incident => (
+                <a href={`/app/incidents/${incident.id}`} class={`active-card severity-${incident.severity}`} data-severity={incident.severity} data-status={incident.status}>
+                  <div class="active-card-top">
+                    <span class={`severity-pill ${incident.severity}`}>
+                      <span class="severity-dot"></span>
+                      {incident.severity}
+                    </span>
+                    <span class={`status-badge ${incident.status}`}>{incident.status}</span>
+                  </div>
+                  <div class="active-card-title">{incident.title}</div>
+                  <div class="active-card-meta">
+                    {incident.stackId && stackMap[incident.stackId] && (
+                      <span class="meta-service">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                        {stackMap[incident.stackId]}
+                      </span>
+                    )}
+                    <span class="meta-time mono">{timeAgo(incident.createdAt)}</span>
+                    {diagnosedIncidentIds.has(incident.id) && (
+                      <span class="ai-badge" title="AI diagnosed">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        AI
+                      </span>
+                    )}
+                  </div>
+                  {incident.tags && (
+                    <div class="active-card-tags">
+                      {incident.tags.split(',').slice(0, 4).map(tag => (
+                        <span class="tag">{tag.trim()}</span>
+                      ))}
+                    </div>
+                  )}
+                </a>
+              ))}
             </div>
-          </a>
-        ))}
+          )}
+        </div>
+
+        <!-- Resolved Incidents Section -->
+        <div class="section resolved-section" data-section="resolved">
+          <div class="section-header">
+            <h2>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+              Resolved
+            </h2>
+            <span class="section-count mono">{resolvedIncidents.length}</span>
+          </div>
+
+          {groups.length === 0 && resolvedIncidents.length === 0 ? (
+            <div class="mini-empty">
+              <p>No resolved incidents yet.</p>
+            </div>
+          ) : (
+            <div class="resolved-groups">
+              {groups.map(group => (
+                <details class="resolved-group" open={group.defaultOpen ? true : undefined}>
+                  <summary class="group-summary">
+                    <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    <span class="group-label">{group.label}</span>
+                    <span class="group-count mono">{group.incidents.length}</span>
+                  </summary>
+                  <div class="resolved-cards">
+                    {group.incidents.map(incident => (
+                      <a href={`/app/incidents/${incident.id}`} class="resolved-card" data-severity={incident.severity} data-status="resolved">
+                        <div class={`severity-bar ${incident.severity}`}></div>
+                        <div class="resolved-card-body">
+                          <div class="resolved-card-top">
+                            <span class="resolved-card-title">{incident.title}</span>
+                            <div class="resolved-card-badges">
+                              {diagnosedIncidentIds.has(incident.id) && (
+                                <span class="ai-badge-sm" title="AI diagnosed">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                </span>
+                              )}
+                              <svg class="resolved-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                            </div>
+                          </div>
+                          <div class="resolved-card-meta">
+                            {incident.stackId && stackMap[incident.stackId] && (
+                              <span class="meta-tag">{stackMap[incident.stackId]}</span>
+                            )}
+                            <span class={`severity-micro ${incident.severity}`}>{incident.severity}</span>
+                            <span class="meta-time mono">{incident.resolvedAt ? timeAgo(incident.resolvedAt) : timeAgo(incident.updatedAt)}</span>
+                          </div>
+                          {resolutionMap[incident.id] && (
+                            <div class="resolution-preview">{truncate(resolutionMap[incident.id], 120)}</div>
+                          )}
+                        </div>
+                      </a>
+                    ))}
+                  </div>
+                </details>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     )}
   </div>
 </Layout>
 
 <style>
-  .incidents-page { max-width: 800px; margin: 0 auto; }
-  .stats-row {
+  /* Page layout */
+  .incidents-page { max-width: 900px; margin: 0 auto; }
+
+  /* Page header */
+  .page-header {
     display: flex;
-    gap: 1px;
-    background: var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 24px;
-    box-shadow: var(--shadow-sm);
-  }
-  .stat-card {
-    flex: 1;
-    padding: 20px 20px;
-    background: var(--bg-surface);
-    text-align: center;
-  }
-  .stat-value {
-    font-size: 32px;
-    font-weight: 700;
-    font-family: var(--font-mono);
-    letter-spacing: -0.03em;
-    line-height: 1;
-  }
-  .stat-label {
-    font-size: 11px;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 6px;
-    font-weight: 500;
-  }
-  .actions-row {
-    display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    gap: 16px;
   }
-  .actions-row h2 {
-    font-size: 16px;
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .page-title-row h1 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .count-badge {
+    font-size: 12px;
     font-weight: 600;
-  }
-  .incident-list {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    box-shadow: var(--shadow-sm);
-  }
-  .incident-row {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer;
-    transition: all 0.15s ease;
-    text-decoration: none;
-    color: inherit;
-  }
-  .incident-row:last-child { border-bottom: none; }
-  .incident-row:hover { background: var(--bg-hover); transform: translateX(2px); }
-  .incident-info { flex: 1; min-width: 0; }
-  .incident-title {
-    font-size: 13px;
-    font-weight: 500;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 2px;
-  }
-  .incident-meta {
-    font-size: 11px;
-    color: var(--text-muted);
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  }
-  .tag {
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-size: 10px;
-    font-weight: 500;
+    padding: 2px 8px;
+    border-radius: 10px;
     background: var(--accent-dim);
     color: var(--accent-light);
   }
-  .status-badge {
+  .page-subtitle {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  /* Filters bar */
+  .filters-bar {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
+  }
+  .filter-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .filter-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .toggle-group {
+    display: flex;
+    gap: 2px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px;
+  }
+  .toggle-btn {
     font-size: 11px;
+    font-weight: 500;
+    font-family: var(--font-ui);
+    padding: 4px 10px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .toggle-btn:hover {
+    color: var(--text-secondary);
+    background: var(--bg-hover);
+  }
+  .toggle-btn.active {
+    background: var(--bg-elevated);
+    color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Sections */
+  .section { margin-bottom: 24px; }
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-header h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+  }
+  .active-section .section-header h2 { color: var(--critical); }
+  .active-section .section-header h2 svg { opacity: 0.8; }
+  .section-count {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  /* All clear banner */
+  .all-clear {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 20px;
+    background: var(--low-dim);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: var(--radius);
+    color: var(--low);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  /* Active incident cards */
+  .active-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+  .active-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+    position: relative;
+    overflow: hidden;
+  }
+  .active-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+  .active-card.severity-critical::before { background: var(--critical); box-shadow: 0 0 12px var(--critical-dim); }
+  .active-card.severity-high::before { background: var(--high); }
+  .active-card.severity-medium::before { background: var(--medium); }
+  .active-card.severity-low::before { background: var(--low); }
+  .active-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .active-card.severity-critical {
+    border-color: rgba(239, 68, 68, 0.2);
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: var(--shadow-sm), 0 0 0 0 rgba(239, 68, 68, 0); }
+    50% { box-shadow: var(--shadow-sm), 0 0 16px rgba(239, 68, 68, 0.08); }
+  }
+
+  .active-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .severity-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .severity-pill.critical { color: var(--critical); background: var(--critical-dim); }
+  .severity-pill.high { color: var(--high); background: var(--high-dim); }
+  .severity-pill.medium { color: var(--medium); background: var(--medium-dim); }
+  .severity-pill.low { color: var(--low); background: var(--low-dim); }
+  .severity-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .severity-pill.critical .severity-dot { box-shadow: 0 0 6px var(--critical); }
+
+  .status-badge {
+    font-size: 10px;
     font-weight: 500;
     padding: 2px 8px;
     border-radius: 4px;
@@ -175,6 +477,200 @@ const resolvedCount = userIncidents.filter(i => i.status === 'resolved').length;
   .status-badge.investigating { color: var(--high); background: var(--high-dim); }
   .status-badge.monitoring { color: var(--medium); background: var(--medium-dim); }
   .status-badge.resolved { color: var(--resolved); background: rgba(85,85,106,0.12); }
+
+  .active-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+  }
+  .active-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .meta-service {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+  }
+  .meta-time {
+    font-size: 10px;
+  }
+  .ai-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent-light);
+    background: var(--accent-dim);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .active-card-tags {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--accent-dim);
+    color: var(--accent-light);
+  }
+
+  /* Resolved section */
+  .resolved-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .resolved-group {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+  .group-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s ease;
+    list-style: none;
+  }
+  .group-summary::-webkit-details-marker { display: none; }
+  .group-summary::marker { display: none; content: ''; }
+  .group-summary:hover { background: var(--bg-hover); }
+  .chevron {
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  details[open] > .group-summary .chevron { transform: rotate(90deg); }
+  .group-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+  .group-count {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+  }
+
+  .resolved-cards {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+  }
+  .resolved-card {
+    display: flex;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.15s ease;
+  }
+  .resolved-card:last-child { border-bottom: none; }
+  .resolved-card:hover {
+    background: var(--bg-hover);
+    transform: translateX(2px);
+  }
+  .resolved-card .severity-bar {
+    width: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+  .resolved-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .resolved-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .resolved-card-title {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+  }
+  .resolved-card-badges {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .ai-badge-sm {
+    color: var(--accent-light);
+    display: flex;
+    align-items: center;
+  }
+  .resolved-check {
+    color: var(--low);
+    opacity: 0.7;
+  }
+  .resolved-card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .meta-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .severity-micro {
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .severity-micro.critical { color: var(--critical); }
+  .severity-micro.high { color: var(--high); }
+  .severity-micro.medium { color: var(--medium); }
+  .severity-micro.low { color: var(--low); }
+
+  .resolution-preview {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    margin-top: 2px;
+  }
+
+  /* Empty state */
   .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -196,4 +692,118 @@ const resolvedCount = userIncidents.filter(i => i.status === 'resolved').length;
     color: var(--text-secondary);
     margin-bottom: 20px;
   }
+
+  /* Mini empty */
+  .mini-empty {
+    text-align: center;
+    padding: 20px 12px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-sm);
+  }
+  .mini-empty p {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .page-header { flex-direction: column; gap: 12px; }
+    .filters-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .active-cards { grid-template-columns: 1fr; }
+  }
 </style>
+
+<script>
+  // Client-side filtering
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('incidents-container');
+    if (!container) return;
+
+    let statusFilter = 'all';
+    let severityFilter = 'all';
+    let sortOrder = 'newest';
+
+    // Toggle button behavior
+    document.querySelectorAll('.toggle-group').forEach(group => {
+      group.querySelectorAll('.toggle-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          group.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const filterType = group.getAttribute('data-filter');
+          const value = btn.getAttribute('data-value') || 'all';
+
+          if (filterType === 'status') statusFilter = value;
+          if (filterType === 'severity') severityFilter = value;
+          if (filterType === 'sort') sortOrder = value;
+
+          applyFilters();
+        });
+      });
+    });
+
+    function applyFilters() {
+      const activeSection = container.querySelector('[data-section="active"]') as HTMLElement;
+      const resolvedSection = container.querySelector('[data-section="resolved"]') as HTMLElement;
+
+      // Status filter: show/hide sections
+      if (statusFilter === 'active') {
+        activeSection.style.display = '';
+        resolvedSection.style.display = 'none';
+      } else if (statusFilter === 'resolved') {
+        activeSection.style.display = 'none';
+        resolvedSection.style.display = '';
+      } else {
+        activeSection.style.display = '';
+        resolvedSection.style.display = '';
+      }
+
+      // Severity filter: show/hide cards
+      const allCards = container.querySelectorAll('[data-severity]') as NodeListOf<HTMLElement>;
+      allCards.forEach(card => {
+        const sev = card.getAttribute('data-severity');
+        if (severityFilter === 'all') {
+          card.style.display = '';
+        } else if (severityFilter === 'high') {
+          // "Warning" maps to high + medium
+          card.style.display = (sev === 'high' || sev === 'medium') ? '' : 'none';
+        } else {
+          card.style.display = sev === severityFilter ? '' : 'none';
+        }
+      });
+
+      // Sort: reverse card order in active section
+      const activeCards = activeSection.querySelector('.active-cards');
+      if (activeCards) {
+        const cards = Array.from(activeCards.children) as HTMLElement[];
+        if (sortOrder === 'oldest') {
+          cards.reverse().forEach(c => activeCards.appendChild(c));
+        } else {
+          // Re-sort by original order (newest first = default server order)
+          cards.sort((a, b) => {
+            const aIdx = parseInt(a.dataset.originalIndex || '0');
+            const bIdx = parseInt(b.dataset.originalIndex || '0');
+            return aIdx - bIdx;
+          });
+          cards.forEach(c => activeCards.appendChild(c));
+        }
+      }
+
+      // Sort resolved groups
+      container.querySelectorAll('.resolved-cards').forEach(group => {
+        const cards = Array.from(group.children) as HTMLElement[];
+        if (sortOrder === 'oldest') {
+          cards.reverse().forEach(c => group.appendChild(c));
+        }
+      });
+    }
+
+    // Store original order indices
+    const activeCards = container.querySelector('.active-cards');
+    if (activeCards) {
+      Array.from(activeCards.children).forEach((c, i) => {
+        (c as HTMLElement).dataset.originalIndex = i.toString();
+      });
+    }
+  });
+</script>

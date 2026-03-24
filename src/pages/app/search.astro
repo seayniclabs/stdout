@@ -23,6 +23,13 @@ if (!user) return Astro.redirect('/app/login');
   const input = document.getElementById('searchInput') as HTMLInputElement;
   const results = document.getElementById('searchResults')!;
 
+  // Pre-populate from URL query param (nav search bar submission)
+  const urlQ = new URLSearchParams(window.location.search).get('q');
+  if (urlQ && input) {
+    input.value = urlQ;
+    input.dispatchEvent(new Event('input'));
+  }
+
   input?.addEventListener('input', () => {
     clearTimeout(debounce);
     const q = input.value.trim();
