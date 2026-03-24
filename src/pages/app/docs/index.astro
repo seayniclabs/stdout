@@ -2,16 +2,25 @@
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, or } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
-const userDocs = db.select().from(tenantSchema.docs)
-  .where(eq(tenantSchema.docs.userId, user.id))
+
+// Fetch user's own docs + community docs
+const allDocs = db.select().from(tenantSchema.docs)
+  .where(or(
+    eq(tenantSchema.docs.userId, user.id),
+    eq(tenantSchema.docs.source, 'community')
+  ))
   .orderBy(desc(tenantSchema.docs.updatedAt))
   .all();
+
+// Split into user docs and community docs for display
+const userDocs = allDocs.filter(d => d.source !== 'community');
+const communityDocs = allDocs.filter(d => d.source === 'community');
 
 const typeLabels: Record<string, string> = {
   runbook: 'Runbook',
@@ -43,19 +52,24 @@ const typeColors: Record<string, string> = {
       </a>
     </div>
 
-    {userDocs.length === 0 ? (
+    {userDocs.length === 0 && communityDocs.length === 0 ? (
       <div class="empty-state">
         <div class="empty-icon mono">{ }</div>
         <h3>No docs yet</h3>
         <p>Create runbooks, post-mortems, guides, and operational notes. The AI references these in future diagnoses.</p>
         <a href="/app/docs/new" class="btn btn-primary">Create your first doc</a>
       </div>
-    ) : (
+    ) : null}
+
+    {userDocs.length > 0 && (
       <div class="doc-list">
         {userDocs.map(doc => (
           <a href={`/app/docs/${doc.id}`} class="doc-row">
             <div class="doc-info">
-              <div class="doc-title">{doc.title}</div>
+              <div class="doc-title">
+                {doc.source === 'fork' && <span class="source-badge fork-badge">Fork</span>}
+                {doc.title}
+              </div>
               <div class="doc-meta">
                 <span class="doc-type" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeLabels[doc.docType] || doc.docType}</span>
                 {doc.tags && doc.tags.split(',').map(tag => (
@@ -67,6 +81,34 @@ const typeColors: Record<string, string> = {
             <div class="doc-date mono">{doc.updatedAt.toISOString().split('T')[0]}</div>
           </a>
         ))}
+      </div>
+    )}
+
+    {communityDocs.length > 0 && (
+      <div class="community-section">
+        <div class="section-header">
+          <h2>Community Library</h2>
+          <span class="community-count mono">{communityDocs.length} docs</span>
+        </div>
+        <div class="doc-list">
+          {communityDocs.map(doc => (
+            <a href={`/app/docs/${doc.id}`} class="doc-row">
+              <div class="doc-info">
+                <div class="doc-title">
+                  <span class="source-badge community-badge">Community</span>
+                  {doc.title}
+                </div>
+                <div class="doc-meta">
+                  <span class="doc-type" style={`color: ${typeColors[doc.docType] || 'var(--text-muted)'}`}>{typeLabels[doc.docType] || doc.docType}</span>
+                  {doc.tags && doc.tags.split(',').map(tag => (
+                    <span class="tag">{tag.trim()}</span>
+                  ))}
+                </div>
+              </div>
+              <div class="doc-date mono">{doc.updatedAt.toISOString().split('T')[0]}</div>
+            </a>
+          ))}
+        </div>
       </div>
     )}
   </div>
@@ -94,5 +136,12 @@ const typeColors: Record<string, string> = {
   .btn-primary { background: var(--accent-btn); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }
   .mono { font-family: var(--font-mono); }
+  .community-section { margin-top: 32px; }
+  .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .section-header h2 { font-size: 15px; font-weight: 600; color: var(--text-secondary); }
+  .community-count { font-size: 11px; color: var(--text-muted); }
+  .source-badge { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 9px; font-weight: 700; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 6px; vertical-align: middle; }
+  .community-badge { background: rgba(0, 212, 170, 0.12); color: var(--low); }
+  .fork-badge { background: var(--accent-dim); color: var(--accent-light); }
 </style>
 

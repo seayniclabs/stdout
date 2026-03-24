@@ -4,6 +4,7 @@ import Layout from '../../../layouts/Layout.astro';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
+import { nanoid } from 'nanoid';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -12,7 +13,11 @@ const { id } = Astro.params;
 const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 
 const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).get();
-if (!doc || doc.userId !== user.id) return Astro.redirect('/app/docs');
+// Allow viewing community docs (any user) or own docs
+if (!doc || (doc.userId !== user.id && doc.source !== 'community')) return Astro.redirect('/app/docs');
+
+const isCommunityDoc = doc.source === 'community';
+const isFork = doc.source === 'fork';
 
 // Get stacks and incidents for edit form
 const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
@@ -54,6 +59,31 @@ if (Astro.request.method === 'POST') {
 
         return Astro.redirect(`/app/docs/${id}`);
       }
+    } else if (action === 'fork') {
+      // Fork a community doc into user's own KB
+      const forkId = nanoid();
+      const sizeBytes = new TextEncoder().encode(doc.content).length;
+      db.insert(tenantSchema.docs).values({
+        id: forkId,
+        userId: user.id,
+        title: doc.title,
+        content: doc.content,
+        docType: doc.docType,
+        tags: doc.tags,
+        sizeBytes,
+        source: 'fork',
+        communityDocId: doc.id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }).run();
+      // Sync fork to FTS
+      const rawDbFork = (db as any)._.session?.client;
+      if (rawDbFork?.prepare) {
+        try {
+          rawDbFork.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(forkId);
+        } catch {}
+      }
+      return Astro.redirect(`/app/docs/${forkId}?edit=true`);
     } else if (action === 'delete') {
       // Delete FTS entry
       const rawDb = (db as any)._.session?.client;
@@ -92,7 +122,11 @@ if (current.incidentId) {
       <a href="/app/docs" class="back-link">&larr; Knowledge Base</a>
       {!editing ? (
         <>
-          <h1>{current.title}</h1>
+          <h1>
+            {isCommunityDoc && <span class="source-badge community-badge">Community</span>}
+            {isFork && <span class="source-badge fork-badge">Fork</span>}
+            {current.title}
+          </h1>
           <div class="doc-meta">
             <span class="doc-type-pill" style={`color: ${typeColors[current.docType] || 'var(--text-muted)'}`}>{typeLabels[current.docType] || current.docType}</span>
             {stackName && <a href="/app/stacks" class="link-pill">{stackName}</a>}
@@ -101,12 +135,27 @@ if (current.incidentId) {
             <span class="mono" style="color: var(--text-muted); font-size: 11px;">{current.updatedAt.toISOString().split('T')[0]}</span>
           </div>
           <div class="doc-actions">
-            <a href={`/app/docs/${id}?edit=true`} class="btn btn-ghost btn-sm">Edit</a>
-            <form method="POST" style="display:inline;">
-              <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
-              <input type="hidden" name="action" value="delete" />
-              <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this document?')">Delete</button>
-            </form>
+            {isCommunityDoc ? (
+              <>
+                <form method="POST" style="display:inline;">
+                  <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                  <input type="hidden" name="action" value="fork" />
+                  <button type="submit" class="btn btn-primary btn-sm">Fork to my KB</button>
+                </form>
+              </>
+            ) : (
+              <>
+                <a href={`/app/docs/${id}?edit=true`} class="btn btn-ghost btn-sm">Edit</a>
+                <form method="POST" style="display:inline;">
+                  <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+                  <input type="hidden" name="action" value="delete" />
+                  <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Delete this document?')">Delete</button>
+                </form>
+                {current.source === 'user' && (
+                  <button id="contribute-btn" class="btn btn-ghost btn-sm" style="color: var(--low);" data-doc-id={id}>Contribute to Community</button>
+                )}
+              </>
+            )}
           </div>
         </>
       ) : (
@@ -115,6 +164,29 @@ if (current.incidentId) {
     </div>
 
     {error && <div class="auth-error">{error}</div>}
+
+    <!-- Contribution preview panel (hidden by default) -->
+    <div id="contribute-panel" class="contribute-panel" style="display:none;">
+      <div class="contribute-header">
+        <h2>Contribute to Community Library</h2>
+        <button id="contribute-close" class="btn btn-ghost btn-sm">Cancel</button>
+      </div>
+      <div id="contribute-loading" class="contribute-loading">
+        <p>Sanitizing document — stripping hostnames, IPs, credentials...</p>
+      </div>
+      <div id="contribute-preview" style="display:none;">
+        <div id="contribute-flagged" class="contribute-flag" style="display:none;"></div>
+        <div id="contribute-replacements" class="contribute-replacements"></div>
+        <h3>Sanitized Preview</h3>
+        <div id="sanitized-title" class="sanitized-title"></div>
+        <pre id="sanitized-content" class="doc-body"></pre>
+        <div class="contribute-actions">
+          <button id="contribute-confirm" class="btn btn-primary">Confirm Contribution</button>
+          <button id="contribute-cancel" class="btn btn-ghost">Cancel</button>
+        </div>
+        <div id="contribute-result" style="display:none;"></div>
+      </div>
+    </div>
 
     {editing ? (
       <form method="POST" class="doc-form">
@@ -209,5 +281,159 @@ if (current.incidentId) {
   .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
   .btn-danger:hover { background: var(--critical-dim); }
   .mono { font-family: var(--font-mono); }
+  .source-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.04em; margin-right: 8px; vertical-align: middle; }
+  .community-badge { background: rgba(0, 212, 170, 0.12); color: var(--low); }
+  .fork-badge { background: var(--accent-dim); color: var(--accent-light); }
+  .contribute-panel { margin-top: 24px; padding: 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-surface); }
+  .contribute-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .contribute-header h2 { font-size: 16px; }
+  .contribute-loading { text-align: center; padding: 24px; color: var(--text-muted); font-size: 13px; }
+  .contribute-flag { padding: 12px 16px; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.06); border-radius: var(--radius-sm); color: var(--critical); font-size: 13px; margin-bottom: 16px; }
+  .contribute-replacements { margin-bottom: 16px; }
+  .contribute-replacements summary { cursor: pointer; font-size: 12px; color: var(--text-muted); font-weight: 600; }
+  .contribute-replacements table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+  .contribute-replacements th { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--border); color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .contribute-replacements td { padding: 4px 8px; border-bottom: 1px solid var(--border); font-family: var(--font-mono); font-size: 11px; }
+  .contribute-replacements .cat { color: var(--accent-light); }
+  .sanitized-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; padding: 8px 12px; background: var(--bg); border-radius: var(--radius-sm); border: 1px solid var(--border); }
+  .contribute-actions { display: flex; gap: 8px; margin-top: 16px; }
   @media (max-width: 600px) { .form-row { flex-direction: column; } }
 </style>
+
+<script>
+  const contributeBtn = document.getElementById('contribute-btn');
+  const contributePanel = document.getElementById('contribute-panel');
+  const contributeLoading = document.getElementById('contribute-loading');
+  const contributePreview = document.getElementById('contribute-preview');
+  const contributeClose = document.getElementById('contribute-close');
+  const contributeCancel = document.getElementById('contribute-cancel');
+  const contributeConfirm = document.getElementById('contribute-confirm');
+  const contributeFlagged = document.getElementById('contribute-flagged');
+  const contributeReplacements = document.getElementById('contribute-replacements');
+  const sanitizedTitle = document.getElementById('sanitized-title');
+  const sanitizedContent = document.getElementById('sanitized-content');
+  const contributeResult = document.getElementById('contribute-result');
+
+  let sanitizedData: any = null;
+
+  function hidePanel() {
+    if (contributePanel) contributePanel.style.display = 'none';
+  }
+
+  contributeClose?.addEventListener('click', hidePanel);
+  contributeCancel?.addEventListener('click', hidePanel);
+
+  contributeBtn?.addEventListener('click', async () => {
+    const docId = contributeBtn.getAttribute('data-doc-id');
+    if (!docId || !contributePanel || !contributeLoading || !contributePreview) return;
+
+    contributePanel.style.display = 'block';
+    contributeLoading.style.display = 'block';
+    contributePreview.style.display = 'none';
+    if (contributeResult) contributeResult.style.display = 'none';
+
+    try {
+      const res = await fetch('/app/api/contribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ docId }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Unknown error' }));
+        contributeLoading.innerHTML = `<p style="color: var(--critical);">${err.error || 'Sanitization failed.'}</p>`;
+        return;
+      }
+
+      sanitizedData = await res.json();
+
+      // Show flagged warning
+      if (sanitizedData.flagged && contributeFlagged) {
+        contributeFlagged.style.display = 'block';
+        contributeFlagged.textContent = sanitizedData.flagReason || 'This document was flagged for review.';
+      } else if (contributeFlagged) {
+        contributeFlagged.style.display = 'none';
+      }
+
+      // Show replacements
+      if (contributeReplacements && sanitizedData.replacements?.length > 0) {
+        contributeReplacements.innerHTML = `
+          <details>
+            <summary>${sanitizedData.replacements.length} items sanitized</summary>
+            <table>
+              <thead><tr><th>Original</th><th>Replaced with</th><th>Category</th></tr></thead>
+              <tbody>
+                ${sanitizedData.replacements.map((r: any) => `
+                  <tr><td>${escapeHtml(r.original)}</td><td>${escapeHtml(r.replacement)}</td><td class="cat">${r.category}</td></tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </details>
+        `;
+      } else if (contributeReplacements) {
+        contributeReplacements.innerHTML = '<p style="font-size: 12px; color: var(--text-muted);">No PII detected — document appears already sanitized.</p>';
+      }
+
+      // Show preview
+      if (sanitizedTitle) sanitizedTitle.textContent = sanitizedData.sanitized.title;
+      if (sanitizedContent) sanitizedContent.textContent = sanitizedData.sanitized.content;
+
+      contributeLoading.style.display = 'none';
+      contributePreview.style.display = 'block';
+
+    } catch (err) {
+      contributeLoading.innerHTML = '<p style="color: var(--critical);">Network error. Please try again.</p>';
+    }
+  });
+
+  contributeConfirm?.addEventListener('click', async () => {
+    if (!sanitizedData) return;
+    if (contributeConfirm) contributeConfirm.textContent = 'Submitting...';
+    if (contributeConfirm) (contributeConfirm as HTMLButtonElement).disabled = true;
+
+    try {
+      const docId = contributeBtn?.getAttribute('data-doc-id');
+      const res = await fetch('/app/api/contribute', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          docId,
+          sanitizedTitle: sanitizedData.sanitized.title,
+          sanitizedContent: sanitizedData.sanitized.content,
+          replacements: sanitizedData.replacements,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        if (contributeResult) {
+          contributeResult.style.display = 'block';
+          const reasons = data.reasons ? `<ul style="margin: 8px 0 0; padding-left: 20px;">${data.reasons.map((r: string) => `<li>${r}</li>`).join('')}</ul>` : '';
+          contributeResult.innerHTML = `<p style="color: var(--critical); font-size: 13px; margin-top: 12px;">${data.error || 'Submission failed.'}${reasons}</p>`;
+        }
+        if (contributeConfirm) contributeConfirm.textContent = 'Confirm Contribution';
+        if (contributeConfirm) (contributeConfirm as HTMLButtonElement).disabled = false;
+        return;
+      }
+
+      if (contributeResult) {
+        contributeResult.style.display = 'block';
+        contributeResult.innerHTML = `<p style="color: var(--low); font-size: 13px; margin-top: 12px;">Contribution submitted for review (score: ${data.score}/100). Thank you for improving the community library.</p>`;
+      }
+      if (contributeConfirm) contributeConfirm.style.display = 'none';
+      if (contributeCancel) contributeCancel.style.display = 'none';
+    } catch {
+      if (contributeResult) {
+        contributeResult.style.display = 'block';
+        contributeResult.innerHTML = '<p style="color: var(--critical); font-size: 13px; margin-top: 12px;">Network error. Please try again.</p>';
+      }
+      if (contributeConfirm) contributeConfirm.textContent = 'Confirm Contribution';
+      if (contributeConfirm) (contributeConfirm as HTMLButtonElement).disabled = false;
+    }
+  });
+
+  function escapeHtml(str: string): string {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+</script>

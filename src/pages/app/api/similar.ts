@@ -66,11 +66,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const ftsQuery = q.split(/\s+/).filter(w => w.length > 2).map(w => `"${w}"`).join(' OR ');
     if (ftsQuery) {
       const docRows = rawDb.prepare(`
-        SELECT d.id, d.title, d.content, d.doc_type
+        SELECT d.id, d.title, d.content, d.doc_type, d.source
         FROM docs_fts fts
         JOIN docs d ON d.rowid = fts.rowid
-        WHERE docs_fts MATCH ? AND d.user_id = ?
-        ORDER BY rank LIMIT 3
+        WHERE docs_fts MATCH ? AND (d.user_id = ? OR d.source = 'community')
+        ORDER BY rank LIMIT 5
       `).all(ftsQuery, locals.user.id);
 
       for (const row of docRows) {
@@ -79,6 +79,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
           title: row.title,
           snippet: (row.content || '').substring(0, 200),
           docType: row.doc_type,
+          source: row.source || 'user',
         });
       }
     }

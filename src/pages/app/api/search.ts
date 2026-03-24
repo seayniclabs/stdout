@@ -66,14 +66,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
     }
   } catch { /* FTS may fail on complex queries */ }
 
-  // Search docs
+  // Search docs (user's own + community docs)
   try {
     const ftsQuery = q.split(/\s+/).map(w => `"${w}"`).join(' OR ');
     const docRows = rawDb.prepare(`
-      SELECT d.id, d.title, d.content, d.doc_type
+      SELECT d.id, d.title, d.content, d.doc_type, d.source
       FROM docs_fts fts
       JOIN docs d ON d.rowid = fts.rowid
-      WHERE docs_fts MATCH ? AND d.user_id = ?
+      WHERE docs_fts MATCH ? AND (d.user_id = ? OR d.source = 'community')
       ORDER BY rank LIMIT 10
     `).all(ftsQuery, locals.user.id);
 
@@ -84,6 +84,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         title: row.title,
         snippet: (row.content || '').substring(0, 120),
         docType: row.doc_type,
+        source: row.source || 'user',
       });
     }
   } catch { /* FTS may fail on complex queries */ }

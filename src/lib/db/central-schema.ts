@@ -92,3 +92,25 @@ export const deletions = sqliteTable('deletions', {
   emailHash: text('email_hash').notNull(),
   deletedAt: integer('deleted_at', { mode: 'timestamp' }).notNull(),
 });
+
+// --- Community Knowledge Base ---
+
+export const communitySubmissions = sqliteTable('community_submissions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(), // submitter
+  originalDocId: text('original_doc_id').notNull(), // source doc in tenant DB
+  sanitizedTitle: text('sanitized_title').notNull(),
+  sanitizedContent: text('sanitized_content').notNull(),
+  docType: text('doc_type').notNull().default('note'),
+  tags: text('tags'),
+  sanitizationLog: text('sanitization_log'), // JSON: replacements made
+  valueScore: integer('value_score'), // 0-100
+  status: text('status', {
+    enum: ['pending', 'published', 'rejected', 'withdrawn'],
+  }).notNull().default('pending'),
+  reviewNotes: text('review_notes'),
+  version: integer('version').notNull().default(1),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  publishedAt: integer('published_at', { mode: 'timestamp' }),
+});

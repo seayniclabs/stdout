@@ -92,6 +92,9 @@ export const docs = sqliteTable('docs', {
   stackId: text('stack_id'), // Optional link to related stack
   tags: text('tags'), // Comma-separated
   sizeBytes: integer('size_bytes').notNull().default(0),
+  source: text('source').notNull().default('user'), // 'user' | 'community' | 'fork'
+  communityDocId: text('community_doc_id'), // Links forked docs back to community source
+  communityVersion: integer('community_version'), // Tracks sync version for update detection
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

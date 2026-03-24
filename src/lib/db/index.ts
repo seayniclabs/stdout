@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import * as centralSchema from './central-schema';
 import * as tenantSchema from './tenant-schema';
+import { seedDocs, SEED_VERSION } from './seed-community-docs';
 
 // Re-export both schemas for convenience
 export { centralSchema, tenantSchema };
@@ -40,6 +41,34 @@ function safeAddColumn(sqlite: InstanceType<typeof Database>, table: string, col
   }
 }
 
+function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
+  // Tenant-side column additions — idempotent, safe on every startup.
+  // Community Knowledge Base (Phase 1)
+  safeAddColumn(sqlite, 'docs', 'source', "TEXT NOT NULL DEFAULT 'user'");
+  safeAddColumn(sqlite, 'docs', 'community_doc_id', 'TEXT');
+  safeAddColumn(sqlite, 'docs', 'community_version', 'INTEGER');
+}
+
+function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {
+  // Insert seed community docs if they don't already exist.
+  // Uses INSERT OR IGNORE so re-runs are safe.
+  const stmt = sqlite.prepare(`
+    INSERT OR IGNORE INTO docs (id, user_id, title, content, doc_type, tags, size_bytes, source, community_doc_id, community_version, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'community', ?, ?, ?, ?)
+  `);
+  const ftsStmt = sqlite.prepare(`
+    INSERT OR IGNORE INTO docs_fts(rowid, title, content, tags)
+    SELECT rowid, title, content, tags FROM docs WHERE id = ?
+  `);
+
+  const now = Date.now();
+  for (const doc of seedDocs) {
+    const sizeBytes = new TextEncoder().encode(doc.content).length;
+    stmt.run(doc.id, userId, doc.title, doc.content, doc.docType, doc.tags, sizeBytes, doc.id, SEED_VERSION, now, now);
+    try { ftsStmt.run(doc.id); } catch { /* FTS sync may fail if already indexed */ }
+  }
+}
+
 function runMigrations(sqlite: InstanceType<typeof Database>): void {
   // Add columns that were added after initial schema creation.
   // Each migration is idempotent — safe to run on every startup.
@@ -64,6 +93,29 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
     );
     CREATE INDEX IF NOT EXISTS idx_team_members_owner ON team_members(owner_id);
     CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
+  `);
+
+  // Community Knowledge Base submissions (central DB)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS community_submissions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      original_doc_id TEXT NOT NULL,
+      sanitized_title TEXT NOT NULL,
+      sanitized_content TEXT NOT NULL,
+      doc_type TEXT NOT NULL DEFAULT 'note',
+      tags TEXT,
+      sanitization_log TEXT,
+      value_score INTEGER,
+      status TEXT NOT NULL DEFAULT 'pending',
+      review_notes TEXT,
+      version INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      published_at INTEGER
+    );
+    CREATE INDEX IF NOT EXISTS idx_community_submissions_status ON community_submissions(status);
+    CREATE INDEX IF NOT EXISTS idx_community_submissions_user ON community_submissions(user_id);
   `);
 }
 
@@ -301,6 +353,8 @@ function getSelfHostDb(): BetterSQLite3Database<typeof combinedSchema> {
     runCentralDDL(sqlite);
     runTenantDDL(sqlite);
     runMigrations(sqlite);
+    runTenantMigrations(sqlite);
+    seedCommunityDocs(sqlite, 'system');
     _selfHostDb = drizzle(sqlite, { schema: combinedSchema });
   }
   return _selfHostDb;
@@ -363,6 +417,8 @@ export function getTenantDb(userId: string): BetterSQLite3Database<typeof tenant
   const dbPath = path.join(tenantsDir, `${userId}.db`);
   const sqlite = initSqlite(dbPath);
   runTenantDDL(sqlite);
+  runTenantMigrations(sqlite);
+  seedCommunityDocs(sqlite, userId);
 
   const db = drizzle(sqlite, { schema: tenantSchema });
   tenantPool.set(userId, { db, lastAccess: Date.now() });
