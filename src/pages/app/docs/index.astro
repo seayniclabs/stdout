@@ -53,6 +53,18 @@ for (const doc of userDocs) {
   if (typeCounts[doc.docType] !== undefined) typeCounts[doc.docType]++;
 }
 
+// StdOut docs: community guides tagged as getting-started, or with "StdOut" in title
+const stdoutDocs = communityDocs.filter(d =>
+  d.title?.toLowerCase().includes('stdout') ||
+  d.title?.toLowerCase().includes('getting started') ||
+  d.title?.toLowerCase().includes('scanner') ||
+  d.title?.toLowerCase().includes('setup') ||
+  d.tags?.toLowerCase().includes('stdout') ||
+  d.tags?.toLowerCase().includes('getting-started')
+);
+// If no tagged docs found, fall back to all community guides
+const stdoutDocsDisplay = stdoutDocs.length > 0 ? stdoutDocs : communityDocs.filter(d => d.docType === 'guide');
+
 // Recently updated (last 5 from all docs)
 const recentlyUpdated = [...allDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
 
@@ -93,6 +105,11 @@ function formatDate(date: Date) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           <span>All Docs</span>
           <span class="sidebar-count mono">{allDocs.length}</span>
+        </button>
+        <button class="sidebar-item sidebar-item--featured" data-filter="stdout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span>StdOut</span>
+          <span class="sidebar-count mono">{stdoutDocsDisplay.length}</span>
         </button>
         <button class="sidebar-item" data-filter="runbook">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
@@ -160,6 +177,7 @@ function formatDate(date: Date) {
       <!-- Mobile category tabs -->
       <div class="mobile-tabs">
         <button class="mobile-tab active" data-filter="all">All</button>
+        <button class="mobile-tab" data-filter="stdout">StdOut</button>
         <button class="mobile-tab" data-filter="runbook">Runbooks</button>
         <button class="mobile-tab" data-filter="postmortem">Post-Mortems</button>
         <button class="mobile-tab" data-filter="guide">Guides</button>
@@ -216,6 +234,7 @@ function formatDate(date: Date) {
                    class="doc-card"
                    data-type={doc.docType}
                    data-source={doc.source}
+                   data-stdout={stdoutDocsDisplay.some(s => s.id === doc.id) ? 'true' : 'false'}
                    data-title={doc.title.toLowerCase()}
                    data-tags={doc.tags?.toLowerCase() || ''}
                    data-content={truncate(doc.content, 200).toLowerCase()}>
@@ -288,6 +307,7 @@ function formatDate(date: Date) {
 
   const filterLabels: Record<string, string> = {
     all: 'All Documents',
+    stdout: 'StdOut Guides',
     runbook: 'Runbooks',
     postmortem: 'Post-Mortems',
     guide: 'Guides',
@@ -304,8 +324,10 @@ function formatDate(date: Date) {
       const tags = card.dataset.tags || '';
       const content = card.dataset.content || '';
 
+      const isStdout = card.dataset.stdout === 'true';
       let matchFilter = currentFilter === 'all'
         || (currentFilter === 'community' && source === 'community')
+        || (currentFilter === 'stdout' && isStdout)
         || type === currentFilter;
 
       let matchSearch = !currentSearch
@@ -431,6 +453,14 @@ function formatDate(date: Date) {
     background: var(--accent-dim);
     border-color: transparent;
     color: var(--accent-light);
+  }
+  .sidebar-item--featured {
+    border-left: 2px solid #FB923C;
+    padding-left: 10px;
+  }
+  .sidebar-item--featured span:first-of-type {
+    color: #FB923C;
+    font-weight: 600;
   }
 
   /* Recently updated sidebar links */
