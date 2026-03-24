@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { exchangeCode, getUserInfo, findOrCreateUser, validateState } from '../../../lib/oidc';
 import { getCentralDb, centralSchema, getTenantDb } from '../../../lib/db';
 import { logAudit, getClientIp } from '../../../lib/audit';
+import { sendWelcomeEmail } from '../../../lib/email';
 
 // Mobile Safari treats 302 responses without Content-Type as file downloads
 // when X-Content-Type-Options: nosniff is set and the URL looks like a filename.
@@ -79,8 +80,13 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   logAudit('login', {
     userId: localUser.id,
     ip: getClientIp(request),
-    details: { method: 'oidc', email: oidcUser.email, sub: oidcUser.sub },
+    details: { method: 'oidc', email: oidcUser.email, sub: oidcUser.sub, isNew: localUser.isNew },
   });
+
+  // Send welcome email for new OIDC users
+  if (localUser.isNew) {
+    sendWelcomeEmail(localUser.email, localUser.displayName || null).catch(() => {});
+  }
 
   const maxAge = 30 * 24 * 60 * 60;
 
@@ -92,5 +98,6 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
     maxAge,
   });
 
-  return safeRedirect('/app');
+  // New users go to onboarding guides
+  return safeRedirect(localUser.isNew ? '/app/docs?filter=stdout' : '/app');
 };

@@ -124,7 +124,7 @@ export async function getUserInfo(accessToken: string): Promise<OIDCUser | null>
 
 // --- Find or Create Local User ---
 
-export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: string; displayName: string } | null {
+export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: string; displayName: string; isNew: boolean } | null {
   const db = getCentralDb();
 
   // Look up by OIDC sub first (stable identifier), then fall back to email
@@ -141,7 +141,7 @@ export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: strin
   }
 
   if (user) {
-    return { id: user.id, email: user.email, displayName: user.displayName || oidcUser.name || '' };
+    return { id: user.id, email: user.email, displayName: user.displayName || oidcUser.name || '', isNew: false };
   }
 
   // Block new account creation when registration is frozen
@@ -167,7 +167,7 @@ export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: strin
     updatedAt: now,
   }).run();
 
-  return { id, email: oidcUser.email, displayName };
+  return { id, email: oidcUser.email, displayName, isNew: true };
 }
 
 // --- State Management (CSRF for OAuth flow) ---

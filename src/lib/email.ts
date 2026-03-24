@@ -68,6 +68,56 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
   return send(to, '[StdOut] Reset your password', html);
 }
 
+export async function sendWelcomeEmail(to: string, displayName?: string | null): Promise<boolean> {
+  const name = escapeHtml(displayName || 'there');
+  const html = wrap(`
+    <h2 style="font-size: 18px; margin: 0 0 12px;">Welcome to StdOut, ${name}</h2>
+    <p style="font-size: 14px; color: #9090A8; line-height: 1.6; margin: 0 0 20px;">
+      Your incident companion is ready. Here's a quick overview of what StdOut does and how to get the most out of it.
+    </p>
+    <a href="${APP_URL}/app" style="display: inline-block; padding: 10px 24px; background: #C2410C; color: #fff; text-decoration: none; border-radius: 6px; font-size: 14px; font-weight: 600;">Open your dashboard</a>
+
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #1F1F35;">
+      <h3 style="font-size: 14px; color: #E0E0E8; margin: 0 0 12px;">Quick guide to StdOut</h3>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">Dashboard</strong><br>
+        Your command center. See service health, active incidents, and recent activity at a glance.
+      </p>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">Scanner</strong><br>
+        A Docker sidecar that discovers your infrastructure automatically. Run it once and StdOut maps your entire stack — containers, networks, services.
+      </p>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">Incidents &amp; AI Diagnosis</strong><br>
+        Log what broke. StdOut matches it against past resolutions and uses AI to suggest root causes and next steps.
+      </p>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">HUD (Uptime Monitoring)</strong><br>
+        HTTP and TCP health checks on your services. Auto-creates incidents when something goes down, auto-resolves when it comes back.
+      </p>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">Knowledge Base</strong><br>
+        Build runbooks, postmortems, and guides from your resolutions. Community docs are included so you're not starting from scratch.
+      </p>
+
+      <p style="font-size: 13px; color: #9090A8; line-height: 1.6; margin: 0 0 10px;">
+        <strong style="color: #E0E0E8;">Infrastructure</strong><br>
+        Your Docker stacks visualized — container health, ports, and related incidents grouped by compose project.
+      </p>
+    </div>
+
+    <p style="font-size: 12px; color: #5A5A72; margin-top: 16px;">
+      Questions? Reply to this email — it goes straight to a human.
+    </p>
+  `);
+  return send(to, "Welcome to StdOut — here's how to get started", html);
+}
+
 export async function sendVerificationEmail(to: string, token: string): Promise<boolean> {
   const verifyUrl = `${APP_URL}/app/verify-email?token=${encodeURIComponent(token)}`;
   const html = wrap(`

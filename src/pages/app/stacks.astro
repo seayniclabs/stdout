@@ -229,8 +229,11 @@ function timeAgo(date: Date) {
             <input type="text" name="name" value={editingStack.name} required />
           </label>
           <label>
-            <span>Description</span>
-            <textarea name="description" rows={10}>{editingStack.description}</textarea>
+            <span>Description <span style="font-weight:400; color:var(--text-muted); font-size:0.8em;">(Markdown — imported by scanner)</span></span>
+            <textarea name="description" rows={10} style="font-family:var(--font-mono); font-size:13px;">{editingStack.description}</textarea>
+            <span style="font-size:0.75em; color:var(--text-muted); margin-top:4px; display:block;">
+              Format: <code>### ContainerName (image)</code> headers with <code>- Key: Value</code> details. Editing manually may break the container grid display.
+            </span>
           </label>
           <div class="form-actions">
             <button type="submit" class="btn btn-primary">Save Changes</button>

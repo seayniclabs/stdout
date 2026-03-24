@@ -7,7 +7,7 @@ import { hashPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
-import { sendVerificationEmail } from '../../lib/email';
+import { sendVerificationEmail, sendWelcomeEmail } from '../../lib/email';
 import { isRegistrationFrozen, canRegister } from '../../lib/freeze';
 import crypto from 'node:crypto';
 
@@ -79,6 +79,7 @@ if (Astro.request.method === 'POST') {
           createdAt: new Date(),
         }).run();
         sendVerificationEmail(email, verifyToken);
+        sendWelcomeEmail(email, displayName || null).catch(() => {});
 
         const sessionId = await createSession(id);
         Astro.cookies.set(SESSION_COOKIE, sessionId, {
