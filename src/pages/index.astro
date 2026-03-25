@@ -790,18 +790,28 @@ const user = Astro.locals.user;
 <script>
   const lnToggle = document.getElementById('lnToggle');
   const lnMobile = document.getElementById('lnMobile');
+  function closeMobileNav() {
+    lnMobile.classList.remove('open');
+    lnToggle.classList.remove('active');
+    lnToggle.setAttribute('aria-expanded', 'false');
+  }
   if (lnToggle && lnMobile) {
     lnToggle.addEventListener('click', () => {
       const isOpen = lnMobile.classList.toggle('open');
       lnToggle.classList.toggle('active', isOpen);
       lnToggle.setAttribute('aria-expanded', String(isOpen));
     });
-    lnMobile.querySelectorAll('a[href^="#"]').forEach(link => {
-      link.addEventListener('click', () => {
-        lnMobile.classList.remove('open');
-        lnToggle.classList.remove('active');
-        lnToggle.setAttribute('aria-expanded', 'false');
-      });
+    // Close on any link click inside the mobile nav
+    lnMobile.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', closeMobileNav);
+    });
+    // Close on tap outside
+    document.addEventListener('click', (e) => {
+      if (lnMobile.classList.contains('open') &&
+          !lnMobile.contains(e.target as Node) &&
+          !lnToggle.contains(e.target as Node)) {
+        closeMobileNav();
+      }
     });
   }
 

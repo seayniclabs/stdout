@@ -1,6 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
+import { readFileSync } from 'fs';
 
-const client = new Anthropic();
+function getAnthropicKey(): string {
+  const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
+  try {
+    return readFileSync(keyPath, 'utf-8').trim();
+  } catch {
+    // Fall back to environment variable (local dev)
+    if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+    throw new Error(`Anthropic API key not found at ${keyPath} and ANTHROPIC_API_KEY env var not set`);
+  }
+}
+
+const client = new Anthropic({ apiKey: getAnthropicKey() });
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
