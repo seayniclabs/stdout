@@ -435,13 +435,3 @@ export function evictTenantDb(userId: string): void {
   tenantPool.delete(userId);
 }
 
-// --- Backwards compatibility ---
-// getDb() still works for self-host mode and any code not yet migrated.
-// TODO: Remove once all call sites are updated.
-export function getDb() {
-  return getSelfHostDb();
-}
-
-// Legacy re-export — old code imports { schema } from './db'
-import * as _legacySchema from './schema';
-export { _legacySchema as schema };
