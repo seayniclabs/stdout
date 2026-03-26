@@ -248,7 +248,7 @@ function timeAgo(date: Date) {
     <div class="page-header">
       <div class="header-left">
         <h1>Infrastructure</h1>
-        <p class="page-subtitle">Your services organized by stack. Imported from scanner, managed here.</p>
+        <p class="page-subtitle">Stacks represent your infrastructure groups -- Docker Compose projects, service clusters, or logical groupings of related services. Imported automatically by the scanner, or added manually.</p>
       </div>
       <div class="header-right">
         <div class="scanner-status mono">
@@ -452,7 +452,7 @@ function timeAgo(date: Date) {
         ) : (
           <>
             <h3>No stacks imported yet</h3>
-            <p>Run the scanner to discover your infrastructure, or add a stack manually.</p>
+            <p>Stacks map your infrastructure -- each one represents a Docker Compose project, a service cluster, or a logical group of services. The scanner discovers them automatically, or you can describe them by hand.</p>
           </>
         )}
 

@@ -91,7 +91,7 @@ function truncate(str: string, max: number) {
           <h1>Incidents</h1>
           <span class="count-badge mono">{userIncidents.length}</span>
         </div>
-        <p class="page-subtitle">Track, diagnose, and resolve infrastructure issues</p>
+        <p class="page-subtitle">Log issues, get AI diagnosis with your stack context, resolve them, and build a library of fixes</p>
       </div>
       <a href="/app/incidents/new" class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
@@ -131,8 +131,12 @@ function truncate(str: string, max: number) {
       <div class="empty-state">
         <div class="empty-icon">&gt;_</div>
         <h3>No incidents yet</h3>
-        <p>When something breaks, log it here. StdOut matches it against your past resolutions and knowledge base.</p>
-        <a href="/app/incidents/new" class="btn btn-primary">Log an incident</a>
+        <p>When something breaks, log it here to start building your resolution library. The workflow: <strong>log</strong> the issue, <strong>diagnose</strong> it with AI context from your stacks, <strong>resolve</strong> it, and <strong>learn</strong> from the pattern next time it happens.</p>
+        <div class="empty-actions">
+          <a href="/app/incidents/new" class="btn btn-primary">Log your first incident</a>
+          <a href="/app/docs?filter=stdout" class="btn btn-ghost">Read the guide</a>
+        </div>
+        <p class="empty-hint">Incidents are linked to your stacks and searchable across your knowledge base. Every resolution makes the next diagnosis smarter.</p>
       </div>
     ) : (
       <div id="incidents-container">
@@ -690,7 +694,22 @@ function truncate(str: string, max: number) {
   .empty-state p {
     font-size: 13px;
     color: var(--text-secondary);
-    margin-bottom: 20px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .empty-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .empty-hint {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
+    margin-top: 8px;
   }
 
   /* Mini empty */

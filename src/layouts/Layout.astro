@@ -97,7 +97,9 @@ const currentWsId = ws?.ownerId || user?.id;
       <svg class="nav-search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="8.5" cy="8.5" r="5.5" /><line x1="13" y1="13" x2="18" y2="18" />
       </svg>
-      <input type="text" name="q" class="nav-search-input" placeholder="Search incidents, docs..." autocomplete="off" />
+      <input type="text" name="q" class="nav-search-input" placeholder="Search incidents, docs..." autocomplete="off" id="navSearchInput" />
+      <kbd class="nav-search-kbd mono">/</kbd>
+      <div class="nav-search-dropdown" id="navSearchDropdown"></div>
     </form>
 
     <button class="nav-search-toggle" id="mobileSearchToggle" aria-label="Search" type="button">
@@ -266,6 +268,95 @@ const currentWsId = ws?.ownerId || user?.id;
       const url = new URL(window.location.href);
       url.searchParams.set('ws', wsSwitcher.value);
       window.location.href = url.toString();
+    });
+
+    // Nav search inline dropdown
+    const navSearchInput = document.getElementById('navSearchInput') as HTMLInputElement;
+    const navSearchDropdown = document.getElementById('navSearchDropdown');
+    let navSearchDebounce: any;
+    let navDropdownIndex = -1;
+
+    function escapeNavHtml(s: string) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function typeToHref(r: any): string {
+      if (r.type === 'incident') return `/app/incidents/${r.incidentId}`;
+      if (r.type === 'resolution') return `/app/incidents/${r.incidentId}`;
+      if (r.type === 'doc') return `/app/docs/${r.docId}`;
+      if (r.type === 'stack') return `/app/stacks`;
+      if (r.type === 'monitor') return `/app/hud/${r.monitorId}`;
+      return '/app/search';
+    }
+
+    navSearchInput?.addEventListener('input', () => {
+      const q = navSearchInput.value.trim();
+      if (q.length < 2) {
+        if (navSearchDropdown) navSearchDropdown.classList.remove('open');
+        return;
+      }
+      clearTimeout(navSearchDebounce);
+      navSearchDebounce = setTimeout(async () => {
+        try {
+          const res = await fetch(`/app/api/search?q=${encodeURIComponent(q)}`);
+          if (!res.ok || !navSearchDropdown) return;
+          const data = await res.json();
+          const results = (data.results || []).slice(0, 6);
+          navDropdownIndex = -1;
+
+          if (results.length === 0) {
+            navSearchDropdown.innerHTML = `<div class="nav-dropdown-empty">No results for &lsquo;${escapeNavHtml(q)}&rsquo;</div>
+              <a href="/app/search?q=${encodeURIComponent(q)}" class="nav-dropdown-footer">Full search &rarr;</a>`;
+          } else {
+            let html = results.map((r: any) => {
+              const typeLabel = r.type === 'resolution' ? 'fix' : r.type;
+              return `<a href="${typeToHref(r)}" class="nav-dropdown-item" data-nav-result>
+                <span class="nav-dropdown-type ${r.type}">${escapeNavHtml(typeLabel)}</span>
+                <span class="nav-dropdown-title">${escapeNavHtml(r.title || '')}</span>
+              </a>`;
+            }).join('');
+            html += `<a href="/app/search?q=${encodeURIComponent(q)}" class="nav-dropdown-footer">View all results &rarr;</a>`;
+            navSearchDropdown.innerHTML = html;
+          }
+          navSearchDropdown.classList.add('open');
+        } catch {}
+      }, 250);
+    });
+
+    // Keyboard nav for dropdown
+    navSearchInput?.addEventListener('keydown', (e) => {
+      if (!navSearchDropdown?.classList.contains('open')) return;
+      const items = navSearchDropdown.querySelectorAll('[data-nav-result]');
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        navDropdownIndex = Math.min(navDropdownIndex + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('selected', i === navDropdownIndex));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        navDropdownIndex = Math.max(navDropdownIndex - 1, -1);
+        items.forEach((el, i) => el.classList.toggle('selected', i === navDropdownIndex));
+      } else if (e.key === 'Enter' && navDropdownIndex >= 0) {
+        e.preventDefault();
+        const selected = items[navDropdownIndex] as HTMLAnchorElement;
+        if (selected) window.location.href = selected.href;
+      } else if (e.key === 'Escape') {
+        navSearchDropdown.classList.remove('open');
+      }
+    });
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (navSearchDropdown && !navSearchDropdown.contains(e.target as Node) && e.target !== navSearchInput) {
+        navSearchDropdown.classList.remove('open');
+      }
+    });
+
+    // "/" keyboard shortcut to focus search
+    document.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        navSearchInput?.focus();
+      }
     });
 
     // Mobile nav toggle
@@ -479,6 +570,100 @@ const currentWsId = ws?.ownerId || user?.id;
       border-color: var(--border-hover);
       background: rgba(14, 14, 24, 0.95);
     }
+    .nav-search-kbd {
+      position: absolute;
+      right: 8px;
+      padding: 1px 6px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      color: var(--text-muted);
+      font-size: 10px;
+      pointer-events: none;
+      opacity: 0.6;
+    }
+    .nav-search-input:focus ~ .nav-search-kbd {
+      display: none;
+    }
+
+    /* ── Nav search dropdown ──────────────────────── */
+    .nav-search-dropdown {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      right: 0;
+      min-width: 320px;
+      max-height: 400px;
+      overflow-y: auto;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      z-index: 200;
+    }
+    .nav-search-dropdown.open {
+      display: block;
+    }
+    .nav-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 13px;
+      transition: background 150ms;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .nav-dropdown-item:hover,
+    .nav-dropdown-item.selected {
+      background: var(--bg-hover);
+    }
+    .nav-dropdown-type {
+      font-size: 9px;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      padding: 1px 5px;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+    .nav-dropdown-type.incident { color: var(--critical); background: var(--critical-dim); }
+    .nav-dropdown-type.resolution { color: var(--low); background: var(--low-dim); }
+    .nav-dropdown-type.doc { color: var(--high); background: var(--high-dim); }
+    .nav-dropdown-type.stack { color: #38bdf8; background: rgba(56, 189, 248, 0.1); }
+    .nav-dropdown-type.monitor { color: #a78bfa; background: rgba(167, 139, 250, 0.1); }
+    .nav-dropdown-title {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .nav-dropdown-footer {
+      display: block;
+      padding: 8px 14px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent-light);
+      text-decoration: none;
+      border-top: 1px solid var(--border);
+      transition: background 150ms;
+    }
+    .nav-dropdown-footer:hover {
+      background: var(--accent-dim);
+    }
+    .nav-dropdown-empty {
+      padding: 16px 14px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
 
     /* ── Mobile search toggle button ─────────────── */
     .nav-search-toggle {
@@ -638,6 +823,14 @@ const currentWsId = ws?.ownerId || user?.id;
         width: 100%;
         font-size: 16px;
         padding: 10px 10px 10px 34px;
+      }
+      .nav-search.mobile-open .nav-search-kbd {
+        display: none;
+      }
+      .nav-search.mobile-open .nav-search-dropdown {
+        min-width: unset;
+        left: 0;
+        right: 0;
       }
       .nav-search-toggle {
         display: flex;

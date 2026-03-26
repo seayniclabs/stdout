@@ -160,7 +160,7 @@ function formatDate(date: Date) {
             <h1>Knowledge Base</h1>
             <span class="count-badge mono">{allDocs.length}</span>
           </div>
-          <p class="page-subtitle">Runbooks, guides, and lessons from every incident</p>
+          <p class="page-subtitle">Your operational knowledge library. Runbooks, post-mortems, guides, and notes -- all searchable alongside your incidents.</p>
         </div>
         <div class="page-header-actions">
           <div class="search-box">
@@ -189,8 +189,12 @@ function formatDate(date: Date) {
         <div class="empty-state">
           <div class="empty-icon">&gt;_</div>
           <h3>Your knowledge base is empty</h3>
-          <p>Start by creating a runbook for your most common issue, or explore community docs.</p>
-          <a href="/app/docs/new" class="btn btn-primary">Create your first doc</a>
+          <p>This is where your operational knowledge lives -- runbooks for recurring issues, post-mortems from resolved incidents, guides for your setup, and notes for everything else. Start by documenting your most common fix, or browse community docs for ideas.</p>
+          <div class="empty-actions">
+            <a href="/app/docs/new" class="btn btn-primary">Create your first doc</a>
+            <a href="/app/search" class="btn btn-ghost">Search community docs</a>
+          </div>
+          <p class="empty-hint">Docs are searchable alongside incidents and resolutions. The more you document, the better your AI diagnoses become.</p>
         </div>
       ) : (
         <div id="docs-container">
@@ -852,6 +856,21 @@ function formatDate(date: Date) {
   .empty-state p {
     font-size: 13px;
     color: var(--text-secondary);
+    margin-bottom: 16px;
+    line-height: 1.6;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .empty-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .empty-hint {
+    font-size: 11px !important;
+    color: var(--text-muted) !important;
     margin-bottom: 20px;
     max-width: 420px;
     margin-left: auto;
