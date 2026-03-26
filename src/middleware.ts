@@ -258,13 +258,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-  // Redirects: return with security headers but skip CSP nonce injection
+  // Redirects: return as-is to preserve Set-Cookie headers from auth flows.
+  // Re-wrapping redirects can drop cookie headers in some runtimes.
   if (response.status >= 300 && response.status < 400) {
-    return new Response(null, {
-      status: response.status,
-      statusText: response.statusText,
-      headers: newHeaders,
-    });
+    return response;
   }
 
   // Non-HTML responses: return with security headers, no CSP nonce needed

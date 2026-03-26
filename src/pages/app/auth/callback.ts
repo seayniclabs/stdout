@@ -5,20 +5,11 @@ import { getCentralDb, centralSchema, getTenantDb } from '../../../lib/db';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import { sendWelcomeEmail } from '../../../lib/email';
 
-// Mobile Safari treats 302 responses without Content-Type as file downloads
-// when X-Content-Type-Options: nosniff is set and the URL looks like a filename.
-function safeRedirect(location: string): Response {
-  return new Response(null, {
-    status: 302,
-    headers: {
-      'Location': location,
-      'Content-Type': 'text/html; charset=utf-8',
-    },
-  });
-}
-
 // GET /app/auth/callback — handle OIDC callback from Authentik
 export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
+  // Use Astro's redirect helper so cookie mutations are reliably attached.
+  const safeRedirect = (location: string) => redirect(location, 302);
+
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const error = url.searchParams.get('error');
@@ -93,7 +84,6 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   }
 
   const maxAge = 30 * 24 * 60 * 60;
-
   cookies.set('sl_session', sessionId, {
     path: '/',
     httpOnly: true,

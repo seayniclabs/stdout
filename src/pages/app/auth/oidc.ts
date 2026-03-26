@@ -2,28 +2,32 @@ import type { APIRoute } from 'astro';
 import { getAuthorizationURL, generateState, generateCodeVerifier, generateCodeChallenge, isOIDCEnabled } from '../../../lib/oidc';
 
 // GET /app/auth/oidc — redirect to Authentik login with PKCE
-export const GET: APIRoute = async ({ cookies }) => {
+export const GET: APIRoute = async ({ cookies, redirect }) => {
   if (!isOIDCEnabled()) {
-    return new Response(null, { status: 302, headers: { 'Location': '/app/login?error=oidc_not_configured' } });
+    return redirect('/app/login?error=oidc_not_configured', 302);
   }
 
   const state = generateState();
   const codeVerifier = generateCodeVerifier();
   const codeChallenge = generateCodeChallenge(codeVerifier);
 
-  // Clear any stale session cookie before starting OIDC flow
-  const deleteSession = 'sl_session=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0';
-  const setState = `sl_oidc_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
-  const setVerifier = `sl_oidc_verifier=${codeVerifier}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`;
+  // Use Astro cookie API so redirects reliably carry all cookie mutations.
+  // Do not clear active session here; unexpected prefetch/retries can erase fresh auth.
+  cookies.set('sl_oidc_state', state, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 600,
+  });
+  cookies.set('sl_oidc_verifier', codeVerifier, {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 600,
+  });
 
   const url = getAuthorizationURL(state, codeChallenge);
-  return new Response(null, {
-    status: 302,
-    headers: new Headers([
-      ['Location', url],
-      ['Set-Cookie', deleteSession],
-      ['Set-Cookie', setState],
-      ['Set-Cookie', setVerifier],
-    ]),
-  });
+  return redirect(url, 302);
 };

@@ -49,7 +49,22 @@ export function validateSession(sessionId: string): SessionUser | null {
     .get();
 
   if (!row) return null;
-  if (row.expiresAt < new Date()) {
+
+  const rawExpiresAt = row.expiresAt as unknown;
+  let expiresAtMs: number;
+  if (rawExpiresAt instanceof Date) {
+    expiresAtMs = rawExpiresAt.getTime();
+  } else if (typeof rawExpiresAt === 'number') {
+    // SQLite integer timestamps may come back as seconds since epoch.
+    expiresAtMs = rawExpiresAt > 1_000_000_000_000 ? rawExpiresAt : rawExpiresAt * 1000;
+  } else if (typeof rawExpiresAt === 'string' && /^\d+$/.test(rawExpiresAt)) {
+    const n = Number(rawExpiresAt);
+    expiresAtMs = n > 1_000_000_000_000 ? n : n * 1000;
+  } else {
+    expiresAtMs = new Date(String(rawExpiresAt)).getTime();
+  }
+
+  if (!Number.isFinite(expiresAtMs) || expiresAtMs < Date.now()) {
     getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
     return null;
   }
