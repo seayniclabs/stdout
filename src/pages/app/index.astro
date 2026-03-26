@@ -57,8 +57,32 @@ const pendingImports = db.select().from(tenantSchema.stackImports)
 // --- Onboarding state ---
 const tokens = getCentralDb().select().from(centralSchema.apiTokens)
   .where(eq(centralSchema.apiTokens.userId, user.id)).all();
-const isNewUser = stacksCount === 0 && allIncidents.length === 0 && totalMonitors === 0;
 const hasToken = tokens.length > 0;
+
+// Load onboarding progress from tenant preferences
+const prefs = db.select().from(tenantSchema.tenantPreferences)
+  .where(eq(tenantSchema.tenantPreferences.userId, user.id)).get();
+const onboardingDismissed = prefs?.onboardingDismissed ?? false;
+const savedProgress: string[] = prefs?.onboardingProgress ? JSON.parse(prefs.onboardingProgress) : [];
+
+// Auto-detect completed steps from actual data
+const autoCompleted = new Set(savedProgress);
+if (prefs?.workspaceName) autoCompleted.add('env');
+if (hasToken) autoCompleted.add('token');
+if (stacksCount > 0) autoCompleted.add('scanner');
+if (allIncidents.length > 0) autoCompleted.add('incident');
+// Check for diagnoses and resolutions
+const hasDiagnosis = db.select().from(tenantSchema.diagnoses).all().length > 0;
+const hasResolution = db.select().from(tenantSchema.resolutions).all().length > 0;
+if (hasDiagnosis) autoCompleted.add('diagnose');
+if (hasResolution) autoCompleted.add('resolution');
+const completedSteps = Array.from(autoCompleted);
+const totalSteps = 7;
+const completedCount = completedSteps.length;
+const progressPct = Math.round((completedCount / totalSteps) * 100);
+const allDone = completedCount >= totalSteps;
+const isNewUser = !onboardingDismissed && !allDone && (stacksCount === 0 && allIncidents.length === 0 && totalMonitors === 0);
+const showOnboarding = !onboardingDismissed && !allDone;
 
 // --- Recent activity (last 5 incidents created/resolved) ---
 const activityItems: { text: string; time: Date; type: string }[] = [];
@@ -94,78 +118,105 @@ function timeAgo(date: Date) {
       </a>
     )}
 
-    {isNewUser ? (
-      <!-- Onboarding for new users -->
-      <div class="onboarding">
-        <div class="onboarding-header">
-          <div class="empty-icon">&gt;_</div>
-          <h3>Welcome to StdOut</h3>
-          <p>Let's get your infrastructure documented. Start with the guides below, or jump straight into setup.</p>
-          <a href="/app/docs?filter=stdout" class="btn btn-primary btn-sm" style="margin-top: 8px;">Read the Getting Started Guides</a>
+    {/* Onboarding checklist — shown as banner for returning users, full view for new users */}
+    {showOnboarding && (
+      <div class={`onboarding ${isNewUser ? 'onboarding--full' : 'onboarding--banner'}`} id="onboarding-widget">
+        <div class="onboarding-top">
+          <div class="onboarding-top-left">
+            {isNewUser && <div class="empty-icon">&gt;_</div>}
+            <div>
+              <h3>{isNewUser ? 'Welcome to StdOut' : 'Getting Started'}</h3>
+              {isNewUser && <p class="onboarding-subtitle">Let's get your infrastructure documented. Complete these steps to get the most out of StdOut.</p>}
+            </div>
+          </div>
+          <button class="onboarding-dismiss" id="onboarding-dismiss" title="Dismiss checklist" aria-label="Dismiss onboarding">&times;</button>
+        </div>
+
+        <div class="onboarding-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style={`width: ${progressPct}%`}></div>
+          </div>
+          <span class="progress-label mono">{completedCount}/{totalSteps} complete</span>
         </div>
 
         <div class="onboarding-steps">
-          <div class={`onboard-step ${hasToken ? 'done' : 'active'}`}>
-            <div class="step-num">{hasToken ? '\u2713' : '1'}</div>
+          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('env') ? 'done' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('env') ? '\u2713' : '1'}</div>
             <div class="step-content">
-              <h4>Create an API token</h4>
-              {hasToken ? (
-                <p class="step-done-text">Token created — ready to scan.</p>
-              ) : (
-                <Fragment>
-                  <p>The scanner needs a token to push results to your account.</p>
-                  <a href="/app/settings" class="btn btn-primary btn-sm">Go to Settings</a>
-                </Fragment>
-              )}
+              <h4>Name your environment</h4>
+              <p>{completedSteps.includes('env') ? 'Workspace named.' : 'Give your setup an identity — "Home Lab," "Production," etc.'}</p>
             </div>
-          </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
 
-          <div class={`onboard-step ${hasToken && stacksCount === 0 ? 'active' : stacksCount > 0 ? 'done' : ''}`}>
-            <div class="step-num">{stacksCount > 0 ? '\u2713' : '2'}</div>
+          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('token') ? 'done' : !completedSteps.includes('env') ? '' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('token') ? '\u2713' : '2'}</div>
             <div class="step-content">
-              <h4>Run the scanner</h4>
-              {stacksCount > 0 ? (
-                <p class="step-done-text">Stack imported — your infrastructure is documented.</p>
-              ) : hasToken ? (
-                <Fragment>
-                  <p>Discover your infrastructure automatically. Run this on your server:</p>
-                  <pre class="scanner-cmd"><code>docker run --rm \
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/charlieseay/stdout-scanner scan \
-  --output json --dry-run</code></pre>
-                  <p class="step-hint">See the <a href="/docs/scanner">scanner docs</a> for full setup.</p>
-                </Fragment>
-              ) : (
-                <p>Create a token first, then run the scanner.</p>
-              )}
+              <h4>Generate an API key</h4>
+              <p>{completedSteps.includes('token') ? 'API token created.' : 'The scanner needs a token to push results.'}</p>
             </div>
-          </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
 
-          <div class={`onboard-step ${stacksCount > 0 ? 'active' : ''}`}>
-            <div class="step-num">3</div>
+          <a href="/app/docs/guide/scanner-setup" class={`onboard-step ${completedSteps.includes('scanner') ? 'done' : !completedSteps.includes('token') ? '' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('scanner') ? '\u2713' : '3'}</div>
+            <div class="step-content">
+              <h4>Install and run the scanner</h4>
+              <p>{completedSteps.includes('scanner') ? 'Scanner ran — infrastructure documented.' : 'Discover your containers, networks, and services automatically.'}</p>
+            </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
+
+          <a href="/app/incidents/new" class={`onboard-step ${completedSteps.includes('incident') ? 'done' : !completedSteps.includes('scanner') ? '' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('incident') ? '\u2713' : '4'}</div>
             <div class="step-content">
               <h4>Log your first incident</h4>
-              {stacksCount > 0 ? (
-                <Fragment>
-                  <p>When something breaks, log it here. StdOut matches it against your past resolutions.</p>
-                  <a href="/app/incidents/new" class="btn btn-primary btn-sm">Log an incident</a>
-                </Fragment>
-              ) : (
-                <p>After scanning, you'll be ready to start logging incidents.</p>
-              )}
+              <p>{completedSteps.includes('incident') ? 'First incident logged.' : 'When something breaks, log it here.'}</p>
             </div>
-          </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
+
+          <a href="/app/docs/guide/ai-features" class={`onboard-step ${completedSteps.includes('diagnose') ? 'done' : !completedSteps.includes('incident') ? '' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('diagnose') ? '\u2713' : '5'}</div>
+            <div class="step-content">
+              <h4>Run AI diagnosis</h4>
+              <p>{completedSteps.includes('diagnose') ? 'AI diagnosis used.' : 'Let AI analyze your incident against your stack context.'}</p>
+            </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
+
+          <a href="/app/docs/guide/incidents" class={`onboard-step ${completedSteps.includes('resolution') ? 'done' : !completedSteps.includes('diagnose') ? '' : 'active'}`}>
+            <div class="step-num">{completedSteps.includes('resolution') ? '\u2713' : '6'}</div>
+            <div class="step-content">
+              <h4>Add your first resolution</h4>
+              <p>{completedSteps.includes('resolution') ? 'Resolution recorded.' : 'Document what actually fixed it — this builds your living runbook.'}</p>
+            </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
+
+          <a href="/app/docs/guide/getting-started" class={`onboard-step ${allDone ? 'done' : ''}`}>
+            <div class="step-num">7</div>
+            <div class="step-content">
+              <h4>Read the docs</h4>
+              <p>Explore the full documentation to unlock everything StdOut offers.</p>
+            </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
         </div>
 
-        <div class="onboarding-alt">
-          <span class="alt-text">or skip setup and</span>
-          <a href="/app/incidents/new" class="alt-link">log an incident directly</a>
-          <span class="alt-text">·</span>
-          <a href="/app/stacks" class="alt-link">describe a stack manually</a>
-        </div>
+        {isNewUser && (
+          <div class="onboarding-alt">
+            <span class="alt-text">or skip setup and</span>
+            <a href="/app/incidents/new" class="alt-link">log an incident directly</a>
+            <span class="alt-text">&middot;</span>
+            <a href="/app/stacks" class="alt-link">describe a stack manually</a>
+          </div>
+        )}
       </div>
-    ) : (
-      <!-- Dashboard for existing users -->
+    )}
+
+    {/* Dashboard content — always shown for users with data, hidden for brand-new users */}
+    {!isNewUser && (
       <Fragment>
         <!-- Status overview cards -->
         <div class="overview-cards">
@@ -363,6 +414,30 @@ function timeAgo(date: Date) {
   </div>
 </Layout>
 
+<script>
+  // Onboarding dismiss handler
+  const dismissBtn = document.getElementById('onboarding-dismiss');
+  const widget = document.getElementById('onboarding-widget');
+  if (dismissBtn && widget) {
+    dismissBtn.addEventListener('click', async () => {
+      widget.style.transition = 'opacity 200ms, max-height 300ms';
+      widget.style.opacity = '0';
+      widget.style.maxHeight = '0';
+      widget.style.overflow = 'hidden';
+      widget.style.marginBottom = '0';
+      try {
+        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        await fetch('/app/api/onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+          body: JSON.stringify({ action: 'dismiss' }),
+        });
+      } catch {}
+      setTimeout(() => widget.remove(), 300);
+    });
+  }
+</script>
+
 <style>
   .dash { max-width: 1100px; margin: 0 auto; }
 
@@ -383,17 +458,22 @@ function timeAgo(date: Date) {
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 18px;
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
     position: relative;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation: fadeInUp 0.35s ease-out both;
   }
+  .ov-card:nth-child(2) { animation-delay: 0.05s; }
+  .ov-card:nth-child(3) { animation-delay: 0.1s; }
+  .ov-card:nth-child(4) { animation-delay: 0.15s; }
   .ov-card:hover {
     border-color: var(--border-hover);
-    box-shadow: var(--shadow-md);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-3px);
   }
   .ov-icon {
     flex-shrink: 0;
@@ -402,23 +482,27 @@ function timeAgo(date: Date) {
   }
   .ov-data { flex: 1; }
   .ov-value {
-    font-size: 24px;
-    font-weight: 700;
+    font-size: 32px;
+    font-weight: 800;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.03em;
+    animation: numberPop 0.4s ease-out both;
   }
+  .ov-card:nth-child(2) .ov-value { animation-delay: 0.08s; }
+  .ov-card:nth-child(3) .ov-value { animation-delay: 0.14s; }
+  .ov-card:nth-child(4) .ov-value { animation-delay: 0.2s; }
   .ov-of {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-muted);
     font-weight: 500;
   }
   .ov-label {
-    font-size: 11px;
+    font-size: 10px;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 4px;
-    font-weight: 500;
+    letter-spacing: 0.08em;
+    margin-top: 6px;
+    font-weight: 600;
   }
   .ov-alert {
     position: absolute;
@@ -460,7 +544,8 @@ function timeAgo(date: Date) {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px 18px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
+    animation: fadeInUp 0.4s ease-out both;
   }
   .dash-section h2 {
     font-size: 13px;
@@ -501,12 +586,13 @@ function timeAgo(date: Date) {
     border-radius: var(--radius-sm);
     text-decoration: none;
     color: inherit;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .svc-card:hover {
     border-color: var(--border-hover);
     background: var(--bg-hover);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
   }
   .svc-card-top {
     display: flex;
@@ -533,19 +619,19 @@ function timeAgo(date: Date) {
     color: var(--text-muted);
   }
 
-  /* Status dots (shared with HUD) */
-  .svc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  .svc-dot.healthy { background: var(--low); box-shadow: 0 0 6px rgba(34,197,94,0.4); }
-  .svc-dot.degraded { background: var(--high); box-shadow: 0 0 6px rgba(249,115,22,0.4); }
-  .svc-dot.down { background: var(--critical); box-shadow: 0 0 6px rgba(239,68,68,0.4); }
+  /* Status dots (shared with HUD) — heartbeat on healthy */
+  .svc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .svc-dot.healthy { background: var(--low); box-shadow: 0 0 8px var(--low-glow); animation: statusHeartbeat 2.5s ease-in-out infinite; color: var(--low); }
+  .svc-dot.degraded { background: var(--high); box-shadow: 0 0 8px var(--high-glow); animation: statusHeartbeat 1.5s ease-in-out infinite; color: var(--high); }
+  .svc-dot.down { background: var(--critical); box-shadow: 0 0 8px var(--critical-glow); animation: statusHeartbeat 1s ease-in-out infinite; color: var(--critical); }
   .svc-dot.maintenance { background: #3b82f6; }
   .svc-dot.unknown { background: var(--text-muted); }
 
-  /* Sparklines */
-  .spark-line { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-  .spark-line.green { stroke: var(--low); filter: drop-shadow(0 0 3px rgba(34,197,94,0.5)); }
-  .spark-line.yellow { stroke: #EAB308; filter: drop-shadow(0 0 3px rgba(234,179,8,0.5)); }
-  .spark-line.red { stroke: var(--critical); filter: drop-shadow(0 0 3px rgba(239,68,68,0.5)); }
+  /* Sparklines — draw-on-load animation */
+  .spark-line { fill: none; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 500; stroke-dashoffset: 500; animation: sparkDraw 0.8s ease-out 0.3s forwards; }
+  .spark-line.green { stroke: var(--low); filter: drop-shadow(0 0 4px var(--low-glow)); }
+  .spark-line.yellow { stroke: var(--high); filter: drop-shadow(0 0 4px var(--high-glow)); }
+  .spark-line.red { stroke: var(--critical); filter: drop-shadow(0 0 4px var(--critical-glow)); }
 
   /* Recent incidents list */
   .recent-list {
@@ -609,16 +695,20 @@ function timeAgo(date: Date) {
     color: var(--text-secondary);
     font-size: 11px;
     font-weight: 600;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .action-btn:hover {
     border-color: var(--accent);
     color: var(--accent-light);
     background: var(--bg-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md), 0 0 12px var(--accent-dim);
   }
-  .action-btn svg { opacity: 0.7; }
+  .action-btn:active {
+    transform: translateY(0);
+    transition-duration: 0.05s;
+  }
+  .action-btn svg { opacity: 0.6; transition: opacity 0.15s; }
   .action-btn:hover svg { opacity: 1; }
 
   /* Activity feed */
@@ -635,16 +725,16 @@ function timeAgo(date: Date) {
   }
   .activity-row:last-child { border-bottom: none; }
   .activity-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
   }
-  .activity-dot.resolved { background: var(--low); }
-  .activity-dot.critical { background: var(--critical); box-shadow: 0 0 4px rgba(239,68,68,0.4); }
-  .activity-dot.high { background: var(--high); }
+  .activity-dot.resolved { background: var(--low); box-shadow: 0 0 4px var(--low-glow); }
+  .activity-dot.critical { background: var(--critical); box-shadow: 0 0 6px var(--critical-glow); animation: statusHeartbeat 1.5s ease-in-out infinite; color: var(--critical); }
+  .activity-dot.high { background: var(--high); box-shadow: 0 0 4px var(--high-glow); }
   .activity-dot.medium { background: var(--medium); }
-  .activity-dot.low { background: var(--low); }
+  .activity-dot.low { background: var(--low); box-shadow: 0 0 4px var(--low-glow); }
   .activity-text {
     font-size: 12px;
     color: var(--text-secondary);
@@ -677,9 +767,9 @@ function timeAgo(date: Date) {
     color: var(--text-secondary);
   }
   .infra-val {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   /* Mini empty states */
@@ -695,28 +785,36 @@ function timeAgo(date: Date) {
     margin-bottom: 8px;
   }
 
-  /* Onboarding (kept from original) */
-  .onboarding { margin-top: 8px; max-width: 640px; margin-left: auto; margin-right: auto; }
-  .onboarding-header { text-align: center; margin-bottom: 28px; }
-  .onboarding-header h3 { font-size: 18px; margin-bottom: 6px; }
-  .onboarding-header p { font-size: 13px; color: var(--text-secondary); }
-  .empty-icon { font-family: var(--font-mono); font-size: 28px; color: var(--accent); margin-bottom: 16px; }
-  .onboarding-steps { display: flex; flex-direction: column; gap: 2px; margin-bottom: 24px; }
-  .onboard-step { display: flex; gap: 14px; padding: 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); opacity: 0.4; }
-  .onboard-step.active { opacity: 1; border-color: var(--accent); }
-  .onboard-step.done { opacity: 0.7; }
-  .step-num { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 13px; font-weight: 700; font-family: var(--font-mono); background: var(--bg); border: 1px solid var(--border); flex-shrink: 0; }
+  /* Onboarding widget */
+  .onboarding { margin-bottom: 20px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow-sm); }
+  .onboarding--full { max-width: 680px; margin-left: auto; margin-right: auto; margin-top: 8px; padding: 24px; }
+  .onboarding--banner { border-left: 3px solid var(--accent); }
+  .onboarding-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+  .onboarding-top-left { display: flex; align-items: center; gap: 12px; }
+  .onboarding-top h3 { font-size: 16px; font-weight: 700; }
+  .onboarding-subtitle { font-size: 13px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5; }
+  .onboarding-dismiss { background: none; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 4px 8px; line-height: 1; border-radius: 4px; transition: all 150ms; flex-shrink: 0; }
+  .onboarding-dismiss:hover { color: var(--text); background: var(--bg-hover); }
+  .empty-icon { font-family: var(--font-mono); font-size: 28px; color: var(--accent); flex-shrink: 0; }
+  .onboarding-progress { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+  .progress-bar { flex: 1; height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width 300ms ease; }
+  .progress-label { font-size: 11px; color: var(--text-muted); white-space: nowrap; }
+  .onboarding-steps { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; }
+  .onboard-step { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); opacity: 0.4; text-decoration: none; color: inherit; transition: all 150ms; }
+  .onboard-step.active { opacity: 1; border-color: var(--accent); background: var(--accent-dim); }
+  .onboard-step.done { opacity: 0.6; }
+  .onboard-step:hover { opacity: 1; border-color: var(--border-hover); transform: translateX(2px); }
+  .step-num { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 11px; font-weight: 700; font-family: var(--font-mono); background: var(--bg-surface); border: 1px solid var(--border); flex-shrink: 0; }
   .onboard-step.active .step-num { background: var(--accent); color: #fff; border-color: var(--accent); }
   .onboard-step.done .step-num { background: var(--low); color: #fff; border-color: var(--low); }
-  .step-content { flex: 1; }
-  .step-content h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-  .step-content p { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
-  .step-done-text { color: var(--low) !important; font-family: var(--font-mono); font-size: 12px !important; }
-  .step-hint { font-size: 12px !important; color: var(--text-muted) !important; }
-  .step-hint a { color: var(--accent-light); }
-  .scanner-cmd { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; overflow-x: auto; margin-bottom: 8px; }
-  .scanner-cmd code { font-family: var(--font-mono); font-size: 12px; color: var(--text); line-height: 1.6; white-space: pre; }
-  .onboarding-alt { text-align: center; font-size: 12px; color: var(--text-muted); }
+  .step-content { flex: 1; min-width: 0; }
+  .step-content h4 { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .step-content p { font-size: 12px; color: var(--text-secondary); line-height: 1.4; margin: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .onboard-step.done .step-content p { color: var(--low); font-family: var(--font-mono); font-size: 11px; }
+  .step-arrow { color: var(--text-muted); font-size: 14px; flex-shrink: 0; opacity: 0; transition: opacity 150ms; }
+  .onboard-step:hover .step-arrow { opacity: 1; }
+  .onboarding-alt { text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 8px; }
   .alt-link { color: var(--accent-light); text-decoration: none; }
   .alt-link:hover { text-decoration: underline; }
   .alt-text { margin: 0 2px; }

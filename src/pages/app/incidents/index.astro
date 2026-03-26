@@ -88,7 +88,7 @@ function truncate(str: string, max: number) {
     <div class="page-header">
       <div class="page-header-left">
         <div class="page-title-row">
-          <h1>Incidents</h1>
+          <h1>Incidents <a href="/app/docs/guide/incidents" class="help-link" title="Incidents documentation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></a></h1>
           <span class="count-badge mono">{userIncidents.length}</span>
         </div>
         <p class="page-subtitle">Log issues, get AI diagnosis with your stack context, resolve them, and build a library of fixes</p>
@@ -276,9 +276,9 @@ function truncate(str: string, max: number) {
     gap: 10px;
   }
   .page-title-row h1 {
-    font-size: 22px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.03em;
   }
   .count-badge {
     font-size: 12px;
@@ -304,7 +304,7 @@ function truncate(str: string, max: number) {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     margin-bottom: 24px;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
     flex-wrap: wrap;
   }
   .filter-group {
@@ -409,8 +409,8 @@ function truncate(str: string, max: number) {
     border-radius: var(--radius);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
-    box-shadow: var(--shadow-sm);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
     position: relative;
     overflow: hidden;
   }
@@ -428,8 +428,8 @@ function truncate(str: string, max: number) {
   .active-card.severity-low::before { background: var(--low); }
   .active-card:hover {
     border-color: var(--border-hover);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-4px);
   }
   .active-card.severity-critical {
     border-color: rgba(239, 68, 68, 0.2);
@@ -468,7 +468,7 @@ function truncate(str: string, max: number) {
     border-radius: 50%;
     background: currentColor;
   }
-  .severity-pill.critical .severity-dot { box-shadow: 0 0 6px var(--critical); }
+  .severity-pill.critical .severity-dot { box-shadow: 0 0 8px var(--critical); animation: statusHeartbeat 1.5s ease-in-out infinite; color: var(--critical); }
 
   .status-badge {
     font-size: 10px;
@@ -540,7 +540,7 @@ function truncate(str: string, max: number) {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow-sm), var(--shadow-inset);
   }
   .group-summary {
     display: flex;
@@ -589,12 +589,12 @@ function truncate(str: string, max: number) {
     border-bottom: 1px solid var(--border);
     text-decoration: none;
     color: inherit;
-    transition: all 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .resolved-card:last-child { border-bottom: none; }
   .resolved-card:hover {
     background: var(--bg-hover);
-    transform: translateX(2px);
+    transform: translateX(4px);
   }
   .resolved-card .severity-bar {
     width: 3px;

@@ -309,17 +309,19 @@ const user = Astro.locals.user;
   }
   .hero-badge {
     font-size: 11px;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.14em;
     color: var(--accent-light);
     margin-bottom: 20px;
-    font-weight: 600;
+    font-weight: 700;
+    animation: fadeIn 0.5s ease-out both;
   }
   .hero h1 {
-    font-size: clamp(30px, 5vw, 48px);
+    font-size: clamp(32px, 5.5vw, 52px);
     font-weight: 800;
-    line-height: 1.15;
-    letter-spacing: -0.03em;
-    margin-bottom: 20px;
+    line-height: 1.1;
+    letter-spacing: -0.04em;
+    margin-bottom: 24px;
+    animation: fadeInUp 0.5s ease-out 0.1s both;
   }
   .hero-dim { color: var(--text-muted); }
   .hero-sub {
@@ -328,6 +330,7 @@ const user = Astro.locals.user;
     color: var(--text-secondary);
     max-width: 600px;
     margin: 0 auto 32px;
+    animation: fadeInUp 0.5s ease-out 0.2s both;
   }
   .hero-cta {
     display: flex;
@@ -336,11 +339,13 @@ const user = Astro.locals.user;
     gap: 12px;
     margin-bottom: 12px;
     flex-wrap: wrap;
+    animation: fadeInUp 0.5s ease-out 0.3s both;
   }
   .hero-note {
     font-size: 11px;
     color: var(--text-muted);
     margin-bottom: 48px;
+    animation: fadeIn 0.5s ease-out 0.4s both;
   }
 
   /* ── Scanner HUD ───────────────────────────── */
@@ -348,11 +353,12 @@ const user = Astro.locals.user;
     max-width: 600px;
     margin: 0 auto;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--radius-lg);
     overflow: hidden;
     text-align: left;
     background: var(--bg);
-    box-shadow: 0 0 60px rgba(249, 115, 22, 0.06), var(--shadow-lg);
+    box-shadow: 0 0 80px rgba(249, 115, 22, 0.08), 0 0 160px rgba(249, 115, 22, 0.03), var(--shadow-xl);
+    animation: fadeInScale 0.6s ease-out 0.5s both;
   }
   .hud-bar {
     display: flex;
@@ -446,6 +452,10 @@ const user = Astro.locals.user;
     flex: 0 1 200px;
     padding: 0 16px;
     text-align: center;
+    transition: transform 0.2s ease;
+  }
+  .pipe-step:hover {
+    transform: translateY(-4px);
   }
   .pipe-icon {
     width: 48px;
@@ -457,6 +467,12 @@ const user = Astro.locals.user;
     align-items: center;
     justify-content: center;
     margin: 0 auto 12px;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 16px rgba(249, 115, 22, 0.05);
+  }
+  .pipe-step:hover .pipe-icon {
+    box-shadow: 0 0 24px var(--accent-glow);
+    border-color: rgba(249, 115, 22, 0.3);
   }
   .pipe-num {
     font-size: 12px;
@@ -513,10 +529,11 @@ const user = Astro.locals.user;
   .feat {
     padding: 28px;
     background: var(--bg);
-    transition: background 0.15s ease;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .feat:hover {
     background: var(--bg-surface);
+    transform: translateY(-2px);
   }
   .feat-head {
     display: flex;
@@ -566,11 +583,20 @@ const user = Astro.locals.user;
     padding: 32px 24px;
     display: flex;
     flex-direction: column;
+    box-shadow: var(--shadow-md);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .price-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
   }
   .price-card.featured {
     border-color: var(--accent);
-    box-shadow: 0 0 60px rgba(249, 115, 22, 0.08), 0 0 120px rgba(249, 115, 22, 0.04);
+    box-shadow: 0 0 80px rgba(249, 115, 22, 0.1), 0 0 160px rgba(249, 115, 22, 0.04), var(--shadow-lg);
     position: relative;
+  }
+  .price-card.featured:hover {
+    box-shadow: 0 0 100px rgba(249, 115, 22, 0.14), 0 0 200px rgba(249, 115, 22, 0.06), var(--shadow-xl);
   }
   .price-badge {
     font-size: 10px;
@@ -585,9 +611,10 @@ const user = Astro.locals.user;
     margin-bottom: 4px;
   }
   .price-amount {
-    font-size: 40px;
+    font-size: 48px;
     font-weight: 800;
     margin-bottom: 8px;
+    letter-spacing: -0.03em;
   }
   .price-per {
     font-size: 14px;
@@ -646,6 +673,7 @@ const user = Astro.locals.user;
     text-align: center;
     position: relative;
     overflow: hidden;
+    box-shadow: var(--shadow-lg);
   }
   .trust-inner::before {
     content: '';
@@ -694,6 +722,18 @@ const user = Astro.locals.user;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     background: var(--bg-surface);
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    overflow: hidden;
+  }
+  .cta-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-dim), var(--accent-glow), var(--accent-dim), transparent);
   }
   .cta-inner h2 {
     font-size: 22px;

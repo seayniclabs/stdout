@@ -1,0 +1,303 @@
+---
+export const prerender = false;
+import Layout from '../../../../layouts/Layout.astro';
+import { docPages, getDocBySlug, getDocNav } from '../../../../lib/docs-content';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { slug } = Astro.params;
+const doc = getDocBySlug(slug || '');
+if (!doc) return Astro.redirect('/app/docs');
+
+const nav = getDocNav();
+const currentIndex = nav.findIndex(n => n.slug === slug);
+const prev = currentIndex > 0 ? nav[currentIndex - 1] : null;
+const next = currentIndex < nav.length - 1 ? nav[currentIndex + 1] : null;
+---
+<Layout title={`${doc.title} — StdOut Docs`}>
+  <div class="guide-layout">
+    <aside class="guide-sidebar">
+      <div class="sidebar-header">
+        <a href="/app/docs" class="sidebar-back">&larr; Knowledge Base</a>
+        <div class="sidebar-title">Documentation</div>
+      </div>
+      <nav class="sidebar-nav">
+        {nav.map(item => (
+          <a
+            href={`/app/docs/guide/${item.slug}`}
+            class:list={['sidebar-link', { active: item.slug === slug }]}
+          >{item.title}</a>
+        ))}
+      </nav>
+    </aside>
+
+    <main class="guide-main">
+      <div class="guide-header">
+        <h1>{doc.title}</h1>
+        <p class="guide-desc">{doc.description}</p>
+      </div>
+
+      <div class="guide-content" set:html={doc.content} />
+
+      <div class="guide-nav">
+        {prev && (
+          <a href={`/app/docs/guide/${prev.slug}`} class="guide-nav-link guide-nav-prev">
+            <span class="guide-nav-label">&larr; Previous</span>
+            <span class="guide-nav-title">{prev.title}</span>
+          </a>
+        )}
+        {next && (
+          <a href={`/app/docs/guide/${next.slug}`} class="guide-nav-link guide-nav-next">
+            <span class="guide-nav-label">Next &rarr;</span>
+            <span class="guide-nav-title">{next.title}</span>
+          </a>
+        )}
+      </div>
+    </main>
+  </div>
+</Layout>
+
+<style>
+  .guide-layout {
+    display: flex;
+    gap: 24px;
+    max-width: 1100px;
+    margin: 0 auto;
+    min-height: calc(100vh - 120px);
+  }
+
+  /* Sidebar */
+  .guide-sidebar {
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .sidebar-header {
+    margin-bottom: 16px;
+  }
+  .sidebar-back {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 150ms;
+  }
+  .sidebar-back:hover { color: var(--accent-light); }
+  .sidebar-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .sidebar-link {
+    display: block;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-sm);
+    transition: all 150ms;
+  }
+  .sidebar-link:hover {
+    color: var(--text);
+    background: var(--bg-hover);
+  }
+  .sidebar-link.active {
+    color: var(--accent-light);
+    background: var(--accent-dim);
+    font-weight: 600;
+  }
+
+  /* Main content */
+  .guide-main {
+    flex: 1;
+    min-width: 0;
+    max-width: 760px;
+  }
+  .guide-header {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .guide-header h1 {
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .guide-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+
+  /* Content styles */
+  .guide-content :global(h2) {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 28px 0 12px;
+    letter-spacing: -0.01em;
+  }
+  .guide-content :global(h3) {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 20px 0 8px;
+    color: var(--text-secondary);
+  }
+  .guide-content :global(p) {
+    font-size: 14px;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+  }
+  .guide-content :global(ul),
+  .guide-content :global(ol) {
+    padding-left: 20px;
+    margin-bottom: 12px;
+  }
+  .guide-content :global(li) {
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+  }
+  .guide-content :global(strong) {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .guide-content :global(a) {
+    color: var(--accent-light);
+    text-decoration: none;
+  }
+  .guide-content :global(a:hover) {
+    text-decoration: underline;
+  }
+  .guide-content :global(code) {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--bg-elevated);
+    padding: 2px 6px;
+    border-radius: 3px;
+    color: var(--accent-light);
+  }
+  .guide-content :global(pre) {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+  }
+  .guide-content :global(pre code) {
+    background: none;
+    padding: 0;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text);
+  }
+  .guide-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .guide-content :global(th) {
+    text-align: left;
+    padding: 8px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    font-weight: 600;
+    color: var(--text);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .guide-content :global(td) {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+  }
+  .guide-content :global(kbd) {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 2px 6px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+  }
+
+  /* Prev/Next navigation */
+  .guide-nav {
+    display: flex;
+    gap: 12px;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .guide-nav-link {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    text-decoration: none;
+    transition: all 150ms;
+  }
+  .guide-nav-link:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-sm);
+  }
+  .guide-nav-next {
+    text-align: right;
+    margin-left: auto;
+  }
+  .guide-nav-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+  .guide-nav-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--accent-light);
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .guide-layout {
+      flex-direction: column;
+      gap: 0;
+    }
+    .guide-sidebar {
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .sidebar-nav {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+    .sidebar-link {
+      font-size: 11px;
+      padding: 6px 10px;
+      white-space: nowrap;
+    }
+    .guide-nav {
+      flex-direction: column;
+    }
+    .guide-nav-next {
+      text-align: left;
+    }
+  }
+</style>

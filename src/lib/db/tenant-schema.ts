@@ -61,6 +61,8 @@ export const tenantPreferences = sqliteTable('tenant_preferences', {
   workspaceName: text('workspace_name'), // Replaces "StdOut" in nav
   accentColor: text('accent_color'), // Hex color override (e.g. #3B82F6)
   logoUrl: text('logo_url'), // Small image URL or data URI
+  onboardingProgress: text('onboarding_progress'), // JSON: completed step IDs e.g. ["env","token","scanner","incident","diagnose","resolution"]
+  onboardingDismissed: integer('onboarding_dismissed', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 

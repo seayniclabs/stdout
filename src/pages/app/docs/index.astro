@@ -100,6 +100,13 @@ function formatDate(date: Date) {
     <!-- Sidebar -->
     <aside class="kb-sidebar">
       <div class="sidebar-section">
+        <div class="sidebar-label">Guides</div>
+        <a href="/app/docs/guide/getting-started" class="sidebar-item" style="color: var(--accent-light);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          <span>Documentation &rarr;</span>
+        </a>
+      </div>
+      <div class="sidebar-section">
         <div class="sidebar-label">Categories</div>
         <button class="sidebar-item active" data-filter="all">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
@@ -157,7 +164,7 @@ function formatDate(date: Date) {
       <div class="page-header">
         <div class="page-header-left">
           <div class="page-title-row">
-            <h1>Knowledge Base</h1>
+            <h1>Knowledge Base <a href="/app/docs/guide/knowledge-base" class="help-link" title="Knowledge Base documentation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></a></h1>
             <span class="count-badge mono">{allDocs.length}</span>
           </div>
           <p class="page-subtitle">Your operational knowledge library. Runbooks, post-mortems, guides, and notes -- all searchable alongside your incidents.</p>
