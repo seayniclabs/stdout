@@ -4,6 +4,8 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm ci
 COPY . .
+ARG APP_URL=https://stdout.seayniclabs.com
+ENV APP_URL=$APP_URL
 RUN npm run build
 
 FROM node:22-alpine AS runtime
