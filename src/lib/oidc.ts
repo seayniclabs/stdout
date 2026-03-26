@@ -185,25 +185,14 @@ export function findOrCreateUser(oidcUser: OIDCUser): { id: string; email: strin
   return { id, email: oidcUser.email, displayName, isNew: true };
 }
 
-// --- State Management (CSRF for OAuth flow) ---
-
-const stateStore = new Map<string, { createdAt: number }>();
-
 export function generateState(): string {
-  const state = crypto.randomBytes(32).toString('hex');
-  stateStore.set(state, { createdAt: Date.now() });
-  // Clean old states (>10 min)
-  const cutoff = Date.now() - 10 * 60 * 1000;
-  for (const [key, val] of stateStore) {
-    if (val.createdAt < cutoff) stateStore.delete(key);
-  }
-  return state;
+  // Keep state stateless across deploys/restarts: callback validates against HttpOnly cookie.
+  return crypto.randomBytes(32).toString('hex');
 }
 
 export function validateState(state: string): boolean {
-  if (!stateStore.has(state)) return false;
-  stateStore.delete(state);
-  return true;
+  // Basic format check; primary validation happens via cookie comparison in callback.
+  return /^[a-f0-9]{64}$/.test(state);
 }
 
 // --- Logout URL ---
