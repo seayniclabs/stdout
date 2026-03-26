@@ -39,8 +39,12 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   }
   cookies.delete('sl_oidc_state', { path: '/' });
 
-  // Exchange code for tokens
-  const tokens = await exchangeCode(code);
+  // Read PKCE verifier
+  const codeVerifier = cookies.get('sl_oidc_verifier')?.value;
+  cookies.delete('sl_oidc_verifier', { path: '/' });
+
+  // Exchange code for tokens (with PKCE verifier if available)
+  const tokens = await exchangeCode(code, codeVerifier || undefined);
   if (!tokens) {
     return safeRedirect('/app/login?error=token_exchange_failed');
   }

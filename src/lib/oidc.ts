@@ -46,7 +46,17 @@ function validateConfig(config: ReturnType<typeof getConfig>): void {
   }
 }
 
-export function getAuthorizationURL(state: string): string {
+/** Generate a PKCE code verifier (43-128 chars, URL-safe) */
+export function generateCodeVerifier(): string {
+  return crypto.randomBytes(32).toString('base64url');
+}
+
+/** Derive the S256 code challenge from a verifier */
+export function generateCodeChallenge(verifier: string): string {
+  return crypto.createHash('sha256').update(verifier).digest('base64url');
+}
+
+export function getAuthorizationURL(state: string, codeChallenge: string): string {
   const config = getConfig();
   validateConfig(config);
   const params = new URLSearchParams({
@@ -55,6 +65,8 @@ export function getAuthorizationURL(state: string): string {
     redirect_uri: config.redirectUri,
     scope: 'openid email profile',
     state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
   });
   return `${config.authorizeUrl}?${params}`;
 }
@@ -68,17 +80,20 @@ interface TokenResponse {
   expires_in: number;
 }
 
-export async function exchangeCode(code: string): Promise<TokenResponse | null> {
+export async function exchangeCode(code: string, codeVerifier?: string): Promise<TokenResponse | null> {
   const config = getConfig();
   validateConfig(config);
 
-  const body = new URLSearchParams({
+  const params: Record<string, string> = {
     grant_type: 'authorization_code',
     code,
     redirect_uri: config.redirectUri,
     client_id: config.clientId,
     client_secret: config.clientSecret,
-  });
+  };
+  if (codeVerifier) params.code_verifier = codeVerifier;
+
+  const body = new URLSearchParams(params);
 
   const resp = await fetch(config.tokenUrl, {
     method: 'POST',

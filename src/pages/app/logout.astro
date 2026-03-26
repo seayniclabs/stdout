@@ -8,12 +8,14 @@ if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const csrfToken = form.get('_csrf') as string || '';
 
-  Astro.cookies.delete(SESSION_COOKIE, { path: '/' });
+  // Read session BEFORE deleting cookie, then invalidate both
+  const sessionId = getSessionFromCookies(Astro.cookies);
 
   if (validateCsrf(csrfToken, Astro.cookies)) {
-    const sessionId = getSessionFromCookies(Astro.cookies);
     if (sessionId) deleteSession(sessionId);
   }
+
+  Astro.cookies.delete(SESSION_COOKIE, { path: '/' });
 
   // End Authentik session too (single logout)
   if (isOIDCEnabled()) {
