@@ -330,6 +330,22 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       subnets TEXT,
       updated_at INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS data_sources (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      url TEXT NOT NULL,
+      token TEXT,
+      org TEXT,
+      bucket TEXT,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_tested_at INTEGER,
+      last_test_status TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_data_sources_user ON data_sources(user_id);
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

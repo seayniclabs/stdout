@@ -181,6 +181,26 @@ export const scannerSchedule = sqliteTable('scanner_schedule', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Data Sources: InfluxDB, Prometheus, etc. ---
+
+export const dataSources = sqliteTable('data_sources', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),              // "My InfluxDB", "Prometheus"
+  type: text('type', {
+    enum: ['influxdb', 'prometheus'],
+  }).notNull(),
+  url: text('url').notNull(),                // e.g. http://localhost:8086
+  token: text('token'),                      // Encrypted API token (AES-256-GCM)
+  org: text('org'),                          // InfluxDB org
+  bucket: text('bucket'),                    // InfluxDB bucket
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastTestedAt: integer('last_tested_at', { mode: 'timestamp' }),
+  lastTestStatus: text('last_test_status'),  // 'ok' | 'error' | error message
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
   rawJson: text('raw_json').notNull(),

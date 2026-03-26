@@ -110,6 +110,13 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
       </section>
     )}
 
+    <!-- Metrics Context (InfluxDB enrichment) -->
+    <section class="section" id="metricsSection" style="display:none;">
+      <h2>Resource Metrics</h2>
+      <p class="metrics-hint mono" id="metricsHint">Loading metrics around incident time...</p>
+      <div class="metrics-grid" id="metricsGrid"></div>
+    </section>
+
     <!-- Similar Past Fixes -->
     {current.status !== 'resolved' && (
       <section class="section">
@@ -253,6 +260,84 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
       }
     });
   }
+
+  // --- Metrics enrichment (InfluxDB) ---
+  const metricsSection = document.getElementById('metricsSection');
+  const metricsGrid = document.getElementById('metricsGrid');
+  const metricsHint = document.getElementById('metricsHint');
+
+  // Try to guess a container name from the incident title/tags
+  const incTitle = document.querySelector('.incident-header h1')?.textContent || '';
+  const incTags = Array.from(document.querySelectorAll('.tag')).map(t => t.textContent?.trim() || '');
+
+  function guessContainer(): string | null {
+    // Check tags first
+    const skip = new Set(['hud', 'auto', 'http', 'tcp', 'docker', 'ping', 'dns', 'critical', 'high', 'medium', 'low']);
+    for (const tag of incTags) {
+      if (tag && !skip.has(tag)) return tag;
+    }
+    // Try title pattern "X is down"
+    const m = incTitle.match(/^(.+?)\s+is\s+(down|degraded)/i);
+    if (m) return m[1].toLowerCase().replace(/\s+/g, '-');
+    return null;
+  }
+
+  const containerName = guessContainer();
+  if (containerName) {
+    fetch(`/app/api/metrics?type=container&name=${encodeURIComponent(containerName)}&range=60`)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.configured || !data.data) return;
+        const { cpu, memory, network } = data.data;
+        if ((!cpu || cpu.length === 0) && (!memory || memory.length === 0) && (!network || network.length === 0)) return;
+
+        if (metricsSection) metricsSection.style.display = '';
+        if (metricsHint) metricsHint.textContent = `Metrics for "${containerName}" — last 60 minutes`;
+
+        let html = '';
+        if (cpu && cpu.length > 1) {
+          html += renderMetricCard('CPU %', cpu, 'var(--accent-light)', '%');
+        }
+        if (memory && memory.length > 1) {
+          html += renderMetricCard('Memory', memory, 'var(--teal)', ' MB');
+        }
+        if (network && network.length > 1) {
+          html += renderMetricCard('Network', network, '#60A5FA', ' B/s');
+        }
+        if (metricsGrid) metricsGrid.innerHTML = html;
+      })
+      .catch(() => {});
+  }
+
+  function renderMetricCard(label: string, points: {time: string; value: number}[], color: string, unit: string): string {
+    const values = points.map(p => p.value);
+    const max = Math.max(...values, 0.001);
+    const min = Math.min(...values);
+    const latest = values[values.length - 1];
+    const latestStr = latest < 10 ? latest.toFixed(1) : Math.round(latest).toString();
+
+    // Build SVG sparkline
+    const w = 240, h = 40;
+    const pts = values.map((v, i) => {
+      const x = (i / Math.max(values.length - 1, 1)) * w;
+      const y = h - 2 - ((v - min) / (max - min + 0.001)) * (h - 4);
+      return `${x},${y}`;
+    });
+    const linePath = pts.length > 1 ? `M${pts.join(' L')}` : '';
+    const areaPath = pts.length > 1 ? `M${pts.join(' L')} L${w},${h} L0,${h} Z` : '';
+
+    return `
+      <div class="metric-card">
+        <div class="metric-header">
+          <span class="metric-label">${label}</span>
+          <span class="metric-value mono" style="color:${color};">${latestStr}${unit}</span>
+        </div>
+        <svg class="metric-spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+          <path d="${areaPath}" fill="${color}" opacity="0.1" />
+          <path d="${linePath}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </div>`;
+  }
 </script>
 
 <style>
@@ -307,4 +392,20 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .similar-resolution { font-size: 12px; font-family: var(--font-mono); color: var(--text-secondary); line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; }
   .similar-meta { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
   .similar-divider { font-size: 11px; color: var(--text-muted); margin: 12px 0 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+
+  /* Metrics enrichment */
+  .metrics-hint { font-size: 11px; color: var(--text-muted); margin-bottom: 12px; }
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .metric-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    transition: border-color 150ms;
+  }
+  .metric-card:hover { border-color: var(--border-hover); }
+  .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .metric-label { font-size: 10px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  .metric-value { font-size: 14px; font-weight: 700; }
+  .metric-spark { width: 100%; height: 40px; overflow: visible; }
 </style>

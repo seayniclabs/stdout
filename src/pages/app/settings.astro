@@ -205,6 +205,55 @@ const isPaid = tier !== 'free';
       </div>
     </section>
 
+    <!-- Data Sources -->
+    <section class="section">
+      <h2>Data Sources</h2>
+      <p class="section-desc">Connect InfluxDB to enrich incidents with metrics and show resource utilization on the HUD.</p>
+
+      <div id="dsList" class="backup-list">
+        <div class="loading mono">Loading...</div>
+      </div>
+
+      <div class="ds-add-form" id="dsAddForm" style="display:none;">
+        <div class="ds-form-header">
+          <h3 id="dsFormTitle">Add InfluxDB Data Source</h3>
+          <button id="dsFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+        <label>
+          <span>Name</span>
+          <input type="text" id="dsName" placeholder="e.g. My InfluxDB" class="settings-input" />
+        </label>
+        <label>
+          <span>URL</span>
+          <input type="text" id="dsUrl" placeholder="http://localhost:8086" class="settings-input mono" />
+        </label>
+        <label>
+          <span>API Token</span>
+          <input type="password" id="dsToken" placeholder="InfluxDB API token" class="settings-input mono" autocomplete="off" />
+        </label>
+        <div class="ds-row">
+          <label style="flex:1;">
+            <span>Organization</span>
+            <input type="text" id="dsOrg" placeholder="e.g. seaynic-labs" class="settings-input mono" />
+          </label>
+          <label style="flex:1;">
+            <span>Bucket</span>
+            <input type="text" id="dsBucket" placeholder="e.g. telegraf" class="settings-input mono" />
+          </label>
+        </div>
+        <div class="ds-actions">
+          <button id="dsTestBtn" class="btn btn-ghost btn-sm">Test Connection</button>
+          <button id="dsSaveBtn" class="btn btn-primary btn-sm">Save</button>
+        </div>
+        <div id="dsTestResult" class="backup-status"></div>
+      </div>
+
+      <div class="ds-bottom">
+        <button id="dsAddBtn" class="btn btn-primary btn-sm">Add data source</button>
+        <div id="dsStatus" class="backup-status"></div>
+      </div>
+    </section>
+
     <!-- Public Status Page -->
     <section class="section">
       <h2>Public Status Page</h2>
@@ -497,6 +546,190 @@ const isPaid = tier !== 'free';
   });
 
   loadPreferences();
+
+  // --- Data Sources ---
+  const dsList = document.getElementById('dsList')!;
+  const dsAddForm = document.getElementById('dsAddForm')!;
+  const dsAddBtn = document.getElementById('dsAddBtn')!;
+  const dsFormCancel = document.getElementById('dsFormCancel')!;
+  const dsName = document.getElementById('dsName') as HTMLInputElement;
+  const dsUrl = document.getElementById('dsUrl') as HTMLInputElement;
+  const dsToken = document.getElementById('dsToken') as HTMLInputElement;
+  const dsOrg = document.getElementById('dsOrg') as HTMLInputElement;
+  const dsBucket = document.getElementById('dsBucket') as HTMLInputElement;
+  const dsTestBtn = document.getElementById('dsTestBtn')!;
+  const dsSaveBtn = document.getElementById('dsSaveBtn')!;
+  const dsTestResult = document.getElementById('dsTestResult')!;
+  const dsStatusEl = document.getElementById('dsStatus')!;
+  const dsFormTitle = document.getElementById('dsFormTitle')!;
+
+  let editingDsId: string | null = null;
+
+  async function loadDataSources() {
+    try {
+      const res = await fetch('/app/api/data-sources');
+      const data = await res.json();
+      if (!data.sources || data.sources.length === 0) {
+        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add InfluxDB to enrich incidents with metrics.</div>';
+        return;
+      }
+      dsList.innerHTML = data.sources.map((s: any) => {
+        const statusIcon = s.lastTestStatus === 'ok'
+          ? '<span class="ds-status-dot ds-ok"></span>'
+          : s.lastTestStatus
+            ? '<span class="ds-status-dot ds-error"></span>'
+            : '<span class="ds-status-dot ds-unknown"></span>';
+        return `
+          <div class="backup-row">
+            <div class="backup-info">
+              <span class="backup-date">${statusIcon} ${escapeHtml(s.name)}</span>
+              <span class="backup-size mono">${s.type} &middot; ${escapeHtml(s.url)}</span>
+            </div>
+            <div style="display:flex;gap:4px;">
+              <button class="btn btn-ghost btn-sm ds-edit-btn" data-id="${s.id}">Edit</button>
+              <button class="btn btn-ghost btn-sm ds-toggle-btn" data-id="${s.id}" data-enabled="${s.enabled}">${s.enabled ? 'Disable' : 'Enable'}</button>
+              <button class="btn btn-danger btn-sm ds-delete-btn" data-id="${s.id}">Remove</button>
+            </div>
+          </div>`;
+      }).join('');
+
+      // Edit handlers
+      dsList.querySelectorAll('.ds-edit-btn').forEach((btn: any) => {
+        btn.addEventListener('click', () => {
+          const ds = data.sources.find((s: any) => s.id === btn.dataset.id);
+          if (!ds) return;
+          editingDsId = ds.id;
+          dsFormTitle.textContent = 'Edit Data Source';
+          dsName.value = ds.name || '';
+          dsUrl.value = ds.url || '';
+          dsToken.value = ds.hasToken ? '********' : '';
+          dsOrg.value = ds.org || '';
+          dsBucket.value = ds.bucket || '';
+          dsAddForm.style.display = '';
+          dsAddBtn.style.display = 'none';
+          dsTestResult.textContent = '';
+        });
+      });
+
+      // Toggle handlers
+      dsList.querySelectorAll('.ds-toggle-btn').forEach((btn: any) => {
+        btn.addEventListener('click', async () => {
+          const enabled = btn.dataset.enabled === 'true' ? false : true;
+          await fetch('/app/api/data-sources', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', id: btn.dataset.id, enabled }),
+          });
+          loadDataSources();
+        });
+      });
+
+      // Delete handlers
+      dsList.querySelectorAll('.ds-delete-btn').forEach((btn: any) => {
+        btn.addEventListener('click', async () => {
+          if (!confirm('Remove this data source?')) return;
+          await fetch('/app/api/data-sources', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete', id: btn.dataset.id }),
+          });
+          loadDataSources();
+        });
+      });
+    } catch {
+      dsList.innerHTML = '<div class="empty mono">Failed to load data sources.</div>';
+    }
+  }
+
+  dsAddBtn?.addEventListener('click', () => {
+    editingDsId = null;
+    dsFormTitle.textContent = 'Add InfluxDB Data Source';
+    dsName.value = ''; dsUrl.value = ''; dsToken.value = ''; dsOrg.value = ''; dsBucket.value = '';
+    dsAddForm.style.display = '';
+    dsAddBtn.style.display = 'none';
+    dsTestResult.textContent = '';
+  });
+
+  dsFormCancel?.addEventListener('click', () => {
+    dsAddForm.style.display = 'none';
+    dsAddBtn.style.display = '';
+    editingDsId = null;
+  });
+
+  dsTestBtn?.addEventListener('click', async () => {
+    dsTestResult.textContent = 'Testing...';
+    dsTestResult.className = 'backup-status';
+    try {
+      const res = await fetch('/app/api/data-sources', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'test',
+          id: editingDsId,
+          url: dsUrl.value,
+          token: dsToken.value,
+          org: dsOrg.value,
+          bucket: dsBucket.value,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        dsTestResult.textContent = 'Connected successfully.';
+        dsTestResult.className = 'backup-status success';
+      } else {
+        dsTestResult.textContent = `Connection failed: ${data.error || 'unknown error'}`;
+        dsTestResult.className = 'backup-status error';
+      }
+    } catch {
+      dsTestResult.textContent = 'Network error.';
+      dsTestResult.className = 'backup-status error';
+    }
+  });
+
+  dsSaveBtn?.addEventListener('click', async () => {
+    const name = dsName.value.trim();
+    const url = dsUrl.value.trim();
+    if (!name || !url) {
+      dsStatusEl.textContent = 'Name and URL are required.';
+      dsStatusEl.className = 'backup-status error';
+      return;
+    }
+
+    dsStatusEl.textContent = 'Saving...';
+    dsStatusEl.className = 'backup-status';
+
+    try {
+      const payload: any = {
+        action: editingDsId ? 'update' : 'create',
+        name,
+        type: 'influxdb',
+        url,
+        token: dsToken.value,
+        org: dsOrg.value,
+        bucket: dsBucket.value,
+      };
+      if (editingDsId) payload.id = editingDsId;
+
+      const res = await fetch('/app/api/data-sources', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.id || data.updated) {
+        dsAddForm.style.display = 'none';
+        dsAddBtn.style.display = '';
+        dsStatusEl.textContent = editingDsId ? 'Updated.' : 'Added.';
+        dsStatusEl.className = 'backup-status success';
+        editingDsId = null;
+        loadDataSources();
+      } else {
+        dsStatusEl.textContent = data.error || 'Failed.';
+        dsStatusEl.className = 'backup-status error';
+      }
+    } catch {
+      dsStatusEl.textContent = 'Network error.';
+      dsStatusEl.className = 'backup-status error';
+    }
+  });
+
+  loadDataSources();
 
   // --- Scanner Schedule ---
   const scanInterval = document.getElementById('scanInterval') as HTMLSelectElement;
@@ -990,4 +1223,32 @@ const isPaid = tier !== 'free';
   .team-invite { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .team-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
   .team-loading { font-size: 13px; color: var(--text-muted); }
+
+  /* Data Sources */
+  .ds-add-form {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ds-form-header { display: flex; justify-content: space-between; align-items: center; }
+  .ds-form-header h3 { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .ds-row { display: flex; gap: 10px; }
+  .ds-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .ds-bottom { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .ds-status-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .ds-status-dot.ds-ok { background: var(--low); box-shadow: 0 0 6px var(--low-glow); }
+  .ds-status-dot.ds-error { background: var(--critical); box-shadow: 0 0 6px var(--critical-glow); }
+  .ds-status-dot.ds-unknown { background: var(--text-muted); }
 </style>
