@@ -141,6 +141,24 @@ const isPaid = tier !== 'free';
       <div id="notifStatus" class="backup-status"></div>
     </section>
 
+    <!-- Add-ons -->
+    <section class="section">
+      <h2>Add-ons</h2>
+      <p class="section-desc">Control how add-on recommendations appear in your console.</p>
+      <div class="toggle-row">
+        <label class="toggle-label" for="addonsToggle">
+          <span>Show add-on recommendations</span>
+          <span class="toggle-hint">Suggests tools from the Seaynic Labs store based on what's running in your stack.</span>
+        </label>
+        <button id="addonsToggle" class="toggle-btn" role="switch" aria-checked="true">
+          <span class="toggle-track"><span class="toggle-thumb"></span></span>
+        </button>
+      </div>
+      <div class="toggle-row" style="margin-top:0.75rem;">
+        <a href="/app/addons" class="btn btn-ghost btn-sm">View add-ons panel &rarr;</a>
+      </div>
+    </section>
+
     <!-- Scanner Schedule -->
     <section class="section">
       <h2>Scanner Schedule</h2>
@@ -546,6 +564,30 @@ const isPaid = tier !== 'free';
   });
 
   loadPreferences();
+
+  // --- Add-ons toggle ---
+  const addonsToggle = document.getElementById('addonsToggle') as HTMLButtonElement;
+  if (addonsToggle) {
+    // Load initial state
+    fetch('/app/api/preferences').then(r => r.json()).then(data => {
+      const hidden = data?.branding?.addons_hidden || data?.branding?.addonsHidden || false;
+      addonsToggle.setAttribute('aria-checked', hidden ? 'false' : 'true');
+      addonsToggle.classList.toggle('off', hidden);
+    }).catch(() => {});
+
+    addonsToggle.addEventListener('click', async () => {
+      const isOn = addonsToggle.getAttribute('aria-checked') === 'true';
+      const newState = !isOn;
+      addonsToggle.setAttribute('aria-checked', String(newState));
+      addonsToggle.classList.toggle('off', !newState);
+
+      await fetch('/app/api/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addonsHidden: !newState }),
+      }).catch(() => {});
+    });
+  }
 
   // --- Data Sources ---
   const dsList = document.getElementById('dsList')!;

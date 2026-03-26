@@ -78,6 +78,11 @@ if (hasDiagnosis) autoCompleted.add('diagnose');
 if (hasResolution) autoCompleted.add('resolution');
 const completedSteps = Array.from(autoCompleted);
 const totalSteps = 7;
+
+// --- Add-ons banner state ---
+const addonsHidden = prefs?.addonsHidden ?? false;
+const addonsDismissed = prefs?.addonsDismissed ?? false;
+const showAddonsBanner = !addonsHidden && !addonsDismissed;
 const completedCount = completedSteps.length;
 const progressPct = Math.round((completedCount / totalSteps) * 100);
 const allDone = completedCount >= totalSteps;
@@ -116,6 +121,17 @@ function timeAgo(date: Date) {
         <span>New scan results available — <strong>{pendingImports.length} pending import{pendingImports.length > 1 ? 's' : ''}</strong></span>
         <span class="import-banner-arrow">&rarr;</span>
       </a>
+    )}
+
+    {/* Add-ons banner */}
+    {showAddonsBanner && (
+      <div class="addons-banner" id="addonsBanner">
+        <a href="/app/addons" class="addons-banner-link">
+          <span class="addons-banner-icon">+</span>
+          <span>Tools that work with your stack — <strong>explore add-ons</strong></span>
+        </a>
+        <button class="addons-banner-dismiss" id="dismissAddons" aria-label="Dismiss">&times;</button>
+      </div>
     )}
 
     {/* Onboarding checklist — shown as banner for returning users, full view for new users */}
@@ -436,6 +452,20 @@ function timeAgo(date: Date) {
       setTimeout(() => widget.remove(), 300);
     });
   }
+
+  // Add-ons banner dismiss
+  const dismissAddons = document.getElementById('dismissAddons');
+  const addonsBanner = document.getElementById('addonsBanner');
+  if (dismissAddons && addonsBanner) {
+    dismissAddons.addEventListener('click', async () => {
+      addonsBanner.style.transition = 'opacity 200ms';
+      addonsBanner.style.opacity = '0';
+      try {
+        await fetch('/app/api/addons/dismiss', { method: 'POST' });
+      } catch {}
+      setTimeout(() => addonsBanner.remove(), 200);
+    });
+  }
 </script>
 
 <style>
@@ -446,6 +476,13 @@ function timeAgo(date: Date) {
   .import-banner:hover { background: var(--accent-glow); }
   .import-banner-icon { font-size: 14px; }
   .import-banner-arrow { margin-left: auto; }
+
+  .addons-banner { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: rgba(34,211,238,0.06); border: 1px solid rgba(34,211,238,0.2); border-radius: var(--radius); margin-bottom: 16px; font-size: 13px; }
+  .addons-banner-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #22d3ee; flex: 1; }
+  .addons-banner-link:hover { opacity: 0.85; }
+  .addons-banner-icon { font-family: var(--font-mono); font-weight: 700; font-size: 16px; }
+  .addons-banner-dismiss { background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1; }
+  .addons-banner-dismiss:hover { color: var(--text); }
 
   /* Overview cards */
   .overview-cards {

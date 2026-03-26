@@ -52,6 +52,11 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   // Onboarding progress (2026-03-25)
   safeAddColumn(sqlite, 'tenant_preferences', 'onboarding_progress', 'TEXT');
   safeAddColumn(sqlite, 'tenant_preferences', 'onboarding_dismissed', 'INTEGER NOT NULL DEFAULT 0');
+  // Add-ons panel (2026-03-26)
+  safeAddColumn(sqlite, 'tenant_preferences', 'addons_dismissed', 'INTEGER DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'addons_hidden', 'INTEGER DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache', 'TEXT');
+  safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache_at', 'INTEGER');
 }
 
 function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {
@@ -346,6 +351,19 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       updated_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_data_sources_user ON data_sources(user_id);
+    CREATE TABLE IF NOT EXISTS unknown_tools (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool_name TEXT NOT NULL,
+      detected_at INTEGER NOT NULL,
+      reported INTEGER DEFAULT 0
+    );
+    CREATE TABLE IF NOT EXISTS addon_interest (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      tool_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      notified INTEGER DEFAULT 0
+    );
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

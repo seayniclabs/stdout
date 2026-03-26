@@ -1,0 +1,417 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../lib/db';
+import { eq } from 'drizzle-orm';
+import { fetchAddons, rankAddons, WHATS_NEW, COMING_SOON, type Addon } from '../../lib/addons';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const userId = Astro.locals.workspace?.ownerId || user.id;
+const db = getTenantDb(userId);
+
+// Get tenant preferences for cache
+const prefs = db.select().from(tenantSchema.tenantPreferences)
+  .where(eq(tenantSchema.tenantPreferences.userId, user.id))
+  .get();
+
+// Fetch products (cached 24hr, 2s timeout, static fallback)
+const allAddons = await fetchAddons(
+  prefs?.addonsCache || null,
+  prefs?.addonsCacheAt as Date | null,
+);
+
+// Cache the result if fresh
+if (allAddons.length > 0 && prefs) {
+  db.update(tenantSchema.tenantPreferences)
+    .set({ addonsCache: JSON.stringify(allAddons), addonsCacheAt: new Date() })
+    .where(eq(tenantSchema.tenantPreferences.userId, user.id))
+    .run();
+}
+
+// Get detected services from stacks for ranking
+const stacks = db.select().from(tenantSchema.stacks)
+  .where(eq(tenantSchema.stacks.userId, user.id))
+  .all();
+
+const detectedServices: string[] = [];
+for (const stack of stacks) {
+  // Extract service names from stack description (markdown)
+  const lines = (stack.description || '').split('\n');
+  for (const line of lines) {
+    const match = line.match(/[-*]\s+\*?\*?(\w[\w-]*)/);
+    if (match) detectedServices.push(match[1]);
+  }
+}
+
+const recommended = rankAddons(allAddons, detectedServices, 3);
+
+// Get user's existing interest flags
+const interests = db.select()
+  .from(tenantSchema.addonInterest)
+  .where(eq(tenantSchema.addonInterest.userId, user.id))
+  .all();
+const interestedIds = new Set(interests.map(i => i.toolId));
+---
+<Layout title="Add-ons — StdOut">
+  <div class="addons-page">
+    <div class="addons-header">
+      <div class="addons-header-text">
+        <p class="addons-label">// add-ons</p>
+        <h1>Tools for your stack</h1>
+        <p class="addons-subtitle">Extend StdOut with tools built for the same infrastructure you're already running.</p>
+      </div>
+    </div>
+
+    <!-- Recommended (contextual) -->
+    <section class="addons-section">
+      <h2 class="addons-section-title">
+        <span class="section-dot recommended-dot"></span>
+        Based on your stack
+      </h2>
+      <div class="addons-grid">
+        {recommended.map(addon => (
+          <a href={addon.url} target="_blank" rel="noopener" class="addon-card">
+            <div class="addon-card-icon">{addon.icon || '🔧'}</div>
+            <div class="addon-card-body">
+              <h3 class="addon-card-name">{addon.name}</h3>
+              <p class="addon-card-tagline">{addon.tagline}</p>
+            </div>
+            <div class="addon-card-meta">
+              <span class="addon-card-price">{addon.price}</span>
+              <span class="addon-card-action">Learn more &rarr;</span>
+            </div>
+          </a>
+        ))}
+        {recommended.length === 0 && (
+          <p class="addons-empty">No specific recommendations yet. Run a scanner import to get personalized suggestions.</p>
+        )}
+      </div>
+    </section>
+
+    <!-- What's New -->
+    <section class="addons-section">
+      <h2 class="addons-section-title">
+        <span class="section-dot new-dot"></span>
+        New from Seaynic Labs
+      </h2>
+      <a href={WHATS_NEW.url} target="_blank" rel="noopener" class="addon-card addon-card-featured">
+        <div class="addon-card-body">
+          <div class="addon-featured-badge">New</div>
+          <h3 class="addon-card-name">{WHATS_NEW.name}</h3>
+          <p class="addon-card-tagline">{WHATS_NEW.tagline}</p>
+        </div>
+        <div class="addon-card-meta">
+          <span class="addon-card-price">{WHATS_NEW.price}</span>
+          <span class="addon-card-action">Learn more &rarr;</span>
+        </div>
+      </a>
+    </section>
+
+    <!-- Coming Soon -->
+    <section class="addons-section">
+      <h2 class="addons-section-title addons-collapsible" id="comingSoonToggle">
+        <span class="section-dot soon-dot"></span>
+        Coming up
+        <svg class="collapse-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </h2>
+      <div class="addons-coming-soon" id="comingSoonList" style="display:none;">
+        {COMING_SOON.map(item => (
+          <div class="coming-soon-item">
+            <div class="coming-soon-info">
+              <h3 class="coming-soon-name">{item.name}</h3>
+              <p class="coming-soon-teaser">{item.teaser}</p>
+            </div>
+            <button
+              class={`coming-soon-notify ${interestedIds.has(item.id) ? 'notified' : ''}`}
+              data-tool-id={item.id}
+              disabled={interestedIds.has(item.id)}
+            >
+              {interestedIds.has(item.id) ? 'Noted \u2713' : 'Notify me'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <div class="addons-footer">
+      <p>All add-ons open in your browser. StdOut never processes payments or stores purchase data.</p>
+      <a href="/app/settings" class="addons-settings-link">Manage add-on preferences in Settings</a>
+    </div>
+  </div>
+
+  <script>
+    // Coming Soon toggle
+    document.getElementById('comingSoonToggle')?.addEventListener('click', () => {
+      const list = document.getElementById('comingSoonList');
+      const chevron = document.querySelector('.collapse-chevron');
+      if (list && chevron) {
+        const isHidden = list.style.display === 'none';
+        list.style.display = isHidden ? '' : 'none';
+        chevron.style.transform = isHidden ? 'rotate(180deg)' : '';
+      }
+    });
+
+    // Notify me buttons
+    document.querySelectorAll('.coming-soon-notify:not(.notified)').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const toolId = (btn as HTMLElement).dataset.toolId;
+        if (!toolId) return;
+        (btn as HTMLButtonElement).disabled = true;
+        btn.textContent = '...';
+
+        try {
+          const res = await fetch('/app/api/addons/notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ toolId }),
+          });
+          if (res.ok) {
+            btn.textContent = 'Noted \u2713';
+            btn.classList.add('notified');
+          } else {
+            btn.textContent = 'Notify me';
+            (btn as HTMLButtonElement).disabled = false;
+          }
+        } catch {
+          btn.textContent = 'Notify me';
+          (btn as HTMLButtonElement).disabled = false;
+        }
+      });
+    });
+  </script>
+
+  <style>
+    .addons-page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    .addons-header { margin-bottom: 2.5rem; }
+
+    .addons-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 0.5rem;
+    }
+
+    .addons-header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .addons-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .addons-section { margin-bottom: 2rem; }
+
+    .addons-section-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .addons-collapsible { cursor: pointer; }
+    .addons-collapsible:hover { color: var(--text); }
+
+    .collapse-chevron {
+      margin-left: auto;
+      transition: transform 0.2s;
+    }
+
+    .section-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+    .recommended-dot { background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
+    .new-dot { background: #22d3ee; box-shadow: 0 0 6px rgba(34, 211, 238, 0.3); }
+    .soon-dot { background: var(--text-muted); }
+
+    .addons-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .addon-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.25rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .addon-card:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-elevated);
+    }
+
+    .addon-card-featured {
+      border-color: rgba(34, 211, 238, 0.2);
+      background: rgba(34, 211, 238, 0.04);
+    }
+    .addon-card-featured:hover {
+      border-color: rgba(34, 211, 238, 0.4);
+      background: rgba(34, 211, 238, 0.08);
+    }
+
+    .addon-card-icon {
+      font-size: 1.5rem;
+      flex-shrink: 0;
+      width: 40px;
+      text-align: center;
+    }
+
+    .addon-card-body { flex: 1; min-width: 0; }
+
+    .addon-card-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.2rem;
+    }
+
+    .addon-card-tagline {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .addon-card-meta {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    .addon-card-price {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .addon-card-action {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    .addon-featured-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #22d3ee;
+      background: rgba(34, 211, 238, 0.1);
+      padding: 0.15rem 0.5rem;
+      border-radius: 3px;
+      margin-bottom: 0.4rem;
+    }
+
+    .coming-soon-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 0.5rem;
+    }
+
+    .coming-soon-info { flex: 1; }
+
+    .coming-soon-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 0.15rem;
+    }
+
+    .coming-soon-teaser {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .coming-soon-notify {
+      padding: 0.4rem 0.8rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--accent);
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s;
+      flex-shrink: 0;
+      margin-left: 1rem;
+    }
+
+    .coming-soon-notify:hover:not(:disabled) { border-color: var(--accent); }
+    .coming-soon-notify:disabled { opacity: 0.7; cursor: default; }
+    .coming-soon-notify.notified { color: var(--text-secondary); border-color: transparent; }
+
+    .addons-empty {
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      padding: 1.5rem;
+      text-align: center;
+      border: 1px dashed var(--border);
+      border-radius: var(--radius);
+    }
+
+    .addons-footer {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+
+    .addons-footer p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .addons-settings-link {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .addons-settings-link:hover { opacity: 0.8; }
+
+    @media (max-width: 640px) {
+      .addon-card { flex-direction: column; align-items: flex-start; }
+      .addon-card-meta { flex-direction: row; align-items: center; gap: 0.75rem; }
+      .coming-soon-item { flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+      .coming-soon-notify { margin-left: 0; }
+    }
+  </style>
+</Layout>

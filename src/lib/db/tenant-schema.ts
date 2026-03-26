@@ -63,6 +63,10 @@ export const tenantPreferences = sqliteTable('tenant_preferences', {
   logoUrl: text('logo_url'), // Small image URL or data URI
   onboardingProgress: text('onboarding_progress'), // JSON: completed step IDs e.g. ["env","token","scanner","incident","diagnose","resolution"]
   onboardingDismissed: integer('onboarding_dismissed', { mode: 'boolean' }).notNull().default(false),
+  addonsDismissed: integer('addons_dismissed', { mode: 'boolean' }).notNull().default(false),
+  addonsHidden: integer('addons_hidden', { mode: 'boolean' }).notNull().default(false),
+  addonsCache: text('addons_cache'),
+  addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp' }),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -199,6 +203,21 @@ export const dataSources = sqliteTable('data_sources', {
   lastTestStatus: text('last_test_status'),  // 'ok' | 'error' | error message
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const unknownTools = sqliteTable('unknown_tools', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  toolName: text('tool_name').notNull(),
+  detectedAt: integer('detected_at', { mode: 'timestamp' }).notNull(),
+  reported: integer('reported').notNull().default(0),
+});
+
+export const addonInterest = sqliteTable('addon_interest', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  toolId: text('tool_id').notNull(),
+  userId: text('user_id').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  notified: integer('notified').notNull().default(0),
 });
 
 export const stackImports = sqliteTable('stack_imports', {

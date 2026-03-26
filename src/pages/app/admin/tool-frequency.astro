@@ -1,0 +1,83 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+if (user.role !== 'superadmin') return Astro.redirect('/app');
+
+const userId = Astro.locals.workspace?.ownerId || user.id;
+const db = getTenantDb(userId);
+
+// Get all unknown tools, grouped and counted
+const allTools = db.select().from(tenantSchema.unknownTools).all();
+
+const frequency = new Map<string, { count: number; firstSeen: Date; lastSeen: Date }>();
+for (const t of allTools) {
+  const name = t.toolName;
+  const existing = frequency.get(name);
+  const detectedAt = t.detectedAt as Date;
+  if (existing) {
+    existing.count++;
+    if (detectedAt < existing.firstSeen) existing.firstSeen = detectedAt;
+    if (detectedAt > existing.lastSeen) existing.lastSeen = detectedAt;
+  } else {
+    frequency.set(name, { count: 1, firstSeen: detectedAt, lastSeen: detectedAt });
+  }
+}
+
+const sorted = [...frequency.entries()]
+  .sort((a, b) => b[1].count - a[1].count);
+---
+<Layout title="Tool Frequency — Admin">
+  <div class="admin-page">
+    <div class="admin-header">
+      <p class="admin-label">// admin · superadmin only</p>
+      <h1>Unknown Tool Frequency</h1>
+      <p class="admin-subtitle">Tools detected by the scanner that StdOut doesn't currently support. Ranked by detection count — this is your product roadmap signal.</p>
+    </div>
+
+    {sorted.length === 0 ? (
+      <div class="admin-empty">
+        <p>No unknown tools detected yet. Run a scanner import to populate this view.</p>
+      </div>
+    ) : (
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Tool</th>
+            <th>Detections</th>
+            <th>First Seen</th>
+            <th>Last Seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map(([name, data]) => (
+            <tr>
+              <td class="tool-name">{name}</td>
+              <td class="tool-count">{data.count}</td>
+              <td class="tool-date">{data.firstSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+              <td class="tool-date">{data.lastSeen.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )}
+  </div>
+
+  <style>
+    .admin-page { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+    .admin-header { margin-bottom: 2rem; }
+    .admin-label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; }
+    .admin-header h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .admin-subtitle { color: var(--text-secondary); font-size: 0.9rem; }
+    .admin-empty { padding: 2rem; text-align: center; border: 1px dashed var(--border); border-radius: var(--radius); color: var(--text-muted); }
+    .admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    .admin-table th { text-align: left; padding: 0.6rem 0.75rem; color: var(--text-muted); font-family: var(--font-mono); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid var(--border); }
+    .admin-table td { padding: 0.6rem 0.75rem; border-bottom: 1px solid rgba(31, 31, 53, 0.5); }
+    .tool-name { font-family: var(--font-mono); font-weight: 600; }
+    .tool-count { font-family: var(--font-mono); color: var(--accent); font-weight: 600; }
+    .tool-date { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-secondary); }
+  </style>
+</Layout>

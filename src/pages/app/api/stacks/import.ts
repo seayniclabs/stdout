@@ -58,6 +58,30 @@ export const POST: APIRoute = async ({ locals, request }) => {
     createdAt: new Date(),
   }).run();
 
+  // Log unknown tools from scanner output
+  try {
+    const { findUnknownTools } = await import('../../../../lib/known-tools');
+    const containerNames: string[] = [];
+    if (body.containers && Array.isArray(body.containers)) {
+      for (const c of body.containers) {
+        if (c.image) containerNames.push(c.image);
+        if (c.name) containerNames.push(c.name);
+      }
+    }
+    const unknowns = findUnknownTools(containerNames);
+    for (const tool of unknowns) {
+      // Avoid duplicates within the same day
+      const existing = db.select().from(tenantSchema.unknownTools).all()
+        .find(t => t.toolName === tool);
+      if (!existing) {
+        db.insert(tenantSchema.unknownTools).values({
+          toolName: tool,
+          detectedAt: new Date(),
+        }).run();
+      }
+    }
+  } catch {}
+
   return new Response(JSON.stringify({
     importId,
     reviewUrl: `/app/stacks/import/${importId}`,

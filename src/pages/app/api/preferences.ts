@@ -104,3 +104,37 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   return new Response(JSON.stringify({ error: 'Unknown action' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 };
+
+// PUT /app/api/preferences — update individual preference fields
+export const PUT: APIRoute = async ({ locals, request }) => {
+  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+
+  let body: any;
+  try { body = await request.json(); } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const existing = db.select().from(tenantSchema.tenantPreferences)
+    .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id)).get();
+
+  const updates: any = { updatedAt: new Date() };
+
+  if (body.addonsHidden !== undefined) {
+    updates.addonsHidden = !!body.addonsHidden;
+  }
+  if (body.addonsDismissed !== undefined) {
+    updates.addonsDismissed = !!body.addonsDismissed;
+  }
+
+  if (existing) {
+    db.update(tenantSchema.tenantPreferences).set(updates)
+      .where(eq(tenantSchema.tenantPreferences.id, existing.id)).run();
+  } else {
+    db.insert(tenantSchema.tenantPreferences).values({
+      id: nanoid(), userId: locals.user.id, ...updates,
+    }).run();
+  }
+
+  return new Response(JSON.stringify({ updated: true }), { headers: { 'Content-Type': 'application/json' } });
+};
