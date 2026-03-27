@@ -83,7 +83,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         });
       }
     }
-  } catch {}
+  } catch (e) { console.error('FTS similarity error:', e); }
 
   return new Response(JSON.stringify({ matches, docs }), {
     headers: { 'Content-Type': 'application/json' },

@@ -13,6 +13,17 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
 
   // Use Astro cookie API so redirects reliably carry all cookie mutations.
   // Do not clear active session here; unexpected prefetch/retries can erase fresh auth.
+  // Guard cookie: if the callback fails and redirects back to /app/login
+  // without an error param, login.astro checks for this cookie to detect
+  // a redirect loop and stop auto-redirecting to OIDC again.
+  cookies.set('sl_oidc_attempt', '1', {
+    path: '/',
+    httpOnly: true,
+    secure: true,
+    sameSite: 'lax',
+    maxAge: 120, // 2 minutes — enough for a single OIDC round trip
+  });
+
   cookies.set('sl_oidc_state', state, {
     path: '/',
     httpOnly: true,

@@ -102,6 +102,9 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
     maxAge,
   });
 
+  // Clear OIDC attempt guard — login succeeded
+  cookies.delete('sl_oidc_attempt', { path: '/' });
+
   // New users go to onboarding guides
   return safeRedirect(localUser.isNew ? '/app/docs?filter=stdout' : '/app');
 };

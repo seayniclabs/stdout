@@ -42,7 +42,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         severity: row.severity,
       });
     }
-  } catch { /* FTS may fail on complex queries */ }
+  } catch (e) { console.error('FTS search error:', e); }
 
   // Search resolutions
   try {
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         snippet: (row.content || '').substring(0, 120),
       });
     }
-  } catch { /* FTS may fail on complex queries */ }
+  } catch (e) { console.error('FTS search error:', e); }
 
   // Search docs (user's own + community docs)
   try {
@@ -87,7 +87,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
         source: row.source || 'user',
       });
     }
-  } catch { /* FTS may fail on complex queries */ }
+  } catch (e) { console.error('FTS search error:', e); }
 
   // Search stacks
   try {

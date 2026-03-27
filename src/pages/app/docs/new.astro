@@ -69,7 +69,7 @@ if (Astro.request.method === 'POST') {
       if (rawDb?.prepare) {
         try {
           rawDb.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(id);
-        } catch {}
+        } catch (e) { console.error('FTS sync error:', e); }
       }
 
       return Astro.redirect(`/app/docs/${id}`);

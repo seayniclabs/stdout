@@ -11,7 +11,13 @@ if (Astro.locals.user) return Astro.redirect(redirectTo);
 
 // OIDC is the only auth path — auto-redirect unless there's an error to show
 const oidcError = Astro.url.searchParams.get('error');
-if (isOIDCEnabled() && !oidcError) {
+// Guard: if sl_oidc_attempt cookie exists, a recent OIDC redirect just failed
+// (callback redirected here without an error param). Stop the loop.
+const oidcAttemptActive = Astro.cookies.get('sl_oidc_attempt')?.value === '1';
+if (oidcAttemptActive && !oidcError) {
+  Astro.cookies.delete('sl_oidc_attempt', { path: '/' });
+}
+if (isOIDCEnabled() && !oidcError && !oidcAttemptActive) {
   return Astro.redirect('/app/auth/oidc');
 }
 
@@ -39,7 +45,9 @@ const OIDC_ERROR_HINTS: Record<string, string> = {
 };
 
 let error = '';
-if (oidcError === 'registration_closed') {
+if (oidcAttemptActive && !oidcError) {
+  error = 'Sign-in did not complete. This can happen with cookie blockers, multiple tabs, or an SSO configuration issue. Try again — if it keeps happening, check browser privacy settings or contact the administrator.';
+} else if (oidcError === 'registration_closed') {
   error = OIDC_ERROR_HINTS.registration_closed;
 } else if (oidcError === 'oidc_not_configured') {
   error = OIDC_ERROR_HINTS.oidc_not_configured;
