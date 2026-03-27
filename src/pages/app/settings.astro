@@ -2,9 +2,18 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getUserLimits, getUpgradeUrl, type TierName } from '../../lib/tiers';
+import { checkForUpdate, type UpdateCheckResult } from '../../lib/update-check';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+
+// Version check (silent failure — never blocks the page)
+let updateInfo: UpdateCheckResult | null = null;
+try {
+  updateInfo = await checkForUpdate();
+} catch {}
+const currentVersion = updateInfo?.currentVersion ?? '1.1.0';
+const hasUpdate = updateInfo?.hasUpdate ?? false;
 
 const { tier, limits } = getUserLimits(user);
 const tierLabels: Record<TierName, string> = {
@@ -20,6 +29,17 @@ const isPaid = tier !== 'free';
 <Layout title="Settings — StdOut">
   <div class="settings-page">
     <h1>Account Settings</h1>
+
+    <!-- Version & Update -->
+    <div class="version-row">
+      <span class="version-label mono">StdOut v{currentVersion}</span>
+      {hasUpdate && updateInfo && (
+        <a href={updateInfo.releaseUrl} class="update-banner" target="_blank" rel="noopener">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span>Update available: <strong>v{updateInfo.currentVersion}</strong> &rarr; <strong>v{updateInfo.latestVersion}</strong></span>
+        </a>
+      )}
+    </div>
 
     <!-- Profile -->
     <section class="section">
@@ -1213,7 +1233,14 @@ const isPaid = tier !== 'free';
 
 <style>
   .settings-page { max-width: 640px; margin: 0 auto; }
-  .settings-page h1 { font-size: 20px; margin-bottom: 24px; }
+  .settings-page h1 { font-size: 20px; margin-bottom: 8px; }
+
+  /* Version & Update */
+  .version-row { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  .version-label { font-size: 12px; color: var(--text-muted); }
+  .update-banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.25); border-radius: var(--radius); font-size: 12px; color: #22d3ee; text-decoration: none; transition: background 150ms; }
+  .update-banner:hover { background: rgba(34,211,238,0.14); }
+  .update-banner svg { flex-shrink: 0; }
   .section { margin-bottom: 32px; }
   .section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
   .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
