@@ -270,9 +270,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
 
-  // Redirects: return as-is to preserve Set-Cookie headers from auth flows.
-  // Re-wrapping redirects can drop cookie headers in some runtimes.
+  // Redirects: set security headers directly on the original response to
+  // preserve Set-Cookie headers from auth flows (re-wrapping can drop them).
   if (response.status >= 300 && response.status < 400) {
+    response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     return response;
   }
 
