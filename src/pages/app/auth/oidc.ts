@@ -18,14 +18,14 @@ export const GET: APIRoute = async ({ cookies, redirect }) => {
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    maxAge: 600,
+    maxAge: 1200,
   });
   cookies.set('sl_oidc_verifier', codeVerifier, {
     path: '/',
     httpOnly: true,
     secure: true,
     sameSite: 'lax',
-    maxAge: 600,
+    maxAge: 1200,
   });
 
   const url = getAuthorizationURL(state, codeChallenge);

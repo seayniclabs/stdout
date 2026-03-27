@@ -54,26 +54,26 @@ export const FALLBACK_ADDONS: Addon[] = [
 
 // What's New — update when a new vertical ships
 export const WHATS_NEW = {
-  id: 'stdout-self-host',
-  name: 'StdOut Self-Hosted',
-  tagline: 'Your incidents. Your server. Your data. Deploy StdOut on your own hardware.',
-  price: '$149 one-time',
-  url: 'https://store.seayniclabs.com/products/stdout-self-host',
+  id: 'network-scanner',
+  name: 'Network Scanner Module',
+  tagline: 'SNMP discovery, VLAN awareness, device type inference, and full subnet mapping — now built into the scanner.',
+  price: 'Included in Self-Hosted',
+  url: 'https://stdout.seayniclabs.com/app/docs/guide/scanner-setup',
   isNew: true,
-  releasedAt: '2026-03-23',
+  releasedAt: '2026-03-27',
 };
 
 // Coming Soon — teasers for future verticals
 export const COMING_SOON = [
   {
-    id: 'network-scanner',
-    name: 'Network Scanner',
-    teaser: 'SNMP, VLAN awareness, device type inference — map your entire network.',
-  },
-  {
     id: 'oncall-toolkit',
     name: 'On-Call Toolkit',
     teaser: 'PagerDuty/Grafana OnCall integration, escalation tracking, shift handoff notes.',
+  },
+  {
+    id: 'msp-multi-tenant',
+    name: 'MSP Multi-Tenant',
+    teaser: 'Manage multiple client stacks from one console. Per-tenant isolation, team access controls.',
   },
 ];
 
@@ -156,8 +156,12 @@ export function rankAddons(addons: Addon[], detectedServices: string[], limit = 
     .map(a => ({ addon: a, score: scores.get(a.id) || 0 }))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
-      const priceA = parseInt(a.addon.price.replace(/\D/g, '')) || 0;
-      const priceB = parseInt(b.addon.price.replace(/\D/g, '')) || 0;
+      const extractPrice = (p: string) => {
+        const match = p.match(/^\$(\d+)/);
+        return match ? parseInt(match[1]) : 0;
+      };
+      const priceA = extractPrice(a.addon.price);
+      const priceB = extractPrice(b.addon.price);
       return priceB - priceA;
     })
     .slice(0, limit)

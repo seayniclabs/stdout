@@ -70,9 +70,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
     const unknowns = findUnknownTools(containerNames);
     for (const tool of unknowns) {
-      // Avoid duplicates within the same day
-      const existing = db.select().from(tenantSchema.unknownTools).all()
-        .find(t => t.toolName === tool);
+      // Check for existing entry with a targeted DB query (not .all())
+      const existing = db.select()
+        .from(tenantSchema.unknownTools)
+        .where(eq(tenantSchema.unknownTools.toolName, tool))
+        .get();
       if (!existing) {
         db.insert(tenantSchema.unknownTools).values({
           toolName: tool,

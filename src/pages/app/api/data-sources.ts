@@ -4,6 +4,7 @@ import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '../../../lib/crypto';
 import { testConnection } from '../../../lib/influx';
+import { isBlockedTarget } from '../../../lib/hud';
 
 // --- List data sources ---
 
@@ -62,7 +63,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // SSRF protection — block internal/private network URLs
-    const { isBlockedTarget } = await import('../../../lib/hud');
     if (isBlockedTarget(url)) {
       return new Response(JSON.stringify({ error: 'URL points to a private or internal address' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
@@ -188,8 +188,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // SSRF protection on test connection
-    const { isBlockedTarget: isBlocked } = await import('../../../lib/hud');
-    if (isBlocked(url)) {
+    if (isBlockedTarget(url)) {
       return new Response(JSON.stringify({ ok: false, error: 'URL points to a private or internal address' }), {
         headers: { 'Content-Type': 'application/json' },
       });
