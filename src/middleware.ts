@@ -236,7 +236,19 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.csrfToken = csrfToken;
 
   // Protect /app/* routes (except login, register, forgot-password)
-  const publicAppPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/api/webhooks/', '/app/api/billing-sync', '/app/auth/oidc', '/app/auth/callback', '/app/api/me'];
+  const publicAppPaths = [
+    '/app/login',
+    '/app/register',
+    '/app/forgot-password',
+    '/app/reset-password',
+    '/app/verify-email',
+    '/app/api/webhooks/',
+    '/app/api/billing-sync',
+    '/app/api/community-sync', // public catalog sync; no auth (see community-sync.ts)
+    '/app/auth/oidc',
+    '/app/auth/callback',
+    '/app/api/me',
+  ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
   // These redirects fall through to security-header injection below
