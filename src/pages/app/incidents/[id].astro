@@ -31,7 +31,7 @@ if (Astro.request.method === 'POST') {
         }).run();
 
         // Sync to FTS
-        const rawDb = (db as any)._.session?.client;
+        const rawDb = (db as any).$client;
         if (rawDb?.prepare) {
           rawDb.prepare('INSERT INTO resolutions_fts(rowid, content) SELECT rowid, content FROM resolutions WHERE id = ?').run(resId);
         }

@@ -57,7 +57,7 @@ if (Astro.request.method === 'POST') {
         }).where(eq(tenantSchema.docs.id, id!)).run();
 
         // Re-sync FTS
-        const rawDb = (db as any)._.session?.client;
+        const rawDb = (db as any).$client;
         if (rawDb?.prepare) {
           try {
             rawDb.prepare('DELETE FROM docs_fts WHERE rowid = (SELECT rowid FROM docs WHERE id = ?)').run(id);
@@ -88,7 +88,7 @@ if (Astro.request.method === 'POST') {
         updatedAt: new Date(),
       }).run();
       // Sync fork to FTS
-      const rawDbFork = (db as any)._.session?.client;
+      const rawDbFork = (db as any).$client;
       if (rawDbFork?.prepare) {
         try {
           rawDbFork.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(forkId);
@@ -100,7 +100,7 @@ if (Astro.request.method === 'POST') {
         return Astro.redirect(`/app/docs/${id}`);
       }
       // Delete FTS entry
-      const rawDb = (db as any)._.session?.client;
+      const rawDb = (db as any).$client;
       if (rawDb?.prepare) {
         try { rawDb.prepare('DELETE FROM docs_fts WHERE rowid = (SELECT rowid FROM docs WHERE id = ?)').run(id); } catch {}
       }

@@ -42,7 +42,7 @@ if (Astro.request.method === 'POST') {
 
       // Tier gate: docs storage
       if (limits.maxDocsStorageMB !== Infinity) {
-        const rawDb = (db as any)._.session?.client;
+        const rawDb = (db as any).$client;
         let totalBytes = 0;
         if (rawDb?.prepare) {
           const row = rawDb.prepare('SELECT COALESCE(SUM(size_bytes), 0) as total FROM docs WHERE user_id = ?').get(user.id);
@@ -65,7 +65,7 @@ if (Astro.request.method === 'POST') {
       }).run();
 
       // Sync to FTS
-      const rawDb = (db as any)._.session?.client;
+      const rawDb = (db as any).$client;
       if (rawDb?.prepare) {
         try {
           rawDb.prepare('INSERT INTO docs_fts(rowid, title, content, tags) SELECT rowid, title, content, tags FROM docs WHERE id = ?').run(id);

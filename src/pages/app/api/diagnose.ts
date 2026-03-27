@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Get past resolutions for similar incidents (FTS5 search)
   const pastResolutions: string[] = [];
   try {
-    const rawDb = (db as any)._.session?.client;
+    const rawDb = (db as any).$client;
     if (rawDb?.prepare) {
       const ftsResults = rawDb.prepare(
         `SELECT r.content FROM resolutions r

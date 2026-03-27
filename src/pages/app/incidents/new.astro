@@ -31,7 +31,7 @@ if (Astro.request.method === 'POST') {
     const stackId = (form.get('stackId') as string || '') || null;
     const tags = (form.get('tags') as string || '').trim() || null;
 
-    const rawDb = (db as any)._.session?.client;
+    const rawDb = (db as any).$client;
 
     if (!title || !description) {
       error = 'Title and description are required.';
