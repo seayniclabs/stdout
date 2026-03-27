@@ -15,8 +15,13 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   const error = url.searchParams.get('error');
 
   if (error) {
-    console.error('OIDC error:', error, url.searchParams.get('error_description'));
-    return safeRedirect(`/app/login?error=${encodeURIComponent(error)}`);
+    const errorDescription = url.searchParams.get('error_description') || '';
+    console.error('OIDC error:', error, errorDescription);
+    const q = new URLSearchParams({ error });
+    if (errorDescription) {
+      q.set('error_description', errorDescription.slice(0, 500));
+    }
+    return safeRedirect(`/app/login?${q.toString()}`);
   }
 
   if (!code || !state) {

@@ -17,13 +17,43 @@ if (isOIDCEnabled() && !oidcError) {
 
 const oidcProviderName = process.env.OIDC_PROVIDER_NAME || 'SSO';
 
+const errorDescription = (Astro.url.searchParams.get('error_description') || '').trim();
+
+/** User-visible copy for OIDC callback ?error= codes (and IdP OAuth errors). */
+const OIDC_ERROR_HINTS: Record<string, string> = {
+  invalid_state:
+    'Your sign-in session expired or did not match (often multiple tabs, a back button, or cookies blocked). Close other StdOut login tabs, allow cookies for this site, and try Sign in with SSO again.',
+  missing_pkce_verifier:
+    'A required sign-in cookie was missing when you returned from SSO. Try again once, avoid previewing the SSO link, and temporarily disable strict tracker blocking for this domain.',
+  missing_params:
+    'The identity provider response was incomplete. Start again with Sign in with SSO from this page.',
+  token_exchange_failed:
+    'The app could not exchange the authorization code with the identity server. If this keeps happening, check container logs and Authentik client/redirect settings.',
+  userinfo_failed:
+    'SSO succeeded but we could not load your profile (email is required). Confirm Authentik returns `email` scope and the user has an email attribute.',
+  registration_closed:
+    'Registration is currently closed. Contact support for access.',
+  oidc_not_configured:
+    'Authentication is not configured on this server. Contact the administrator.',
+  access_denied: 'Sign-in was cancelled or denied at the identity provider.',
+};
+
 let error = '';
 if (oidcError === 'registration_closed') {
-  error = 'Registration is currently closed. Contact support for access.';
+  error = OIDC_ERROR_HINTS.registration_closed;
 } else if (oidcError === 'oidc_not_configured') {
-  error = 'Authentication is not configured. Contact the administrator.';
+  error = OIDC_ERROR_HINTS.oidc_not_configured;
 } else if (oidcError) {
-  error = 'Authentication failed. Please try again.';
+  const hint = OIDC_ERROR_HINTS[oidcError];
+  if (hint) {
+    error = hint;
+  } else {
+    error = `Sign-in failed (code: ${oidcError}). Try Sign in with SSO again. If it persists, note this code for support.`;
+  }
+  if (errorDescription) {
+    const safe = errorDescription.replace(/</g, '').slice(0, 280);
+    error += ` — ${safe}`;
+  }
 }
 ---
 <Layout title="Sign in — StdOut">
