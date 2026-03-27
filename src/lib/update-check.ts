@@ -67,7 +67,7 @@ export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
       hasUpdate: isNewer(latestVersion, currentVersion),
       currentVersion,
       latestVersion,
-      releaseUrl: data.releaseUrl || 'https://store.seayniclabs.com/products/stdout-self-host',
+      releaseUrl: data.releaseUrl || 'https://store.seayniclabs.com/account/downloads',
     };
 
     cachedResult = result;
