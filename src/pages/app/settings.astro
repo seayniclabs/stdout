@@ -226,17 +226,26 @@ const isPaid = tier !== 'free';
     <!-- Data Sources -->
     <section class="section">
       <h2>Data Sources</h2>
-      <p class="section-desc">Connect InfluxDB to enrich incidents with metrics and show resource utilization on the HUD.</p>
+      <p class="section-desc">Connect InfluxDB or Prometheus to enrich incidents with metrics and show resource utilization on the HUD.</p>
 
       <div id="dsList" class="backup-list">
         <div class="loading mono">Loading...</div>
       </div>
 
+      <div id="dsRecommendations" class="backup-list"></div>
+
       <div class="ds-add-form" id="dsAddForm" style="display:none;">
         <div class="ds-form-header">
-          <h3 id="dsFormTitle">Add InfluxDB Data Source</h3>
+          <h3 id="dsFormTitle">Add Data Source</h3>
           <button id="dsFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
         </div>
+        <label>
+          <span>Type</span>
+          <select id="dsType" class="settings-input">
+            <option value="influxdb">InfluxDB</option>
+            <option value="prometheus">Prometheus</option>
+          </select>
+        </label>
         <label>
           <span>Name</span>
           <input type="text" id="dsName" placeholder="e.g. My InfluxDB" class="settings-input" />
@@ -249,7 +258,7 @@ const isPaid = tier !== 'free';
           <span>API Token</span>
           <input type="password" id="dsToken" placeholder="InfluxDB API token" class="settings-input mono" autocomplete="off" />
         </label>
-        <div class="ds-row">
+        <div class="ds-row" id="dsInfluxFields">
           <label style="flex:1;">
             <span>Organization</span>
             <input type="text" id="dsOrg" placeholder="e.g. seaynic-labs" class="settings-input mono" />
@@ -595,24 +604,38 @@ const isPaid = tier !== 'free';
   const dsAddBtn = document.getElementById('dsAddBtn')!;
   const dsFormCancel = document.getElementById('dsFormCancel')!;
   const dsName = document.getElementById('dsName') as HTMLInputElement;
+  const dsType = document.getElementById('dsType') as HTMLSelectElement;
   const dsUrl = document.getElementById('dsUrl') as HTMLInputElement;
   const dsToken = document.getElementById('dsToken') as HTMLInputElement;
   const dsOrg = document.getElementById('dsOrg') as HTMLInputElement;
   const dsBucket = document.getElementById('dsBucket') as HTMLInputElement;
+  const dsInfluxFields = document.getElementById('dsInfluxFields')!;
   const dsTestBtn = document.getElementById('dsTestBtn')!;
   const dsSaveBtn = document.getElementById('dsSaveBtn')!;
   const dsTestResult = document.getElementById('dsTestResult')!;
   const dsStatusEl = document.getElementById('dsStatus')!;
   const dsFormTitle = document.getElementById('dsFormTitle')!;
+  const dsRecommendations = document.getElementById('dsRecommendations')!;
 
   let editingDsId: string | null = null;
+
+  function updateDataSourceFormByType() {
+    const isInflux = dsType.value === 'influxdb';
+    dsInfluxFields.style.display = isInflux ? '' : 'none';
+    dsOrg.disabled = !isInflux;
+    dsBucket.disabled = !isInflux;
+    if (!isInflux) {
+      dsOrg.value = '';
+      dsBucket.value = '';
+    }
+  }
 
   async function loadDataSources() {
     try {
       const res = await fetch('/app/api/data-sources');
       const data = await res.json();
       if (!data.sources || data.sources.length === 0) {
-        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add InfluxDB to enrich incidents with metrics.</div>';
+        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add InfluxDB or Prometheus to enrich incidents with metrics.</div>';
         return;
       }
       dsList.innerHTML = data.sources.map((s: any) => {
@@ -642,11 +665,13 @@ const isPaid = tier !== 'free';
           if (!ds) return;
           editingDsId = ds.id;
           dsFormTitle.textContent = 'Edit Data Source';
+          dsType.value = ds.type || 'influxdb';
           dsName.value = ds.name || '';
           dsUrl.value = ds.url || '';
           dsToken.value = ds.hasToken ? '********' : '';
           dsOrg.value = ds.org || '';
           dsBucket.value = ds.bucket || '';
+          updateDataSourceFormByType();
           dsAddForm.style.display = '';
           dsAddBtn.style.display = 'none';
           dsTestResult.textContent = '';
@@ -681,10 +706,41 @@ const isPaid = tier !== 'free';
     }
   }
 
+  async function loadDataSourceRecommendations() {
+    if (!dsRecommendations) return;
+    try {
+      const res = await fetch('/app/api/data-sources/recommendations');
+      const data = await res.json();
+      const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
+      if (recs.length === 0) {
+        dsRecommendations.innerHTML = '';
+        return;
+      }
+      dsRecommendations.innerHTML = `
+        <div class="backup-row" style="display:block;">
+          <div class="backup-info" style="margin-bottom:8px;">
+            <span class="backup-date">Suggested Integrations From Latest Scanner Run</span>
+          </div>
+          ${recs.map((r: any) => `
+            <div class="ds-rec-row">
+              <span class="mono ds-rec-type">${escapeHtml(r.type || 'unknown')}</span>
+              <span class="ds-rec-text">${escapeHtml(r.reason || '')}</span>
+              <span class="mono ds-rec-reco">Try: ${escapeHtml(r.recommendation || 'n/a')}</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    } catch {
+      dsRecommendations.innerHTML = '';
+    }
+  }
+
   dsAddBtn?.addEventListener('click', () => {
     editingDsId = null;
-    dsFormTitle.textContent = 'Add InfluxDB Data Source';
+    dsFormTitle.textContent = 'Add Data Source';
+    dsType.value = 'influxdb';
     dsName.value = ''; dsUrl.value = ''; dsToken.value = ''; dsOrg.value = ''; dsBucket.value = '';
+    updateDataSourceFormByType();
     dsAddForm.style.display = '';
     dsAddBtn.style.display = 'none';
     dsTestResult.textContent = '';
@@ -696,6 +752,8 @@ const isPaid = tier !== 'free';
     editingDsId = null;
   });
 
+  dsType?.addEventListener('change', updateDataSourceFormByType);
+
   dsTestBtn?.addEventListener('click', async () => {
     dsTestResult.textContent = 'Testing...';
     dsTestResult.className = 'backup-status';
@@ -705,6 +763,7 @@ const isPaid = tier !== 'free';
         body: JSON.stringify({
           action: 'test',
           id: editingDsId,
+          type: dsType.value,
           url: dsUrl.value,
           token: dsToken.value,
           org: dsOrg.value,
@@ -741,7 +800,7 @@ const isPaid = tier !== 'free';
       const payload: any = {
         action: editingDsId ? 'update' : 'create',
         name,
-        type: 'influxdb',
+        type: dsType.value,
         url,
         token: dsToken.value,
         org: dsOrg.value,
@@ -771,7 +830,9 @@ const isPaid = tier !== 'free';
     }
   });
 
+  updateDataSourceFormByType();
   loadDataSources();
+  loadDataSourceRecommendations();
 
   // --- Scanner Schedule ---
   const scanInterval = document.getElementById('scanInterval') as HTMLSelectElement;
@@ -1293,4 +1354,15 @@ const isPaid = tier !== 'free';
   .ds-status-dot.ds-ok { background: var(--low); box-shadow: 0 0 6px var(--low-glow); }
   .ds-status-dot.ds-error { background: var(--critical); box-shadow: 0 0 6px var(--critical-glow); }
   .ds-status-dot.ds-unknown { background: var(--text-muted); }
+  .ds-rec-row {
+    display: grid;
+    grid-template-columns: 110px 1fr auto;
+    gap: 10px;
+    align-items: start;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+  }
+  .ds-rec-type { font-size: 11px; color: var(--accent-light); text-transform: uppercase; }
+  .ds-rec-text { font-size: 12px; color: var(--text-secondary); }
+  .ds-rec-reco { font-size: 11px; color: var(--text-muted); }
 </style>

@@ -470,7 +470,7 @@ function timeAgo(date: Date) {
     }
   });
 
-  // --- Resource Utilization (InfluxDB) ---
+  // --- Resource Utilization (InfluxDB/Prometheus) ---
   const resourcePanel = document.getElementById('resourcePanel');
   const resourceCards = document.getElementById('resourceCards');
   const resourceSource = document.getElementById('resourceSource');
@@ -484,7 +484,10 @@ function timeAgo(date: Date) {
       .then(data => {
         if (!data.configured || !data.data || data.data.length === 0) return;
         if (resourcePanel) resourcePanel.style.display = '';
-        if (resourceSource) resourceSource.textContent = 'via InfluxDB';
+        if (resourceSource) {
+          const src = data.source === 'prometheus' ? 'Prometheus' : 'InfluxDB';
+          resourceSource.textContent = `via ${src}`;
+        }
 
         const cards = data.data.map((r: any) => {
           const cpuColor = (r.cpuPercent || 0) > 80 ? 'var(--critical)' : (r.cpuPercent || 0) > 50 ? 'var(--high)' : 'var(--low)';

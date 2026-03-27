@@ -3,7 +3,8 @@ import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '../../../lib/crypto';
-import { testConnection } from '../../../lib/influx';
+import { testConnection as testInfluxConnection } from '../../../lib/influx';
+import { testPrometheusConnection } from '../../../lib/prometheus';
 import { isBlockedTarget } from '../../../lib/hud';
 
 // --- List data sources ---
@@ -194,12 +195,26 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const result = await testConnection({
-      url,
-      token: resolvedToken,
-      org,
-      bucket,
-    });
+    let sourceType = (body.type || body.sourceType || 'influxdb') as 'influxdb' | 'prometheus';
+    if (body.id && !body.type && !body.sourceType) {
+      const stored = db.select().from(tenantSchema.dataSources)
+        .where(and(
+          eq(tenantSchema.dataSources.id, body.id),
+          eq(tenantSchema.dataSources.userId, locals.user.id),
+        )).get();
+      if (stored?.type === 'prometheus') sourceType = 'prometheus';
+    }
+    const result = sourceType === 'prometheus'
+      ? await testPrometheusConnection({
+        url,
+        token: resolvedToken,
+      })
+      : await testInfluxConnection({
+        url,
+        token: resolvedToken,
+        org,
+        bucket,
+      });
 
     // Update last test status if we have an ID
     if (body.id) {

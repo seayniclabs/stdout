@@ -1,11 +1,24 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
 import { checkRBAC } from '../../../../lib/rbac';
 
 const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
+
+type ScannerDetectedSource = {
+  name?: string;
+  type?: string;
+  endpoint?: string;
+  status?: string;
+  accessible?: boolean;
+};
+
+type ScannerDataSourcesPayload = {
+  detected?: ScannerDetectedSource[];
+  missing?: Array<{ type?: string; recommendation?: string; reason?: string }>;
+};
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -44,6 +57,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  const dataSourcesRegistered = syncDetectedDataSources(db, locals.user.id, body.data_sources as ScannerDataSourcesPayload | undefined);
 
   // Render markdown from scan data
   const markdown = renderMarkdown(body);
@@ -87,11 +102,83 @@ export const POST: APIRoute = async ({ locals, request }) => {
   return new Response(JSON.stringify({
     importId,
     reviewUrl: `/app/stacks/import/${importId}`,
+    dataSourcesRegistered,
   }), {
     status: 201,
     headers: { 'Content-Type': 'application/json' },
   });
 };
+
+function normalizeDataSourceType(source: ScannerDetectedSource): 'prometheus' | null {
+  const name = (source.name || '').toLowerCase();
+  const type = (source.type || '').toLowerCase();
+
+  // Current StdOut schema supports influxdb/prometheus.
+  // Scanner source detection can discover many tools; we auto-register
+  // only Prometheus-compatible metrics endpoints for now.
+  if (name === 'prometheus') return 'prometheus';
+  if (type === 'metrics' && name.includes('prometheus')) return 'prometheus';
+  return null;
+}
+
+function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: string, dataSources?: ScannerDataSourcesPayload): number {
+  const detected = dataSources?.detected;
+  if (!detected || !Array.isArray(detected) || detected.length === 0) return 0;
+
+  let upserted = 0;
+
+  for (const source of detected) {
+    const normalizedType = normalizeDataSourceType(source);
+    const endpoint = (source.endpoint || '').trim();
+    const name = (source.name || '').trim();
+    if (!normalizedType || !endpoint) continue;
+
+    const existing = db.select().from(tenantSchema.dataSources)
+      .where(and(
+        eq(tenantSchema.dataSources.userId, userId),
+        eq(tenantSchema.dataSources.type, normalizedType),
+      ))
+      .get();
+
+    const now = new Date();
+    const testStatus = source.accessible === false
+      ? (source.status || 'unreachable')
+      : (source.status || 'ok');
+
+    if (existing) {
+      // Preserve user-entered secrets and Influx-specific fields.
+      // Update endpoint/health to reflect latest scanner detection.
+      db.update(tenantSchema.dataSources).set({
+        name: existing.name || `${name || 'Prometheus'} (auto-detected)`,
+        url: endpoint,
+        enabled: true,
+        lastTestedAt: now,
+        lastTestStatus: testStatus,
+        updatedAt: now,
+      }).where(eq(tenantSchema.dataSources.id, existing.id)).run();
+    } else {
+      db.insert(tenantSchema.dataSources).values({
+        id: nanoid(),
+        userId,
+        name: `${name || 'Prometheus'} (auto-detected)`,
+        type: normalizedType,
+        url: endpoint,
+        token: null,
+        org: null,
+        bucket: null,
+        enabled: true,
+        lastTestedAt: now,
+        lastTestStatus: testStatus,
+        createdAt: now,
+        updatedAt: now,
+      }).run();
+    }
+
+    upserted += 1;
+  }
+
+  return upserted;
+}
 
 function renderMarkdown(scan: any): string {
   const lines: string[] = [

@@ -4,6 +4,11 @@ import {
   queryContainerMetrics,
   queryCurrentResources,
 } from '../../../lib/influx';
+import {
+  getPrometheusConfig,
+  queryPrometheusContainerMetrics,
+  queryPrometheusCurrentResources,
+} from '../../../lib/prometheus';
 
 /**
  * Metrics API — proxies InfluxDB queries through StdOut.
@@ -15,13 +20,16 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const config = getInfluxConfig(userId);
+  const influxConfig = getInfluxConfig(userId);
+  const prometheusConfig = influxConfig ? null : getPrometheusConfig(userId);
 
-  if (!config) {
+  if (!influxConfig && !prometheusConfig) {
     return new Response(JSON.stringify({ configured: false, data: null }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  const source = influxConfig ? 'influxdb' : 'prometheus';
 
   const type = url.searchParams.get('type');
 
@@ -34,9 +42,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
       });
     }
     const range = parseInt(url.searchParams.get('range') || '60');
-    const metrics = await queryContainerMetrics(config, name, range);
+    const metrics = influxConfig
+      ? await queryContainerMetrics(influxConfig, name, range)
+      : await queryPrometheusContainerMetrics(prometheusConfig!, name, range);
 
-    return new Response(JSON.stringify({ configured: true, data: metrics }), {
+    return new Response(JSON.stringify({ configured: true, source, data: metrics }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -45,9 +55,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (type === 'resources') {
     const namesParam = url.searchParams.get('names');
     const names = namesParam ? namesParam.split(',').map(n => n.trim()).filter(Boolean) : undefined;
-    const resources = await queryCurrentResources(config, names);
+    const resources = influxConfig
+      ? await queryCurrentResources(influxConfig, names)
+      : await queryPrometheusCurrentResources(prometheusConfig!, names);
 
-    return new Response(JSON.stringify({ configured: true, data: resources }), {
+    return new Response(JSON.stringify({ configured: true, source, data: resources }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }

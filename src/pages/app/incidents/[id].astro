@@ -292,7 +292,10 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         if ((!cpu || cpu.length === 0) && (!memory || memory.length === 0) && (!network || network.length === 0)) return;
 
         if (metricsSection) metricsSection.style.display = '';
-        if (metricsHint) metricsHint.textContent = `Metrics for "${containerName}" — last 60 minutes`;
+        if (metricsHint) {
+          const src = data.source === 'prometheus' ? 'Prometheus' : 'InfluxDB';
+          metricsHint.textContent = `Metrics for "${containerName}" — last 60 minutes via ${src}`;
+        }
 
         let html = '';
         if (cpu && cpu.length > 1) {
