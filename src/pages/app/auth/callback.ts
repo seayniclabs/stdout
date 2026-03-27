@@ -30,12 +30,17 @@ export const GET: APIRoute = async ({ url, redirect, cookies, request }) => {
   }
   cookies.delete('sl_oidc_state', { path: '/' });
 
-  // Read PKCE verifier
+  // Read PKCE verifier — required, fail closed if missing
   const codeVerifier = cookies.get('sl_oidc_verifier')?.value;
   cookies.delete('sl_oidc_verifier', { path: '/' });
 
-  // Exchange code for tokens (with PKCE verifier if available)
-  const tokens = await exchangeCode(code, codeVerifier || undefined);
+  if (!codeVerifier) {
+    console.warn('OIDC callback missing PKCE verifier cookie');
+    return safeRedirect('/app/login?error=missing_pkce_verifier');
+  }
+
+  // Exchange code for tokens with PKCE verifier
+  const tokens = await exchangeCode(code, codeVerifier);
   if (!tokens) {
     return safeRedirect('/app/login?error=token_exchange_failed');
   }

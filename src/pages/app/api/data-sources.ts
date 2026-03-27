@@ -120,7 +120,17 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const updates: any = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = (body.name || '').trim();
-    if (body.url !== undefined) updates.url = (body.url || '').trim();
+    if (body.url !== undefined) {
+      const newUrl = (body.url || '').trim();
+      // SSRF protection on update path
+      const { isBlockedTarget: isBlockedUrl } = await import('../../../lib/hud');
+      if (newUrl && isBlockedUrl(newUrl)) {
+        return new Response(JSON.stringify({ error: 'URL points to a private or internal address' }), {
+          status: 400, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      updates.url = newUrl;
+    }
     if (body.org !== undefined) updates.org = (body.org || '').trim() || null;
     if (body.bucket !== undefined) updates.bucket = (body.bucket || '').trim() || null;
     if (body.enabled !== undefined) updates.enabled = !!body.enabled;

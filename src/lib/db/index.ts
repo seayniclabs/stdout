@@ -362,7 +362,8 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       tool_id TEXT NOT NULL,
       user_id TEXT NOT NULL,
       created_at INTEGER NOT NULL,
-      notified INTEGER DEFAULT 0
+      notified INTEGER DEFAULT 0,
+      UNIQUE(tool_id, user_id)
     );
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
