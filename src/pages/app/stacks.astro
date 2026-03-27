@@ -410,6 +410,7 @@ function timeAgo(date: Date) {
                     {stack.incidentCount} incident{stack.incidentCount !== 1 ? 's' : ''}
                   </a>
                 )}
+                <button type="button" class="btn btn-ghost btn-xs merge-btn" data-stack-id={stack.id} data-stack-name={stack.name}>Merge</button>
                 <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-xs">Edit</a>
                 {stack.previousDescription && (
                   <form method="POST" style="display:inline;">
@@ -494,6 +495,27 @@ function timeAgo(date: Date) {
         </div>
       </div>
     )}
+
+    {/* Merge modal */}
+    <div id="mergeModal" class="merge-overlay" style="display:none;">
+      <div class="merge-dialog">
+        <h3>Merge Stack</h3>
+        <p class="merge-hint">Merge <strong id="mergeSourceName"></strong> into another stack. Its containers, incidents, and docs will be moved to the target. The source stack will be deleted.</p>
+        <input type="hidden" id="mergeSourceId" />
+        <input type="hidden" name="_csrf" id="mergeCsrf" value={Astro.locals.csrfToken} />
+        <label class="merge-label">
+          <span>Merge into:</span>
+          <select id="mergeTargetSelect">
+            <option value="">Select a stack...</option>
+          </select>
+        </label>
+        <div class="merge-actions">
+          <button type="button" class="btn btn-primary btn-sm" id="mergeConfirmBtn" disabled>Merge</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="mergeCancelBtn">Cancel</button>
+        </div>
+        <div id="mergeError" class="auth-error" style="display:none; margin-top:10px;"></div>
+      </div>
+    </div>
   </div>
 </Layout>
 
@@ -748,6 +770,28 @@ function timeAgo(date: Date) {
     .health-summary { flex-wrap: wrap; gap: 10px; }
     .template-grid { grid-template-columns: 1fr; }
   }
+
+  /* Merge modal */
+  .merge-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .merge-dialog {
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px; width: 420px; max-width: 90vw;
+    box-shadow: var(--shadow-lg);
+  }
+  .merge-dialog h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+  .merge-hint { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 16px; }
+  .merge-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; }
+  .merge-label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .merge-label select {
+    background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text); font-family: var(--font-mono); font-size: 13px; padding: 8px 10px;
+  }
+  .merge-label select:focus { border-color: var(--accent); outline: none; }
+  .merge-actions { display: flex; gap: 8px; }
 </style>
 
 <script define:vars={{ templates: stackTemplates }}>
@@ -813,6 +857,90 @@ function timeAgo(date: Date) {
       if (!confirm('Restore the previous version of this stack description?')) {
         e.preventDefault();
       }
+    });
+  });
+</script>
+
+<script define:vars={{ stackCardsJson: stackCards.map(s => ({ id: s.id, name: s.name, containers: s.containers.length })) }}>
+  const modal = document.getElementById('mergeModal');
+  const sourceIdInput = document.getElementById('mergeSourceId');
+  const sourceNameEl = document.getElementById('mergeSourceName');
+  const targetSelect = document.getElementById('mergeTargetSelect');
+  const confirmBtn = document.getElementById('mergeConfirmBtn');
+  const cancelBtn = document.getElementById('mergeCancelBtn');
+  const errorEl = document.getElementById('mergeError');
+
+  function openMergeModal(stackId, stackName) {
+    sourceIdInput.value = stackId;
+    sourceNameEl.textContent = stackName;
+    errorEl.style.display = 'none';
+    confirmBtn.disabled = true;
+
+    // Populate target dropdown with all stacks except the source
+    targetSelect.innerHTML = '<option value="">Select a stack...</option>';
+    for (const s of stackCardsJson) {
+      if (s.id === stackId) continue;
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = `${s.name} (${s.containers} containers)`;
+      targetSelect.appendChild(opt);
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  targetSelect.addEventListener('change', () => {
+    confirmBtn.disabled = !targetSelect.value;
+  });
+
+  cancelBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+  });
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.style.display = 'none';
+  });
+
+  confirmBtn.addEventListener('click', async () => {
+    const sourceId = sourceIdInput.value;
+    const targetId = targetSelect.value;
+    if (!sourceId || !targetId) return;
+
+    const targetName = targetSelect.options[targetSelect.selectedIndex].textContent;
+    if (!confirm(`Merge "${sourceNameEl.textContent}" into "${targetName}"? The source stack will be deleted. This cannot be undone.`)) {
+      return;
+    }
+
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Merging...';
+    errorEl.style.display = 'none';
+
+    try {
+      const res = await fetch('/app/api/stacks/merge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sourceId, targetId }),
+      });
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        window.location.href = '/app/stacks';
+      } else {
+        errorEl.textContent = data.error || 'Merge failed';
+        errorEl.style.display = 'block';
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'Merge';
+      }
+    } catch (err) {
+      errorEl.textContent = 'Network error';
+      errorEl.style.display = 'block';
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Merge';
+    }
+  });
+
+  document.querySelectorAll('.merge-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      openMergeModal(btn.dataset.stackId, btn.dataset.stackName);
     });
   });
 </script>
