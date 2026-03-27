@@ -4,7 +4,7 @@ RUN apk add --no-cache python3 make g++
 COPY package*.json ./
 RUN npm ci
 COPY . .
-ARG APP_URL=https://stdout.seayniclabs.com
+ARG APP_URL=http://localhost:3000
 ENV APP_URL=$APP_URL
 RUN npm run build
 
