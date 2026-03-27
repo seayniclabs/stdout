@@ -12,8 +12,10 @@ let updateInfo: UpdateCheckResult | null = null;
 try {
   updateInfo = await checkForUpdate();
 } catch {}
-const currentVersion = updateInfo?.currentVersion ?? '1.1.0';
+const currentVersion = updateInfo?.currentVersion ?? '1.2.0';
 const hasUpdate = updateInfo?.hasUpdate ?? false;
+const latestVersion = updateInfo?.latestVersion ?? currentVersion;
+const mode = process.env.STDOUT_MODE || 'saas';
 
 const { tier, limits } = getUserLimits(user);
 const tierLabels: Record<TierName, string> = {
@@ -30,16 +32,13 @@ const isPaid = tier !== 'free';
   <div class="settings-page">
     <h1>Account Settings</h1>
 
-    <!-- Version & Update -->
-    <div class="version-row">
-      <span class="version-label mono">StdOut v{currentVersion}</span>
-      {hasUpdate && updateInfo && (
-        <a href={updateInfo.releaseUrl} class="update-banner" target="_blank" rel="noopener">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span>Update available: <strong>v{updateInfo.currentVersion}</strong> &rarr; <strong>v{updateInfo.latestVersion}</strong></span>
-        </a>
-      )}
-    </div>
+    <!-- Update banner (if available) -->
+    {hasUpdate && updateInfo && (
+      <a href={updateInfo.releaseUrl} class="update-banner" target="_blank" rel="noopener">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Update available: <strong>v{updateInfo.currentVersion}</strong> &rarr; <strong>v{updateInfo.latestVersion}</strong></span>
+      </a>
+    )}
 
     <!-- Profile -->
     <section class="section">
@@ -68,7 +67,10 @@ const isPaid = tier !== 'free';
         <div class="tier-card">
           <div class="tier-header">
             <span class="tier-name">{tierLabel}</span>
+            {user.subscriptionStatus === 'active' && <span class="tier-badge success">Active</span>}
             {user.subscriptionStatus === 'past_due' && <span class="tier-badge warning">Payment past due</span>}
+            {user.subscriptionStatus === 'cancelled' && <span class="tier-badge muted">Cancelled</span>}
+            {tier === 'self-host' && user.subscriptionStatus !== 'past_due' && <span class="tier-badge success">Lifetime license</span>}
           </div>
           <div class="tier-limits">
             <div class="limit-row"><span>Stacks</span><span>{limits.maxStacks === Infinity ? 'Unlimited' : limits.maxStacks}</span></div>
@@ -1327,6 +1329,8 @@ const isPaid = tier !== 'free';
   .tier-name { font-size: 18px; font-weight: 700; }
   .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
   .tier-badge.warning { background: #FEF3C7; color: #92400E; }
+  .tier-badge.success { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .tier-badge.muted { background: var(--bg-surface); color: var(--text-muted); }
   .tier-limits { display: grid; gap: 0; }
   .limit-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .limit-row:last-child { border-bottom: none; }
