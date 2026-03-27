@@ -43,11 +43,12 @@ if (Astro.request.method === 'POST') {
 
       // Get stack name and whether to create or update
       const stackName = (form.get('stackName') as string || 'Scanned Stack').trim();
+      const saveMode = form.get('saveMode') as string || 'new';
       const existingStackId = form.get('existingStackId') as string || '';
 
-      let targetStackId = existingStackId;
+      let targetStackId = (saveMode === 'existing' && existingStackId) ? existingStackId : '';
 
-      if (existingStackId) {
+      if (targetStackId) {
         // Update existing stack
         db.update(tenantSchema.stacks).set({
           description: markdown,
@@ -194,22 +195,26 @@ function renderFilteredMarkdown(data: any): string {
           <h2>Save to</h2>
           <div class="save-options">
             <label class="save-option">
-              <input type="radio" name="saveMode" value="new" checked onchange="document.getElementById('newStackName').disabled = false; document.getElementById('existingStackSelect').disabled = true;" />
+              <input type="radio" name="saveMode" value="new" checked onchange="document.getElementById('newStackFields').classList.remove('save-dimmed'); document.getElementById('existingStackFields').classList.add('save-dimmed');" />
               <span>New stack</span>
             </label>
-            <input type="text" name="stackName" id="newStackName" value="Scanned Stack" class="save-input" />
+            <div id="newStackFields">
+              <input type="text" name="stackName" id="newStackName" value="Scanned Stack" class="save-input" />
+            </div>
 
             {userStacks.length > 0 && (
               <>
                 <label class="save-option">
-                  <input type="radio" name="saveMode" value="existing" onchange="document.getElementById('newStackName').disabled = true; document.getElementById('existingStackSelect').disabled = false;" />
+                  <input type="radio" name="saveMode" value="existing" onchange="document.getElementById('newStackFields').classList.add('save-dimmed'); document.getElementById('existingStackFields').classList.remove('save-dimmed');" />
                   <span>Update existing</span>
                 </label>
-                <select name="existingStackId" id="existingStackSelect" class="save-input" disabled>
-                  {userStacks.map(s => (
-                    <option value={s.id}>{s.name}</option>
-                  ))}
-                </select>
+                <div id="existingStackFields" class="save-dimmed">
+                  <select name="existingStackId" id="existingStackSelect" class="save-input">
+                    {userStacks.map(s => (
+                      <option value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
+                </div>
               </>
             )}
           </div>
@@ -259,7 +264,7 @@ function renderFilteredMarkdown(data: any): string {
   .save-option input[type="radio"] { accent-color: var(--accent); }
   .save-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; max-width: 300px; }
   .save-input:focus { border-color: var(--accent); outline: none; }
-  .save-input:disabled { opacity: 0.4; }
+  .save-dimmed { opacity: 0.4; pointer-events: none; }
   .preview-block { font-family: var(--font-mono); font-size: 11px; line-height: 1.6; white-space: pre-wrap; word-wrap: break-word; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; color: var(--text-secondary); max-height: 300px; overflow-y: auto; }
   .import-actions { display: flex; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); }
   .import-done { text-align: center; padding: 40px; }
