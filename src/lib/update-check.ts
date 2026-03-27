@@ -6,11 +6,10 @@
  * - Caches result for 24 hours in a module-level variable
  */
 
-import { createRequire } from 'module';
-const require = createRequire(import.meta.url);
-const pkg = require('../../package.json');
+// Version injected at build time via astro.config.mjs define, or fallback to env var
+const CURRENT_VERSION = import.meta.env.STDOUT_VERSION || process.env.STDOUT_VERSION || '1.1.0';
 
-const STORE_URL = 'https://store.seayniclabs.com/api/products/stdout-self-host/latest.json';
+const STORE_URL = 'https://seayniclabs.com/api/products/stdout-self-host/latest.json';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 const FETCH_TIMEOUT_MS = 5_000;
 
@@ -61,14 +60,14 @@ export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
     if (!res.ok) return null;
 
     const data = await res.json() as { version: string; releaseUrl: string };
-    const currentVersion: string = pkg.version;
+    const currentVersion: string = CURRENT_VERSION;
     const latestVersion = data.version;
 
     const result: UpdateCheckResult = {
       hasUpdate: isNewer(latestVersion, currentVersion),
       currentVersion,
       latestVersion,
-      releaseUrl: data.releaseUrl || STORE_URL.replace('/api/products/stdout-self-host/latest.json', '/products/stdout-self-host'),
+      releaseUrl: data.releaseUrl || 'https://store.seayniclabs.com/products/stdout-self-host',
     };
 
     cachedResult = result;
