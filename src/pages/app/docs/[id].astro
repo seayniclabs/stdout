@@ -19,6 +19,11 @@ if (!doc || (doc.userId !== user.id && doc.source !== 'community')) return Astro
 const isCommunityDoc = doc.source === 'community';
 const isFork = doc.source === 'fork';
 
+// Community docs are read-only here — no edit UI (prevents ?edit=true tampering)
+if (isCommunityDoc && Astro.url.searchParams.get('edit') === 'true') {
+  return Astro.redirect(`/app/docs/${id}`);
+}
+
 // Get stacks and incidents for edit form
 const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
 const userIncidents = db.select({ id: tenantSchema.incidents.id, title: tenantSchema.incidents.title })
@@ -33,6 +38,9 @@ if (Astro.request.method === 'POST') {
     const action = form.get('action') as string;
 
     if (action === 'update') {
+      if (doc.source === 'community') {
+        return Astro.redirect(`/app/docs/${id}`);
+      }
       const title = (form.get('title') as string || '').trim();
       const content = (form.get('content') as string || '').trim();
       const docType = form.get('docType') as string || doc.docType;
@@ -60,6 +68,9 @@ if (Astro.request.method === 'POST') {
         return Astro.redirect(`/app/docs/${id}`);
       }
     } else if (action === 'fork') {
+      if (doc.source !== 'community') {
+        return Astro.redirect(`/app/docs/${id}`);
+      }
       // Fork a community doc into user's own KB
       const forkId = nanoid();
       const sizeBytes = new TextEncoder().encode(doc.content).length;
@@ -85,6 +96,9 @@ if (Astro.request.method === 'POST') {
       }
       return Astro.redirect(`/app/docs/${forkId}?edit=true`);
     } else if (action === 'delete') {
+      if (doc.source === 'community') {
+        return Astro.redirect(`/app/docs/${id}`);
+      }
       // Delete FTS entry
       const rawDb = (db as any)._.session?.client;
       if (rawDb?.prepare) {
