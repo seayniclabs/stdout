@@ -17,7 +17,7 @@ test.describe('AI Diagnosis (F36-F41)', () => {
     await page.locator('input[name="title"]').fill(testIncident.title);
     await page.locator('textarea[name="description"]').fill(testIncident.description);
     await page.locator('select[name="severity"]').selectOption(testIncident.severity);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Extract incident ID from URL

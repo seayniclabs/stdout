@@ -13,11 +13,11 @@ test.describe('Incidents (F27-F35)', () => {
     await page.locator('textarea[name="description"]').fill(testIncident.description);
     await page.locator('select[name="severity"]').selectOption(testIncident.severity);
     await page.locator('input[name="tags"]').fill(testIncident.tags);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
 
     // Should redirect to incident detail
     await page.waitForURL(/\/app\/incidents\//);
-    await expect(page.locator('h1')).toContainText(testIncident.title);
+    await expect(page.locator('h1').first()).toContainText(testIncident.title);
   });
 
   test('F28 — View incident detail', async ({ page }) => {
@@ -26,11 +26,11 @@ test.describe('Incidents (F27-F35)', () => {
     await page.locator('input[name="title"]').fill(testIncident.title);
     await page.locator('textarea[name="description"]').fill(testIncident.description);
     await page.locator('select[name="severity"]').selectOption(testIncident.severity);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Verify detail page elements
-    await expect(page.locator('h1')).toContainText(testIncident.title);
+    await expect(page.locator('h1').first()).toContainText(testIncident.title);
     await expect(page.locator('.severity-pill')).toContainText(testIncident.severity);
     await expect(page.locator('.status-pill')).toBeVisible();
     await expect(page.locator('.description-block')).toContainText('test_description');
@@ -40,7 +40,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill(testIncident.title);
     await page.locator('textarea[name="description"]').fill(testIncident.description);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Add resolution
@@ -58,7 +58,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_status_change_incident');
     await page.locator('textarea[name="description"]').fill('test_description');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Change to investigating
@@ -75,7 +75,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.locator('input[name="title"]').fill('test_severity_incident');
     await page.locator('textarea[name="description"]').fill('test_description');
     await page.locator('select[name="severity"]').selectOption('low');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     await expect(page.locator('.severity-pill')).toContainText('low');
@@ -86,7 +86,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.locator('input[name="title"]').fill('test_tagged_incident');
     await page.locator('textarea[name="description"]').fill('test_description');
     await page.locator('input[name="tags"]').fill('test_docker, test_nginx, test_n8n');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Tags should be visible
@@ -98,7 +98,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('textarea[name="description"]').fill('test_description');
     // Leave title empty, try submit
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
 
     // Should remain on the form (browser required attribute or server error)
     expect(page.url()).toContain('/incidents/new');
@@ -109,7 +109,7 @@ test.describe('Incidents (F27-F35)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_dashboard_list_incident');
     await page.locator('textarea[name="description"]').fill('test_description');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Go to dashboard

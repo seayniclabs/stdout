@@ -108,7 +108,7 @@ test.describe('Accessibility (A1-A8)', () => {
     await page.locator('input[name="title"]').fill('test_a8_severity');
     await page.locator('textarea[name="description"]').fill('test_description');
     await page.locator('select[name="severity"]').selectOption('critical');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // The severity pill should have text content (not just a colored dot)

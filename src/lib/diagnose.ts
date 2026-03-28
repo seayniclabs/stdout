@@ -12,7 +12,13 @@ function getAnthropicKey(): string {
   }
 }
 
-const client = new Anthropic({ apiKey: getAnthropicKey() });
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({ apiKey: getAnthropicKey() });
+  }
+  return _client;
+}
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
@@ -110,7 +116,7 @@ export async function diagnoseIncident(opts: {
   }
 
   const response = await callWithRetry(() =>
-    client.messages.create({
+    getClient().messages.create({
       model,
       max_tokens: 1024,
       system: `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`,

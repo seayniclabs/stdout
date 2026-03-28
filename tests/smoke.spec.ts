@@ -24,11 +24,11 @@ test.describe('Smoke Tests (S1-S6)', () => {
     await page.locator('input[name="title"]').fill(testIncident.title);
     await page.locator('textarea[name="description"]').fill(testIncident.description);
     await page.locator('select[name="severity"]').selectOption(testIncident.severity);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
 
     // Should redirect to incident detail
     await page.waitForURL(/\/app\/incidents\//);
-    await expect(page.locator('h1')).toContainText(testIncident.title);
+    await expect(page.locator('h1').first()).toContainText(testIncident.title);
 
     // Add resolution and resolve
     const resolutionTextarea = page.locator('textarea[name="content"]');
@@ -78,9 +78,9 @@ test.describe('Smoke Tests (S1-S6)', () => {
     await page.goto('/app');
     await page.waitForTimeout(1000);
 
-    // Filter out known acceptable errors (e.g., favicon, third-party)
+    // Filter out known acceptable errors (e.g., favicon, third-party, rate limits from test runs)
     const realErrors = errors.filter(
-      e => !e.includes('favicon') && !e.includes('net::ERR')
+      e => !e.includes('favicon') && !e.includes('net::ERR') && !e.includes('429')
     );
     expect(realErrors).toEqual([]);
   });

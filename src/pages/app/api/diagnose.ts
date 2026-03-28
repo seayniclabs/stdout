@@ -67,12 +67,18 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const { incidentId } = body;
-  if (!incidentId) return new Response('Missing incidentId', { status: 400 });
+  if (!incidentId) {
+    return new Response(JSON.stringify({ error: 'Missing incidentId' }), {
+      status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
   const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
-    return new Response('Not found', { status: 404 });
+    return new Response(JSON.stringify({ error: 'Incident not found' }), {
+      status: 404, headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   // Get stack context

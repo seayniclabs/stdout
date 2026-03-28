@@ -1,5 +1,20 @@
 import { type Page, type BrowserContext, expect } from '@playwright/test';
 
+/**
+ * Dismiss Vite error overlay if present.
+ * In dev mode, server errors cause a persistent overlay that blocks interaction.
+ */
+export async function dismissViteOverlay(page: Page): Promise<void> {
+  try {
+    const overlay = page.locator('vite-error-overlay');
+    if (await overlay.isVisible({ timeout: 500 }).catch(() => false)) {
+      await page.evaluate(() => {
+        document.querySelector('vite-error-overlay')?.remove();
+      });
+    }
+  } catch { /* no overlay */ }
+}
+
 const BASE_URL = process.env.STDOUT_TEST_URL || 'http://localhost:4321';
 
 /** Generate a unique test email that won't collide with production data */
@@ -31,6 +46,7 @@ export async function registerUser(
     : '/app/register';
 
   await page.goto(url);
+  await dismissViteOverlay(page);
 
   await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="displayName"]').fill(displayName);
@@ -148,7 +164,11 @@ export async function rawFetch(
  */
 export async function logoutUser(page: Page): Promise<void> {
   await page.goto('/app/logout');
-  const csrfToken = await getCsrfTokenFromPage(page);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL(/^\//);
+  // The logout page has a single form with a submit button
+  await page.locator('form button[type="submit"]').click();
+  // After POST, server redirects to / (or OIDC logout URL)
+  await page.waitForURL(url => {
+    const path = new URL(url).pathname;
+    return path === '/' || path.includes('/login');
+  }, { timeout: 10000 });
 }

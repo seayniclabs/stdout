@@ -80,6 +80,7 @@ function getClientIp(request: Request): string {
 }
 
 function checkRateLimit(request: Request, pathname: string): Response | null {
+  if (process.env.STDOUT_DISABLE_RATE_LIMIT === '1') return null;
   if (request.method !== 'POST') return null;
   if (!RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/')) return null;
 
@@ -185,13 +186,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   // Bearer token auth for scanner API paths
   const isBearerPath = BEARER_PATHS.some(p => pathname.startsWith(p));
-  if (isBearerPath) {
+  if (isBearerPath && context.request.headers.get('authorization')?.startsWith('Bearer ')) {
     const tokenAuth = validateBearerToken(context.request);
     if (tokenAuth) {
       // Minimal user object for API token auth
       context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, subscriptionStatus: 'none', subscriptionTier: null, role: 'member', stripeCustomerId: null };
     } else {
-      context.locals.user = null;
+      // Invalid/revoked bearer token — return 401, don't redirect to login
+      return new Response(JSON.stringify({ error: 'Invalid or revoked token' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
   } else {
     // Session validation (cookie-based)

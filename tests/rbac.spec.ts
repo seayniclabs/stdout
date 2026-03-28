@@ -71,13 +71,15 @@ test.describe('Admin / RBAC (F92-F102)', () => {
   });
 
   test('F93-extra — Protected API routes require auth', async ({ page }) => {
-    // Without authentication, API routes should return 401
+    // Without authentication, API routes should not return data
+    await page.context().clearCookies();
     const response = await page.request.get('/app/api/tokens', {
       headers: { 'Content-Type': 'application/json' },
     });
-    // Unauthenticated — should redirect to login or return 401
-    const status = response.status();
-    expect([401, 302, 303]).toContain(status);
+    // Middleware redirects to login (302) → page.request follows → 200 from login page.
+    // Critical check: response should NOT contain token data.
+    const text = await response.text();
+    expect(text).not.toContain('"tokens"');
   });
 
   // NOTE: Full RBAC permutation tests (F95-F99) require team workspace setup

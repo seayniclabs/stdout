@@ -19,17 +19,20 @@ test.describe('Auth — Registration (F1-F10)', () => {
     expect(session).toBeTruthy();
   });
 
-  test('F2 — Duplicate email', async ({ page }) => {
+  test('F2 — Duplicate email', async ({ page, browser }) => {
     const email = testEmail('dup');
     await registerUser(page, { email });
     await page.waitForURL(/\/app/);
 
-    // Log out and try registering again with same email
-    await logoutUser(page);
-    await registerUser(page, { email });
+    // Use a fresh browser context (new session) instead of logout
+    // This avoids secure cookie timing issues on http://localhost
+    const ctx2 = await browser.newContext();
+    const page2 = await ctx2.newPage();
+    await registerUser(page2, { email });
 
     // Should show error, NOT redirect to /app
-    await expect(page.locator('.auth-error')).toContainText(/already exists/i);
+    await expect(page2.locator('.auth-error')).toContainText(/already exists/i);
+    await ctx2.close();
   });
 
   test('F3 — Password mismatch', async ({ page }) => {
@@ -49,6 +52,10 @@ test.describe('Auth — Registration (F1-F10)', () => {
     await page.locator('input[name="displayName"]').fill(TEST_DISPLAY_NAME);
     await page.locator('input[name="password"]').fill('short');
     await page.locator('input[name="confirm"]').fill('short');
+
+    // Browser's minlength="8" blocks submission — remove it to test server-side validation
+    await page.locator('input[name="password"]').evaluate(el => el.removeAttribute('minlength'));
+    await page.locator('input[name="confirm"]').evaluate(el => el.removeAttribute('minlength'));
     await page.locator('button[type="submit"]').click();
 
     await expect(page.locator('.auth-error')).toContainText(/at least 8/i);

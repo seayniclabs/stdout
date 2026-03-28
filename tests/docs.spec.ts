@@ -13,7 +13,7 @@ test.describe('Docs / Knowledge Base (F113-F117)', () => {
     await page.locator('textarea[name="content"]').fill(testDoc.content);
     await page.locator('select[name="docType"]').selectOption(testDoc.docType);
     await page.locator('input[name="tags"]').fill(testDoc.tags);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
 
     // Should redirect to doc detail
     await page.waitForURL(/\/app\/docs\//);
@@ -26,7 +26,7 @@ test.describe('Docs / Knowledge Base (F113-F117)', () => {
     await page.goto('/app/docs/new');
     await page.locator('input[name="title"]').fill('test_view_doc');
     await page.locator('textarea[name="content"]').fill('test_view_doc_content');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
     await page.waitForURL(/\/app\/docs\//);
 
     // Verify content renders
@@ -40,7 +40,7 @@ test.describe('Docs / Knowledge Base (F113-F117)', () => {
     await page.goto('/app/docs/new');
     await page.locator('input[name="title"]').fill('test_listed_doc');
     await page.locator('textarea[name="content"]').fill('test_listed_content');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
     await page.waitForURL(/\/app\/docs\//);
 
     // Visit docs list
@@ -54,7 +54,7 @@ test.describe('Docs / Knowledge Base (F113-F117)', () => {
     await page.goto('/app/docs/new');
     await page.locator('input[name="title"]').fill('test_fts_searchable_doc');
     await page.locator('textarea[name="content"]').fill('test_unique_fts_content_xyzzy');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
     await page.waitForURL(/\/app\/docs\//);
 
     // Search for it
@@ -68,7 +68,7 @@ test.describe('Docs / Knowledge Base (F113-F117)', () => {
     await page.goto('/app/docs/new');
     await page.locator('input[name="title"]').fill('');
     await page.locator('textarea[name="content"]').fill('');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
 
     // Should stay on the form (browser validation or server error)
     expect(page.url()).toContain('/docs/new');

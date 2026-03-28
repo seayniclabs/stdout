@@ -13,7 +13,7 @@ test.describe('Security — Injection (X1-X3)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill("'; DROP TABLE incidents; --");
     await page.locator('textarea[name="description"]').fill('test_sql_injection_attempt');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Incident should be created with the literal string (escaped)
@@ -30,7 +30,7 @@ test.describe('Security — Injection (X1-X3)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('<script>alert(1)</script>');
     await page.locator('textarea[name="description"]').fill('test_xss_attempt');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Check that the script tag is escaped, not executed
@@ -44,7 +44,7 @@ test.describe('Security — Injection (X1-X3)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_xss_resolution');
     await page.locator('textarea[name="description"]').fill('test_description');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Add resolution with XSS payload
@@ -64,10 +64,12 @@ test.describe('Security — Injection (X1-X3)', () => {
 test.describe('Security — Open Redirect (X4-X5)', () => {
   test('X4 — Open redirect blocked: //evil.com', async ({ page }) => {
     await page.goto('/app/login?redirect=//evil.com');
-    // If OIDC auto-redirects, the redirect param should be sanitized
-    // Either way, should NOT end up on evil.com
-    const url = page.url();
-    expect(url).not.toContain('evil.com');
+    // After login, the redirect should be sanitized — user should NOT end up on evil.com
+    // The login page itself may contain the redirect param in its URL, which is fine.
+    // The critical check: the page origin is still localhost, not evil.com.
+    const url = new URL(page.url());
+    expect(url.hostname).not.toBe('evil.com');
+    expect(url.hostname).toMatch(/localhost|127\.0\.0\.1/);
   });
 
   test('X5 — Valid redirect works: /app/stacks', async ({ page }) => {
@@ -325,7 +327,7 @@ test.describe('Security — Export Scoping (X40)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_user_a_export_private');
     await page.locator('textarea[name="description"]').fill('test_private_data_a');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Export as User B

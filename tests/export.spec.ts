@@ -12,7 +12,7 @@ test.describe('Data Export (F103-F107)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_export_incident');
     await page.locator('textarea[name="description"]').fill('test_export_description');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     const { status, json, headers } = await apiRequest(page, 'GET', '/app/api/export');
@@ -34,7 +34,7 @@ test.describe('Data Export (F103-F107)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_user_a_private_incident');
     await page.locator('textarea[name="description"]').fill('test_private_data');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     // Create User B and export
@@ -64,7 +64,9 @@ test.describe('Data Export (F103-F107)', () => {
     await page.context().clearCookies();
     const response = await page.request.get('/app/api/export');
     const status = response.status();
-    // Should be rejected — either 401 or redirect to login
-    expect([401, 302, 303]).toContain(status);
+    // Middleware redirects unauthenticated to login (302), which page.request follows → 200 from login page.
+    // The critical check: the response should NOT contain export data.
+    const text = await response.text();
+    expect(text).not.toContain('"exportedAt"');
   });
 });

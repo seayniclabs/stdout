@@ -12,7 +12,13 @@ function getAnthropicKey(): string {
   }
 }
 
-const client = new Anthropic({ apiKey: getAnthropicKey() });
+let _client: Anthropic | null = null;
+function getClient(): Anthropic {
+  if (!_client) {
+    _client = new Anthropic({ apiKey: getAnthropicKey() });
+  }
+  return _client;
+}
 
 export interface SanitizationResult {
   sanitizedContent: string;
@@ -34,7 +40,7 @@ export async function sanitizeForCommunity(opts: {
 }): Promise<SanitizationResult> {
   const model = opts.model || 'claude-haiku-4-5-20251001';
 
-  const response = await client.messages.create({
+  const response = await getClient().messages.create({
     model,
     max_tokens: 4096,
     messages: [

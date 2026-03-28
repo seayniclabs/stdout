@@ -30,7 +30,7 @@ test.describe('Performance (P1-P10)', () => {
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_perf_incident');
     await page.locator('textarea[name="description"]').fill('test_perf_description');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
     const incidentUrl = page.url();

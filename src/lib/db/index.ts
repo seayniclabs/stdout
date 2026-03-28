@@ -57,6 +57,9 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_hidden', 'INTEGER DEFAULT 0');
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache', 'TEXT');
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache_at', 'INTEGER');
+  // Data sources: username/password columns (2026-03-28)
+  safeAddColumn(sqlite, 'data_sources', 'username', 'TEXT');
+  safeAddColumn(sqlite, 'data_sources', 'password', 'TEXT');
 }
 
 function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {
@@ -342,6 +345,8 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       type TEXT NOT NULL,
       url TEXT NOT NULL,
       token TEXT,
+      username TEXT,
+      password TEXT,
       org TEXT,
       bucket TEXT,
       enabled INTEGER NOT NULL DEFAULT 1,

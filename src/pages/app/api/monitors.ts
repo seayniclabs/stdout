@@ -79,6 +79,18 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return new Response(JSON.stringify({ error: 'Type must be http or tcp (more coming soon)' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
+    // Validate target format
+    if (type === 'http' && !target.startsWith('http://') && !target.startsWith('https://')) {
+      return new Response(JSON.stringify({ error: 'HTTP monitor target must start with http:// or https://' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    // SSRF protection — block private/internal network targets
+    const { isBlockedTarget } = await import('../../../lib/hud');
+    const targetUrl = type === 'http' ? target : `tcp://${target}`;
+    if (isBlockedTarget(targetUrl)) {
+      return new Response(JSON.stringify({ error: 'Target points to a private or internal address' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
     const id = nanoid();
     const now = new Date();
     const intervalSeconds = Math.max(30, Math.min(3600, parseInt(body.interval) || 60));

@@ -11,7 +11,7 @@ test.describe('Search — FTS5 (F48-F54)', () => {
     await page.locator('input[name="title"]').fill(testIncident.title);
     await page.locator('textarea[name="description"]').fill(testIncident.description);
     await page.locator('select[name="severity"]').selectOption(testIncident.severity);
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
   });
 
@@ -31,7 +31,7 @@ test.describe('Search — FTS5 (F48-F54)', () => {
     await page.goto('/app/docs/new');
     await page.locator('input[name="title"]').fill('test_searchable_doc');
     await page.locator('textarea[name="content"]').fill('test_searchable_content for docker restart');
-    await page.locator('button[type="submit"]').click();
+    await page.getByRole('button', { name: 'Save document' }).click();
     await page.waitForURL(/\/app\/docs\//);
 
     const { status, json } = await apiRequest(page, 'GET', '/app/api/search?q=test_searchable');
