@@ -5,7 +5,10 @@ import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '../../../lib/crypto';
 import { testConnection as testInfluxConnection } from '../../../lib/influx';
 import { testPrometheusConnection } from '../../../lib/prometheus';
+import { testSourceConnection } from '../../../lib/source-test';
 import { isBlockedTarget } from '../../../lib/hud';
+
+const VALID_DS_TYPES = ['influxdb', 'prometheus', 'trivy', 'uptime-kuma', 'loki', 'graylog', 'crowdsec', 'pihole'] as const;
 
 // --- List data sources ---
 
@@ -17,11 +20,13 @@ export const GET: APIRoute = async ({ locals }) => {
     .where(eq(tenantSchema.dataSources.userId, locals.user.id))
     .all();
 
-  // Strip encrypted tokens — return masked version
+  // Strip encrypted tokens/passwords — return masked version
   const safe = sources.map(s => ({
     ...s,
     token: s.token ? '********' : null,
     hasToken: !!s.token,
+    password: s.password ? '********' : null,
+    hasPassword: !!s.password,
   }));
 
   return new Response(JSON.stringify({ sources: safe }), {
@@ -70,11 +75,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    if (!['influxdb', 'prometheus'].includes(type)) {
+    if (!(VALID_DS_TYPES as readonly string[]).includes(type)) {
       return new Response(JSON.stringify({ error: 'Invalid type' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
+
+    const username = (body.username || '').trim();
+    const password = (body.password || '').trim();
 
     const id = nanoid();
     const now = new Date();
@@ -86,6 +94,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       type,
       url,
       token: token ? encrypt(token) : null,
+      username: username || null,
+      password: password ? encrypt(password) : null,
       org: org || null,
       bucket: bucket || null,
       enabled: true,
@@ -138,6 +148,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
     // Only update token if explicitly provided (not masked)
     if (body.token !== undefined && body.token !== '********') {
       updates.token = body.token ? encrypt(body.token) : null;
+    }
+    if (body.username !== undefined) updates.username = (body.username || '').trim() || null;
+    if (body.password !== undefined && body.password !== '********') {
+      updates.password = body.password ? encrypt(body.password) : null;
     }
 
     db.update(tenantSchema.dataSources).set(updates)
@@ -195,26 +209,42 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    let sourceType = (body.type || body.sourceType || 'influxdb') as 'influxdb' | 'prometheus';
+    let sourceType = (body.type || body.sourceType || 'influxdb') as string;
     if (body.id && !body.type && !body.sourceType) {
       const stored = db.select().from(tenantSchema.dataSources)
         .where(and(
           eq(tenantSchema.dataSources.id, body.id),
           eq(tenantSchema.dataSources.userId, locals.user.id),
         )).get();
-      if (stored?.type === 'prometheus') sourceType = 'prometheus';
+      if (stored?.type) sourceType = stored.type;
     }
-    const result = sourceType === 'prometheus'
-      ? await testPrometheusConnection({
+
+    // Resolve username/password for Graylog
+    let resolvedUsername = (body.username || '').trim();
+    let resolvedPassword = (body.password || '').trim();
+    if ((resolvedPassword === '********' || (!resolvedPassword && !resolvedUsername)) && body.id) {
+      const existing = db.select().from(tenantSchema.dataSources)
+        .where(and(
+          eq(tenantSchema.dataSources.id, body.id),
+          eq(tenantSchema.dataSources.userId, locals.user.id),
+        )).get();
+      if (existing?.username) resolvedUsername = existing.username;
+      if (existing?.password) resolvedPassword = decrypt(existing.password) || '';
+    }
+
+    let result: { ok: boolean; error?: string };
+    if (sourceType === 'prometheus') {
+      result = await testPrometheusConnection({ url, token: resolvedToken });
+    } else if (sourceType === 'influxdb') {
+      result = await testInfluxConnection({ url, token: resolvedToken, org, bucket });
+    } else {
+      result = await testSourceConnection(sourceType, {
         url,
         token: resolvedToken,
-      })
-      : await testInfluxConnection({
-        url,
-        token: resolvedToken,
-        org,
-        bucket,
+        username: resolvedUsername,
+        password: resolvedPassword,
       });
+    }
 
     // Update last test status if we have an ID
     if (body.id) {

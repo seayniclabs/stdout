@@ -249,7 +249,7 @@ const isPaid = tier !== 'free';
     <!-- Data Sources -->
     <section class="section">
       <h2>Data Sources</h2>
-      <p class="section-desc">Connect InfluxDB or Prometheus to enrich incidents with metrics and show resource utilization on the HUD.</p>
+      <p class="section-desc">Connect monitoring, security, and observability tools to enrich incidents and power the HUD.</p>
 
       <div id="dsList" class="backup-list">
         <div class="loading mono">Loading...</div>
@@ -267,6 +267,12 @@ const isPaid = tier !== 'free';
           <select id="dsType" class="settings-input">
             <option value="influxdb">InfluxDB</option>
             <option value="prometheus">Prometheus</option>
+            <option value="trivy">Trivy</option>
+            <option value="uptime-kuma">Uptime Kuma</option>
+            <option value="loki">Loki</option>
+            <option value="graylog">Graylog</option>
+            <option value="crowdsec">CrowdSec</option>
+            <option value="pihole">Pi-hole</option>
           </select>
         </label>
         <label>
@@ -277,10 +283,20 @@ const isPaid = tier !== 'free';
           <span>URL</span>
           <input type="text" id="dsUrl" placeholder="http://localhost:8086" class="settings-input mono" />
         </label>
-        <label>
-          <span>API Token</span>
-          <input type="password" id="dsToken" placeholder="InfluxDB API token" class="settings-input mono" autocomplete="off" />
+        <label id="dsTokenLabel">
+          <span id="dsTokenLabelText">API Token</span>
+          <input type="password" id="dsToken" placeholder="API token" class="settings-input mono" autocomplete="off" />
         </label>
+        <div class="ds-row" id="dsGraylogFields" style="display:none;">
+          <label style="flex:1;">
+            <span>Username</span>
+            <input type="text" id="dsUsername" placeholder="admin" class="settings-input mono" />
+          </label>
+          <label style="flex:1;">
+            <span>Password</span>
+            <input type="password" id="dsPassword" placeholder="Graylog password" class="settings-input mono" autocomplete="off" />
+          </label>
+        </div>
         <div class="ds-row" id="dsInfluxFields">
           <label style="flex:1;">
             <span>Organization</span>
@@ -633,6 +649,11 @@ const isPaid = tier !== 'free';
   const dsOrg = document.getElementById('dsOrg') as HTMLInputElement;
   const dsBucket = document.getElementById('dsBucket') as HTMLInputElement;
   const dsInfluxFields = document.getElementById('dsInfluxFields')!;
+  const dsGraylogFields = document.getElementById('dsGraylogFields')!;
+  const dsUsername = document.getElementById('dsUsername') as HTMLInputElement;
+  const dsPassword = document.getElementById('dsPassword') as HTMLInputElement;
+  const dsTokenLabel = document.getElementById('dsTokenLabel')!;
+  const dsTokenLabelText = document.getElementById('dsTokenLabelText')!;
   const dsTestBtn = document.getElementById('dsTestBtn')!;
   const dsSaveBtn = document.getElementById('dsSaveBtn')!;
   const dsTestResult = document.getElementById('dsTestResult')!;
@@ -643,13 +664,36 @@ const isPaid = tier !== 'free';
   let editingDsId: string | null = null;
 
   function updateDataSourceFormByType() {
-    const isInflux = dsType.value === 'influxdb';
+    const t = dsType.value;
+    const isInflux = t === 'influxdb';
+    const isGraylog = t === 'graylog';
+    const isCrowdSec = t === 'crowdsec';
+    const needsToken = ['influxdb', 'prometheus', 'loki', 'crowdsec'].includes(t);
+
     dsInfluxFields.style.display = isInflux ? '' : 'none';
     dsOrg.disabled = !isInflux;
     dsBucket.disabled = !isInflux;
-    if (!isInflux) {
-      dsOrg.value = '';
-      dsBucket.value = '';
+    if (!isInflux) { dsOrg.value = ''; dsBucket.value = ''; }
+
+    dsGraylogFields.style.display = isGraylog ? '' : 'none';
+    dsUsername.disabled = !isGraylog;
+    dsPassword.disabled = !isGraylog;
+    if (!isGraylog) { dsUsername.value = ''; dsPassword.value = ''; }
+
+    // Show/hide token field based on type
+    dsTokenLabel.style.display = needsToken || isGraylog ? '' : 'none';
+    dsToken.disabled = !needsToken && !isGraylog;
+
+    // Update token placeholder
+    if (isCrowdSec) {
+      dsTokenLabelText.textContent = 'API Key';
+      dsToken.placeholder = 'CrowdSec bouncer API key';
+    } else if (isGraylog) {
+      dsTokenLabelText.textContent = 'Session Token (optional)';
+      dsToken.placeholder = 'Graylog session token (or use username/password)';
+    } else {
+      dsTokenLabelText.textContent = 'API Token';
+      dsToken.placeholder = 'API token';
     }
   }
 
@@ -658,7 +702,7 @@ const isPaid = tier !== 'free';
       const res = await fetch('/app/api/data-sources');
       const data = await res.json();
       if (!data.sources || data.sources.length === 0) {
-        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add InfluxDB or Prometheus to enrich incidents with metrics.</div>';
+        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add monitoring, security, or observability tools to enrich incidents.</div>';
         return;
       }
       dsList.innerHTML = data.sources.map((s: any) => {
@@ -694,6 +738,8 @@ const isPaid = tier !== 'free';
           dsToken.value = ds.hasToken ? '********' : '';
           dsOrg.value = ds.org || '';
           dsBucket.value = ds.bucket || '';
+          dsUsername.value = ds.username || '';
+          dsPassword.value = ds.hasPassword ? '********' : '';
           updateDataSourceFormByType();
           dsAddForm.style.display = '';
           dsAddBtn.style.display = 'none';
@@ -763,6 +809,7 @@ const isPaid = tier !== 'free';
     dsFormTitle.textContent = 'Add Data Source';
     dsType.value = 'influxdb';
     dsName.value = ''; dsUrl.value = ''; dsToken.value = ''; dsOrg.value = ''; dsBucket.value = '';
+    dsUsername.value = ''; dsPassword.value = '';
     updateDataSourceFormByType();
     dsAddForm.style.display = '';
     dsAddBtn.style.display = 'none';
@@ -791,6 +838,8 @@ const isPaid = tier !== 'free';
           token: dsToken.value,
           org: dsOrg.value,
           bucket: dsBucket.value,
+          username: dsUsername.value,
+          password: dsPassword.value,
         }),
       });
       const data = await res.json();
@@ -828,6 +877,8 @@ const isPaid = tier !== 'free';
         token: dsToken.value,
         org: dsOrg.value,
         bucket: dsBucket.value,
+        username: dsUsername.value,
+        password: dsPassword.value,
       };
       if (editingDsId) payload.id = editingDsId;
 

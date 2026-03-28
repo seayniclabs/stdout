@@ -192,10 +192,12 @@ export const dataSources = sqliteTable('data_sources', {
   userId: text('user_id').notNull(),
   name: text('name').notNull(),              // "My InfluxDB", "Prometheus"
   type: text('type', {
-    enum: ['influxdb', 'prometheus'],
+    enum: ['influxdb', 'prometheus', 'trivy', 'uptime-kuma', 'loki', 'graylog', 'crowdsec', 'pihole'],
   }).notNull(),
   url: text('url').notNull(),                // e.g. http://localhost:8086
   token: text('token'),                      // Encrypted API token (AES-256-GCM)
+  username: text('username'),                // Basic auth username (Graylog)
+  password: text('password'),               // Encrypted basic auth password (Graylog)
   org: text('org'),                          // InfluxDB org
   bucket: text('bucket'),                    // InfluxDB bucket
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),

@@ -60,6 +60,49 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const dataSourcesRegistered = syncDetectedDataSources(db, locals.user.id, body.data_sources as ScannerDataSourcesPayload | undefined);
 
+  // Auto-detect data sources from container images
+  let autoDetectedSources: Array<{ type: string; name: string; url: string }> = [];
+  try {
+    const { detectSources } = await import('../../../../lib/source-detect');
+    const containerInfos = (body.containers || []).map((c: any) => ({
+      name: c.name || '',
+      image: c.image || '',
+      ports: c.ports || [],
+    }));
+    const detected = detectSources(containerInfos);
+
+    // Only register sources that don't already exist for this user
+    for (const source of detected) {
+      const existing = db.select().from(tenantSchema.dataSources)
+        .where(and(
+          eq(tenantSchema.dataSources.userId, locals.user.id),
+          eq(tenantSchema.dataSources.type, source.type),
+        ))
+        .get();
+
+      if (!existing) {
+        db.insert(tenantSchema.dataSources).values({
+          id: nanoid(),
+          userId: locals.user.id,
+          name: source.name,
+          type: source.type,
+          url: source.url,
+          token: null,
+          username: null,
+          password: null,
+          org: null,
+          bucket: null,
+          enabled: true,
+          lastTestedAt: null,
+          lastTestStatus: 'untested',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }).run();
+        autoDetectedSources.push({ type: source.type, name: source.name, url: source.url });
+      }
+    }
+  } catch {}
+
   // Render markdown from scan data
   const markdown = renderMarkdown(body);
 
@@ -103,21 +146,39 @@ export const POST: APIRoute = async ({ locals, request }) => {
     importId,
     reviewUrl: `/app/stacks/import/${importId}`,
     dataSourcesRegistered,
+    autoDetectedSources,
   }), {
     status: 201,
     headers: { 'Content-Type': 'application/json' },
   });
 };
 
-function normalizeDataSourceType(source: ScannerDetectedSource): 'prometheus' | null {
+type ValidDataSourceType = 'influxdb' | 'prometheus' | 'trivy' | 'uptime-kuma' | 'loki' | 'graylog' | 'crowdsec' | 'pihole';
+
+const SCANNER_TYPE_MAP: Record<string, ValidDataSourceType> = {
+  prometheus: 'prometheus',
+  influxdb: 'influxdb',
+  trivy: 'trivy',
+  'uptime-kuma': 'uptime-kuma',
+  'uptime_kuma': 'uptime-kuma',
+  loki: 'loki',
+  graylog: 'graylog',
+  crowdsec: 'crowdsec',
+  pihole: 'pihole',
+  'pi-hole': 'pihole',
+};
+
+function normalizeDataSourceType(source: ScannerDetectedSource): ValidDataSourceType | null {
   const name = (source.name || '').toLowerCase();
   const type = (source.type || '').toLowerCase();
 
-  // Current StdOut schema supports influxdb/prometheus.
-  // Scanner source detection can discover many tools; we auto-register
-  // only Prometheus-compatible metrics endpoints for now.
-  if (name === 'prometheus') return 'prometheus';
+  // Check direct type mapping
+  if (SCANNER_TYPE_MAP[name]) return SCANNER_TYPE_MAP[name];
+  if (SCANNER_TYPE_MAP[type]) return SCANNER_TYPE_MAP[type];
+
+  // Legacy fallback for metrics type
   if (type === 'metrics' && name.includes('prometheus')) return 'prometheus';
+
   return null;
 }
 
@@ -157,13 +218,22 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
         updatedAt: now,
       }).where(eq(tenantSchema.dataSources.id, existing.id)).run();
     } else {
+      // Use tool name for label, not hardcoded "Prometheus"
+      const typeLabels: Record<string, string> = {
+        prometheus: 'Prometheus', influxdb: 'InfluxDB', trivy: 'Trivy',
+        'uptime-kuma': 'Uptime Kuma', loki: 'Loki', graylog: 'Graylog',
+        crowdsec: 'CrowdSec', pihole: 'Pi-hole',
+      };
+      const label = typeLabels[normalizedType] || normalizedType;
       db.insert(tenantSchema.dataSources).values({
         id: nanoid(),
         userId,
-        name: `${name || 'Prometheus'} (auto-detected)`,
+        name: `${name || label} (auto-detected)`,
         type: normalizedType,
         url: endpoint,
         token: null,
+        username: null,
+        password: null,
         org: null,
         bucket: null,
         enabled: true,

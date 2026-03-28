@@ -108,6 +108,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const rateLimitResponse = checkDiagnoseRateLimit(locals.user.id, isPaid);
   if (rateLimitResponse) return rateLimitResponse;
 
+  // Fetch enabled data sources for diagnosis context enrichment
+  let dataSources: Array<{ type: string; name: string; enabled: boolean }> = [];
+  try {
+    const allSources = db.select().from(tenantSchema.dataSources)
+      .where(eq(tenantSchema.dataSources.userId, locals.user.id))
+      .all();
+    dataSources = allSources.map((s) => ({
+      type: s.type,
+      name: s.name,
+      enabled: !!s.enabled,
+    }));
+  } catch { /* data sources table may not exist yet */ }
+
   const description = `Title: ${incident.title}\n\n${incident.description}`;
 
   try {
@@ -116,6 +129,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       incidentDescription: description,
       pastResolutions,
       tier,
+      dataSources,
     });
 
     // Store diagnosis

@@ -66,11 +66,29 @@ async function callWithRetry(
   throw new Error('Unreachable');
 }
 
+export interface DataSourceContext {
+  type: string;
+  name: string;
+  enabled: boolean;
+}
+
+const DATA_SOURCE_DESCRIPTIONS: Record<string, string> = {
+  influxdb: 'InfluxDB for time-series metrics collection and querying',
+  prometheus: 'Prometheus for metrics scraping and alerting',
+  trivy: 'Trivy for container vulnerability scanning',
+  'uptime-kuma': 'Uptime Kuma for monitoring service availability and uptime',
+  loki: 'Loki for centralized log aggregation and querying',
+  graylog: 'Graylog for log management, analysis, and alerting',
+  crowdsec: 'CrowdSec for collaborative intrusion detection and prevention',
+  pihole: 'Pi-hole for DNS filtering, ad blocking, and DNS query analytics',
+};
+
 export async function diagnoseIncident(opts: {
   stackContext: string;
   incidentDescription: string;
   pastResolutions: string[];
   tier: 'free' | 'paid';
+  dataSources?: DataSourceContext[];
 }): Promise<DiagnosisResult> {
   const model = opts.tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001';
 
@@ -78,11 +96,24 @@ export async function diagnoseIncident(opts: {
     ? `\n\nPast resolutions for similar incidents:\n${opts.pastResolutions.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
     : '';
 
+  let dataSourcesBlock = '';
+  if (opts.dataSources && opts.dataSources.length > 0) {
+    const lines = opts.dataSources
+      .filter((ds) => ds.enabled)
+      .map((ds) => {
+        const desc = DATA_SOURCE_DESCRIPTIONS[ds.type] || ds.type;
+        return `- ${ds.name}: ${desc}`;
+      });
+    if (lines.length > 0) {
+      dataSourcesBlock = `\n\nThe user has the following monitoring and security tools available:\n${lines.join('\n')}\nConsider what data from these tools might help diagnose the issue, and suggest relevant queries or commands.`;
+    }
+  }
+
   const response = await callWithRetry(() =>
     client.messages.create({
       model,
       max_tokens: 1024,
-      system: `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`,
+      system: `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`,
       messages: [
         { role: 'user', content: opts.incidentDescription },
       ],
