@@ -1,0 +1,282 @@
+---
+export const prerender = true;
+
+import '../../styles/global.css';
+import { useCases, categoryLabels, categoryDescriptions } from '../../data/use-cases';
+import type { UseCase } from '../../data/use-cases';
+
+const categories: UseCase['category'][] = ['homelab', 'devops', 'monitoring', 'security', 'comparison'];
+const grouped = categories.map(cat => ({
+  key: cat,
+  label: categoryLabels[cat],
+  description: categoryDescriptions[cat],
+  items: useCases.filter(uc => uc.category === cat),
+}));
+
+const canonicalUrl = 'https://stdout.seayniclabs.com/use-cases';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Explore how StdOut helps homelab builders, solo DevOps engineers, and self-hosters manage incidents with AI diagnosis and living runbooks." />
+  <title>Use Cases — StdOut Incident Companion</title>
+  <meta property="og:title" content="Use Cases — StdOut Incident Companion" />
+  <meta property="og:description" content="Explore how StdOut helps homelab builders, solo DevOps engineers, and self-hosters manage incidents with AI diagnosis and living runbooks." />
+  <meta property="og:url" content={canonicalUrl} />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#F97316" />
+  <link rel="canonical" href={canonicalUrl} />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/#how" class="ln-link">How it works</a>
+      <a href="/#features" class="ln-link">Features</a>
+      <a href="/use-cases" class="ln-link ln-active">Use Cases</a>
+      <a href="/#pricing" class="ln-link">Pricing</a>
+      <a href="/docs/scanner" class="ln-link">Docs</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+      <a href="/app/register" class="btn btn-primary btn-sm">Self-Host $149</a>
+    </div>
+    <button class="ln-toggle" id="lnToggle" aria-label="Menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <div class="ln-mobile" id="lnMobile">
+    <a href="/#how" class="ln-mobile-link">How it works</a>
+    <a href="/#features" class="ln-mobile-link">Features</a>
+    <a href="/use-cases" class="ln-mobile-link">Use Cases</a>
+    <a href="/#pricing" class="ln-mobile-link">Pricing</a>
+    <a href="/docs/scanner" class="ln-mobile-link">Docs</a>
+    <a href="/app/login" class="ln-mobile-link">Log in</a>
+    <a href="/app/register" class="ln-mobile-link ln-mobile-cta">Self-Host $149</a>
+  </div>
+
+  <!-- Hero -->
+  <section class="idx-hero">
+    <div class="idx-badge mono">USE CASES</div>
+    <h1>Built for the way you actually work.</h1>
+    <p class="idx-sub">Whether you're running a homelab, managing solo infrastructure, or integrating with your monitoring stack — StdOut fits your workflow.</p>
+  </section>
+
+  <!-- Category sections -->
+  {grouped.map(group => (
+    <section class="idx-category" id={group.key}>
+      <div class="idx-cat-header">
+        <h2>{group.label}</h2>
+        <p class="idx-cat-desc">{group.description}</p>
+      </div>
+      <div class="idx-grid">
+        {group.items.map(uc => (
+          <a href={`/use-cases/${uc.slug}`} class="idx-card">
+            <span class="idx-card-cat mono">{categoryLabels[uc.category]}</span>
+            <h3>{uc.headline}</h3>
+            <p>{uc.subheadline}</p>
+            <span class="idx-card-link mono">Learn more &rarr;</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  ))}
+
+  <!-- Bottom CTA -->
+  <section class="bottom-cta">
+    <div class="cta-inner">
+      <img src="/logo.svg" alt="" width="48" height="48" style="margin-bottom: 20px; opacity: 0.8;" />
+      <h2>Stop solving the same incident twice.</h2>
+      <p class="mono" style="color: var(--text-muted); margin-bottom: 24px;">$149 one-time. Docker image. Your infra, your data, forever.</p>
+      <div class="cta-buttons">
+        <a href="/app/register" class="btn btn-primary btn-lg btn-glow">Self-Host for $149</a>
+        <a href="/app/register" class="btn btn-ghost">Or try free on cloud</a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="lf">
+    <div class="lf-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/docs/scanner">Docs</a>
+      <a href="/use-cases">Use Cases</a>
+      <a href="mailto:hello@seayniclabs.com">Contact</a>
+    </div>
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  /* ── Nav ──────────────────────────────────────── */
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 1100px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-active { color: var(--text-secondary); }
+  .btn-sm { padding: 7px 16px; font-size: 12px; }
+  .btn-lg { padding: 14px 32px; font-size: 15px; }
+  .btn-glow { box-shadow: 0 0 20px var(--accent-glow), var(--shadow-sm); }
+  .btn-glow:hover { box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(249, 115, 22, 0.1), var(--shadow-md); }
+  .btn-ghost {
+    background: transparent; color: var(--text-secondary); border: 1px solid var(--border);
+    padding: 10px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600;
+    font-family: var(--font-ui); cursor: pointer; transition: all 0.15s ease; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-ghost:hover { color: var(--text); border-color: var(--border-hover); background: var(--bg-surface); transform: translateY(-1px); }
+
+  .ln-toggle {
+    display: none; flex-direction: column; gap: 5px; background: none; border: none; cursor: pointer;
+    padding: 8px; min-height: 44px; min-width: 44px; align-items: center; justify-content: center;
+  }
+  .ln-toggle span { display: block; width: 20px; height: 2px; background: var(--text-secondary); border-radius: 1px; transition: all 0.25s ease; }
+  .ln-toggle.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+  .ln-toggle.active span:nth-child(2) { opacity: 0; }
+  .ln-toggle.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+  .ln-mobile {
+    display: none; flex-direction: column; background: var(--bg-surface); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 99;
+  }
+  .ln-mobile.open { display: flex; }
+  .ln-mobile-link {
+    display: block; padding: 14px 24px; color: var(--text-secondary); font-size: 14px; font-weight: 500;
+    font-family: var(--font-mono); text-decoration: none; border-bottom: 1px solid var(--border);
+    transition: color 150ms, background 150ms;
+  }
+  .ln-mobile-link:hover { color: var(--text); background: var(--bg-hover); }
+  .ln-mobile-cta { color: var(--accent-light); font-weight: 600; }
+
+  /* ── Index Hero ──────────────────────────────── */
+  .idx-hero {
+    text-align: center; padding: 80px 24px 48px; max-width: 780px; margin: 0 auto;
+    animation: fadeInUp 0.5s ease-out both;
+  }
+  .idx-badge {
+    font-size: 11px; letter-spacing: 0.14em; color: var(--accent-light);
+    margin-bottom: 16px; font-weight: 700;
+  }
+  .idx-hero h1 {
+    font-size: clamp(28px, 4.5vw, 42px); font-weight: 800; line-height: 1.15;
+    letter-spacing: -0.03em; margin-bottom: 16px;
+  }
+  .idx-sub {
+    font-size: 16px; line-height: 1.7; color: var(--text-secondary);
+    max-width: 560px; margin: 0 auto;
+  }
+
+  /* ── Category sections ───────────────────────── */
+  .idx-category {
+    max-width: 1000px; margin: 0 auto; padding: 32px 24px 48px;
+  }
+  .idx-cat-header {
+    margin-bottom: 24px;
+  }
+  .idx-cat-header h2 {
+    font-size: 22px; font-weight: 700; margin-bottom: 4px;
+  }
+  .idx-cat-desc {
+    font-size: 14px; color: var(--text-muted);
+  }
+
+  /* ── Card grid ───────────────────────────────── */
+  .idx-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .idx-card {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--bg-surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px;
+    text-decoration: none; transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: var(--shadow-sm);
+  }
+  .idx-card:hover {
+    border-color: var(--border-hover); transform: translateY(-3px);
+    box-shadow: var(--shadow-lg);
+  }
+  .idx-card-cat {
+    font-size: 10px; color: var(--accent-light); letter-spacing: 0.08em; font-weight: 600;
+  }
+  .idx-card h3 {
+    font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.3;
+  }
+  .idx-card p {
+    font-size: 13px; color: var(--text-secondary); line-height: 1.55; flex: 1;
+  }
+  .idx-card-link {
+    font-size: 11px; color: var(--accent-light); letter-spacing: 0.04em;
+    margin-top: 4px;
+  }
+
+  /* ── Bottom CTA ──────────────────────────────── */
+  .bottom-cta { padding: 0 24px 80px; }
+  .cta-inner {
+    text-align: center; max-width: 560px; margin: 0 auto; padding: 48px 32px;
+    border: 1px solid var(--border); border-radius: var(--radius-lg);
+    background: var(--bg-surface); box-shadow: var(--shadow-lg);
+    position: relative; overflow: hidden;
+  }
+  .cta-inner::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent-dim), var(--accent-glow), var(--accent-dim), transparent);
+  }
+  .cta-inner h2 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .cta-buttons { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+
+  /* ── Footer ──────────────────────────────────── */
+  .lf { text-align: center; padding: 24px; border-top: 1px solid var(--border); }
+  .lf-links { display: flex; justify-content: center; gap: 20px; margin-bottom: 8px; }
+  .lf-links a { font-size: 12px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .lf-links a:hover { color: var(--text-secondary); }
+
+  /* ── Responsive ──────────────────────────────── */
+  @media (max-width: 700px) {
+    .ln-link { display: none; }
+    .ln-links .btn-sm { display: none; }
+    .ln-toggle { display: flex; }
+    .idx-hero { padding: 50px 16px 32px; }
+    .idx-grid { grid-template-columns: 1fr; }
+    .idx-category { padding: 24px 16px 36px; }
+    .bottom-cta { padding: 0 16px 60px; }
+  }
+  @media (min-width: 701px) and (max-width: 950px) {
+    .idx-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<script>
+  const lnToggle = document.getElementById('lnToggle');
+  const lnMobile = document.getElementById('lnMobile');
+  function closeMobileNav() {
+    lnMobile?.classList.remove('open');
+    lnToggle?.classList.remove('active');
+    lnToggle?.setAttribute('aria-expanded', 'false');
+  }
+  if (lnToggle && lnMobile) {
+    lnToggle.addEventListener('click', () => {
+      const isOpen = lnMobile.classList.toggle('open');
+      lnToggle.classList.toggle('active', isOpen);
+      lnToggle.setAttribute('aria-expanded', String(isOpen));
+    });
+    lnMobile.querySelectorAll('a').forEach(link => {
+      link.addEventListener('click', closeMobileNav);
+    });
+    document.addEventListener('click', (e) => {
+      if (lnMobile.classList.contains('open') &&
+          !lnMobile.contains(e.target as Node) &&
+          !lnToggle.contains(e.target as Node)) {
+        closeMobileNav();
+      }
+    });
+  }
+</script>
