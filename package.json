@@ -7,7 +7,13 @@
     "build": "astro build",
     "preview": "astro preview",
     "start": "node dist/server/entry.mjs",
-    "astro": "astro"
+    "astro": "astro",
+    "test": "npx playwright test --config=tests/playwright.config.ts",
+    "test:smoke": "npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts",
+    "test:auth": "npx playwright test tests/auth.spec.ts --config=tests/playwright.config.ts",
+    "test:security": "npx playwright test tests/security.spec.ts --config=tests/playwright.config.ts",
+    "test:no-ratelimit": "npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
+    "test:ratelimit": "npx playwright test --config=tests/playwright.config.ts --grep @ratelimit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -22,6 +28,7 @@
     "stripe": "^20.4.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.50.0",
     "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.9"
   },
