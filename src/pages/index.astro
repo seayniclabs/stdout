@@ -185,8 +185,8 @@ const user = Astro.locals.user;
   <!-- Pricing -->
   <section class="pricing" id="pricing">
     <h2>Own it. Run it. Keep it.</h2>
-    <p class="pricing-sub">Your infrastructure, your data. No subscription required.</p>
-    <div class="price-grid">
+    <p class="pricing-sub">Your infrastructure, your data. Self-hosted is the default path we recommend.</p>
+    <div class="price-grid price-grid-primary">
       <div class="price-card featured">
         <div class="price-badge mono">RECOMMENDED</div>
         <div class="price-tier">Self-Hosted</div>
@@ -203,23 +203,26 @@ const user = Astro.locals.user;
         </div>
         <a href="/app/register" class="btn btn-primary btn-glow" style="width:100%;">Get Self-Hosted</a>
       </div>
-      <div class="price-card">
-        <div class="price-tier">Free Cloud</div>
-        <div class="price-amount mono">$0</div>
-        <p class="price-desc">Try StdOut on our cloud. No credit card, no commitment.</p>
-        <div class="price-items">
-          <div class="pi"><span class="pi-check dim">&#10003;</span> 1 stack</div>
-          <div class="pi"><span class="pi-check dim">&#10003;</span> 10 incidents / month</div>
-          <div class="pi"><span class="pi-check dim">&#10003;</span> AI diagnosis</div>
-          <div class="pi"><span class="pi-check dim">&#10003;</span> 100 MB knowledge base</div>
-          <div class="pi"><span class="pi-check dim">&#10003;</span> Full-text search</div>
-          <div class="pi"><span class="pi-check dim">&#10003;</span> Resolution matching</div>
-          <div class="pi">&nbsp;</div>
+    </div>
+    <p class="try-free-cloud"><a href="/app/register">Try free on cloud</a> &mdash; no credit card. 1 stack, 10 incidents/month, 100 MB knowledge base.</p>
+
+    <div class="cloud-plans">
+      <p class="cloud-plans-label mono">For those who prefer managed hosting</p>
+      <div class="price-grid-cloud">
+        <div class="price-card price-card-cloud">
+          <div class="price-tier">Solo</div>
+          <div class="price-amount-cloud mono">$12<span class="price-per">/mo</span></div>
+          <p class="price-desc-cloud">Full StdOut in the cloud for individual homelabbers.</p>
+          <a href="https://store.seayniclabs.com/products/stdout-solo" class="btn btn-secondary btn-sm-cloud" target="_blank" rel="noopener noreferrer">Subscribe</a>
         </div>
-        <a href="/app/register" class="btn btn-secondary" style="width:100%;">Start Free</a>
+        <div class="price-card price-card-cloud">
+          <div class="price-tier">Shop</div>
+          <div class="price-amount-cloud mono">$24<span class="price-per">/mo</span></div>
+          <p class="price-desc-cloud">Teams: shared stacks, RBAC, more seats and storage.</p>
+          <a href="https://store.seayniclabs.com/products/stdout-shop" class="btn btn-secondary btn-sm-cloud" target="_blank" rel="noopener noreferrer">Subscribe</a>
+        </div>
       </div>
     </div>
-    <p class="pricing-saas mono">Cloud subscriptions also available for teams that prefer managed hosting. <a href="mailto:hello@seayniclabs.com">Contact us</a></p>
   </section>
 
   <!-- Trust / Builder -->
@@ -573,6 +576,98 @@ const user = Astro.locals.user;
     color: var(--text-muted);
     margin-bottom: 40px;
   }
+  .price-grid-primary {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-width: 440px;
+    margin: 0 auto;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  .try-free-cloud {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 20px;
+    margin-bottom: 0;
+    line-height: 1.5;
+  }
+
+  .try-free-cloud a {
+    color: var(--accent-light);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .try-free-cloud a:hover {
+    text-decoration: underline;
+  }
+
+  .cloud-plans {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+
+  .cloud-plans-label {
+    text-align: center;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+  }
+
+  .price-grid-cloud {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    max-width: 640px;
+    margin: 0 auto;
+    align-items: stretch;
+  }
+
+  .price-card-cloud {
+    padding: 20px 18px;
+    transform: none;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .price-card-cloud:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .price-card-cloud .price-tier {
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+
+  .price-amount-cloud {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+  }
+
+  .price-desc-cloud {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 16px;
+    flex: 1;
+  }
+
+  .btn-sm-cloud {
+    width: 100%;
+    padding: 8px 14px;
+    font-size: 12px;
+    justify-content: center;
+  }
+
   .price-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -652,16 +747,6 @@ const user = Astro.locals.user;
   .pi-check.dim {
     color: var(--text-muted);
   }
-  .pricing-saas {
-    text-align: center;
-    font-size: 11px;
-    color: var(--text-muted);
-    margin-top: 24px;
-  }
-  .pricing-saas a {
-    color: var(--text-secondary);
-  }
-
   /* ── Trust ─────────────────────────────────── */
   .trust {
     max-width: 1000px;
@@ -820,6 +905,7 @@ const user = Astro.locals.user;
     .pipe-step { flex: none; width: 100%; max-width: 320px; padding: 16px; }
     .feat-grid { grid-template-columns: 1fr; }
     .price-grid { grid-template-columns: 1fr; }
+    .price-grid-cloud { grid-template-columns: 1fr; }
     .hud { margin: 0 auto; }
     .hud-line { font-size: 11px; }
     .trust-inner { padding: 32px 20px; }
