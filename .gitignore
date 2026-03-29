@@ -6,3 +6,6 @@ data/
 hone
 .env
 .env.*
+
+playwright-report/
+test-results/
