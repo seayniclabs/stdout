@@ -302,11 +302,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   const csp = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}'`,
+    `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com`,
     "style-src 'self' 'unsafe-inline'",
     "font-src 'self'",
     "img-src 'self' data: https:",
-    "connect-src 'self'",
+    "connect-src 'self' https://analytics.seaynicroute.com",
     "frame-ancestors 'none'",
   ].join('; ');
 
