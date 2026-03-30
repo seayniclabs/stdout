@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
-    "@astrojs/node": "^9.5.4",
+    "@astrojs/node": "^10.0.4",
     "@astrojs/sitemap": "^3.7.1",
     "@node-rs/argon2": "^2.0.2",
     "astro": "^5.17.1",
