@@ -222,6 +222,63 @@ export const addonInterest = sqliteTable('addon_interest', {
   notified: integer('notified').notNull().default(0),
 });
 
+// --- Windlass: Schedule-Aware Service Management ---
+
+export const windlassServices = sqliteTable('windlass_services', {
+  id: text('id').primaryKey(),                // e.g. "postiz", "grafana"
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),               // Display name
+  classification: text('classification', {
+    enum: ['always_on', 'scheduled', 'on_demand', 'manual'],
+  }).notNull(),
+  composePath: text('compose_path'),          // Path to docker-compose dir
+  containerCount: integer('container_count'),
+  memoryMb: integer('memory_mb'),
+  priority: integer('priority').notNull().default(3), // 1=critical, 5=optional
+  description: text('description'),
+  scheduleCronStart: text('schedule_cron_start'), // Cron expression for start
+  scheduleCronStop: text('schedule_cron_stop'),   // Cron expression for stop
+  runtimeWindowStart: text('runtime_window_start'), // HH:MM for display
+  runtimeWindowEnd: text('runtime_window_end'),     // HH:MM for display
+  currentState: text('current_state', {
+    enum: ['running', 'stopped', 'partial', 'starting', 'stopping', 'error', 'unknown'],
+  }).notNull().default('unknown'),
+  expectedState: text('expected_state', {
+    enum: ['running', 'stopped'],
+  }).notNull().default('running'),
+  lastStateChange: integer('last_state_change', { mode: 'timestamp' }),
+  lastStarted: integer('last_started', { mode: 'timestamp' }),
+  lastStopped: integer('last_stopped', { mode: 'timestamp' }),
+  containers: text('containers'),             // JSON array of container names
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const windlassEvents = sqliteTable('windlass_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  serviceId: text('service_id'),              // NULL = system-level event
+  eventType: text('event_type', {
+    enum: ['service_started', 'service_stopped', 'service_crashed', 'service_recovered',
+           'schedule_start', 'schedule_stop', 'manual_start', 'manual_stop',
+           'memory_shed', 'sync_completed', 'config_changed'],
+  }).notNull(),
+  detail: text('detail'),                     // Human-readable description
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const windlassConfig = sqliteTable('windlass_config', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  endpointUrl: text('endpoint_url').notNull(), // e.g. http://localhost:8116
+  syncIntervalSeconds: integer('sync_interval_seconds').notNull().default(60),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }),
+  lastSyncStatus: text('last_sync_status'),    // 'ok' | error message
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
   rawJson: text('raw_json').notNull(),

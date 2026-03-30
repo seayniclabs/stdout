@@ -14,7 +14,7 @@ export interface SeedDoc {
   tags: string;
 }
 
-export const SEED_VERSION = 2;
+export const SEED_VERSION = 3;
 
 export const seedDocs: SeedDoc[] = [
   // ── Getting Started Onboarding Guides ──────────────────────────────
@@ -1109,5 +1109,175 @@ timeout 3600 restic backup /path/to/data
 - Use \`restic check\` periodically to verify repository integrity`,
     docType: 'runbook',
     tags: 'restic,backup,locks,automation',
+  },
+
+  // ── Windlass — Schedule-Aware Service Management ─────────────────────
+  {
+    id: 'community_guide_windlass',
+    title: 'Windlass — Schedule-Aware Service Management',
+    content: `## What Is Windlass?
+
+Windlass is StdOut's built-in tool for schedule-aware container management. It tracks which services are running, which should be running, and when — then lets you control them from a single dashboard.
+
+The core idea: **your service schedule IS your alert policy.** If a service is scheduled to run from 11 PM to 4 AM, Windlass only alerts you during that window. Outside it, silence is expected, so silence is enforced. No more false alarms for services you intentionally stopped.
+
+## Key Concepts
+
+### Service Classifications
+
+Every service in Windlass has a classification that determines its behavior:
+
+| Classification | Behavior | Alerts |
+|---------------|----------|--------|
+| **Always On** | Expected to run 24/7 | Alert anytime service goes down |
+| **Scheduled** | Runs during a defined time window (cron-based) | Alert only during runtime window |
+| **On-Demand** | Started manually or by external trigger, stops when idle | Alert only while actively running |
+| **Manual** | Never auto-managed, no monitoring | No automatic alerts |
+
+### Schedule as Alert Policy
+
+This is what makes Windlass different from simple container monitoring:
+
+- A **scheduled** service with a runtime window of 23:00–04:00 will only trigger alerts between 11 PM and 4 AM
+- Outside that window, the service being stopped is **expected** — no alert fires
+- State changes are still logged, so you have full history
+- If a service crashes during its runtime window, the alert fires immediately
+
+## Getting Started
+
+### Step 1: Install the Windlass Engine
+
+Windlass has two parts: an **engine** that runs on your Docker host, and the **StdOut UI** that displays and controls it.
+
+The engine is a lightweight Python script that runs on a schedule (via cron, systemd timer, or launchd):
+
+\`\`\`bash
+# Download the engine
+curl -o ~/.local/bin/windlass https://raw.githubusercontent.com/seayniclabs/windlass/main/windlass.py
+chmod +x ~/.local/bin/windlass
+
+# Create the config directory
+mkdir -p /opt/windlass
+\`\`\`
+
+### Step 2: Create Your Schedule
+
+Create \`/opt/windlass/schedule.yaml\` to define your services:
+
+\`\`\`yaml
+services:
+  nginx-proxy-manager:
+    compose_path: /opt/containers/npm
+    containers: [npm]
+    type: always
+    memory_mb: 150
+    priority: 1
+    description: Reverse proxy for all services
+
+  postiz:
+    compose_path: /opt/containers/postiz
+    containers: [postiz-app, postiz-worker, postiz-postgres, postiz-redis]
+    type: schedule
+    memory_mb: 2300
+    priority: 4
+    description: Social media scheduler
+    cron_start: "0 23 * * *"    # Start at 11 PM
+    cron_stop: "0 4 * * *"      # Stop at 4 AM
+
+  grafana:
+    compose_path: /opt/containers/grafana
+    containers: [grafana]
+    type: on-demand
+    memory_mb: 250
+    priority: 3
+    description: Dashboards and metrics
+    idle_shutdown_minutes: 30
+\`\`\`
+
+**Service types:**
+- \`always\` — runs 24/7, restarted if stopped
+- \`schedule\` — started/stopped on a cron schedule
+- \`on-demand\` — started externally, auto-stopped after idle timeout
+- \`manual\` — tracked but never auto-managed
+
+### Step 3: Start the Windlass Server
+
+The engine includes a lightweight HTTP server that StdOut reads from:
+
+\`\`\`bash
+# Run the engine once (evaluates schedule, starts/stops services)
+windlass --run
+
+# Start the status server (serves status.json for StdOut)
+windlass --serve --port 8116
+\`\`\`
+
+For production, set up a recurring schedule:
+
+\`\`\`bash
+# crontab example: evaluate every 5 minutes
+*/5 * * * * /usr/local/bin/windlass --run >> /var/log/windlass.log 2>&1
+\`\`\`
+
+### Step 4: Connect to StdOut
+
+1. Navigate to **Windlass** in StdOut's nav bar
+2. Enter your Windlass endpoint URL (e.g., \`http://localhost:8116\` or \`http://your-host:8116\`)
+3. Click **Connect**
+4. Click **Sync** to pull in your service registry
+
+## The Dashboard
+
+Once connected and synced, the Windlass dashboard shows:
+
+- **Summary gauges** — running, stopped, scheduled, and total memory usage
+- **Service cards** — grouped by classification (Always On, Scheduled, On-Demand, Manual)
+- **State indicators** — green (running), gray (stopped), orange (partial), red (error)
+- **Mismatch warnings** — a red \`!\` badge when a service's actual state doesn't match its expected state
+- **Recent events** — a log of state changes, syncs, and manual actions
+
+## Timeline View
+
+Click **Timeline** to see a 24-hour Gantt chart of all services:
+
+- Green blocks = Always On services
+- Blue blocks = Scheduled runtime windows
+- Orange blocks = On-Demand services currently running
+- A vertical line marks the current time
+
+This gives you an at-a-glance view of your infrastructure's daily rhythm.
+
+## Service Controls
+
+Click any service card to see its detail page, where you can:
+
+- **Start / Stop / Restart** — manual controls that take effect on the next Windlass cycle
+- **View properties** — memory, container count, priority, compose path
+- **View schedule** — runtime window, cron expressions (for scheduled services)
+- **View event history** — every state change, sync, and manual action for this service
+
+## How Sync Works
+
+StdOut reads from the Windlass engine's \`status.json\` endpoint. This file is updated every time the engine runs and contains:
+
+- Current state of all services (running/stopped/partial)
+- Memory usage per service
+- Upcoming scheduled events
+- Recent event history
+- Schedule windows for the next 24 hours
+
+StdOut doesn't directly start or stop containers. It sends commands to Windlass, which manages Docker Compose stacks on your behalf.
+
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| "Windlass not configured" | No endpoint URL saved | Go to Windlass page, enter URL, click Connect |
+| Sync fails with connection error | Engine not running or wrong URL | Verify \`windlass --serve\` is running and the port is correct |
+| Services show "unknown" state | Haven't synced yet | Click Sync on the dashboard |
+| Mismatch warning on scheduled service | Service stopped outside its window | Expected behavior — no action needed |
+| Manual control doesn't take effect | Windlass processes commands on its next cycle | Wait up to 5 minutes, or run \`windlass --run\` manually |`,
+    docType: 'guide',
+    tags: 'windlass,scheduling,containers,docker,alerts',
   },
 ];

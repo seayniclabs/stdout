@@ -370,6 +370,50 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       notified INTEGER DEFAULT 0,
       UNIQUE(tool_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS windlass_services (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      classification TEXT NOT NULL,
+      compose_path TEXT,
+      container_count INTEGER,
+      memory_mb INTEGER,
+      priority INTEGER NOT NULL DEFAULT 3,
+      description TEXT,
+      schedule_cron_start TEXT,
+      schedule_cron_stop TEXT,
+      runtime_window_start TEXT,
+      runtime_window_end TEXT,
+      current_state TEXT NOT NULL DEFAULT 'unknown',
+      expected_state TEXT NOT NULL DEFAULT 'running',
+      last_state_change INTEGER,
+      last_started INTEGER,
+      last_stopped INTEGER,
+      containers TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_windlass_services_user ON windlass_services(user_id);
+    CREATE TABLE IF NOT EXISTS windlass_events (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      service_id TEXT,
+      event_type TEXT NOT NULL,
+      detail TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_windlass_events_service ON windlass_events(service_id, created_at);
+    CREATE TABLE IF NOT EXISTS windlass_config (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      endpoint_url TEXT NOT NULL,
+      sync_interval_seconds INTEGER NOT NULL DEFAULT 60,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      last_sync_at INTEGER,
+      last_sync_status TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

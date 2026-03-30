@@ -1,0 +1,285 @@
+---
+export const prerender = false;
+import Layout from '../../../../../layouts/Layout.astro';
+import { getService, getServiceEvents } from '../../../../../lib/windlass';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const userId = Astro.locals.workspace?.ownerId || user.id;
+const { id } = Astro.params;
+const service = id ? getService(userId, id) : null;
+
+if (!service) return Astro.redirect('/app/tools/windlass');
+
+const events = getServiceEvents(userId, id!, 50);
+const containers = service.containers ? JSON.parse(service.containers) : [];
+
+function timeAgo(date: Date | null) {
+  if (!date) return 'never';
+  const ms = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
+const classLabels: Record<string, string> = {
+  always_on: 'Always On',
+  scheduled: 'Scheduled',
+  on_demand: 'On-Demand',
+  manual: 'Manual',
+};
+
+const stateColors: Record<string, string> = {
+  running: 'var(--low)',
+  stopped: 'var(--muted)',
+  partial: '#F97316',
+  error: 'var(--high)',
+  unknown: 'var(--muted)',
+};
+---
+<Layout title={`${service.name} — Windlass`}>
+  <div class="detail-page">
+    <div class="detail-header">
+      <a href="/app/tools/windlass" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Windlass
+      </a>
+      <div class="detail-title-row">
+        <span class="state-dot" style={`background: ${stateColors[service.currentState] || 'var(--muted)'}`}></span>
+        <h1>{service.name}</h1>
+        <span class="classification-badge">{classLabels[service.classification] || service.classification}</span>
+      </div>
+      {service.description && <p class="detail-desc">{service.description}</p>}
+    </div>
+
+    {/* Controls */}
+    <div class="control-bar">
+      <button class="btn btn-sm btn-ghost control-btn" data-action="start" data-service={id}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start
+      </button>
+      <button class="btn btn-sm btn-ghost control-btn" data-action="stop" data-service={id}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+        Stop
+      </button>
+      <button class="btn btn-sm btn-ghost control-btn" data-action="restart" data-service={id}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        Restart
+      </button>
+    </div>
+
+    {/* Properties */}
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h3>Status</h3>
+        <div class="prop-list">
+          <div class="prop-row">
+            <span class="prop-label">Current State</span>
+            <span class={`prop-value state-${service.currentState}`}>{service.currentState}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Expected State</span>
+            <span class="prop-value">{service.expectedState}</span>
+          </div>
+          {service.currentState !== service.expectedState && service.classification !== 'manual' && (
+            <div class="state-warning">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              State mismatch — service is {service.currentState} but expected {service.expectedState}
+            </div>
+          )}
+          <div class="prop-row">
+            <span class="prop-label">Priority</span>
+            <span class="prop-value mono">{service.priority} / 5</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Last State Change</span>
+            <span class="prop-value mono">{timeAgo(service.lastStateChange)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <h3>Resources</h3>
+        <div class="prop-list">
+          <div class="prop-row">
+            <span class="prop-label">Memory</span>
+            <span class="prop-value mono">{service.memoryMb ? `${service.memoryMb} MB` : '—'}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Containers</span>
+            <span class="prop-value mono">{service.containerCount || 0}</span>
+          </div>
+          {service.composePath && (
+            <div class="prop-row">
+              <span class="prop-label">Compose Path</span>
+              <span class="prop-value mono" title={service.composePath}>{service.composePath}</span>
+            </div>
+          )}
+        </div>
+        {containers.length > 0 && (
+          <div class="container-list">
+            <span class="prop-label">Container Names</span>
+            <div class="container-tags">
+              {containers.map((c: string) => (
+                <span class="container-tag">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {service.classification === 'scheduled' && (
+        <div class="detail-card">
+          <h3>Schedule</h3>
+          <div class="prop-list">
+            {service.runtimeWindowStart && service.runtimeWindowEnd && (
+              <div class="prop-row">
+                <span class="prop-label">Runtime Window</span>
+                <span class="prop-value mono">{service.runtimeWindowStart} — {service.runtimeWindowEnd}</span>
+              </div>
+            )}
+            {service.scheduleCronStart && (
+              <div class="prop-row">
+                <span class="prop-label">Start Cron</span>
+                <span class="prop-value mono">{service.scheduleCronStart}</span>
+              </div>
+            )}
+            {service.scheduleCronStop && (
+              <div class="prop-row">
+                <span class="prop-label">Stop Cron</span>
+                <span class="prop-value mono">{service.scheduleCronStop}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div class="detail-card">
+        <h3>Timing</h3>
+        <div class="prop-list">
+          <div class="prop-row">
+            <span class="prop-label">Last Started</span>
+            <span class="prop-value mono">{timeAgo(service.lastStarted)}</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Last Stopped</span>
+            <span class="prop-value mono">{timeAgo(service.lastStopped)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Event history */}
+    {events.length > 0 && (
+      <div class="events-section">
+        <h2>Event History</h2>
+        <div class="events-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Event</th>
+                <th>Detail</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map(evt => (
+                <tr>
+                  <td class="mono">{timeAgo(evt.createdAt)}</td>
+                  <td><span class={`event-badge event-${evt.eventType}`}>{evt.eventType.replace(/_/g, ' ')}</span></td>
+                  <td class="event-detail">{evt.detail || ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+
+  <style>
+    .detail-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); text-decoration: none; font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .back-link:hover { color: var(--text); }
+    .detail-title-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem; }
+    .detail-title-row h1 { font-size: 1.5rem; margin: 0; }
+    .state-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .classification-badge { font-size: 0.7rem; padding: 0.15rem 0.5rem; border-radius: 4px; background: var(--border); color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+    .detail-desc { color: var(--muted); font-size: 0.85rem; margin: 0 0 1rem; }
+
+    /* Controls */
+    .control-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; padding: 0.75rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; }
+    .control-btn { display: flex; align-items: center; gap: 0.35rem; }
+
+    /* Properties grid */
+    .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .detail-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .detail-card h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 0.75rem; }
+    .prop-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .prop-row { display: flex; justify-content: space-between; align-items: center; }
+    .prop-label { font-size: 0.8rem; color: var(--muted); }
+    .prop-value { font-size: 0.85rem; font-weight: 500; }
+    .state-running { color: var(--low); }
+    .state-stopped { color: var(--muted); }
+    .state-partial { color: #F97316; }
+    .state-error { color: var(--high); }
+
+    .state-warning { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; background: rgba(239, 68, 68, 0.08); border-radius: 6px; font-size: 0.8rem; color: var(--high); margin-top: 0.25rem; }
+
+    .container-list { margin-top: 0.75rem; }
+    .container-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
+    .container-tag { font-size: 0.7rem; font-family: var(--font-mono); padding: 0.15rem 0.4rem; background: var(--border); border-radius: 3px; }
+
+    .mono { font-family: var(--font-mono); }
+
+    /* Events */
+    .events-section h2 { font-size: 1rem; margin: 0 0 0.75rem; }
+    .events-table { overflow-x: auto; }
+    .events-table table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .events-table th { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; }
+    .events-table td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .event-badge { font-size: 0.7rem; padding: 0.15rem 0.4rem; border-radius: 4px; background: var(--border); white-space: nowrap; }
+    .event-badge.event-service_started, .event-badge.event-manual_start { background: rgba(74, 222, 128, 0.15); color: var(--low); }
+    .event-badge.event-service_stopped, .event-badge.event-manual_stop { background: rgba(148, 163, 184, 0.15); color: var(--muted); }
+    .event-badge.event-service_crashed { background: rgba(239, 68, 68, 0.15); color: var(--high); }
+    .event-badge.event-sync_completed { background: rgba(96, 165, 250, 0.15); color: #60A5FA; }
+    .event-detail { color: var(--muted); max-width: 400px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    @media (max-width: 640px) {
+      .detail-grid { grid-template-columns: 1fr; }
+      .control-bar { flex-wrap: wrap; }
+    }
+  </style>
+
+  <script>
+    document.querySelectorAll('.control-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const action = (btn as HTMLElement).dataset.action;
+        const serviceId = (btn as HTMLElement).dataset.service;
+        if (!action || !serviceId) return;
+
+        (btn as HTMLElement).textContent = `${action}ing...`;
+
+        const res = await window.stdoutFetch('/app/api/windlass/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'control', serviceId, command: action }),
+        });
+
+        if (res?.ok) {
+          window.showToast?.(`${action} command sent`, 'success');
+          setTimeout(() => location.reload(), 2000);
+        } else {
+          const data = await res?.json().catch(() => ({}));
+          window.showToast?.(data?.error || `${action} failed`, 'error');
+          location.reload();
+        }
+      });
+    });
+  </script>
+</Layout>

@@ -4,6 +4,7 @@ import Layout from '../../layouts/Layout.astro';
 import { getTenantDb, tenantSchema } from '../../lib/db';
 import { eq, desc, gt, and } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats, startMonitor } from '../../lib/hud';
+import { getServiceSummary, getConfig as getWindlassConfig } from '../../lib/windlass';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -56,6 +57,10 @@ function gaugePercent(value: number, max: number) {
 
 const stacks = db.select().from(tenantSchema.stacks)
   .where(eq(tenantSchema.stacks.userId, user.id)).all();
+
+// Windlass service summary (if configured)
+const windlassConfig = getWindlassConfig(user.id);
+const windlassSummary = windlassConfig ? getServiceSummary(user.id) : null;
 
 // Scanner schedule data
 const schedule = db.select().from(tenantSchema.scannerSchedule)
@@ -235,6 +240,22 @@ function timeAgo(date: Date) {
               <div class="gauge-label">Incidents (7d)</div>
             </div>
           </div>
+
+          {/* Windlass widget (if configured) */}
+          {windlassSummary && windlassSummary.total > 0 && (
+            <a href="/app/tools/windlass" class="windlass-widget">
+              <div class="ww-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="ww-title mono">WINDLASS</span>
+              </div>
+              <div class="ww-stats">
+                <span class="ww-stat"><span class="ww-num" style="color: var(--low)">{windlassSummary.running}</span> running</span>
+                <span class="ww-stat"><span class="ww-num">{windlassSummary.stopped}</span> stopped</span>
+                <span class="ww-stat"><span class="ww-num" style="color: #60A5FA">{windlassSummary.scheduled}</span> scheduled</span>
+                <span class="ww-stat"><span class="ww-num" style="color: #F97316">{windlassSummary.totalMemory.toLocaleString()}</span> MB</span>
+              </div>
+            </a>
+          )}
 
           <!-- Right: Service list + Incidents -->
           <div class="right-panel">
@@ -651,6 +672,15 @@ function timeAgo(date: Date) {
   .right-panel { flex: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow-y: auto; padding-right: 4px; }
 
   /* Service rows — control room list */
+  /* Windlass widget */
+  .windlass-widget { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; text-decoration: none; color: var(--text); transition: border-color 0.15s; grid-column: 1 / -1; margin-bottom: 8px; }
+  .windlass-widget:hover { border-color: var(--accent); }
+  .ww-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); }
+  .ww-title { font-size: 0.7rem; letter-spacing: 0.08em; }
+  .ww-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .ww-stat { font-size: 0.8rem; color: var(--muted); }
+  .ww-num { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; margin-right: 2px; }
+
   .service-list { display: flex; flex-direction: column; gap: 4px; }
   .service-row {
     display: flex;

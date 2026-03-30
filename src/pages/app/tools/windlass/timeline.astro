@@ -1,0 +1,171 @@
+---
+export const prerender = false;
+import Layout from '../../../../layouts/Layout.astro';
+import { getAllServices, getConfig } from '../../../../lib/windlass';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const userId = Astro.locals.workspace?.ownerId || user.id;
+const config = getConfig(userId);
+const services = getAllServices(userId);
+
+if (!config || services.length === 0) return Astro.redirect('/app/tools/windlass');
+
+// Sort: scheduled first, then by name
+const sortedServices = [...services].sort((a, b) => {
+  const order = { scheduled: 0, on_demand: 1, always_on: 2, manual: 3 };
+  const oa = order[a.classification as keyof typeof order] ?? 9;
+  const ob = order[b.classification as keyof typeof order] ?? 9;
+  if (oa !== ob) return oa - ob;
+  return a.name.localeCompare(b.name);
+});
+
+const hours = Array.from({ length: 24 }, (_, i) => i);
+
+const classLabels: Record<string, string> = {
+  always_on: 'Always On',
+  scheduled: 'Scheduled',
+  on_demand: 'On-Demand',
+  manual: 'Manual',
+};
+
+const stateColors: Record<string, string> = {
+  running: 'var(--low)',
+  stopped: 'var(--muted)',
+  partial: '#F97316',
+  error: 'var(--high)',
+  unknown: 'var(--border)',
+};
+---
+<Layout title="Timeline — Windlass">
+  <div class="timeline-page">
+    <div class="timeline-header">
+      <a href="/app/tools/windlass" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Windlass
+      </a>
+      <h1>24-Hour Timeline</h1>
+      <p class="page-subtitle">Runtime windows and service state across a 24-hour period. Green blocks show when scheduled services are expected to run.</p>
+    </div>
+
+    <div class="timeline-container">
+      {/* Hour labels */}
+      <div class="timeline-row timeline-hours">
+        <div class="timeline-label"></div>
+        <div class="timeline-bar">
+          {hours.map(h => (
+            <div class="hour-label" style={`left: ${(h / 24) * 100}%`}>
+              <span>{String(h).padStart(2, '0')}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current time marker */}
+      <div class="now-marker" style={`left: calc(120px + ${(new Date().getHours() + new Date().getMinutes() / 60) / 24 * 100}%)`}>
+        <div class="now-line"></div>
+        <span class="now-label">Now</span>
+      </div>
+
+      {/* Service rows */}
+      {sortedServices.map(svc => {
+        // Calculate runtime window as percentage of 24h
+        let windowStart = 0;
+        let windowEnd = 100;
+        let hasWindow = false;
+
+        if (svc.runtimeWindowStart && svc.runtimeWindowEnd) {
+          hasWindow = true;
+          const [sh, sm] = svc.runtimeWindowStart.split(':').map(Number);
+          const [eh, em] = svc.runtimeWindowEnd.split(':').map(Number);
+          windowStart = ((sh + sm / 60) / 24) * 100;
+          windowEnd = ((eh + em / 60) / 24) * 100;
+        }
+
+        const isAlwaysOn = svc.classification === 'always_on';
+
+        return (
+          <a href={`/app/tools/windlass/services/${svc.id}`} class="timeline-row">
+            <div class="timeline-label">
+              <span class="tl-dot" style={`background: ${stateColors[svc.currentState] || 'var(--muted)'}`}></span>
+              <span class="tl-name">{svc.name}</span>
+              <span class="tl-class">{classLabels[svc.classification]}</span>
+            </div>
+            <div class="timeline-bar">
+              {isAlwaysOn ? (
+                <div class="tl-block tl-always" style="left: 0; width: 100%"></div>
+              ) : hasWindow ? (
+                windowEnd > windowStart ? (
+                  <div class="tl-block tl-scheduled" style={`left: ${windowStart}%; width: ${windowEnd - windowStart}%`}></div>
+                ) : (
+                  <Fragment>
+                    <div class="tl-block tl-scheduled" style={`left: ${windowStart}%; width: ${100 - windowStart}%`}></div>
+                    <div class="tl-block tl-scheduled" style={`left: 0; width: ${windowEnd}%`}></div>
+                  </Fragment>
+                )
+              ) : svc.classification === 'on_demand' ? (
+                svc.currentState === 'running' ? (
+                  <div class="tl-block tl-ondemand" style="left: 0; width: 100%" title="On-demand: currently running"></div>
+                ) : null
+              ) : null}
+            </div>
+          </a>
+        );
+      })}
+    </div>
+
+    <div class="timeline-legend">
+      <div class="legend-item"><span class="legend-swatch tl-always"></span> Always On</div>
+      <div class="legend-item"><span class="legend-swatch tl-scheduled"></span> Scheduled Window</div>
+      <div class="legend-item"><span class="legend-swatch tl-ondemand"></span> On-Demand (active)</div>
+    </div>
+  </div>
+
+  <style>
+    .timeline-page { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .timeline-header { margin-bottom: 1.5rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); text-decoration: none; font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .back-link:hover { color: var(--text); }
+    .timeline-header h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .page-subtitle { color: var(--muted); font-size: 0.85rem; margin: 0; }
+
+    .timeline-container { position: relative; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 0; overflow-x: auto; }
+
+    .timeline-row { display: flex; align-items: center; height: 32px; text-decoration: none; color: var(--text); transition: background 0.1s; }
+    a.timeline-row:hover { background: rgba(255, 255, 255, 0.03); }
+
+    .timeline-hours { height: 24px; border-bottom: 1px solid var(--border); margin-bottom: 0.25rem; }
+
+    .timeline-label { width: 120px; min-width: 120px; padding: 0 0.75rem; display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0; }
+    .tl-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .tl-name { font-size: 0.75rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 70px; }
+    .tl-class { font-size: 0.6rem; color: var(--muted); white-space: nowrap; }
+
+    .timeline-bar { flex: 1; position: relative; height: 100%; min-width: 600px; }
+
+    .hour-label { position: absolute; top: 0; height: 100%; display: flex; align-items: center; border-left: 1px solid var(--border); padding-left: 4px; }
+    .hour-label span { font-size: 0.6rem; color: var(--muted); font-family: var(--font-mono); }
+
+    .tl-block { position: absolute; top: 4px; bottom: 4px; border-radius: 3px; opacity: 0.7; }
+    .tl-always { background: var(--low); opacity: 0.2; }
+    .tl-scheduled { background: #60A5FA; opacity: 0.5; }
+    .tl-ondemand { background: #F97316; opacity: 0.25; }
+
+    .now-marker { position: absolute; top: 0; bottom: 0; z-index: 10; pointer-events: none; }
+    .now-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent, #F97316); }
+    .now-label { position: absolute; top: -2px; left: 4px; font-size: 0.55rem; color: var(--accent, #F97316); font-weight: 700; text-transform: uppercase; }
+
+    .timeline-legend { display: flex; gap: 1.5rem; margin-top: 1rem; padding: 0 0.5rem; }
+    .legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--muted); }
+    .legend-swatch { width: 16px; height: 8px; border-radius: 2px; }
+    .legend-swatch.tl-always { background: var(--low); opacity: 0.4; }
+    .legend-swatch.tl-scheduled { background: #60A5FA; opacity: 0.7; }
+    .legend-swatch.tl-ondemand { background: #F97316; opacity: 0.5; }
+
+    @media (max-width: 640px) {
+      .timeline-label { width: 90px; min-width: 90px; }
+      .tl-name { max-width: 50px; }
+    }
+  </style>
+</Layout>
