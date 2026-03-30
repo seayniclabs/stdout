@@ -246,6 +246,53 @@ const isPaid = tier !== 'free';
       </div>
     </section>
 
+    <!-- AI Providers (BYOK — self-hosted only) -->
+    {mode !== 'saas' && (
+    <section class="section">
+      <h2>AI Providers</h2>
+      <p class="section-desc">Bring your own API key for AI diagnostics. Your key is used first; the platform key is a fallback for diagnostics only.</p>
+
+      <div id="aiProvidersList" class="backup-list">
+        <div class="loading mono">Loading...</div>
+      </div>
+
+      <div id="aiProviderForm" class="ds-add-form" style="display:none;">
+        <div class="ds-form-header">
+          <h3 id="aiFormTitle">Add Provider Key</h3>
+          <button id="aiFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+        <div class="ds-form-body">
+          <label>Provider</label>
+          <select id="aiProviderSelect" class="settings-input">
+            <option value="">Select provider...</option>
+          </select>
+
+          <label>API Key</label>
+          <input type="password" id="aiKeyInput" class="settings-input" placeholder="sk-..." autocomplete="off" />
+
+          <label>Diagnostics Model</label>
+          <select id="aiDiagModel" class="settings-input"></select>
+
+          <div id="aiAutofixSection" style="display:none;">
+            <label>Auto-Fix Model</label>
+            <select id="aiAutofixModel" class="settings-input"></select>
+          </div>
+
+          <div class="ds-form-actions" style="margin-top: 0.75rem;">
+            <button id="aiSaveBtn" class="btn btn-primary btn-sm">Save Key</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="aiAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+        Add Provider
+      </button>
+
+      <div id="aiStatus" class="backup-status"></div>
+    </section>
+    )}
+
     <!-- Data Sources -->
     <section class="section">
       <h2>Data Sources</h2>
@@ -636,6 +683,191 @@ const isPaid = tier !== 'free';
       }).catch(() => {});
     });
   }
+
+  // --- AI Providers (BYOK) ---
+  let aiProvidersData: any[] = [];
+
+  async function loadAIProviders() {
+    const list = document.getElementById('aiProvidersList');
+    if (!list) return;
+
+    const res = await window.stdoutFetch('/app/api/settings/ai-providers');
+    if (!res?.ok) {
+      list.innerHTML = '<div class="empty-hint">Failed to load providers</div>';
+      return;
+    }
+
+    const { providers } = await res.json();
+    aiProvidersData = providers;
+
+    if (!providers || providers.length === 0) {
+      list.innerHTML = '<div class="empty-hint">No AI providers available</div>';
+      return;
+    }
+
+    list.innerHTML = providers.map((p: any) => {
+      const stateLabel = p.state === 'certified' ? 'Certified' : p.state === 'beta' ? 'Beta' : p.state;
+      const stateColor = p.state === 'certified' ? 'var(--low)' : p.state === 'beta' ? '#F97316' : 'var(--muted)';
+      const saved = p.savedKey;
+
+      if (!saved) {
+        return `<div class="ds-row">
+          <div class="ds-row-info">
+            <span class="ds-row-name">${p.name}</span>
+            <span class="ds-row-type" style="color: ${stateColor}">${stateLabel}</span>
+          </div>
+          <span class="ds-row-status" style="color: var(--muted)">No key</span>
+        </div>`;
+      }
+
+      const statusColor = saved.status === 'active' ? 'var(--low)' : 'var(--high)';
+      const validatedText = saved.lastValidatedAt
+        ? new Date(saved.lastValidatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+        : 'never';
+
+      return `<div class="ds-row">
+        <div class="ds-row-info">
+          <span class="ds-row-name">${p.name}</span>
+          <span class="ds-row-type" style="color: ${stateColor}">${stateLabel}</span>
+          <span class="ds-row-meta mono">${saved.keyFingerprint}</span>
+        </div>
+        <div class="ds-row-actions">
+          <span class="ds-row-status" style="color: ${statusColor}">${saved.status}</span>
+          <span class="ds-row-meta">Validated: ${validatedText}</span>
+          <button class="btn btn-ghost btn-sm ai-validate-btn" data-provider="${p.id}">Test</button>
+          <button class="btn btn-ghost btn-sm ai-delete-btn" data-key-id="${saved.id}" data-provider="${p.name}">Delete</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Bind validate buttons
+    document.querySelectorAll('.ai-validate-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const provider = (btn as HTMLElement).dataset.provider;
+        (btn as HTMLElement).textContent = 'Testing...';
+        const res = await window.stdoutFetch('/app/api/settings/ai-providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'validate', provider }),
+        });
+        const data = await res?.json();
+        const statusEl = document.getElementById('aiStatus');
+        if (data?.valid) {
+          if (statusEl) { statusEl.textContent = `${provider} key validated successfully`; statusEl.style.color = 'var(--low)'; }
+        } else {
+          if (statusEl) { statusEl.textContent = `Validation failed: ${data?.error || 'unknown error'}`; statusEl.style.color = 'var(--high)'; }
+        }
+        loadAIProviders();
+      });
+    });
+
+    // Bind delete buttons
+    document.querySelectorAll('.ai-delete-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const keyId = (btn as HTMLElement).dataset.keyId;
+        const name = (btn as HTMLElement).dataset.provider;
+        if (!confirm(`Delete ${name} API key? Diagnostics will fall back to platform key.`)) return;
+        await window.stdoutFetch('/app/api/settings/ai-providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', keyId }),
+        });
+        loadAIProviders();
+      });
+    });
+  }
+
+  // AI Provider form
+  const aiAddBtn = document.getElementById('aiAddBtn');
+  const aiForm = document.getElementById('aiProviderForm');
+  const aiFormCancel = document.getElementById('aiFormCancel');
+  const aiProviderSelect = document.getElementById('aiProviderSelect') as HTMLSelectElement | null;
+  const aiDiagModel = document.getElementById('aiDiagModel') as HTMLSelectElement | null;
+  const aiAutofixModel = document.getElementById('aiAutofixModel') as HTMLSelectElement | null;
+  const aiAutofixSection = document.getElementById('aiAutofixSection');
+  const aiSaveBtn = document.getElementById('aiSaveBtn');
+
+  aiAddBtn?.addEventListener('click', () => {
+    if (aiForm) aiForm.style.display = 'block';
+    if (aiAddBtn) aiAddBtn.style.display = 'none';
+
+    // Populate provider select with providers that don't have a key yet
+    if (aiProviderSelect) {
+      aiProviderSelect.innerHTML = '<option value="">Select provider...</option>';
+      for (const p of aiProvidersData) {
+        if (!p.savedKey) {
+          const label = p.state === 'beta' ? `${p.name} (Beta)` : p.name;
+          aiProviderSelect.innerHTML += `<option value="${p.id}">${label}</option>`;
+        }
+      }
+    }
+  });
+
+  aiFormCancel?.addEventListener('click', () => {
+    if (aiForm) aiForm.style.display = 'none';
+    if (aiAddBtn) aiAddBtn.style.display = '';
+  });
+
+  aiProviderSelect?.addEventListener('change', () => {
+    const providerId = aiProviderSelect.value;
+    const provider = aiProvidersData.find((p: any) => p.id === providerId);
+    if (!provider || !aiDiagModel) return;
+
+    // Populate model selects
+    const diagModels = provider.models.filter((m: any) => m.capability === 'diagnostics' || m.capability === 'both');
+    const fixModels = provider.models.filter((m: any) => m.capability === 'autofix' || m.capability === 'both');
+
+    aiDiagModel.innerHTML = diagModels.map((m: any) => `<option value="${m.id}">${m.name}</option>`).join('');
+
+    if (aiAutofixModel && aiAutofixSection) {
+      if (provider.canAutofix && fixModels.length > 0) {
+        aiAutofixSection.style.display = 'block';
+        aiAutofixModel.innerHTML = fixModels.map((m: any) => `<option value="${m.id}">${m.name}</option>`).join('');
+      } else {
+        aiAutofixSection.style.display = 'none';
+      }
+    }
+  });
+
+  aiSaveBtn?.addEventListener('click', async () => {
+    const provider = aiProviderSelect?.value;
+    const apiKey = (document.getElementById('aiKeyInput') as HTMLInputElement)?.value?.trim();
+    const diagModel = aiDiagModel?.value;
+    const autofixModelVal = aiAutofixModel?.value;
+
+    if (!provider || !apiKey) {
+      window.showToast?.('Provider and API key are required', 'error');
+      return;
+    }
+
+    (aiSaveBtn as HTMLElement).textContent = 'Saving...';
+
+    const res = await window.stdoutFetch('/app/api/settings/ai-providers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'save',
+        provider,
+        apiKey,
+        diagnosticsModel: diagModel,
+        autofixModel: autofixModelVal || null,
+      }),
+    });
+
+    if (res?.ok) {
+      window.showToast?.('API key saved', 'success');
+      if (aiForm) aiForm.style.display = 'none';
+      if (aiAddBtn) aiAddBtn.style.display = '';
+      (document.getElementById('aiKeyInput') as HTMLInputElement).value = '';
+      loadAIProviders();
+    } else {
+      const data = await res?.json().catch(() => ({}));
+      window.showToast?.(data?.error || 'Save failed', 'error');
+    }
+    (aiSaveBtn as HTMLElement).textContent = 'Save Key';
+  });
+
+  loadAIProviders();
 
   // --- Data Sources ---
   const dsList = document.getElementById('dsList')!;

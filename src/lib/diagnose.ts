@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'fs';
 
-function getAnthropicKey(): string {
+export function getAnthropicKey(): string {
   const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
   try {
     return readFileSync(keyPath, 'utf-8').trim();
@@ -13,7 +13,11 @@ function getAnthropicKey(): string {
 }
 
 let _client: Anthropic | null = null;
-function getClient(): Anthropic {
+function getClient(apiKey?: string): Anthropic {
+  if (apiKey) {
+    // BYOK: create a fresh client with the user's key (don't cache)
+    return new Anthropic({ apiKey });
+  }
   if (!_client) {
     _client = new Anthropic({ apiKey: getAnthropicKey() });
   }
@@ -95,8 +99,12 @@ export async function diagnoseIncident(opts: {
   pastResolutions: string[];
   tier: 'free' | 'paid';
   dataSources?: DataSourceContext[];
+  // BYOK overrides (optional — if not provided, uses platform key)
+  apiKey?: string;
+  model?: string;
+  provider?: string;
 }): Promise<DiagnosisResult> {
-  const model = opts.tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001';
+  const model = opts.model || (opts.tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001');
 
   const pastResolutionsBlock = opts.pastResolutions.length > 0
     ? `\n\nPast resolutions for similar incidents:\n${opts.pastResolutions.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
@@ -115,8 +123,13 @@ export async function diagnoseIncident(opts: {
     }
   }
 
+  // For non-Anthropic providers, we'd need different client logic here.
+  // Phase 1 supports Anthropic keys only for diagnostics calls.
+  // OpenAI/Gemini routing is a future enhancement.
+  const client = getClient(opts.apiKey);
+
   const response = await callWithRetry(() =>
-    getClient().messages.create({
+    client.messages.create({
       model,
       max_tokens: 1024,
       system: `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`,

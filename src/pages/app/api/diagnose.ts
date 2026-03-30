@@ -129,6 +129,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const description = `Title: ${incident.title}\n\n${incident.description}`;
 
+  // BYOK credential routing — try user key first, fall back to platform key
+  const { resolveForDiagnostics, logAudit: logProviderAudit } = await import('../../../lib/ai-providers');
+  const credential = resolveForDiagnostics(locals.user.id, tier as 'free' | 'paid');
+
   try {
     const result = await diagnoseIncident({
       stackContext,
@@ -136,7 +140,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
       pastResolutions,
       tier,
       dataSources,
+      // Pass BYOK credential if resolved (otherwise diagnoseIncident uses platform key internally)
+      apiKey: credential?.source === 'user_key' ? credential.apiKey : undefined,
+      model: credential?.model,
+      provider: credential?.provider,
     });
+
+    // Log BYOK audit
+    logProviderAudit(
+      locals.user.id,
+      incidentId,
+      'diagnostics',
+      credential?.provider || 'anthropic',
+      result.model,
+      credential?.source || 'platform_fallback',
+      'success',
+    );
 
     // Store diagnosis
     const diagId = nanoid();
@@ -157,13 +176,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
       title: `Diagnosis: ${incident.title}`,
       body: result.rootCauses[0] || 'Analysis complete',
       url: `/app/incidents/${incidentId}`,
-      metadata: { model: result.model, incidentId },
+      metadata: { model: result.model, incidentId, credentialSource: credential?.source || 'platform_fallback' },
     });
 
     logAudit('ai_diagnosis', {
       userId: locals.user.id,
       ip: getClientIp(request),
-      details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens },
+      details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens, credentialSource: credential?.source || 'platform_fallback' },
     });
 
     return new Response(JSON.stringify(result), {
@@ -171,6 +190,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   } catch (err: any) {
     console.error('Diagnosis error:', err);
+
+    // Log BYOK audit on failure
+    logProviderAudit(
+      locals.user.id,
+      incidentId,
+      'diagnostics',
+      credential?.provider || 'anthropic',
+      credential?.model || 'unknown',
+      credential?.source || 'platform_fallback',
+      'failed',
+      err?.message?.slice(0, 200),
+    );
+
     const status = err?.status === 429 ? 429 : 500;
     const message = status === 429
       ? 'AI service is busy. Please try again in a moment.'

@@ -370,6 +370,34 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       notified INTEGER DEFAULT 0,
       UNIQUE(tool_id, user_id)
     );
+    CREATE TABLE IF NOT EXISTS ai_provider_keys (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      encrypted_api_key TEXT NOT NULL,
+      key_fingerprint TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'active',
+      diagnostics_model TEXT,
+      autofix_model TEXT,
+      platform_fallback INTEGER NOT NULL DEFAULT 1,
+      last_validated_at INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_provider_keys_user ON ai_provider_keys(user_id);
+    CREATE TABLE IF NOT EXISTS ai_execution_audit (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      incident_id TEXT,
+      capability TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      model TEXT NOT NULL,
+      credential_source TEXT NOT NULL,
+      outcome TEXT NOT NULL,
+      failure_reason TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_ai_audit_user ON ai_execution_audit(user_id, created_at);
     CREATE TABLE IF NOT EXISTS windlass_services (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,

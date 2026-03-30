@@ -279,6 +279,44 @@ export const windlassConfig = sqliteTable('windlass_config', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- AI Provider Keys (BYOK) ---
+
+export const aiProviderKeys = sqliteTable('ai_provider_keys', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  provider: text('provider').notNull(),         // anthropic | openai | gemini
+  encryptedApiKey: text('encrypted_api_key').notNull(),
+  keyFingerprint: text('key_fingerprint').notNull(),
+  status: text('status', {
+    enum: ['active', 'invalid', 'revoked'],
+  }).notNull().default('active'),
+  diagnosticsModel: text('diagnostics_model'),
+  autofixModel: text('autofix_model'),
+  platformFallback: integer('platform_fallback', { mode: 'boolean' }).notNull().default(true),
+  lastValidatedAt: integer('last_validated_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  incidentId: text('incident_id'),
+  capability: text('capability', {
+    enum: ['diagnostics', 'autofix_plan', 'autofix_apply'],
+  }).notNull(),
+  provider: text('provider').notNull(),
+  model: text('model').notNull(),
+  credentialSource: text('credential_source', {
+    enum: ['user_key', 'platform_fallback'],
+  }).notNull(),
+  outcome: text('outcome', {
+    enum: ['success', 'failed', 'blocked'],
+  }).notNull(),
+  failureReason: text('failure_reason'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
   rawJson: text('raw_json').notNull(),
