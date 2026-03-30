@@ -24,7 +24,7 @@
     "astro": "^5.17.1",
     "better-sqlite3": "^12.6.2",
     "creatomate": "^1.2.1",
-    "drizzle-orm": "^0.45.1",
+    "drizzle-orm": "^0.45.2",
     "nanoid": "^5.1.6",
     "resend": "^6.9.3",
     "stripe": "^20.4.1"
