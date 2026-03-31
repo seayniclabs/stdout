@@ -131,7 +131,21 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   // BYOK credential routing — try user key first, fall back to platform key
   const { resolveForDiagnostics, logAudit: logProviderAudit } = await import('../../../lib/ai-providers');
-  const credential = resolveForDiagnostics(locals.user.id, tier as 'free' | 'paid');
+  let credential: Awaited<ReturnType<typeof resolveForDiagnostics>> = null;
+  try {
+    credential = resolveForDiagnostics(locals.user.id, tier as 'free' | 'paid');
+  } catch { /* resolver may fail if DB not ready */ }
+
+  // If no credential available at all, return a clean error
+  if (!credential) {
+    return new Response(JSON.stringify({
+      error: 'No AI provider configured. Add an API key in Settings > AI Providers, or ensure the platform key is available.',
+      retryable: false,
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   try {
     const result = await diagnoseIncident({

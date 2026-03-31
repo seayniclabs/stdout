@@ -123,27 +123,79 @@ export async function diagnoseIncident(opts: {
     }
   }
 
-  // For non-Anthropic providers, we'd need different client logic here.
-  // Phase 1 supports Anthropic keys only for diagnostics calls.
-  // OpenAI/Gemini routing is a future enhancement.
-  const client = getClient(opts.apiKey);
+  const systemPrompt = `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`;
 
-  const response = await callWithRetry(() =>
-    client.messages.create({
-      model,
-      max_tokens: 1024,
-      system: `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`,
-      messages: [
-        { role: 'user', content: opts.incidentDescription },
-      ],
-    })
-  );
+  const provider = opts.provider || 'anthropic';
+  let text = '';
+  let promptTokens = 0;
+  let completionTokens = 0;
 
-  const text = response.content[0].type === 'text' ? response.content[0].text : '';
+  if (provider === 'openai') {
+    // OpenAI Chat Completions API
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${opts.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: opts.incidentDescription },
+        ],
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => '');
+      throw Object.assign(new Error(`OpenAI API error: ${res.status}`), { status: res.status, body: err });
+    }
+    const data = await res.json() as any;
+    text = data.choices?.[0]?.message?.content || '';
+    promptTokens = data.usage?.prompt_tokens || 0;
+    completionTokens = data.usage?.completion_tokens || 0;
+  } else if (provider === 'gemini') {
+    // Google Gemini API
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${opts.apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        contents: [{ parts: [{ text: opts.incidentDescription }] }],
+        generationConfig: { maxOutputTokens: 1024 },
+      }),
+      signal: AbortSignal.timeout(60000),
+    });
+    if (!res.ok) {
+      const err = await res.text().catch(() => '');
+      throw Object.assign(new Error(`Gemini API error: ${res.status}`), { status: res.status, body: err });
+    }
+    const data = await res.json() as any;
+    text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    promptTokens = data.usageMetadata?.promptTokenCount || 0;
+    completionTokens = data.usageMetadata?.candidatesTokenCount || 0;
+  } else {
+    // Anthropic (default) — uses SDK with retry logic
+    const client = getClient(opts.apiKey);
+    const response = await callWithRetry(() =>
+      client.messages.create({
+        model,
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: [
+          { role: 'user', content: opts.incidentDescription },
+        ],
+      })
+    );
+    text = response.content[0].type === 'text' ? response.content[0].text : '';
+    promptTokens = response.usage.input_tokens;
+    completionTokens = response.usage.output_tokens;
+  }
 
   let parsed: { rootCauses: string[]; suggestedCommands: string[] };
   try {
-    // Strip markdown code fences if present (models sometimes add them despite instructions)
     let jsonText = text.trim();
     if (jsonText.startsWith('```')) {
       jsonText = jsonText.replace(/^```\w*\n?/, '').replace(/\n?```$/, '');
@@ -160,7 +212,7 @@ export async function diagnoseIncident(opts: {
     rootCauses: parsed.rootCauses || [],
     suggestedCommands: parsed.suggestedCommands || [],
     model,
-    promptTokens: response.usage.input_tokens,
-    completionTokens: response.usage.output_tokens,
+    promptTokens,
+    completionTokens,
   };
 }
