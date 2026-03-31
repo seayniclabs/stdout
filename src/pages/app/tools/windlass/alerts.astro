@@ -1,0 +1,373 @@
+---
+export const prerender = false;
+import Layout from '../../../../layouts/Layout.astro';
+import { getConfig } from '../../../../lib/windlass';
+import { listChannels, listRules, listAlertEvents } from '../../../../lib/alert-router';
+import { getAllServices } from '../../../../lib/windlass';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const userId = Astro.locals.workspace?.ownerId || user.id;
+const config = getConfig(userId);
+if (!config) return Astro.redirect('/app/tools/windlass');
+
+const channels = listChannels(userId);
+const rules = listRules(userId);
+const events = listAlertEvents(userId, 50);
+const services = getAllServices(userId);
+
+function timeAgo(date: Date | null) {
+  if (!date) return 'never';
+  const ms = Date.now() - new Date(date).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+---
+<Layout title="Alerts — Windlass">
+  <div class="alerts-page">
+    <div class="alerts-header">
+      <a href="/app/tools/windlass" class="back-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Windlass
+      </a>
+      <h1>Alert Channels & Rules</h1>
+      <p class="page-subtitle">Configure where alerts go and which services trigger them. Alerts respect Windlass schedules — no false alarms for planned downtime.</p>
+    </div>
+
+    {/* Channels */}
+    <section class="section">
+      <div class="section-header">
+        <h2>Channels ({channels.length})</h2>
+        <button id="addChannelBtn" class="btn btn-primary btn-sm">Add Channel</button>
+      </div>
+
+      {channels.length === 0 ? (
+        <p class="empty-hint">No alert channels configured. Add an email, Telegram, or webhook channel to start receiving alerts.</p>
+      ) : (
+        <div class="channel-list">
+          {channels.map(ch => (
+            <div class="channel-card">
+              <div class="channel-info">
+                <span class={`channel-type type-${ch.type}`}>{ch.type}</span>
+                <span class="channel-name">{ch.name}</span>
+                <span class={`channel-status ${ch.enabled ? 'enabled' : 'disabled'}`}>{ch.enabled ? 'active' : 'disabled'}</span>
+              </div>
+              <div class="channel-actions">
+                <button class="btn btn-ghost btn-sm test-channel-btn" data-channel-id={ch.id}>Test</button>
+                <button class="btn btn-ghost btn-sm toggle-channel-btn" data-channel-id={ch.id} data-enabled={String(ch.enabled)}>{ch.enabled ? 'Disable' : 'Enable'}</button>
+                <button class="btn btn-ghost btn-sm delete-channel-btn" data-channel-id={ch.id} data-name={ch.name}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add channel form */}
+      <div id="channelForm" class="add-form" style="display:none;">
+        <h3>Add Alert Channel</h3>
+        <label>Type</label>
+        <select id="channelType" class="form-input">
+          <option value="telegram">Telegram</option>
+          <option value="email">Email</option>
+          <option value="webhook">Webhook</option>
+        </select>
+        <label>Name</label>
+        <input type="text" id="channelName" class="form-input" placeholder="e.g., My Telegram" />
+
+        <div id="telegramFields">
+          <label>Bot Token</label>
+          <input type="password" id="channelBotToken" class="form-input" placeholder="123456:ABC-DEF..." autocomplete="off" />
+          <label>Chat ID</label>
+          <input type="text" id="channelChatId" class="form-input" placeholder="7939798184" />
+        </div>
+        <div id="emailFields" style="display:none;">
+          <label>Email Address</label>
+          <input type="email" id="channelEmail" class="form-input" placeholder="alerts@example.com" />
+        </div>
+        <div id="webhookFields" style="display:none;">
+          <label>Webhook URL</label>
+          <input type="url" id="channelWebhookUrl" class="form-input" placeholder="https://..." />
+          <label>Signing Secret (optional)</label>
+          <input type="password" id="channelWebhookSecret" class="form-input" placeholder="HMAC secret" autocomplete="off" />
+        </div>
+        <div class="form-actions">
+          <button id="saveChannelBtn" class="btn btn-primary btn-sm">Save Channel</button>
+          <button id="cancelChannelBtn" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    {/* Rules */}
+    <section class="section">
+      <div class="section-header">
+        <h2>Routing Rules ({rules.length})</h2>
+        <button id="addRuleBtn" class="btn btn-primary btn-sm">Add Rule</button>
+      </div>
+
+      {rules.length === 0 ? (
+        <p class="empty-hint">No routing rules. Add a rule to connect services to alert channels.</p>
+      ) : (
+        <div class="rules-list">
+          {rules.map(r => {
+            const ch = channels.find(c => c.id === r.channelId);
+            const svc = services.find(s => s.id === r.serviceId);
+            return (
+              <div class="rule-card">
+                <span class="rule-service">{svc?.name || 'All services'}</span>
+                <span class="rule-arrow">→</span>
+                <span class="rule-channel">{ch?.name || r.channelId}</span>
+                <span class={`rule-severity sev-${r.severityMin}`}>{r.severityMin}+</span>
+                <button class="btn btn-ghost btn-sm delete-rule-btn" data-rule-id={r.id}>Delete</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Add rule form */}
+      <div id="ruleForm" class="add-form" style="display:none;">
+        <h3>Add Routing Rule</h3>
+        <label>Service (leave blank for all)</label>
+        <select id="ruleService" class="form-input">
+          <option value="">All services</option>
+          {services.map(s => <option value={s.id}>{s.name}</option>)}
+        </select>
+        <label>Channel</label>
+        <select id="ruleChannel" class="form-input">
+          {channels.map(ch => <option value={ch.id}>{ch.name} ({ch.type})</option>)}
+        </select>
+        <label>Minimum Severity</label>
+        <select id="ruleSeverity" class="form-input">
+          <option value="info">Info (all alerts)</option>
+          <option value="warning" selected>Warning+</option>
+          <option value="critical">Critical only</option>
+        </select>
+        <div class="form-actions">
+          <button id="saveRuleBtn" class="btn btn-primary btn-sm">Save Rule</button>
+          <button id="cancelRuleBtn" class="btn btn-ghost btn-sm">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    {/* Recent Events */}
+    <section class="section">
+      <h2>Recent Alert Events</h2>
+      {events.length === 0 ? (
+        <p class="empty-hint">No alert events yet. Events are recorded when service state changes are detected during sync.</p>
+      ) : (
+        <div class="events-table">
+          <table>
+            <thead>
+              <tr><th>Time</th><th>Service</th><th>Event</th><th>Severity</th><th>Suppressed</th><th>Channels</th></tr>
+            </thead>
+            <tbody>
+              {events.map(evt => (
+                <tr class={evt.suppressed ? 'suppressed' : ''}>
+                  <td class="mono">{timeAgo(evt.createdAt)}</td>
+                  <td>{evt.serviceId || '—'}</td>
+                  <td>{evt.eventType}</td>
+                  <td><span class={`sev-badge sev-${evt.severity}`}>{evt.severity}</span></td>
+                  <td>{evt.suppressed ? <span class="suppressed-reason" title={evt.suppressionReason || ''}>{evt.suppressionReason || 'yes'}</span> : '—'}</td>
+                  <td class="mono">{evt.channelsNotified ? JSON.parse(evt.channelsNotified).length : 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  </div>
+
+  <style>
+    .alerts-page { max-width: 1000px; margin: 0 auto; padding: 1.5rem; }
+    .back-link { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--muted); text-decoration: none; font-size: 0.8rem; margin-bottom: 0.75rem; }
+    .back-link:hover { color: var(--text); }
+    h1 { font-size: 1.5rem; margin: 0 0 0.25rem; }
+    .page-subtitle { color: var(--muted); font-size: 0.85rem; margin: 0 0 1.5rem; }
+
+    .section { margin-bottom: 2rem; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+    .section h2 { font-size: 1rem; margin: 0; }
+    .empty-hint { font-size: 0.8rem; color: var(--muted); }
+
+    /* Channels */
+    .channel-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .channel-card { display: flex; justify-content: space-between; align-items: center; padding: 0.6rem 0.75rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap; gap: 0.5rem; }
+    .channel-info { display: flex; align-items: center; gap: 0.5rem; }
+    .channel-type { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em; }
+    .type-telegram { background: rgba(0, 136, 204, 0.15); color: #0088cc; }
+    .type-email { background: rgba(59, 130, 246, 0.15); color: #3B82F6; }
+    .type-webhook { background: rgba(168, 85, 247, 0.15); color: #A855F7; }
+    .channel-name { font-weight: 500; font-size: 0.85rem; }
+    .channel-status { font-size: 0.7rem; }
+    .channel-status.enabled { color: var(--low); }
+    .channel-status.disabled { color: var(--muted); }
+    .channel-actions { display: flex; gap: 0.35rem; }
+
+    /* Rules */
+    .rules-list { display: flex; flex-direction: column; gap: 0.5rem; }
+    .rule-card { display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; font-size: 0.85rem; }
+    .rule-service { font-weight: 500; }
+    .rule-arrow { color: var(--muted); }
+    .rule-channel { color: var(--accent, #F97316); }
+    .rule-severity { font-size: 0.65rem; padding: 0.1rem 0.4rem; border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: auto; }
+    .sev-info { background: rgba(96, 165, 250, 0.15); color: #60A5FA; }
+    .sev-warning { background: rgba(249, 115, 22, 0.15); color: #F97316; }
+    .sev-critical { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+
+    /* Events */
+    .events-table { overflow-x: auto; }
+    .events-table table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .events-table th { text-align: left; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); color: var(--muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; }
+    .events-table td { padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+    .events-table tr.suppressed { opacity: 0.5; }
+    .sev-badge { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 3px; font-weight: 600; }
+    .sev-badge.sev-info { background: rgba(96, 165, 250, 0.15); color: #60A5FA; }
+    .sev-badge.sev-warning { background: rgba(249, 115, 22, 0.15); color: #F97316; }
+    .sev-badge.sev-critical { background: rgba(239, 68, 68, 0.15); color: #EF4444; }
+    .suppressed-reason { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+
+    /* Forms */
+    .add-form { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-top: 0.75rem; }
+    .add-form h3 { margin: 0 0 0.75rem; font-size: 0.9rem; }
+    .add-form label { display: block; font-size: 0.8rem; font-weight: 600; margin: 0.5rem 0 0.25rem; }
+    .form-input { width: 100%; padding: 0.4rem 0.6rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); font-size: 0.85rem; }
+    .form-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .mono { font-family: var(--font-mono); }
+  </style>
+
+  <script>
+    const API = '/app/api/windlass/alerts';
+
+    // --- Channel type toggle ---
+    const channelType = document.getElementById('channelType') as HTMLSelectElement;
+    channelType?.addEventListener('change', () => {
+      document.getElementById('telegramFields')!.style.display = channelType.value === 'telegram' ? '' : 'none';
+      document.getElementById('emailFields')!.style.display = channelType.value === 'email' ? '' : 'none';
+      document.getElementById('webhookFields')!.style.display = channelType.value === 'webhook' ? '' : 'none';
+    });
+
+    // --- Add channel ---
+    document.getElementById('addChannelBtn')?.addEventListener('click', () => {
+      document.getElementById('channelForm')!.style.display = 'block';
+    });
+    document.getElementById('cancelChannelBtn')?.addEventListener('click', () => {
+      document.getElementById('channelForm')!.style.display = 'none';
+    });
+
+    document.getElementById('saveChannelBtn')?.addEventListener('click', async () => {
+      const type = (document.getElementById('channelType') as HTMLSelectElement).value;
+      const name = (document.getElementById('channelName') as HTMLInputElement).value.trim();
+      if (!name) { window.showToast?.('Name is required', 'error'); return; }
+
+      let config: any = {};
+      if (type === 'telegram') {
+        config = {
+          bot_token: (document.getElementById('channelBotToken') as HTMLInputElement).value.trim(),
+          chat_id: (document.getElementById('channelChatId') as HTMLInputElement).value.trim(),
+        };
+        if (!config.bot_token || !config.chat_id) { window.showToast?.('Bot token and chat ID are required', 'error'); return; }
+      } else if (type === 'email') {
+        config = { email: (document.getElementById('channelEmail') as HTMLInputElement).value.trim() };
+        if (!config.email) { window.showToast?.('Email is required', 'error'); return; }
+      } else if (type === 'webhook') {
+        config = {
+          url: (document.getElementById('channelWebhookUrl') as HTMLInputElement).value.trim(),
+          secret: (document.getElementById('channelWebhookSecret') as HTMLInputElement).value.trim() || undefined,
+        };
+        if (!config.url) { window.showToast?.('URL is required', 'error'); return; }
+      }
+
+      const res = await window.stdoutFetch(API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_channel', type, name, config }),
+      });
+      if (res?.ok) { location.reload(); } else {
+        const data = await res?.json().catch(() => ({}));
+        window.showToast?.(data?.error || 'Failed', 'error');
+      }
+    });
+
+    // --- Test / Toggle / Delete channel ---
+    document.querySelectorAll('.test-channel-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.channelId;
+        (btn as HTMLElement).textContent = 'Testing...';
+        const res = await window.stdoutFetch(API, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'test_channel', channelId: id }),
+        });
+        const data = await res?.json();
+        if (data?.success) { window.showToast?.('Test sent!', 'success'); }
+        else { window.showToast?.(data?.error || 'Test failed', 'error'); }
+        (btn as HTMLElement).textContent = 'Test';
+      });
+    });
+
+    document.querySelectorAll('.toggle-channel-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = (btn as HTMLElement).dataset.channelId;
+        const enabled = (btn as HTMLElement).dataset.enabled === 'true' ? false : true;
+        await window.stdoutFetch(API, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'toggle_channel', channelId: id, enabled }),
+        });
+        location.reload();
+      });
+    });
+
+    document.querySelectorAll('.delete-channel-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const name = (btn as HTMLElement).dataset.name;
+        if (!confirm(`Delete channel "${name}"? Associated rules will also be removed.`)) return;
+        await window.stdoutFetch(API, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_channel', channelId: (btn as HTMLElement).dataset.channelId }),
+        });
+        location.reload();
+      });
+    });
+
+    // --- Add rule ---
+    document.getElementById('addRuleBtn')?.addEventListener('click', () => {
+      document.getElementById('ruleForm')!.style.display = 'block';
+    });
+    document.getElementById('cancelRuleBtn')?.addEventListener('click', () => {
+      document.getElementById('ruleForm')!.style.display = 'none';
+    });
+
+    document.getElementById('saveRuleBtn')?.addEventListener('click', async () => {
+      const serviceId = (document.getElementById('ruleService') as HTMLSelectElement).value || null;
+      const channelId = (document.getElementById('ruleChannel') as HTMLSelectElement).value;
+      const severityMin = (document.getElementById('ruleSeverity') as HTMLSelectElement).value;
+
+      if (!channelId) { window.showToast?.('Select a channel', 'error'); return; }
+
+      const res = await window.stdoutFetch(API, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'create_rule', channelId, serviceId, severityMin }),
+      });
+      if (res?.ok) { location.reload(); } else {
+        const data = await res?.json().catch(() => ({}));
+        window.showToast?.(data?.error || 'Failed', 'error');
+      }
+    });
+
+    // --- Delete rule ---
+    document.querySelectorAll('.delete-rule-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        await window.stdoutFetch(API, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_rule', ruleId: (btn as HTMLElement).dataset.ruleId }),
+        });
+        location.reload();
+      });
+    });
+  </script>
+</Layout>

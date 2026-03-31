@@ -281,6 +281,49 @@ export const windlassConfig = sqliteTable('windlass_config', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Windlass Alert Router ---
+
+export const alertChannels = sqliteTable('alert_channels', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  type: text('type', {
+    enum: ['email', 'telegram', 'webhook'],
+  }).notNull(),
+  name: text('name').notNull(),                // User-friendly label
+  config: text('config').notNull(),            // JSON: {email}, {bot_token, chat_id}, {url, secret}
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const alertRules = sqliteTable('alert_rules', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  serviceId: text('service_id'),               // NULL = global (all services)
+  channelId: text('channel_id').notNull(),
+  severityMin: text('severity_min', {
+    enum: ['info', 'warning', 'critical'],
+  }).notNull().default('warning'),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const alertEvents = sqliteTable('alert_events', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  serviceId: text('service_id'),
+  eventType: text('event_type').notNull(),     // service_down | service_up | health_degraded | cve_found | image_update
+  severity: text('severity', {
+    enum: ['info', 'warning', 'critical'],
+  }).notNull(),
+  title: text('title').notNull(),
+  detail: text('detail'),
+  suppressed: integer('suppressed', { mode: 'boolean' }).notNull().default(false),
+  suppressionReason: text('suppression_reason'), // outside_schedule | flap_suppression | manual_mute | override_active
+  channelsNotified: text('channels_notified'),   // JSON array of channel IDs
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- AI Provider Keys (BYOK) ---
 
 export const aiProviderKeys = sqliteTable('ai_provider_keys', {

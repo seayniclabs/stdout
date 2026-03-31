@@ -63,6 +63,44 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   // Windlass: manual override (2026-03-30)
   safeAddColumn(sqlite, 'windlass_services', 'override_until', 'INTEGER');
   safeAddColumn(sqlite, 'windlass_services', 'override_reason', 'TEXT');
+
+  // Windlass: alert router tables (2026-03-30)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS alert_channels (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      name TEXT NOT NULL,
+      config TEXT NOT NULL,
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS alert_rules (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      service_id TEXT,
+      channel_id TEXT NOT NULL,
+      severity_min TEXT NOT NULL DEFAULT 'warning',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS alert_events (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      service_id TEXT,
+      event_type TEXT NOT NULL,
+      severity TEXT NOT NULL,
+      title TEXT NOT NULL,
+      detail TEXT,
+      suppressed INTEGER NOT NULL DEFAULT 0,
+      suppression_reason TEXT,
+      channels_notified TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_alert_events_user ON alert_events(user_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_alert_events_service ON alert_events(service_id, created_at);
+  `);
 }
 
 function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {

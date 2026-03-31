@@ -9,6 +9,7 @@
 import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
+import { fireAlert } from './alert-router';
 
 // --- Types ---
 
@@ -126,12 +127,40 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       .get();
 
     if (existing) {
-      // Detect state change → log event
+      // Detect state change → log event + fire alert
       if (existing.currentState !== svc.state) {
         const eventType = svc.state === 'running' ? 'service_started'
           : svc.state === 'stopped' ? 'service_stopped'
           : 'config_changed';
         logEvent(userId, id, eventType, `State changed: ${existing.currentState} → ${svc.state}`);
+
+        // Fire alert for service down events
+        // Alert if service was running and is now stopped or partial (degraded)
+        // Manual services never alert
+        const wasRunning = existing.currentState === 'running';
+        const isDown = svc.state === 'stopped' || svc.state === 'partial';
+        const shouldAlertDown = wasRunning && isDown && classification !== 'manual';
+        if (shouldAlertDown) {
+          fireAlert({
+            userId,
+            serviceId: id,
+            eventType: 'service_down',
+            severity: svc.priority <= 2 ? 'critical' : 'warning',
+            title: `${svc.name} is down`,
+            detail: `Service stopped unexpectedly. Classification: ${classification}, Priority: ${svc.priority}/5`,
+          }).catch(err => console.error('Alert fire error:', err));
+        }
+        // Fire recovery alert
+        if (svc.state === 'running' && existing.currentState === 'stopped') {
+          fireAlert({
+            userId,
+            serviceId: id,
+            eventType: 'service_up',
+            severity: 'info',
+            title: `${svc.name} recovered`,
+            detail: `Service is running again`,
+          }).catch(err => console.error('Alert fire error:', err));
+        }
       }
 
       db.update(tenantSchema.windlassServices)

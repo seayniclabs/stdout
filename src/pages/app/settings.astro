@@ -707,33 +707,33 @@ const isPaid = tier !== 'free';
 
     list.innerHTML = providers.map((p: any) => {
       const stateLabel = p.state === 'certified' ? 'Certified' : p.state === 'beta' ? 'Beta' : p.state;
-      const stateColor = p.state === 'certified' ? 'var(--low)' : p.state === 'beta' ? '#F97316' : 'var(--muted)';
+      const stateColor = p.state === 'certified' ? '#4ade80' : p.state === 'beta' ? '#F97316' : '#94a3b8';
       const saved = p.savedKey;
 
       if (!saved) {
-        return `<div class="ds-row">
-          <div class="ds-row-info">
-            <span class="ds-row-name">${p.name}</span>
-            <span class="ds-row-type" style="color: ${stateColor}">${stateLabel}</span>
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;margin-bottom:6px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-weight:600;font-size:14px;">${p.name}</span>
+            <span style="font-size:11px;color:${stateColor};font-weight:600;">${stateLabel}</span>
           </div>
-          <span class="ds-row-status" style="color: var(--muted)">No key</span>
+          <span style="font-size:12px;color:#94a3b8;">No key</span>
         </div>`;
       }
 
-      const statusColor = saved.status === 'active' ? 'var(--low)' : 'var(--high)';
+      const statusColor = saved.status === 'active' ? '#4ade80' : '#ef4444';
       const validatedText = saved.lastValidatedAt
         ? new Date(saved.lastValidatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : 'never';
 
-      return `<div class="ds-row">
-        <div class="ds-row-info">
-          <span class="ds-row-name">${p.name}</span>
-          <span class="ds-row-type" style="color: ${stateColor}">${stateLabel}</span>
-          <span class="ds-row-meta mono">${saved.keyFingerprint}</span>
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;margin-bottom:6px;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-weight:600;font-size:14px;">${p.name}</span>
+          <span style="font-size:11px;color:${stateColor};font-weight:600;">${stateLabel}</span>
+          <code style="font-size:11px;color:#94a3b8;background:rgba(255,255,255,0.05);padding:2px 6px;border-radius:3px;">${saved.keyFingerprint}</code>
         </div>
-        <div class="ds-row-actions">
-          <span class="ds-row-status" style="color: ${statusColor}">${saved.status}</span>
-          <span class="ds-row-meta">Validated: ${validatedText}</span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-size:12px;color:${statusColor};font-weight:500;">${saved.status}</span>
+          <span style="font-size:11px;color:#64748b;">Validated: ${validatedText}</span>
           <button class="btn btn-ghost btn-sm ai-validate-btn" data-provider="${p.id}">Test</button>
           <button class="btn btn-ghost btn-sm ai-delete-btn" data-key-id="${saved.id}" data-provider="${p.name}">Delete</button>
         </div>

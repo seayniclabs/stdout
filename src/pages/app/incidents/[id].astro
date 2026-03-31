@@ -165,7 +165,7 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
     {current.status !== 'resolved' && (
       <section class="section">
         <h2>Auto-Fix</h2>
-        <p class="section-hint">Generate a step-by-step remediation plan using your AI provider key. Requires a BYOK key in Settings.</p>
+        <p class="section-hint">Generate a step-by-step remediation plan using your AI provider key. Plans use ~4K tokens from your key. <a href="/app/settings" style="color: var(--accent);">Manage keys</a></p>
 
         <div id="autofixContainer">
           <button id="autofixPlanBtn" class="btn btn-primary" data-incident-id={current.id}>
@@ -595,7 +595,9 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .command-line { display: block; font-family: var(--font-mono); font-size: 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; color: var(--accent-light); }
   .diagnosis-meta { margin-top: 12px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
 
-  /* Auto-Fix */
+</style>
+<style is:global>
+  /* Auto-Fix (global — rendered via innerHTML) */
   .section-hint { font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; }
   .autofix-summary { margin-bottom: 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .risk-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border: 1px solid; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
