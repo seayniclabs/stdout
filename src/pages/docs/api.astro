@@ -39,7 +39,7 @@ import '../../styles/global.css';
 
     <p>Pass the token in the <code>Authorization</code> header:</p>
 
-    <pre><code>Authorization: Bearer YOUR_TOKEN</code></pre>
+    <pre is:raw><code>Authorization: Bearer YOUR_TOKEN</code></pre>
 
     <p>Tokens are per-account and carry full read/write access. Treat them like passwords. You can generate multiple tokens (useful for different integrations) and revoke any of them individually without affecting others.</p>
 
@@ -57,7 +57,7 @@ import '../../styles/global.css';
 
     <p>Push an incident from any external system — a monitoring script, a failed cron job, an uptime checker, a CI pipeline. Anything that can make an HTTP request can open an incident in StdOut.</p>
 
-    <pre><code>POST /app/api/incidents/webhook
+    <pre is:raw><code>POST /app/api/incidents/webhook
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -86,7 +86,7 @@ Content-Type: application/json
 
     <h3>Response</h3>
 
-    <pre><code>HTTP 201 Created
+    <pre is:raw><code>HTTP 201 Created
 
 {
   "id": "inc_01j...",
@@ -100,7 +100,7 @@ Content-Type: application/json
 
     <p>A one-liner to open an incident from any shell script:</p>
 
-    <pre><code>#!/bin/bash
+    <pre is:raw><code>#!/bin/bash
 # Run your command; open an incident if it fails
 
 if ! /usr/local/bin/backup.sh; then
@@ -131,7 +131,7 @@ fi</code></pre>
 
     <p>The Scanner uses this endpoint to push discovery results. You can also push custom stack data directly if you have your own inventory source.</p>
 
-    <pre><code>POST /app/api/stacks/import
+    <pre is:raw><code>POST /app/api/stacks/import
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -147,10 +147,10 @@ Content-Type: application/json
 
     <h3>Get current schedule</h3>
 
-    <pre><code>GET /app/api/scanner/schedule
+    <pre is:raw><code>GET /app/api/scanner/schedule
 Authorization: Bearer YOUR_TOKEN</code></pre>
 
-    <pre><code>HTTP 200 OK
+    <pre is:raw><code>HTTP 200 OK
 
 {
   "enabled": true,
@@ -162,7 +162,7 @@ Authorization: Bearer YOUR_TOKEN</code></pre>
 
     <h3>Update schedule</h3>
 
-    <pre><code>PUT /app/api/scanner/schedule
+    <pre is:raw><code>PUT /app/api/scanner/schedule
 Authorization: Bearer YOUR_TOKEN
 Content-Type: application/json
 
@@ -180,12 +180,12 @@ Content-Type: application/json
 
     <h3>Export all data</h3>
 
-    <pre><code>GET /app/api/export
+    <pre is:raw><code>GET /app/api/export
 Authorization: Bearer YOUR_TOKEN</code></pre>
 
     <p>Returns a JSON archive of your full account — incidents, stacks, knowledge base docs, and preferences. Use this for backups or migrations.</p>
 
-    <pre><code>HTTP 200 OK
+    <pre is:raw><code>HTTP 200 OK
 Content-Type: application/json
 
 {
@@ -200,10 +200,10 @@ Content-Type: application/json
 
     <h3>List tokens</h3>
 
-    <pre><code>GET /app/api/tokens
+    <pre is:raw><code>GET /app/api/tokens
 Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
 
-    <pre><code>HTTP 200 OK
+    <pre is:raw><code>HTTP 200 OK
 
 {
   "tokens": [
@@ -218,7 +218,7 @@ Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
 
     <h3>Create a token</h3>
 
-    <pre><code>POST /app/api/tokens
+    <pre is:raw><code>POST /app/api/tokens
 Content-Type: application/json
 
 { "name": "my-script" }</code></pre>
@@ -227,16 +227,16 @@ Content-Type: application/json
 
     <h3>Revoke a token</h3>
 
-    <pre><code>DELETE /app/api/tokens/:id</code></pre>
+    <pre is:raw><code>DELETE /app/api/tokens/:id</code></pre>
 
     <h2>Account</h2>
 
     <h3>Current user</h3>
 
-    <pre><code>GET /app/api/me
+    <pre is:raw><code>GET /app/api/me
 Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
 
-    <pre><code>HTTP 200 OK
+    <pre is:raw><code>HTTP 200 OK
 
 {
   "id": "usr_01j...",
@@ -265,7 +265,7 @@ Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
 
     <p>All error responses include a JSON body:</p>
 
-    <pre><code>{
+    <pre is:raw><code>{
   "error": "missing required field: title"
 }</code></pre>
 

@@ -21,24 +21,6 @@ if (limits.rbacEnabled && isOwnWorkspace) {
   members = getTeamMembers(user.id);
   try {
     const db = getCentralDb();
-
-    // Enrich accepted members with displayName from users table
-    const userIds = members.filter(m => m.userId).map(m => m.userId as string);
-    let userMap: Record<string, string> = {};
-    if (userIds.length > 0) {
-      const rows = db.select({ id: centralSchema.users.id, displayName: centralSchema.users.displayName })
-        .from(centralSchema.users)
-        .where(inArray(centralSchema.users.id, userIds))
-        .all();
-      for (const row of rows) {
-        userMap[row.id] = row.displayName || '';
-      }
-    }
-    members = members.map(m => ({
-      ...m,
-      displayName: m.userId ? (userMap[m.userId] || '') : '',
-    }));
-
     activityLog = db.select({
       action: centralSchema.auditLog.action,
       details: centralSchema.auditLog.details,
@@ -171,10 +153,10 @@ function activityLabel(action: string, details: string | null): string {
 
             {activeMembers.map(m => (
               <div class="member-row" data-id={m.id}>
-                <div class="member-avatar">{(m.displayName || m.email).charAt(0).toUpperCase()}</div>
+                <div class="member-avatar">{m.email.charAt(0).toUpperCase()}</div>
                 <div class="member-info">
-                  <div class="member-name">{m.displayName || m.email}</div>
-                  <div class="member-email mono">{m.displayName ? m.email : `Joined ${timeAgo(m.acceptedAt)}`}</div>
+                  <div class="member-name">{m.email}</div>
+                  <div class="member-email mono">Joined {timeAgo(m.acceptedAt)}</div>
                 </div>
                 <div class="member-role-cell">
                   <select class="role-inline-select" data-member-id={m.id} data-current-role={m.role}>
@@ -183,9 +165,9 @@ function activityLabel(action: string, details: string | null): string {
                     <option value="viewer" selected={m.role === 'viewer'}>Viewer</option>
                   </select>
                 </div>
-                <div class="member-joined">{m.displayName ? timeAgo(m.acceptedAt) : '—'}</div>
+                <div class="member-joined">{timeAgo(m.acceptedAt)}</div>
                 <div class="member-actions">
-                  <button class="btn-remove" data-member-id={m.id} data-email={m.displayName || m.email} title="Remove member">
+                  <button class="btn-remove" data-member-id={m.id} data-email={m.email} title="Remove member">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
                       <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
                     </svg>

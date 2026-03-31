@@ -52,7 +52,7 @@ import '../../styles/global.css';
 
     <p>Quick example — open an incident when a cron job fails:</p>
 
-    <pre><code>curl -s -X POST https://app.stdout.run/app/api/incidents/webhook \
+    <pre is:raw><code>curl -s -X POST https://app.stdout.run/app/api/incidents/webhook \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -142,7 +142,7 @@ import '../../styles/global.css';
 
     <p>Your full incident history is included in the account export. Go to <strong>Settings → Export</strong>, or use the API:</p>
 
-    <pre><code>GET /app/api/export
+    <pre is:raw><code>GET /app/api/export
 Authorization: Bearer YOUR_TOKEN</code></pre>
 
     <p>Returns JSON with all incidents, resolutions, and tags. Useful for backups or migrating to a self-hosted instance.</p>

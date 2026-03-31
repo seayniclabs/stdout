@@ -50,15 +50,15 @@ import '../../styles/global.css';
 
     <p>The StdOut image is hosted on GHCR. You'll need a GitHub account and a personal access token (classic, <code>read:packages</code> scope) to pull it.</p>
 
-    <pre><code>echo YOUR_GITHUB_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin</code></pre>
+    <pre is:raw><code>echo YOUR_GITHUB_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin</code></pre>
 
     <h3>2. Create a compose file</h3>
 
     <p>Create a directory for StdOut and add a <code>docker-compose.yml</code>:</p>
 
-    <pre><code>mkdir ~/stdout && cd ~/stdout</code></pre>
+    <pre is:raw><code>mkdir ~/stdout && cd ~/stdout</code></pre>
 
-    <pre><code># docker-compose.yml
+    <pre is:raw><code># docker-compose.yml
 services:
   stdout:
     image: ghcr.io/seayniclabs/stdout:latest
@@ -83,7 +83,7 @@ services:
 
     <h3>3. Start the container</h3>
 
-    <pre><code>docker compose up -d</code></pre>
+    <pre is:raw><code>docker compose up -d</code></pre>
 
     <p>StdOut starts on port 8100. Open <code>http://localhost:8100</code> to create your admin account.</p>
 
@@ -103,7 +103,7 @@ services:
 
     <p><strong>Back up <code>./data/stdout.db</code> before any update.</strong> A single <code>cp</code> is enough — SQLite databases are just files.</p>
 
-    <pre><code>cp ./data/stdout.db ./data/stdout.db.bak</code></pre>
+    <pre is:raw><code>cp ./data/stdout.db ./data/stdout.db.bak</code></pre>
 
     <h2>Environment variables</h2>
 
@@ -126,27 +126,11 @@ services:
 
     <h3>nginx example</h3>
 
-    <pre><code>server {
-    listen 443 ssl;
-    server_name stdout.yourdomain.com;
-
-    ssl_certificate     /etc/ssl/certs/yourdomain.crt;
-    ssl_certificate_key /etc/ssl/private/yourdomain.key;
-
-    location / {
-        proxy_pass http://localhost:8100;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto https;
-    }
-}</code></pre>
+    <pre><code set:html={`server {\n    listen 443 ssl;\n    server_name stdout.yourdomain.com;\n\n    ssl_certificate     /etc/ssl/certs/yourdomain.crt;\n    ssl_certificate_key /etc/ssl/private/yourdomain.key;\n\n    location / {\n        proxy_pass http://localhost:8100;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto https;\n    }\n}`}></code></pre>
 
     <h3>Caddy example</h3>
 
-    <pre><code>stdout.yourdomain.com {
-    reverse_proxy localhost:8100
-}</code></pre>
+    <pre><code set:html={`stdout.yourdomain.com {\n    reverse_proxy localhost:8100\n}`}></code></pre>
 
     <p>Caddy handles TLS automatically via Let's Encrypt.</p>
 
@@ -154,7 +138,7 @@ services:
 
     <p>To update to the latest release:</p>
 
-    <pre><code># 1. Back up your database
+    <pre is:raw><code># 1. Back up your database
 cp ./data/stdout.db ./data/stdout.db.bak
 
 # 2. Pull the new image
@@ -169,7 +153,7 @@ docker compose up -d</code></pre>
 
     <p>The Scanner works the same way with self-hosted StdOut — point it at your instance URL instead of <code>app.stdout.run</code>:</p>
 
-    <pre><code>docker run --rm \
+    <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner scan \

@@ -64,11 +64,11 @@ import '../../styles/global.css';
 
     <p>The scanner is distributed as a Docker image. Pull it from GitHub Container Registry:</p>
 
-    <pre><code>docker pull ghcr.io/charlieseay/stdout-scanner:latest</code></pre>
+    <pre is:raw><code>docker pull ghcr.io/charlieseay/stdout-scanner:latest</code></pre>
 
     <p>Or run it directly — Docker will pull the image automatically:</p>
 
-    <pre><code>docker run --rm \
+    <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   ghcr.io/charlieseay/stdout-scanner version</code></pre>
 
@@ -80,7 +80,7 @@ import '../../styles/global.css';
 
     <h3>2. Run the interactive setup</h3>
 
-    <pre><code>docker run -it --rm \
+    <pre is:raw><code>docker run -it --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner init</code></pre>
@@ -97,7 +97,7 @@ import '../../styles/global.css';
 
     <h3>3. Run your first scan</h3>
 
-    <pre><code>docker run --rm \
+    <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner scan</code></pre>
@@ -110,7 +110,7 @@ import '../../styles/global.css';
 
     <p>The default. Scans once and exits. Good for manual runs or cron jobs.</p>
 
-    <pre><code># Scan and push to StdOut
+    <pre is:raw><code># Scan and push to StdOut
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
@@ -130,7 +130,7 @@ docker run --rm \
 
     <p>Compares the current scan against the last one and reports only changes. The scanner saves state to <code>/data/last-scan.json</code>.</p>
 
-    <pre><code>docker run --rm \
+    <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner scan --delta</code></pre>
@@ -149,7 +149,7 @@ docker run --rm \
 
     <p>Run the scanner as a persistent container that scans on a schedule:</p>
 
-    <pre><code>docker run -d --name stdout-scanner \
+    <pre is:raw><code>docker run -d --name stdout-scanner \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner scan \
@@ -164,7 +164,7 @@ docker run --rm \
 
     <p>Network discovery is optional and off by default. To enable it, the scanner needs access to your LAN:</p>
 
-    <pre><code># Option 1: Host networking (full LAN visibility)
+    <pre is:raw><code># Option 1: Host networking (full LAN visibility)
 docker run --rm --net=host \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
@@ -189,7 +189,7 @@ docker run --rm --net=host \
 
     <p>Enable everything at once with <code>--full</code>:</p>
 
-    <pre><code>docker run --rm --net=host \
+    <pre is:raw><code>docker run --rm --net=host \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
   ghcr.io/charlieseay/stdout-scanner scan --full \

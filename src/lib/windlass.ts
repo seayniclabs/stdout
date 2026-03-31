@@ -7,7 +7,7 @@
  */
 
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from './db';
+import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 import { fireAlert } from './alert-router';
 
@@ -339,4 +339,17 @@ export function getServiceSummary(userId: string) {
     .reduce((sum, s) => sum + (s.memoryMb || 0), 0);
 
   return { total: services.length, running, stopped, scheduled, totalMemory };
+}
+
+export function getAllWindlassConfigs() {
+  const centralDb = getCentralDb();
+  const users = centralDb.select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+  const configs: any[] = [];
+  for (const user of users) {
+    try {
+      const cfg = getConfig(user.id);
+      if (cfg) configs.push({ ...cfg, userId: user.id });
+    } catch {}
+  }
+  return configs;
 }

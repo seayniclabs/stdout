@@ -168,6 +168,23 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Windlass auto-sync — runs every 60s, checks each user's configured interval
+setInterval(async () => {
+  try {
+    const { getAllWindlassConfigs, syncFromEndpoint } = await import('./lib/windlass');
+    const configs = getAllWindlassConfigs();
+    const now = Date.now();
+    for (const cfg of configs) {
+      if (!cfg.enabled) continue;
+      const intervalMs = (cfg.syncIntervalSeconds || 60) * 1000;
+      const lastSync = cfg.lastSyncedAt ? new Date(cfg.lastSyncedAt).getTime() : 0;
+      if (now - lastSync >= intervalMs) {
+        syncFromEndpoint(cfg.userId).catch(() => {});
+      }
+    }
+  } catch {}
+}, 60 * 1000);
+
 // Weekly digest timer — runs every Monday at 8 AM CT (14:00 UTC)
 // Checks once per hour; only fires if it's Monday 14:xx UTC and hasn't run today
 let lastDigestDate = '';
