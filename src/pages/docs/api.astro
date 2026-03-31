@@ -1,0 +1,306 @@
+---
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut API reference — integrate incidents, scanner results, and infrastructure data with your own tools." />
+  <title>API Reference — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/docs" class="ln-link">Docs</a>
+      <a href="/docs/scanner" class="ln-link">Scanner</a>
+      <a href="/docs/incidents" class="ln-link">Incidents</a>
+      <a href="/docs/api" class="ln-link active">API</a>
+      <a href="/docs/self-host" class="ln-link">Self-Host</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>API Reference</h1>
+    <p class="updated mono">Integrate incidents, scanner results, and infrastructure data with your own tools</p>
+
+    <p>The StdOut API lets you push incidents from external systems, pull your infrastructure data, and manage your account programmatically. All authenticated endpoints use Bearer token auth.</p>
+
+    <h2>Authentication</h2>
+
+    <p>Most API endpoints require a Bearer token. Generate tokens in <a href="/app/settings">Settings → API Tokens</a>. Each token is shown once — copy it before leaving the page.</p>
+
+    <p>Pass the token in the <code>Authorization</code> header:</p>
+
+    <pre><code>Authorization: Bearer YOUR_TOKEN</code></pre>
+
+    <p>Tokens are per-account and carry full read/write access. Treat them like passwords. You can generate multiple tokens (useful for different integrations) and revoke any of them individually without affecting others.</p>
+
+    <h2>Base URL</h2>
+
+    <p>All endpoints are relative to your StdOut instance:</p>
+    <ul>
+      <li><strong>SaaS:</strong> <code>https://app.stdout.run</code></li>
+      <li><strong>Self-hosted:</strong> your configured domain</li>
+    </ul>
+
+    <h2>Incidents</h2>
+
+    <h3>Create an incident</h3>
+
+    <p>Push an incident from any external system — a monitoring script, a failed cron job, an uptime checker, a CI pipeline. Anything that can make an HTTP request can open an incident in StdOut.</p>
+
+    <pre><code>POST /app/api/incidents/webhook
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "title": "Backup job failed on nas01",
+  "severity": "high",
+  "source": "cron",
+  "body": "Exit code 1. Destination /mnt/backup not mounted.",
+  "tags": ["backup", "nas01"]
+}</code></pre>
+
+    <h3>Request fields</h3>
+
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>title</code></td><td>string</td><td>Yes</td><td>Short description of the incident (appears in the dashboard list)</td></tr>
+        <tr><td><code>severity</code></td><td>string</td><td>No</td><td><code>low</code>, <code>medium</code>, <code>high</code>, <code>critical</code>. Defaults to <code>medium</code>.</td></tr>
+        <tr><td><code>source</code></td><td>string</td><td>No</td><td>Where the incident originated — e.g. <code>cron</code>, <code>monitor</code>, <code>deploy</code>, <code>uptime-kuma</code>. Free text.</td></tr>
+        <tr><td><code>body</code></td><td>string</td><td>No</td><td>Full error output, log excerpt, or additional context. Markdown supported.</td></tr>
+        <tr><td><code>tags</code></td><td>string[]</td><td>No</td><td>Labels for filtering and search.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Response</h3>
+
+    <pre><code>HTTP 201 Created
+
+{
+  "id": "inc_01j...",
+  "title": "Backup job failed on nas01",
+  "severity": "high",
+  "status": "open",
+  "created_at": "2025-04-01T14:23:00Z"
+}</code></pre>
+
+    <h3>Example: bash script</h3>
+
+    <p>A one-liner to open an incident from any shell script:</p>
+
+    <pre><code>#!/bin/bash
+# Run your command; open an incident if it fails
+
+if ! /usr/local/bin/backup.sh; then
+  curl -s -X POST https://app.stdout.run/app/api/incidents/webhook \
+    -H "Authorization: Bearer $STDOUT_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "title": "Backup script failed",
+      "severity": "high",
+      "source": "cron",
+      "body": "See /var/log/backup.log for details"
+    }'
+fi</code></pre>
+
+    <h3>Example: n8n HTTP Request node</h3>
+
+    <p>In n8n, add an HTTP Request node after any failing branch:</p>
+    <ul>
+      <li>Method: <code>POST</code></li>
+      <li>URL: <code>https://app.stdout.run/app/api/incidents/webhook</code></li>
+      <li>Authentication: Header Auth → <code>Authorization: Bearer YOUR_TOKEN</code></li>
+      <li>Body: JSON with <code>title</code>, <code>severity</code>, <code>source</code>, <code>body</code></li>
+    </ul>
+
+    <h2>Scanner results</h2>
+
+    <h3>Push a scan</h3>
+
+    <p>The Scanner uses this endpoint to push discovery results. You can also push custom stack data directly if you have your own inventory source.</p>
+
+    <pre><code>POST /app/api/stacks/import
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "source": "scanner",
+  "scan_type": "docker",
+  "data": { ... }
+}</code></pre>
+
+    <p>The scanner binary handles this automatically — you don't need to call this manually unless you're building a custom integration.</p>
+
+    <h2>Scanner schedule</h2>
+
+    <h3>Get current schedule</h3>
+
+    <pre><code>GET /app/api/scanner/schedule
+Authorization: Bearer YOUR_TOKEN</code></pre>
+
+    <pre><code>HTTP 200 OK
+
+{
+  "enabled": true,
+  "frequency": "daily",
+  "time": "03:00",
+  "modules": ["docker", "metrics", "network"],
+  "delta_only": true
+}</code></pre>
+
+    <h3>Update schedule</h3>
+
+    <pre><code>PUT /app/api/scanner/schedule
+Authorization: Bearer YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "enabled": true,
+  "frequency": "daily",
+  "time": "03:00",
+  "modules": ["docker", "metrics", "network", "dns"],
+  "delta_only": true
+}</code></pre>
+
+    <p>A persistent scanner container polls this endpoint and applies changes without requiring a restart. Frequency options: <code>hourly</code>, <code>daily</code>, <code>weekly</code>.</p>
+
+    <h2>Export</h2>
+
+    <h3>Export all data</h3>
+
+    <pre><code>GET /app/api/export
+Authorization: Bearer YOUR_TOKEN</code></pre>
+
+    <p>Returns a JSON archive of your full account — incidents, stacks, knowledge base docs, and preferences. Use this for backups or migrations.</p>
+
+    <pre><code>HTTP 200 OK
+Content-Type: application/json
+
+{
+  "exported_at": "2025-04-01T14:23:00Z",
+  "account": { ... },
+  "incidents": [ ... ],
+  "stacks": [ ... ],
+  "docs": [ ... ]
+}</code></pre>
+
+    <h2>Token management</h2>
+
+    <h3>List tokens</h3>
+
+    <pre><code>GET /app/api/tokens
+Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
+
+    <pre><code>HTTP 200 OK
+
+{
+  "tokens": [
+    {
+      "id": "tok_01j...",
+      "name": "scanner",
+      "created_at": "2025-03-15T09:00:00Z",
+      "last_used_at": "2025-04-01T03:00:00Z"
+    }
+  ]
+}</code></pre>
+
+    <h3>Create a token</h3>
+
+    <pre><code>POST /app/api/tokens
+Content-Type: application/json
+
+{ "name": "my-script" }</code></pre>
+
+    <p>The full token value is returned once in the response. It is not stored and cannot be retrieved again.</p>
+
+    <h3>Revoke a token</h3>
+
+    <pre><code>DELETE /app/api/tokens/:id</code></pre>
+
+    <h2>Account</h2>
+
+    <h3>Current user</h3>
+
+    <pre><code>GET /app/api/me
+Authorization: Bearer YOUR_TOKEN (session cookie also accepted)</code></pre>
+
+    <pre><code>HTTP 200 OK
+
+{
+  "id": "usr_01j...",
+  "email": "you@example.com",
+  "plan": "solo",
+  "workspaces": [
+    { "id": "ws_01j...", "name": "homelab", "role": "owner" }
+  ]
+}</code></pre>
+
+    <h2>Errors</h2>
+
+    <table>
+      <thead>
+        <tr><th>Status</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>400</code></td><td>Bad request — missing required field or invalid value</td></tr>
+        <tr><td><code>401</code></td><td>Missing or invalid token</td></tr>
+        <tr><td><code>403</code></td><td>Token valid but action not permitted for your plan</td></tr>
+        <tr><td><code>404</code></td><td>Resource not found</td></tr>
+        <tr><td><code>429</code></td><td>Rate limited — back off and retry</td></tr>
+        <tr><td><code>500</code></td><td>Server error — check status or contact support</td></tr>
+      </tbody>
+    </table>
+
+    <p>All error responses include a JSON body:</p>
+
+    <pre><code>{
+  "error": "missing required field: title"
+}</code></pre>
+
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-link.active { color: var(--accent-light); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text-secondary); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface); padding: 2px 6px; border-radius: 3px; }
+  .legal pre { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 12px 0; overflow-x: auto; }
+  .legal pre code { background: none; padding: 0; font-size: 12px; line-height: 1.7; }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal strong { color: var(--text); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>

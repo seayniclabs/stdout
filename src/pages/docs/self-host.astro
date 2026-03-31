@@ -1,0 +1,235 @@
+---
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Self-host StdOut on your own infrastructure — Docker Compose setup, data persistence, and first-run configuration." />
+  <title>Self-Hosting — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/docs" class="ln-link">Docs</a>
+      <a href="/docs/scanner" class="ln-link">Scanner</a>
+      <a href="/docs/incidents" class="ln-link">Incidents</a>
+      <a href="/docs/api" class="ln-link">API</a>
+      <a href="/docs/self-host" class="ln-link active">Self-Host</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Self-Hosting</h1>
+    <p class="updated mono">Run StdOut on your own infrastructure — one Docker Compose file, your data stays local</p>
+
+    <p>The self-hosted edition of StdOut runs entirely on your own infrastructure. Your incident history, infrastructure inventory, and knowledge base never leave your machine. You manage updates on your schedule.</p>
+
+    <p>Self-hosting requires a one-time license available from the <a href="https://seayniclabs.com">Seaynic Labs store</a>. After purchase you'll receive a license key and access to the Docker image on GitHub Container Registry.</p>
+
+    <h2>Requirements</h2>
+
+    <ul>
+      <li>Docker and Docker Compose (v2)</li>
+      <li>A machine with at least 512MB available RAM</li>
+      <li>Persistent storage for the database (SQLite)</li>
+      <li>Optional: a reverse proxy (nginx, Caddy, Traefik) for HTTPS and custom domain</li>
+    </ul>
+
+    <h2>Installation</h2>
+
+    <h3>1. Authenticate with GitHub Container Registry</h3>
+
+    <p>The StdOut image is hosted on GHCR. You'll need a GitHub account and a personal access token (classic, <code>read:packages</code> scope) to pull it.</p>
+
+    <pre><code>echo YOUR_GITHUB_PAT | docker login ghcr.io -u YOUR_GITHUB_USERNAME --password-stdin</code></pre>
+
+    <h3>2. Create a compose file</h3>
+
+    <p>Create a directory for StdOut and add a <code>docker-compose.yml</code>:</p>
+
+    <pre><code>mkdir ~/stdout && cd ~/stdout</code></pre>
+
+    <pre><code># docker-compose.yml
+services:
+  stdout:
+    image: ghcr.io/seayniclabs/stdout:latest
+    restart: unless-stopped
+    ports:
+      - "8100:3000"
+    environment:
+      - TZ=America/Chicago
+      - STDOUT_LICENSE_KEY=your-license-key
+      - STDOUT_SECRET=a-long-random-string-for-session-signing
+      - STDOUT_URL=https://your-domain.com
+    volumes:
+      - ./data:/app/data</code></pre>
+
+    <p>Replace:</p>
+    <ul>
+      <li><code>your-license-key</code> — from your purchase confirmation email</li>
+      <li><code>a-long-random-string-for-session-signing</code> — generate with <code>openssl rand -hex 32</code></li>
+      <li><code>https://your-domain.com</code> — your public URL (used for OAuth callbacks and email links)</li>
+      <li><code>America/Chicago</code> — your timezone</li>
+    </ul>
+
+    <h3>3. Start the container</h3>
+
+    <pre><code>docker compose up -d</code></pre>
+
+    <p>StdOut starts on port 8100. Open <code>http://localhost:8100</code> to create your admin account.</p>
+
+    <h2>Data persistence</h2>
+
+    <p>All data lives in the <code>./data</code> directory (mapped to <code>/app/data</code> inside the container):</p>
+
+    <table>
+      <thead>
+        <tr><th>Path</th><th>Contents</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>./data/stdout.db</code></td><td>SQLite database — incidents, stacks, docs, user accounts</td></tr>
+        <tr><td><code>./data/backups/</code></td><td>Encrypted backup archives (if backups are enabled)</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Back up <code>./data/stdout.db</code> before any update.</strong> A single <code>cp</code> is enough — SQLite databases are just files.</p>
+
+    <pre><code>cp ./data/stdout.db ./data/stdout.db.bak</code></pre>
+
+    <h2>Environment variables</h2>
+
+    <table>
+      <thead>
+        <tr><th>Variable</th><th>Required</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>STDOUT_LICENSE_KEY</code></td><td>Yes</td><td>License key from your purchase</td></tr>
+        <tr><td><code>STDOUT_SECRET</code></td><td>Yes</td><td>Random string for session signing — keep this stable</td></tr>
+        <tr><td><code>STDOUT_URL</code></td><td>Yes</td><td>Public URL of your instance (no trailing slash)</td></tr>
+        <tr><td><code>TZ</code></td><td>Recommended</td><td>Timezone for timestamps (e.g. <code>America/New_York</code>)</td></tr>
+        <tr><td><code>STDOUT_PORT</code></td><td>No</td><td>Internal port to bind (default: <code>3000</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Reverse proxy</h2>
+
+    <p>To serve StdOut over HTTPS with a custom domain, put it behind a reverse proxy. The container listens on port 3000 internally (mapped to 8100 in the example above).</p>
+
+    <h3>nginx example</h3>
+
+    <pre><code>server {
+    listen 443 ssl;
+    server_name stdout.yourdomain.com;
+
+    ssl_certificate     /etc/ssl/certs/yourdomain.crt;
+    ssl_certificate_key /etc/ssl/private/yourdomain.key;
+
+    location / {
+        proxy_pass http://localhost:8100;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto https;
+    }
+}</code></pre>
+
+    <h3>Caddy example</h3>
+
+    <pre><code>stdout.yourdomain.com {
+    reverse_proxy localhost:8100
+}</code></pre>
+
+    <p>Caddy handles TLS automatically via Let's Encrypt.</p>
+
+    <h2>Updating</h2>
+
+    <p>To update to the latest release:</p>
+
+    <pre><code># 1. Back up your database
+cp ./data/stdout.db ./data/stdout.db.bak
+
+# 2. Pull the new image
+docker compose pull
+
+# 3. Restart with the new image
+docker compose up -d</code></pre>
+
+    <p>StdOut runs database migrations automatically on startup. If a migration fails, the container will exit rather than corrupt your data — restore from backup and report the issue.</p>
+
+    <h2>Connecting the Scanner</h2>
+
+    <p>The Scanner works the same way with self-hosted StdOut — point it at your instance URL instead of <code>app.stdout.run</code>:</p>
+
+    <pre><code>docker run --rm \
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \
+  -v ~/.stdout:/data \
+  ghcr.io/charlieseay/stdout-scanner scan \
+  --url https://stdout.yourdomain.com \
+  --token YOUR_TOKEN</code></pre>
+
+    <p>See the <a href="/docs/scanner">Scanner documentation</a> for the full setup guide.</p>
+
+    <h2>Community knowledge base sync</h2>
+
+    <p>Self-hosted instances can pull the curated community knowledge base — real-world resolutions contributed and sanitized by other StdOut users. Sync runs automatically in the background once configured.</p>
+
+    <p>Enable it in <strong>Settings → Knowledge Base → Community Sync</strong>. Your instance will check for new community docs periodically and add them as read-only entries. You can fork any community doc to make it your own and edit it.</p>
+
+    <h2>Troubleshooting</h2>
+
+    <h3>Container exits immediately</h3>
+    <p>Check logs with <code>docker compose logs stdout</code>. Missing required environment variables (<code>STDOUT_LICENSE_KEY</code>, <code>STDOUT_SECRET</code>, <code>STDOUT_URL</code>) will cause an immediate exit with a descriptive error.</p>
+
+    <h3>License key not accepted</h3>
+    <p>License validation requires the container to reach <code>api.seayniclabs.com</code>. Check that outbound HTTPS is not blocked by your firewall. If your instance is air-gapped, contact support for an offline license.</p>
+
+    <h3>Database locked error</h3>
+    <p>Only one container instance should write to <code>stdout.db</code> at a time. If you're running multiple replicas, they will conflict — StdOut self-hosted is single-instance by design.</p>
+
+    <h3>Session expires on restart</h3>
+    <p>Make sure <code>STDOUT_SECRET</code> is stable across restarts. If you regenerate it, all active sessions will be invalidated and users will need to log in again.</p>
+
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-link.active { color: var(--accent-light); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text-secondary); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface); padding: 2px 6px; border-radius: 3px; }
+  .legal pre { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 12px 0; overflow-x: auto; }
+  .legal pre code { background: none; padding: 0; font-size: 12px; line-height: 1.7; }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal strong { color: var(--text); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>

@@ -7,14 +7,12 @@ import { checkForUpdate, type UpdateCheckResult } from '../../lib/update-check';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-// Version check (silent failure — never blocks the page)
 let updateInfo: UpdateCheckResult | null = null;
 try {
   updateInfo = await checkForUpdate();
 } catch {}
 const currentVersion = updateInfo?.currentVersion ?? '1.2.0';
 const hasUpdate = updateInfo?.hasUpdate ?? false;
-const latestVersion = updateInfo?.latestVersion ?? currentVersion;
 const mode = process.env.STDOUT_MODE || 'saas';
 
 const { tier, limits } = getUserLimits(user);
@@ -30,10 +28,12 @@ const isPaid = tier !== 'free';
 ---
 <Layout title="Settings — StdOut">
   <div class="settings-page">
-    <h1>Account Settings</h1>
-    <span class="version-label mono">StdOut v{currentVersion}</span>
 
-    <!-- Update banner (if available) -->
+    <div class="settings-header">
+      <h1>Settings</h1>
+      <span class="version-label mono">v{currentVersion}</span>
+    </div>
+
     {hasUpdate && updateInfo && (
       <a href={updateInfo.releaseUrl} class="update-banner" target="_blank" rel="noopener">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -41,473 +41,496 @@ const isPaid = tier !== 'free';
       </a>
     )}
 
-    <!-- Profile -->
-    <section class="section">
-      <h2>Profile</h2>
-      <div class="profile-info">
-        <div class="profile-row">
-          <span class="label">Email</span>
-          <span class="value mono">{user.email}</span>
-        </div>
-        <div class="profile-row">
-          <span class="label">Display name</span>
-          <span class="value">{user.displayName || '—'}</span>
-        </div>
-        <div class="profile-row">
-          <span class="label">Plan</span>
-          <span class="value">{tierLabel}</span>
-          {!isPaid && <a href={upgradeUrl} class="btn btn-primary btn-sm" style="margin-left: 12px;" target="_blank" rel="noopener">Upgrade</a>}
-        </div>
-      </div>
-    </section>
+    <!-- Tab bar -->
+    <div class="settings-tabs" role="tablist" aria-label="Settings sections">
+      <button class="tab-btn active" data-tab="account" role="tab" aria-selected="true" aria-controls="tab-account">Account</button>
+      <button class="tab-btn" data-tab="integrations" role="tab" aria-selected="false" aria-controls="tab-integrations">Integrations</button>
+      <button class="tab-btn" data-tab="data" role="tab" aria-selected="false" aria-controls="tab-data">Data</button>
+    </div>
 
-    <!-- Billing -->
-    <section class="section">
-      <h2>Plan & Billing</h2>
-      <div class="billing-info">
-        <div class="tier-card">
-          <div class="tier-header">
-            <span class="tier-name">{tierLabel}</span>
-            {user.subscriptionStatus === 'active' && <span class="tier-badge success">Active</span>}
-            {user.subscriptionStatus === 'past_due' && <span class="tier-badge warning">Payment past due</span>}
-            {user.subscriptionStatus === 'cancelled' && <span class="tier-badge muted">Cancelled</span>}
-            {tier === 'self-host' && user.subscriptionStatus !== 'past_due' && <span class="tier-badge success">Lifetime license</span>}
-          </div>
-          <div class="tier-limits">
-            <div class="limit-row"><span>Stacks</span><span>{limits.maxStacks === Infinity ? 'Unlimited' : limits.maxStacks}</span></div>
-            <div class="limit-row"><span>Incidents/month</span><span>{limits.maxIncidentsPerMonth === Infinity ? 'Unlimited' : limits.maxIncidentsPerMonth}</span></div>
-            <div class="limit-row"><span>Doc storage</span><span>{limits.maxDocsStorageMB === Infinity ? 'Unlimited' : `${limits.maxDocsStorageMB}MB`}</span></div>
-            <div class="limit-row"><span>Monitors</span><span>{limits.maxMonitors === Infinity ? 'Unlimited' : limits.maxMonitors}</span></div>
-            <div class="limit-row"><span>AI model</span><span>{limits.aiModel === 'sonnet' ? 'Sonnet' : 'Haiku'}</span></div>
-            <div class="limit-row"><span>Backups</span><span>{limits.backupsEnabled ? 'Yes' : 'No'}</span></div>
-            <div class="limit-row"><span>Public status pages</span><span>{limits.publicStatusPages ? 'Yes' : 'No'}</span></div>
-            <div class="limit-row"><span>Weekly digest</span><span>{limits.weeklyDigest ? 'Yes' : 'No'}</span></div>
-          </div>
-          {!isPaid && (
-            <div class="tier-upgrade">
-              <p>Upgrade for unlimited stacks, incidents, Sonnet AI, backups, and more.</p>
-              <div class="upgrade-buttons">
-                <a href="https://store.seayniclabs.com/products/stdout-solo" class="btn btn-primary" target="_blank" rel="noopener">Solo — $12/mo</a>
-                <a href="https://store.seayniclabs.com/products/stdout-shop" class="btn btn-secondary" target="_blank" rel="noopener">Shop — $24/mo</a>
-                <a href="https://store.seayniclabs.com/products/stdout-self-host" class="btn btn-secondary" target="_blank" rel="noopener">Self-Host — $149</a>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-    </section>
+    <!-- ── TAB 1: ACCOUNT ── -->
+    <div id="tab-account" class="tab-panel active" role="tabpanel">
 
-    <!-- Team (Shop) -->
-    {limits.rbacEnabled && (
+      <!-- Profile -->
       <section class="section">
-        <h2>Team Members</h2>
-        <p class="section-desc">Manage your team. Shop plan includes up to {limits.maxSeats} seats.</p>
-        <div class="team-section">
-          <div id="teamList" class="team-list">
-            <div class="team-loading">Loading team...</div>
+        <h2>Profile</h2>
+        <div class="profile-info">
+          <div class="profile-row">
+            <span class="label">Email</span>
+            <span class="value mono">{user.email}</span>
           </div>
-          <div class="team-invite">
-            <input type="email" id="inviteEmail" placeholder="Email address" class="settings-input" />
-            <select id="inviteRole" class="settings-input">
-              <option value="viewer">Viewer</option>
-              <option value="editor">Editor</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button id="inviteBtn" class="btn btn-primary btn-sm">Invite</button>
+          <div class="profile-row">
+            <span class="label">Display name</span>
+            <span class="value">{user.displayName || '—'}</span>
           </div>
-          <div id="teamStatus" class="backup-status"></div>
+          <div class="profile-row">
+            <span class="label">Plan</span>
+            <span class="value">{tierLabel}</span>
+            {!isPaid && <a href={upgradeUrl} class="btn btn-primary btn-sm" style="margin-left: 12px;" target="_blank" rel="noopener">Upgrade</a>}
+          </div>
         </div>
       </section>
-    )}
 
-    <!-- Feature Requests -->
-    <section class="section">
-      <h2>Feature Requests</h2>
-      <p class="section-desc">Request features or improvements. We read every submission.</p>
-
-      <div id="featureRequestList" class="backup-list">
-        <div class="loading mono">Loading...</div>
-      </div>
-
-      <div id="featureRequestForm" style="display:none; margin-top: 0.75rem;">
-        <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
-          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
-          <input type="text" id="frTitle" class="settings-input" placeholder="Short description of what you need" />
-          <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
-          <select id="frCategory" class="settings-input">
-            <option value="feature">New Feature</option>
-            <option value="improvement">Improvement</option>
-            <option value="integration">Integration</option>
-            <option value="bug">Bug Report</option>
-            <option value="other">Other</option>
-          </select>
-          <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Description</label>
-          <textarea id="frDescription" class="settings-input" rows="4" placeholder="What problem does this solve? How would you use it?"></textarea>
-          <div style="display: flex; gap: 8px; margin-top: 8px;">
-            <button id="frSubmitBtn" class="btn btn-primary btn-sm">Submit</button>
-            <button id="frCancelBtn" class="btn btn-ghost btn-sm">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <button id="frAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">Request a feature</button>
-      <div id="frStatus" class="backup-status"></div>
-    </section>
-
-    <!-- Branding (Solo+) -->
-    <section class="section">
-      <h2>Workspace Branding</h2>
-      <p class="section-desc">Customize how StdOut looks for your workspace. Solo tier and above.</p>
-      <div class="brand-form">
-        <label>
-          <span>Workspace name</span>
-          <input type="text" id="brandName" placeholder="e.g. My Lab" class="settings-input" />
-        </label>
-        <label>
-          <span>Accent color</span>
-          <div class="color-row">
-            <input type="color" id="brandColor" value="#F97316" class="color-picker" />
-            <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
-          </div>
-        </label>
-        <button id="saveBrandingBtn" class="btn btn-primary btn-sm">Save branding</button>
-        <div id="brandingStatus" class="backup-status"></div>
-      </div>
-    </section>
-
-    <!-- Notifications -->
-    <section class="section">
-      <h2>Notifications</h2>
-      <p class="section-desc">Get notified when incidents are created or diagnoses complete.</p>
-
-      <div id="notifList" class="backup-list">
-        <div class="loading mono">Loading...</div>
-      </div>
-
-      <div class="notif-add">
-        <select id="notifChannel" class="settings-input" style="width: 120px;">
-          <option value="email">Email</option>
-          <option value="webhook">Webhook</option>
-        </select>
-        <input type="text" id="notifDest" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
-        <button id="addNotifBtn" class="btn btn-primary btn-sm">Add</button>
-      </div>
-      <div class="notif-events mono" style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
-        Events: incident_created, diagnosis_complete, severity_critical, backup_complete
-      </div>
-      <div id="notifStatus" class="backup-status"></div>
-    </section>
-
-    <!-- Add-ons -->
-    <section class="section">
-      <h2>Add-ons</h2>
-      <p class="section-desc">Control how add-on recommendations appear in your console.</p>
-      <div class="toggle-row">
-        <label class="toggle-label" for="addonsToggle">
-          <span>Show add-on recommendations</span>
-          <span class="toggle-hint">Suggests tools from the Seaynic Labs store based on what's running in your stack.</span>
-        </label>
-        <button id="addonsToggle" class="toggle-btn" role="switch" aria-checked="true">
-          <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        </button>
-      </div>
-      <div class="toggle-row" style="margin-top:0.75rem;">
-        <a href="/app/addons" class="btn btn-ghost btn-sm">View add-ons panel &rarr;</a>
-      </div>
-    </section>
-
-    <!-- Scanner Schedule -->
-    <section class="section">
-      <h2>Scanner Schedule</h2>
-      <p class="section-desc">Control how often the scanner runs and what it discovers. The scanner polls this configuration automatically.</p>
-
-      <div class="scanner-form">
-        <div class="scanner-row">
-          <label>
-            <span>Frequency</span>
-            <select id="scanInterval" class="settings-input">
-              <option value="hourly">Hourly</option>
-              <option value="daily" selected>Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </label>
-
-          <label id="scanWeekdayLabel" style="display:none;">
-            <span>Day</span>
-            <select id="scanWeekday" class="settings-input">
-              <option value="0">Sunday</option>
-              <option value="1">Monday</option>
-              <option value="2">Tuesday</option>
-              <option value="3">Wednesday</option>
-              <option value="4">Thursday</option>
-              <option value="5">Friday</option>
-              <option value="6">Saturday</option>
-            </select>
-          </label>
-
-          <label id="scanTimeLabel">
-            <span>Time</span>
-            <div class="time-row">
-              <input type="number" id="scanHour" min="0" max="23" value="3" class="settings-input time-input" />
-              <span class="time-sep">:</span>
-              <input type="number" id="scanMinute" min="0" max="59" value="0" class="settings-input time-input" />
+      <!-- Plan & Billing -->
+      <section class="section">
+        <h2>Plan &amp; Billing</h2>
+        <div class="billing-info">
+          <div class="tier-card">
+            <div class="tier-header">
+              <span class="tier-name">{tierLabel}</span>
+              {user.subscriptionStatus === 'active' && <span class="tier-badge success">Active</span>}
+              {user.subscriptionStatus === 'past_due' && <span class="tier-badge warning">Payment past due</span>}
+              {user.subscriptionStatus === 'cancelled' && <span class="tier-badge muted">Cancelled</span>}
+              {tier === 'self-host' && user.subscriptionStatus !== 'past_due' && <span class="tier-badge success">Lifetime license</span>}
             </div>
-          </label>
-        </div>
-
-        <div class="scanner-modules">
-          <span class="module-label">Modules</span>
-          <label class="module-check"><input type="checkbox" id="modDocker" checked disabled /> Docker containers</label>
-          <label class="module-check"><input type="checkbox" id="modMetrics" checked /> Resource metrics</label>
-          <label class="module-check"><input type="checkbox" id="modNetwork" /> Network devices</label>
-          <label class="module-check"><input type="checkbox" id="modDns" /> DNS &amp; services</label>
-          <label class="module-check"><input type="checkbox" id="modAuth" /> Auth detection</label>
-        </div>
-
-        <label>
-          <span>Subnets <span style="font-weight:400;color:var(--text-muted)">(leave empty for auto-detect)</span></span>
-          <input type="text" id="scanSubnets" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
-        </label>
-
-        <div class="scanner-actions">
-          <label class="scanner-toggle">
-            <input type="checkbox" id="scanEnabled" checked />
-            <span>Scanning enabled</span>
-          </label>
-          <button id="saveScannerBtn" class="btn btn-primary btn-sm">Save schedule</button>
-        </div>
-        <div id="scannerStatus" class="backup-status"></div>
-      </div>
-    </section>
-
-    <!-- AI Providers (BYOK — self-hosted only) -->
-    {mode !== 'saas' && (
-    <section class="section">
-      <h2>AI Providers</h2>
-      <p class="section-desc">Bring your own API key for AI diagnostics. Your key is used first; the platform key is a fallback for diagnostics only.</p>
-
-      <div id="aiProvidersList" class="backup-list">
-        <div class="loading mono">Loading...</div>
-      </div>
-
-      <div id="aiProviderForm" class="ds-add-form" style="display:none;">
-        <div class="ds-form-header">
-          <h3 id="aiFormTitle">Add Provider Key</h3>
-          <button id="aiFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
-        </div>
-        <div class="ds-form-body">
-          <label>Provider</label>
-          <select id="aiProviderSelect" class="settings-input">
-            <option value="">Select provider...</option>
-          </select>
-
-          <label>API Key</label>
-          <input type="password" id="aiKeyInput" class="settings-input" placeholder="sk-..." autocomplete="off" />
-
-          <label>Diagnostics Model</label>
-          <select id="aiDiagModel" class="settings-input"></select>
-
-          <div id="aiAutofixSection" style="display:none;">
-            <label>Auto-Fix Model</label>
-            <select id="aiAutofixModel" class="settings-input"></select>
-          </div>
-
-          <div class="ds-form-actions">
-            <button id="aiSaveBtn" class="btn btn-primary btn-sm">Save Key</button>
+            <div class="tier-limits">
+              <div class="limit-row"><span>Stacks</span><span>{limits.maxStacks === Infinity ? 'Unlimited' : limits.maxStacks}</span></div>
+              <div class="limit-row"><span>Incidents/month</span><span>{limits.maxIncidentsPerMonth === Infinity ? 'Unlimited' : limits.maxIncidentsPerMonth}</span></div>
+              <div class="limit-row"><span>Doc storage</span><span>{limits.maxDocsStorageMB === Infinity ? 'Unlimited' : `${limits.maxDocsStorageMB}MB`}</span></div>
+              <div class="limit-row"><span>Monitors</span><span>{limits.maxMonitors === Infinity ? 'Unlimited' : limits.maxMonitors}</span></div>
+              <div class="limit-row"><span>AI model</span><span>{limits.aiModel === 'sonnet' ? 'Sonnet' : 'Haiku'}</span></div>
+              <div class="limit-row"><span>Team seats</span><span>{limits.maxSeats === 1 ? '1 (Solo)' : limits.maxSeats}</span></div>
+              <div class="limit-row"><span>Backups</span><span>{limits.backupsEnabled ? 'Yes' : 'No'}</span></div>
+              <div class="limit-row"><span>Public status pages</span><span>{limits.publicStatusPages ? 'Yes' : 'No'}</span></div>
+            </div>
+            {!isPaid && (
+              <div class="tier-upgrade">
+                <p>Upgrade for unlimited stacks, incidents, Sonnet AI, backups, team seats, and more.</p>
+                <div class="upgrade-buttons">
+                  <a href="https://store.seayniclabs.com/products/stdout-solo" class="btn btn-primary" target="_blank" rel="noopener">Solo — $12/mo</a>
+                  <a href="https://store.seayniclabs.com/products/stdout-shop" class="btn btn-secondary" target="_blank" rel="noopener">Shop — $24/mo</a>
+                  <a href="https://store.seayniclabs.com/products/stdout-self-host" class="btn btn-secondary" target="_blank" rel="noopener">Self-Host — $149</a>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      </section>
 
-      <button id="aiAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
-        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
-        Add Provider
-      </button>
+      <!-- Team (Shop) -->
+      {limits.rbacEnabled && (
+        <section class="section">
+          <h2>Team Members</h2>
+          <p class="section-desc">Manage your team. Shop plan includes up to {limits.maxSeats} seats. <a href="/app/team" class="section-link">Open Team panel &rarr;</a></p>
+          <div class="team-section">
+            <div id="teamList" class="team-list">
+              <div class="team-loading">Loading team...</div>
+            </div>
+            <div class="team-invite">
+              <input type="email" id="inviteEmail" placeholder="Email address" class="settings-input" />
+              <select id="inviteRole" class="settings-input">
+                <option value="viewer">Viewer</option>
+                <option value="editor">Editor</option>
+                <option value="admin">Admin</option>
+              </select>
+              <button id="inviteBtn" class="btn btn-primary btn-sm">Invite</button>
+            </div>
+            <div id="teamStatus" class="backup-status"></div>
+          </div>
+        </section>
+      )}
 
-      <div id="aiStatus" class="backup-status"></div>
-    </section>
-    )}
-
-    <!-- Data Sources -->
-    <section class="section">
-      <h2>Data Sources</h2>
-      <p class="section-desc">Connect monitoring, security, and observability tools to enrich incidents and power the HUD.</p>
-
-      <div id="dsList" class="backup-list">
-        <div class="loading mono">Loading...</div>
-      </div>
-
-      <div id="dsRecommendations" class="backup-list"></div>
-
-      <div class="ds-add-form" id="dsAddForm" style="display:none;">
-        <div class="ds-form-header">
-          <h3 id="dsFormTitle">Add Data Source</h3>
-          <button id="dsFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
-        </div>
-        <label>
-          <span>Type</span>
-          <select id="dsType" class="settings-input">
-            <option value="influxdb">InfluxDB</option>
-            <option value="prometheus">Prometheus</option>
-            <option value="trivy">Trivy</option>
-            <option value="uptime-kuma">Uptime Kuma</option>
-            <option value="loki">Loki</option>
-            <option value="graylog">Graylog</option>
-            <option value="crowdsec">CrowdSec</option>
-            <option value="pihole">Pi-hole</option>
-          </select>
-        </label>
-        <label>
-          <span>Name</span>
-          <input type="text" id="dsName" placeholder="e.g. My InfluxDB" class="settings-input" />
-        </label>
-        <label>
-          <span>URL</span>
-          <input type="text" id="dsUrl" placeholder="http://localhost:8086" class="settings-input mono" />
-        </label>
-        <label id="dsTokenLabel">
-          <span id="dsTokenLabelText">API Token</span>
-          <input type="password" id="dsToken" placeholder="API token" class="settings-input mono" autocomplete="off" />
-        </label>
-        <div class="ds-row" id="dsGraylogFields" style="display:none;">
-          <label style="flex:1;">
-            <span>Username</span>
-            <input type="text" id="dsUsername" placeholder="admin" class="settings-input mono" />
+      <!-- Workspace Branding -->
+      <section class="section">
+        <h2>Workspace Branding</h2>
+        <p class="section-desc">Customize how StdOut looks for your workspace. Solo tier and above.</p>
+        <div class="brand-form">
+          <label>
+            <span>Workspace name</span>
+            <input type="text" id="brandName" placeholder="e.g. My Lab" class="settings-input" />
           </label>
-          <label style="flex:1;">
-            <span>Password</span>
-            <input type="password" id="dsPassword" placeholder="Graylog password" class="settings-input mono" autocomplete="off" />
-          </label>
-        </div>
-        <div class="ds-row" id="dsInfluxFields">
-          <label style="flex:1;">
-            <span>Organization</span>
-            <input type="text" id="dsOrg" placeholder="e.g. seaynic-labs" class="settings-input mono" />
-          </label>
-          <label style="flex:1;">
-            <span>Bucket</span>
-            <input type="text" id="dsBucket" placeholder="e.g. telegraf" class="settings-input mono" />
-          </label>
-        </div>
-        <div class="ds-actions">
-          <button id="dsTestBtn" class="btn btn-ghost btn-sm">Test Connection</button>
-          <button id="dsSaveBtn" class="btn btn-primary btn-sm">Save</button>
-        </div>
-        <div id="dsTestResult" class="backup-status"></div>
-      </div>
-
-      <div class="ds-bottom">
-        <button id="dsAddBtn" class="btn btn-primary btn-sm">Add data source</button>
-        <div id="dsStatus" class="backup-status"></div>
-      </div>
-    </section>
-
-    <!-- Public Status Page -->
-    <section class="section">
-      <h2>Public Status Page</h2>
-      <p class="section-desc">Share a public URL showing your service health. No login required for visitors.</p>
-
-      <div class="status-page-form">
-        <div class="sp-row">
-          <label style="flex:1;">
-            <span>URL slug</span>
-            <div class="slug-preview">
-              <span class="slug-base mono">/status/</span>
-              <input type="text" id="spSlug" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
+          <label>
+            <span>Accent color</span>
+            <div class="color-row">
+              <input type="color" id="brandColor" value="#F97316" class="color-picker" />
+              <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
             </div>
           </label>
           <label>
-            <span>Page title</span>
-            <input type="text" id="spTitle" placeholder="Service Status" class="settings-input" />
+            <span>Logo URL <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
+            <input type="text" id="brandLogo" placeholder="https://example.com/logo.png" class="settings-input" />
           </label>
+          <button id="saveBrandingBtn" class="btn btn-primary btn-sm">Save branding</button>
+          <div id="brandingStatus" class="backup-status"></div>
         </div>
+      </section>
 
-        <label>
-          <span>Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
-          <input type="text" id="spDesc" placeholder="Current status of my homelab services" class="settings-input" />
-        </label>
+      <!-- Notifications -->
+      <section class="section">
+        <h2>Notifications</h2>
+        <p class="section-desc">Get notified when incidents are created or diagnoses complete.</p>
+        <div id="notifList" class="backup-list">
+          <div class="loading mono">Loading...</div>
+        </div>
+        <div class="notif-add">
+          <select id="notifChannel" class="settings-input" style="width: 120px;">
+            <option value="email">Email</option>
+            <option value="webhook">Webhook</option>
+          </select>
+          <input type="text" id="notifDest" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
+          <button id="addNotifBtn" class="btn btn-primary btn-sm">Add</button>
+        </div>
+        <div class="notif-events mono" style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
+          Events: incident_created, diagnosis_complete, severity_critical, backup_complete
+        </div>
+        <div id="notifStatus" class="backup-status"></div>
+      </section>
 
-        <div class="sp-monitors">
-          <span class="module-label">Monitors to display</span>
-          <div id="spMonitorList" class="sp-monitor-checks">
-            <div class="loading mono">Loading monitors...</div>
+      <!-- Add-ons -->
+      <section class="section">
+        <h2>Add-ons</h2>
+        <p class="section-desc">Control how add-on recommendations appear in your console.</p>
+        <div class="toggle-row">
+          <label class="toggle-label" for="addonsToggle">
+            <span>Show add-on recommendations</span>
+            <span class="toggle-hint">Suggests tools from the Seaynic Labs store based on what's running in your stack.</span>
+          </label>
+          <button id="addonsToggle" class="toggle-btn" role="switch" aria-checked="true">
+            <span class="toggle-track"><span class="toggle-thumb"></span></span>
+          </button>
+        </div>
+        <div class="toggle-row" style="margin-top:0.75rem;">
+          <a href="/app/addons" class="btn btn-ghost btn-sm">View add-ons panel &rarr;</a>
+        </div>
+      </section>
+
+      <!-- Public Status Page -->
+      <section class="section">
+        <h2>Public Status Page</h2>
+        <p class="section-desc">Share a public URL showing your service health. No login required for visitors.</p>
+        <div class="status-page-form">
+          <div class="sp-row">
+            <label style="flex:1;">
+              <span>URL slug</span>
+              <div class="slug-preview">
+                <span class="slug-base mono">/status/</span>
+                <input type="text" id="spSlug" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
+              </div>
+            </label>
+            <label>
+              <span>Page title</span>
+              <input type="text" id="spTitle" placeholder="Service Status" class="settings-input" />
+            </label>
+          </div>
+          <label>
+            <span>Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
+            <input type="text" id="spDesc" placeholder="Current status of my homelab services" class="settings-input" />
+          </label>
+          <div class="sp-monitors">
+            <span class="module-label">Monitors to display</span>
+            <div id="spMonitorList" class="sp-monitor-checks">
+              <div class="loading mono">Loading monitors...</div>
+            </div>
+          </div>
+          <div class="sp-options">
+            <label class="module-check"><input type="checkbox" id="spShowResp" checked /> Show response times</label>
+            <label class="module-check"><input type="checkbox" id="spShowUptime" checked /> Show uptime percentage</label>
+            <label class="scanner-toggle"><input type="checkbox" id="spEnabled" checked /> <span>Page enabled</span></label>
+          </div>
+          <div class="scanner-actions">
+            <button id="saveStatusPageBtn" class="btn btn-primary btn-sm">Save status page</button>
+            <a id="statusPageLink" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none;">View page</a>
+          </div>
+          <div id="statusPageStatus" class="backup-status"></div>
+        </div>
+      </section>
+
+      <!-- Feedback -->
+      <section class="section">
+        <h2>Feedback</h2>
+        <p class="section-desc">Request features or report issues. We read every submission.</p>
+        <div id="featureRequestList" class="backup-list">
+          <div class="loading mono">Loading...</div>
+        </div>
+        <div id="featureRequestForm" style="display:none; margin-top: 0.75rem;">
+          <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
+            <input type="text" id="frTitle" class="settings-input" placeholder="Short description of what you need" />
+            <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
+            <select id="frCategory" class="settings-input">
+              <option value="feature">New Feature</option>
+              <option value="improvement">Improvement</option>
+              <option value="integration">Integration</option>
+              <option value="bug">Bug Report</option>
+              <option value="other">Other</option>
+            </select>
+            <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Description</label>
+            <textarea id="frDescription" class="settings-input" rows="4" placeholder="What problem does this solve? How would you use it?"></textarea>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <button id="frSubmitBtn" class="btn btn-primary btn-sm">Submit</button>
+              <button id="frCancelBtn" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
           </div>
         </div>
+        <button id="frAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">Send feedback</button>
+        <div id="frStatus" class="backup-status"></div>
+      </section>
 
-        <div class="sp-options">
-          <label class="module-check"><input type="checkbox" id="spShowResp" checked /> Show response times</label>
-          <label class="module-check"><input type="checkbox" id="spShowUptime" checked /> Show uptime percentage</label>
-          <label class="scanner-toggle"><input type="checkbox" id="spEnabled" checked /> <span>Page enabled</span></label>
+    </div><!-- /tab-account -->
+
+    <!-- ── TAB 2: INTEGRATIONS ── -->
+    <div id="tab-integrations" class="tab-panel" role="tabpanel">
+
+      <!-- AI Providers (BYOK — self-hosted only) -->
+      {mode !== 'saas' && (
+        <section class="section">
+          <h2>AI Providers</h2>
+          <p class="section-desc">Bring your own API key for AI diagnostics and auto-fix. Your key is used first; the platform key is a fallback.</p>
+          <div id="aiProvidersList" class="backup-list">
+            <div class="loading mono">Loading...</div>
+          </div>
+          <div id="aiProviderForm" class="ds-add-form" style="display:none;">
+            <div class="ds-form-header">
+              <h3 id="aiFormTitle">Add Provider Key</h3>
+              <button id="aiFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
+            </div>
+            <div class="ds-form-body">
+              <label>Provider</label>
+              <select id="aiProviderSelect" class="settings-input">
+                <option value="">Select provider...</option>
+              </select>
+              <label>API Key</label>
+              <input type="password" id="aiKeyInput" class="settings-input" placeholder="sk-..." autocomplete="off" />
+              <label>Diagnostics Model</label>
+              <select id="aiDiagModel" class="settings-input"></select>
+              <div id="aiAutofixSection" style="display:none;">
+                <label>Auto-Fix Model</label>
+                <select id="aiAutofixModel" class="settings-input"></select>
+              </div>
+              <div class="ds-form-actions">
+                <button id="aiSaveBtn" class="btn btn-primary btn-sm">Save Key</button>
+              </div>
+            </div>
+          </div>
+          <button id="aiAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+            Add Provider
+          </button>
+          <div id="aiStatus" class="backup-status"></div>
+        </section>
+      )}
+
+      <!-- Scanner Schedule -->
+      <section class="section">
+        <h2>Scanner Schedule</h2>
+        <p class="section-desc">Control how often the scanner runs and what it discovers. The scanner polls this configuration automatically.</p>
+        <div class="scanner-form">
+          <div class="scanner-row">
+            <label>
+              <span>Frequency</span>
+              <select id="scanInterval" class="settings-input">
+                <option value="hourly">Hourly</option>
+                <option value="daily" selected>Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </label>
+            <label id="scanWeekdayLabel" style="display:none;">
+              <span>Day</span>
+              <select id="scanWeekday" class="settings-input">
+                <option value="0">Sunday</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+              </select>
+            </label>
+            <label id="scanTimeLabel">
+              <span>Time</span>
+              <div class="time-row">
+                <input type="number" id="scanHour" min="0" max="23" value="3" class="settings-input time-input" />
+                <span class="time-sep">:</span>
+                <input type="number" id="scanMinute" min="0" max="59" value="0" class="settings-input time-input" />
+              </div>
+            </label>
+          </div>
+          <div class="scanner-modules">
+            <span class="module-label">Modules</span>
+            <label class="module-check"><input type="checkbox" id="modDocker" checked disabled /> Docker containers</label>
+            <label class="module-check"><input type="checkbox" id="modMetrics" checked /> Resource metrics</label>
+            <label class="module-check"><input type="checkbox" id="modNetwork" /> Network devices</label>
+            <label class="module-check"><input type="checkbox" id="modDns" /> DNS &amp; services</label>
+            <label class="module-check"><input type="checkbox" id="modAuth" /> Auth detection</label>
+          </div>
+          <label>
+            <span>Subnets <span style="font-weight:400;color:var(--text-muted)">(leave empty for auto-detect)</span></span>
+            <input type="text" id="scanSubnets" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
+          </label>
+          <div class="scanner-actions">
+            <label class="scanner-toggle">
+              <input type="checkbox" id="scanEnabled" checked />
+              <span>Scanning enabled</span>
+            </label>
+            <button id="saveScannerBtn" class="btn btn-primary btn-sm">Save schedule</button>
+          </div>
+          <div id="scannerStatus" class="backup-status"></div>
         </div>
+      </section>
 
-        <div class="scanner-actions">
-          <button id="saveStatusPageBtn" class="btn btn-primary btn-sm">Save status page</button>
-          <a id="statusPageLink" href="#" target="_blank" class="btn btn-ghost btn-sm" style="display:none;">View page</a>
+      <!-- Data Sources -->
+      <section class="section">
+        <h2>Data Sources</h2>
+        <p class="section-desc">Connect monitoring, security, and observability tools to enrich incidents and power the HUD.</p>
+        <div id="dsList" class="backup-list">
+          <div class="loading mono">Loading...</div>
         </div>
-        <div id="statusPageStatus" class="backup-status"></div>
-      </div>
-    </section>
-
-    <!-- Backups -->
-    <section class="section">
-      <h2>Backups</h2>
-      <p class="section-desc">Encrypted snapshots of your data. Up to 3 kept automatically.</p>
-
-      <div id="backupList" class="backup-list">
-        <div class="loading mono">Loading backups...</div>
-      </div>
-
-      <div class="backup-actions">
-        <button id="createBackupBtn" class="btn btn-primary">Create backup now</button>
-        <div id="backupStatus" class="backup-status"></div>
-      </div>
-    </section>
-
-    <!-- API Tokens -->
-    <section class="section">
-      <h2>API Tokens</h2>
-      <p class="section-desc">Tokens for the stack discovery scanner. The raw token is shown once at creation.</p>
-
-      <div id="tokenList" class="backup-list">
-        <div class="loading mono">Loading tokens...</div>
-      </div>
-
-      <div class="token-create">
-        <input type="text" id="tokenNameInput" placeholder="Token name (e.g. Scanner)" class="token-input" />
-        <button id="createTokenBtn" class="btn btn-primary btn-sm">Generate token</button>
-      </div>
-      <div id="tokenStatus" class="backup-status"></div>
-      <div id="tokenReveal" class="token-reveal" style="display:none;">
-        <p class="token-warning">Copy this token now — it won't be shown again.</p>
-        <code id="tokenValue" class="token-value"></code>
-        <div id="scannerCmd" class="scanner-cmd-block">
-          <p class="scanner-cmd-label">Quick start — run this on your server:</p>
-          <pre class="scanner-cmd-pre"><code id="scannerCmdValue"></code></pre>
+        <div id="dsRecommendations" class="backup-list"></div>
+        <div class="ds-add-form" id="dsAddForm" style="display:none;">
+          <div class="ds-form-header">
+            <h3 id="dsFormTitle">Add Data Source</h3>
+            <button id="dsFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+          <label>
+            <span>Type</span>
+            <select id="dsType" class="settings-input">
+              <option value="influxdb">InfluxDB</option>
+              <option value="prometheus">Prometheus</option>
+              <option value="trivy">Trivy</option>
+              <option value="uptime-kuma">Uptime Kuma</option>
+              <option value="loki">Loki</option>
+              <option value="graylog">Graylog</option>
+              <option value="crowdsec">CrowdSec</option>
+              <option value="pihole">Pi-hole</option>
+            </select>
+          </label>
+          <label>
+            <span>Name</span>
+            <input type="text" id="dsName" placeholder="e.g. My InfluxDB" class="settings-input" />
+          </label>
+          <label>
+            <span>URL</span>
+            <input type="text" id="dsUrl" placeholder="http://localhost:8086" class="settings-input mono" />
+          </label>
+          <label id="dsTokenLabel">
+            <span id="dsTokenLabelText">API Token</span>
+            <input type="password" id="dsToken" placeholder="API token" class="settings-input mono" autocomplete="off" />
+          </label>
+          <div class="ds-row" id="dsGraylogFields" style="display:none;">
+            <label style="flex:1;">
+              <span>Username</span>
+              <input type="text" id="dsUsername" placeholder="admin" class="settings-input mono" />
+            </label>
+            <label style="flex:1;">
+              <span>Password</span>
+              <input type="password" id="dsPassword" placeholder="Graylog password" class="settings-input mono" autocomplete="off" />
+            </label>
+          </div>
+          <div class="ds-row" id="dsInfluxFields">
+            <label style="flex:1;">
+              <span>Organization</span>
+              <input type="text" id="dsOrg" placeholder="e.g. seaynic-labs" class="settings-input mono" />
+            </label>
+            <label style="flex:1;">
+              <span>Bucket</span>
+              <input type="text" id="dsBucket" placeholder="e.g. telegraf" class="settings-input mono" />
+            </label>
+          </div>
+          <div class="ds-actions">
+            <button id="dsTestBtn" class="btn btn-ghost btn-sm">Test Connection</button>
+            <button id="dsSaveBtn" class="btn btn-primary btn-sm">Save</button>
+          </div>
+          <div id="dsTestResult" class="backup-status"></div>
         </div>
-      </div>
-    </section>
+        <div class="ds-bottom">
+          <button id="dsAddBtn" class="btn btn-primary btn-sm">Add data source</button>
+          <div id="dsStatus" class="backup-status"></div>
+        </div>
+      </section>
 
-    <!-- Danger Zone -->
-    <section class="section danger-zone">
-      <h2>Danger Zone</h2>
-      <p class="section-desc">These actions are irreversible.</p>
-      <div class="danger-actions">
-        <a href="/app/api/export" class="btn btn-ghost">Export all data (JSON)</a>
-      </div>
-      <div class="delete-zone">
-        <p class="delete-warning">Deleting your account deactivates it immediately. Your data is kept for 14 days in case you need recovery (contact support). After 14 days, all data is permanently purged.</p>
-        <label class="delete-confirm-label">
-          <span>Type <strong>DELETE</strong> to confirm</span>
-          <input type="text" id="deleteConfirmInput" placeholder="DELETE" class="settings-input" autocomplete="off" />
-        </label>
-        <button id="deleteAccountBtn" class="btn btn-danger" disabled>Delete account</button>
-        <div id="deleteStatus" class="backup-status"></div>
-      </div>
-    </section>
+      <!-- API Tokens -->
+      <section class="section">
+        <h2>API Tokens</h2>
+        <p class="section-desc">Tokens for the stack discovery scanner. The raw token is shown once at creation.</p>
+        <div id="tokenList" class="backup-list">
+          <div class="loading mono">Loading tokens...</div>
+        </div>
+        <div class="token-create">
+          <input type="text" id="tokenNameInput" placeholder="Token name (e.g. Scanner)" class="token-input" />
+          <button id="createTokenBtn" class="btn btn-primary btn-sm">Generate token</button>
+        </div>
+        <div id="tokenStatus" class="backup-status"></div>
+        <div id="tokenReveal" class="token-reveal" style="display:none;">
+          <p class="token-warning">Copy this token now — it won't be shown again.</p>
+          <code id="tokenValue" class="token-value"></code>
+          <div id="scannerCmd" class="scanner-cmd-block">
+            <p class="scanner-cmd-label">Quick start — run this on your server:</p>
+            <pre class="scanner-cmd-pre"><code id="scannerCmdValue"></code></pre>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- /tab-integrations -->
+
+    <!-- ── TAB 3: DATA ── -->
+    <div id="tab-data" class="tab-panel" role="tabpanel">
+
+      <!-- Backups -->
+      <section class="section">
+        <h2>Backups</h2>
+        <p class="section-desc">Encrypted snapshots of your data. Up to 3 kept automatically.</p>
+        <div id="backupList" class="backup-list">
+          <div class="loading mono">Loading backups...</div>
+        </div>
+        <div class="backup-actions">
+          <button id="createBackupBtn" class="btn btn-primary">Create backup now</button>
+          <div id="backupStatus" class="backup-status"></div>
+        </div>
+      </section>
+
+      <!-- Danger Zone -->
+      <section class="section danger-zone">
+        <h2>Danger Zone</h2>
+        <p class="section-desc">These actions are irreversible.</p>
+        <div class="danger-actions">
+          <a href="/app/api/export" class="btn btn-ghost">Export all data (JSON)</a>
+        </div>
+        <div class="delete-zone">
+          <p class="delete-warning">Deleting your account deactivates it immediately. Your data is kept for 14 days in case you need recovery (contact support). After 14 days, all data is permanently purged.</p>
+          <label class="delete-confirm-label">
+            <span>Type <strong>DELETE</strong> to confirm</span>
+            <input type="text" id="deleteConfirmInput" placeholder="DELETE" class="settings-input" autocomplete="off" />
+          </label>
+          <button id="deleteAccountBtn" class="btn btn-danger" disabled>Delete account</button>
+          <div id="deleteStatus" class="backup-status"></div>
+        </div>
+      </section>
+
+    </div><!-- /tab-data -->
+
   </div>
 </Layout>
 
 <script>
-  // --- Team Management ---
+  // ── Tab switching ──
+  function initTabs() {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
+    const panels = document.querySelectorAll<HTMLElement>('.tab-panel');
+
+    function showTab(tabId: string) {
+      buttons.forEach(btn => {
+        const active = btn.dataset.tab === tabId;
+        btn.classList.toggle('active', active);
+        btn.setAttribute('aria-selected', String(active));
+      });
+      panels.forEach(panel => {
+        panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+      });
+      history.replaceState(null, '', `${window.location.pathname}#${tabId}`);
+    }
+
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => showTab(btn.dataset.tab!));
+    });
+
+    const hash = window.location.hash.slice(1);
+    const valid = ['account', 'integrations', 'data'];
+    if (valid.includes(hash)) showTab(hash);
+  }
+
+  initTabs();
+
+  // ── Team Management ──
   const teamList = document.getElementById('teamList');
   const inviteBtn = document.getElementById('inviteBtn');
   const teamStatus = document.getElementById('teamStatus');
@@ -541,7 +564,6 @@ const isPaid = tier !== 'free';
           </div>
         `).join('');
 
-      // Role change handlers
       teamList.querySelectorAll('.team-role-select').forEach((sel: any) => {
         sel.addEventListener('change', async () => {
           await fetch('/app/api/team', {
@@ -552,7 +574,6 @@ const isPaid = tier !== 'free';
         });
       });
 
-      // Remove handlers
       teamList.querySelectorAll('.team-remove-btn').forEach((btn: any) => {
         btn.addEventListener('click', async () => {
           if (!confirm('Remove this team member?')) return;
@@ -564,7 +585,7 @@ const isPaid = tier !== 'free';
           loadTeam();
         });
       });
-    } catch { teamList.innerHTML = '<div class="team-empty">Failed to load team.</div>'; }
+    } catch { if (teamList) teamList.innerHTML = '<div class="team-empty">Failed to load team.</div>'; }
   }
 
   inviteBtn?.addEventListener('click', async () => {
@@ -572,7 +593,6 @@ const isPaid = tier !== 'free';
     const roleSelect = document.getElementById('inviteRole') as HTMLSelectElement;
     const email = emailInput?.value.trim();
     if (!email) return;
-
     const res = await fetch('/app/api/team', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -588,14 +608,11 @@ const isPaid = tier !== 'free';
 
   loadTeam();
 
-  const backupList = document.getElementById('backupList')!;
-  const createBtn = document.getElementById('createBackupBtn')!;
-  const statusEl = document.getElementById('backupStatus')!;
-
-  // --- Branding ---
+  // ── Branding ──
   const brandName = document.getElementById('brandName') as HTMLInputElement;
   const brandColor = document.getElementById('brandColor') as HTMLInputElement;
   const brandColorHex = document.getElementById('brandColorHex') as HTMLInputElement;
+  const brandLogo = document.getElementById('brandLogo') as HTMLInputElement;
   const saveBrandingBtn = document.getElementById('saveBrandingBtn')!;
   const brandingStatusEl = document.getElementById('brandingStatus')!;
 
@@ -612,8 +629,9 @@ const isPaid = tier !== 'free';
           const c = data.branding.accent_color || data.branding.accentColor;
           brandColor.value = c; brandColorHex.value = c;
         }
+        if (data.branding.logo_url || data.branding.logoUrl) brandLogo.value = data.branding.logo_url || data.branding.logoUrl || '';
       }
-      // Notifications
+
       const notifListEl = document.getElementById('notifList')!;
       if (!data.notifications || data.notifications.length === 0) {
         notifListEl.innerHTML = '<div class="empty mono">No notifications configured.</div>';
@@ -657,7 +675,7 @@ const isPaid = tier !== 'free';
     try {
       await fetch('/app/api/preferences', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_branding', workspaceName: brandName.value, accentColor: brandColorHex.value }),
+        body: JSON.stringify({ action: 'update_branding', workspaceName: brandName.value, accentColor: brandColorHex.value, logoUrl: brandLogo?.value || '' }),
       });
       brandingStatusEl.textContent = 'Saved. Reload to see changes.';
       brandingStatusEl.className = 'backup-status success';
@@ -667,7 +685,6 @@ const isPaid = tier !== 'free';
     }
   });
 
-  // Add notification
   const addNotifBtn = document.getElementById('addNotifBtn')!;
   const notifChannel = document.getElementById('notifChannel') as HTMLSelectElement;
   const notifDest = document.getElementById('notifDest') as HTMLInputElement;
@@ -694,10 +711,9 @@ const isPaid = tier !== 'free';
 
   loadPreferences();
 
-  // --- Add-ons toggle ---
+  // ── Add-ons toggle ──
   const addonsToggle = document.getElementById('addonsToggle') as HTMLButtonElement;
   if (addonsToggle) {
-    // Load initial state
     fetch('/app/api/preferences').then(r => r.json()).then(data => {
       const hidden = data?.branding?.addons_hidden || data?.branding?.addonsHidden || false;
       addonsToggle.setAttribute('aria-checked', hidden ? 'false' : 'true');
@@ -709,34 +725,28 @@ const isPaid = tier !== 'free';
       const newState = !isOn;
       addonsToggle.setAttribute('aria-checked', String(newState));
       addonsToggle.classList.toggle('off', !newState);
-
       await fetch('/app/api/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ addonsHidden: !newState }),
       }).catch(() => {});
     });
   }
 
-  // --- Feature Requests ---
+  // ── Feedback (Feature Requests) ──
   async function loadFeatureRequests() {
     const list = document.getElementById('featureRequestList');
     if (!list) return;
-
     const res = await window.stdoutFetch('/app/api/feature-requests');
     if (!res?.ok) { list.innerHTML = '<div class="empty-hint">Failed to load</div>'; return; }
     const { requests } = await res.json();
-
     if (!requests || requests.length === 0) {
-      list.innerHTML = '<div class="empty-hint">No feature requests yet. Be the first!</div>';
+      list.innerHTML = '<div class="empty-hint">No feedback submitted yet.</div>';
       return;
     }
-
     const statusColors: Record<string, string> = {
       submitted: '#94a3b8', reviewing: '#60A5FA', planned: '#A855F7',
       in_progress: '#F97316', shipped: '#4ade80', declined: '#EF4444',
     };
-
     list.innerHTML = requests.map((r: any) => {
       const color = statusColors[r.status] || '#94a3b8';
       const date = new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -767,20 +777,15 @@ const isPaid = tier !== 'free';
     const title = (document.getElementById('frTitle') as HTMLInputElement)?.value.trim();
     const description = (document.getElementById('frDescription') as HTMLTextAreaElement)?.value.trim();
     const category = (document.getElementById('frCategory') as HTMLSelectElement)?.value;
-
     if (!title || !description) { window.showToast?.('Title and description are required', 'error'); return; }
-
     const btn = document.getElementById('frSubmitBtn') as HTMLElement;
     btn.textContent = 'Submitting...';
-
     const res = await window.stdoutFetch('/app/api/feature-requests', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title, description, category }),
     });
-
     if (res?.ok) {
-      window.showToast?.('Feature request submitted!', 'success');
+      window.showToast?.('Feedback submitted!', 'success');
       document.getElementById('featureRequestForm')!.style.display = 'none';
       document.getElementById('frAddBtn')!.style.display = '';
       (document.getElementById('frTitle') as HTMLInputElement).value = '';
@@ -795,32 +800,24 @@ const isPaid = tier !== 'free';
 
   loadFeatureRequests();
 
-  // --- AI Providers (BYOK) ---
+  // ── AI Providers (BYOK) ──
   let aiProvidersData: any[] = [];
 
   async function loadAIProviders() {
     const list = document.getElementById('aiProvidersList');
     if (!list) return;
-
     const res = await window.stdoutFetch('/app/api/settings/ai-providers');
-    if (!res?.ok) {
-      list.innerHTML = '<div class="empty-hint">Failed to load providers</div>';
-      return;
-    }
-
+    if (!res?.ok) { list.innerHTML = '<div class="empty-hint">Failed to load providers</div>'; return; }
     const { providers } = await res.json();
     aiProvidersData = providers;
-
     if (!providers || providers.length === 0) {
       list.innerHTML = '<div class="empty-hint">No AI providers available</div>';
       return;
     }
-
     list.innerHTML = providers.map((p: any) => {
       const stateLabel = p.state === 'certified' ? 'Certified' : p.state === 'beta' ? 'Beta' : p.state;
       const stateColor = p.state === 'certified' ? '#4ade80' : p.state === 'beta' ? '#F97316' : '#94a3b8';
       const saved = p.savedKey;
-
       if (!saved) {
         return `<div class="ai-provider-card">
           <div class="ai-provider-left">
@@ -830,12 +827,10 @@ const isPaid = tier !== 'free';
           <span class="ai-provider-nokey">No key</span>
         </div>`;
       }
-
       const statusColor = saved.status === 'active' ? 'var(--low)' : 'var(--high)';
       const validatedText = saved.lastValidatedAt
         ? new Date(saved.lastValidatedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
         : 'never';
-
       return `<div class="ai-provider-card has-key">
         <div class="ai-provider-left">
           <span class="ai-provider-name">${p.name}</span>
@@ -851,14 +846,12 @@ const isPaid = tier !== 'free';
       </div>`;
     }).join('');
 
-    // Bind validate buttons
     document.querySelectorAll('.ai-validate-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const provider = (btn as HTMLElement).dataset.provider;
         (btn as HTMLElement).textContent = 'Testing...';
         const res = await window.stdoutFetch('/app/api/settings/ai-providers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'validate', provider }),
         });
         const data = await res?.json();
@@ -872,15 +865,13 @@ const isPaid = tier !== 'free';
       });
     });
 
-    // Bind delete buttons
     document.querySelectorAll('.ai-delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const keyId = (btn as HTMLElement).dataset.keyId;
         const name = (btn as HTMLElement).dataset.provider;
         if (!confirm(`Delete ${name} API key? Diagnostics will fall back to platform key.`)) return;
         await window.stdoutFetch('/app/api/settings/ai-providers', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'delete', keyId }),
         });
         loadAIProviders();
@@ -888,7 +879,6 @@ const isPaid = tier !== 'free';
     });
   }
 
-  // AI Provider form
   const aiAddBtn = document.getElementById('aiAddBtn');
   const aiForm = document.getElementById('aiProviderForm');
   const aiFormCancel = document.getElementById('aiFormCancel');
@@ -901,8 +891,6 @@ const isPaid = tier !== 'free';
   aiAddBtn?.addEventListener('click', () => {
     if (aiForm) aiForm.style.display = 'block';
     if (aiAddBtn) aiAddBtn.style.display = 'none';
-
-    // Populate provider select with providers that don't have a key yet
     if (aiProviderSelect) {
       aiProviderSelect.innerHTML = '<option value="">Select provider...</option>';
       for (const p of aiProvidersData) {
@@ -923,13 +911,9 @@ const isPaid = tier !== 'free';
     const providerId = aiProviderSelect.value;
     const provider = aiProvidersData.find((p: any) => p.id === providerId);
     if (!provider || !aiDiagModel) return;
-
-    // Populate model selects
     const diagModels = provider.models.filter((m: any) => m.capability === 'diagnostics' || m.capability === 'both');
     const fixModels = provider.models.filter((m: any) => m.capability === 'autofix' || m.capability === 'both');
-
     aiDiagModel.innerHTML = diagModels.map((m: any) => `<option value="${m.id}">${m.name}</option>`).join('');
-
     if (aiAutofixModel && aiAutofixSection) {
       if (provider.canAutofix && fixModels.length > 0) {
         aiAutofixSection.style.display = 'block';
@@ -945,26 +929,12 @@ const isPaid = tier !== 'free';
     const apiKey = (document.getElementById('aiKeyInput') as HTMLInputElement)?.value?.trim();
     const diagModel = aiDiagModel?.value;
     const autofixModelVal = aiAutofixModel?.value;
-
-    if (!provider || !apiKey) {
-      window.showToast?.('Provider and API key are required', 'error');
-      return;
-    }
-
+    if (!provider || !apiKey) { window.showToast?.('Provider and API key are required', 'error'); return; }
     (aiSaveBtn as HTMLElement).textContent = 'Saving...';
-
     const res = await window.stdoutFetch('/app/api/settings/ai-providers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'save',
-        provider,
-        apiKey,
-        diagnosticsModel: diagModel,
-        autofixModel: autofixModelVal || null,
-      }),
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'save', provider, apiKey, diagnosticsModel: diagModel, autofixModel: autofixModelVal || null }),
     });
-
     if (res?.ok) {
       window.showToast?.('API key saved', 'success');
       if (aiForm) aiForm.style.display = 'none';
@@ -980,7 +950,7 @@ const isPaid = tier !== 'free';
 
   loadAIProviders();
 
-  // --- Data Sources ---
+  // ── Data Sources ──
   const dsList = document.getElementById('dsList')!;
   const dsAddForm = document.getElementById('dsAddForm')!;
   const dsAddBtn = document.getElementById('dsAddBtn')!;
@@ -1003,7 +973,6 @@ const isPaid = tier !== 'free';
   const dsStatusEl = document.getElementById('dsStatus')!;
   const dsFormTitle = document.getElementById('dsFormTitle')!;
   const dsRecommendations = document.getElementById('dsRecommendations')!;
-
   let editingDsId: string | null = null;
 
   function updateDataSourceFormByType() {
@@ -1012,22 +981,16 @@ const isPaid = tier !== 'free';
     const isGraylog = t === 'graylog';
     const isCrowdSec = t === 'crowdsec';
     const needsToken = ['influxdb', 'prometheus', 'loki', 'crowdsec'].includes(t);
-
     dsInfluxFields.style.display = isInflux ? '' : 'none';
     dsOrg.disabled = !isInflux;
     dsBucket.disabled = !isInflux;
     if (!isInflux) { dsOrg.value = ''; dsBucket.value = ''; }
-
     dsGraylogFields.style.display = isGraylog ? '' : 'none';
     dsUsername.disabled = !isGraylog;
     dsPassword.disabled = !isGraylog;
     if (!isGraylog) { dsUsername.value = ''; dsPassword.value = ''; }
-
-    // Show/hide token field based on type
     dsTokenLabel.style.display = needsToken || isGraylog ? '' : 'none';
     dsToken.disabled = !needsToken && !isGraylog;
-
-    // Update token placeholder
     if (isCrowdSec) {
       dsTokenLabelText.textContent = 'API Key';
       dsToken.placeholder = 'CrowdSec bouncer API key';
@@ -1068,7 +1031,6 @@ const isPaid = tier !== 'free';
           </div>`;
       }).join('');
 
-      // Edit handlers
       dsList.querySelectorAll('.ds-edit-btn').forEach((btn: any) => {
         btn.addEventListener('click', () => {
           const ds = data.sources.find((s: any) => s.id === btn.dataset.id);
@@ -1090,32 +1052,22 @@ const isPaid = tier !== 'free';
         });
       });
 
-      // Toggle handlers
       dsList.querySelectorAll('.ds-toggle-btn').forEach((btn: any) => {
         btn.addEventListener('click', async () => {
           const enabled = btn.dataset.enabled === 'true' ? false : true;
-          await fetch('/app/api/data-sources', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'update', id: btn.dataset.id, enabled }),
-          });
+          await fetch('/app/api/data-sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update', id: btn.dataset.id, enabled }) });
           loadDataSources();
         });
       });
 
-      // Delete handlers
       dsList.querySelectorAll('.ds-delete-btn').forEach((btn: any) => {
         btn.addEventListener('click', async () => {
           if (!confirm('Remove this data source?')) return;
-          await fetch('/app/api/data-sources', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'delete', id: btn.dataset.id }),
-          });
+          await fetch('/app/api/data-sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: btn.dataset.id }) });
           loadDataSources();
         });
       });
-    } catch {
-      dsList.innerHTML = '<div class="empty mono">Failed to load data sources.</div>';
-    }
+    } catch { dsList.innerHTML = '<div class="empty mono">Failed to load data sources.</div>'; }
   }
 
   async function loadDataSourceRecommendations() {
@@ -1124,10 +1076,7 @@ const isPaid = tier !== 'free';
       const res = await fetch('/app/api/data-sources/recommendations');
       const data = await res.json();
       const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
-      if (recs.length === 0) {
-        dsRecommendations.innerHTML = '';
-        return;
-      }
+      if (recs.length === 0) { dsRecommendations.innerHTML = ''; return; }
       dsRecommendations.innerHTML = `
         <div class="backup-row" style="display:block;">
           <div class="backup-info" style="margin-bottom:8px;">
@@ -1142,9 +1091,7 @@ const isPaid = tier !== 'free';
           `).join('')}
         </div>
       `;
-    } catch {
-      dsRecommendations.innerHTML = '';
-    }
+    } catch { dsRecommendations.innerHTML = ''; }
   }
 
   dsAddBtn?.addEventListener('click', () => {
@@ -1159,12 +1106,7 @@ const isPaid = tier !== 'free';
     dsTestResult.textContent = '';
   });
 
-  dsFormCancel?.addEventListener('click', () => {
-    dsAddForm.style.display = 'none';
-    dsAddBtn.style.display = '';
-    editingDsId = null;
-  });
-
+  dsFormCancel?.addEventListener('click', () => { dsAddForm.style.display = 'none'; dsAddBtn.style.display = ''; editingDsId = null; });
   dsType?.addEventListener('change', updateDataSourceFormByType);
 
   dsTestBtn?.addEventListener('click', async () => {
@@ -1173,85 +1115,39 @@ const isPaid = tier !== 'free';
     try {
       const res = await fetch('/app/api/data-sources', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'test',
-          id: editingDsId,
-          type: dsType.value,
-          url: dsUrl.value,
-          token: dsToken.value,
-          org: dsOrg.value,
-          bucket: dsBucket.value,
-          username: dsUsername.value,
-          password: dsPassword.value,
-        }),
+        body: JSON.stringify({ action: 'test', id: editingDsId, type: dsType.value, url: dsUrl.value, token: dsToken.value, org: dsOrg.value, bucket: dsBucket.value, username: dsUsername.value, password: dsPassword.value }),
       });
       const data = await res.json();
-      if (data.ok) {
-        dsTestResult.textContent = 'Connected successfully.';
-        dsTestResult.className = 'backup-status success';
-      } else {
-        dsTestResult.textContent = `Connection failed: ${data.error || 'unknown error'}`;
-        dsTestResult.className = 'backup-status error';
-      }
-    } catch {
-      dsTestResult.textContent = 'Network error.';
-      dsTestResult.className = 'backup-status error';
-    }
+      if (data.ok) { dsTestResult.textContent = 'Connected successfully.'; dsTestResult.className = 'backup-status success'; }
+      else { dsTestResult.textContent = `Connection failed: ${data.error || 'unknown error'}`; dsTestResult.className = 'backup-status error'; }
+    } catch { dsTestResult.textContent = 'Network error.'; dsTestResult.className = 'backup-status error'; }
   });
 
   dsSaveBtn?.addEventListener('click', async () => {
     const name = dsName.value.trim();
     const url = dsUrl.value.trim();
-    if (!name || !url) {
-      dsStatusEl.textContent = 'Name and URL are required.';
-      dsStatusEl.className = 'backup-status error';
-      return;
-    }
-
+    if (!name || !url) { dsStatusEl.textContent = 'Name and URL are required.'; dsStatusEl.className = 'backup-status error'; return; }
     dsStatusEl.textContent = 'Saving...';
     dsStatusEl.className = 'backup-status';
-
     try {
-      const payload: any = {
-        action: editingDsId ? 'update' : 'create',
-        name,
-        type: dsType.value,
-        url,
-        token: dsToken.value,
-        org: dsOrg.value,
-        bucket: dsBucket.value,
-        username: dsUsername.value,
-        password: dsPassword.value,
-      };
+      const payload: any = { action: editingDsId ? 'update' : 'create', name, type: dsType.value, url, token: dsToken.value, org: dsOrg.value, bucket: dsBucket.value, username: dsUsername.value, password: dsPassword.value };
       if (editingDsId) payload.id = editingDsId;
-
-      const res = await fetch('/app/api/data-sources', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch('/app/api/data-sources', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (data.id || data.updated) {
-        dsAddForm.style.display = 'none';
-        dsAddBtn.style.display = '';
+        dsAddForm.style.display = 'none'; dsAddBtn.style.display = '';
         dsStatusEl.textContent = editingDsId ? 'Updated.' : 'Added.';
         dsStatusEl.className = 'backup-status success';
-        editingDsId = null;
-        loadDataSources();
-      } else {
-        dsStatusEl.textContent = data.error || 'Failed.';
-        dsStatusEl.className = 'backup-status error';
-      }
-    } catch {
-      dsStatusEl.textContent = 'Network error.';
-      dsStatusEl.className = 'backup-status error';
-    }
+        editingDsId = null; loadDataSources();
+      } else { dsStatusEl.textContent = data.error || 'Failed.'; dsStatusEl.className = 'backup-status error'; }
+    } catch { dsStatusEl.textContent = 'Network error.'; dsStatusEl.className = 'backup-status error'; }
   });
 
   updateDataSourceFormByType();
   loadDataSources();
   loadDataSourceRecommendations();
 
-  // --- Scanner Schedule ---
+  // ── Scanner Schedule ──
   const scanInterval = document.getElementById('scanInterval') as HTMLSelectElement;
   const scanWeekday = document.getElementById('scanWeekday') as HTMLSelectElement;
   const scanWeekdayLabel = document.getElementById('scanWeekdayLabel')!;
@@ -1262,7 +1158,6 @@ const isPaid = tier !== 'free';
   const scanEnabled = document.getElementById('scanEnabled') as HTMLInputElement;
   const saveScannerBtn = document.getElementById('saveScannerBtn')!;
   const scannerStatusEl = document.getElementById('scannerStatus')!;
-  const modDocker = document.getElementById('modDocker') as HTMLInputElement;
   const modMetrics = document.getElementById('modMetrics') as HTMLInputElement;
   const modNetwork = document.getElementById('modNetwork') as HTMLInputElement;
   const modDns = document.getElementById('modDns') as HTMLInputElement;
@@ -1284,63 +1179,39 @@ const isPaid = tier !== 'free';
       scanEnabled.checked = data.enabled !== false;
       scanWeekdayLabel.style.display = data.interval === 'weekly' ? '' : 'none';
       scanTimeLabel.style.display = data.interval === 'hourly' ? 'none' : '';
-
       const mods = data.modules || ['docker', 'metrics'];
       modMetrics.checked = mods.includes('metrics');
       modNetwork.checked = mods.includes('network');
       modDns.checked = mods.includes('dns');
       modAuth.checked = mods.includes('auth');
-
-      if (data.subnets && Array.isArray(data.subnets)) {
-        scanSubnets.value = data.subnets.join(', ');
-      }
+      if (data.subnets && Array.isArray(data.subnets)) scanSubnets.value = data.subnets.join(', ');
     } catch {}
   }
 
   saveScannerBtn?.addEventListener('click', async () => {
     scannerStatusEl.textContent = 'Saving...';
     scannerStatusEl.className = 'backup-status';
-
     const modules = ['docker'];
     if (modMetrics.checked) modules.push('metrics');
     if (modNetwork.checked) modules.push('network');
     if (modDns.checked) modules.push('dns');
     if (modAuth.checked) modules.push('auth');
-
     const subnetsRaw = scanSubnets.value.trim();
     const subnets = subnetsRaw ? subnetsRaw.split(',').map((s: string) => s.trim()).filter(Boolean) : null;
-
     try {
       const res = await fetch('/app/api/scanner/schedule', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          interval: scanInterval.value,
-          hour: parseInt(scanHour.value) || 3,
-          minute: parseInt(scanMinute.value) || 0,
-          weekday: parseInt(scanWeekday.value) || 0,
-          enabled: scanEnabled.checked,
-          modules,
-          subnets,
-        }),
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ interval: scanInterval.value, hour: parseInt(scanHour.value) || 3, minute: parseInt(scanMinute.value) || 0, weekday: parseInt(scanWeekday.value) || 0, enabled: scanEnabled.checked, modules, subnets }),
       });
       const data = await res.json();
-      if (data.updated) {
-        scannerStatusEl.textContent = 'Schedule saved. Scanner will pick up changes on next poll.';
-        scannerStatusEl.className = 'backup-status success';
-      } else {
-        scannerStatusEl.textContent = data.error || 'Failed.';
-        scannerStatusEl.className = 'backup-status error';
-      }
-    } catch {
-      scannerStatusEl.textContent = 'Network error.';
-      scannerStatusEl.className = 'backup-status error';
-    }
+      if (data.updated) { scannerStatusEl.textContent = 'Schedule saved.'; scannerStatusEl.className = 'backup-status success'; }
+      else { scannerStatusEl.textContent = data.error || 'Failed.'; scannerStatusEl.className = 'backup-status error'; }
+    } catch { scannerStatusEl.textContent = 'Network error.'; scannerStatusEl.className = 'backup-status error'; }
   });
 
   loadScannerSchedule();
 
-  // --- Status Page ---
+  // ── Status Page ──
   const spSlug = document.getElementById('spSlug') as HTMLInputElement;
   const spTitle = document.getElementById('spTitle') as HTMLInputElement;
   const spDesc = document.getElementById('spDesc') as HTMLInputElement;
@@ -1352,24 +1223,18 @@ const isPaid = tier !== 'free';
   const statusPageStatusEl = document.getElementById('statusPageStatus')!;
   const statusPageLink = document.getElementById('statusPageLink') as HTMLAnchorElement;
 
-  let allMonitorIds: string[] = [];
-
   async function loadStatusPage() {
-    // Load monitors for checkboxes
     try {
       const mRes = await fetch('/app/api/monitors');
       const mData = await mRes.json();
       if (mData.monitors && mData.monitors.length > 0) {
-        spMonitorList.innerHTML = mData.monitors.map((m: any) => {
-          allMonitorIds.push(m.id);
-          return `<label class="module-check"><input type="checkbox" value="${m.id}" class="sp-mon-check" /> ${escapeHtml(m.name)}</label>`;
-        }).join('');
+        spMonitorList.innerHTML = mData.monitors.map((m: any) =>
+          `<label class="module-check"><input type="checkbox" value="${m.id}" class="sp-mon-check" /> ${escapeHtml(m.name)}</label>`
+        ).join('');
       } else {
         spMonitorList.innerHTML = '<div class="empty mono">No monitors yet. Add monitors in HUD first.</div>';
       }
     } catch {}
-
-    // Load existing config
     try {
       const res = await fetch('/app/api/status-page');
       const data = await res.json();
@@ -1380,15 +1245,9 @@ const isPaid = tier !== 'free';
         spShowResp.checked = data.page.show_response_time !== false && data.page.showResponseTime !== false;
         spShowUptime.checked = data.page.show_uptime !== false && data.page.showUptime !== false;
         spEnabled.checked = data.page.enabled !== false;
-
-        // Check the right monitors
         let ids: string[] = [];
         try { ids = JSON.parse(data.page.monitor_ids || data.page.monitorIds || '[]'); } catch {}
-        document.querySelectorAll('.sp-mon-check').forEach((cb: any) => {
-          cb.checked = ids.includes(cb.value);
-        });
-
-        // Show link
+        document.querySelectorAll('.sp-mon-check').forEach((cb: any) => { cb.checked = ids.includes(cb.value); });
         statusPageLink.href = `/status/${data.page.slug}`;
         statusPageLink.style.display = '';
       }
@@ -1398,51 +1257,33 @@ const isPaid = tier !== 'free';
   saveStatusPageBtn?.addEventListener('click', async () => {
     const monitorIds: string[] = [];
     document.querySelectorAll('.sp-mon-check:checked').forEach((cb: any) => monitorIds.push(cb.value));
-
     statusPageStatusEl.textContent = 'Saving...';
     statusPageStatusEl.className = 'backup-status';
-
     try {
       const res = await fetch('/app/api/status-page', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: spSlug.value,
-          title: spTitle.value,
-          description: spDesc.value,
-          monitorIds,
-          showResponseTime: spShowResp.checked,
-          showUptime: spShowUptime.checked,
-          enabled: spEnabled.checked,
-        }),
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug: spSlug.value, title: spTitle.value, description: spDesc.value, monitorIds, showResponseTime: spShowResp.checked, showUptime: spShowUptime.checked, enabled: spEnabled.checked }),
       });
       const data = await res.json();
       if (data.updated) {
-        statusPageStatusEl.textContent = 'Saved.';
-        statusPageStatusEl.className = 'backup-status success';
-        statusPageLink.href = `/status/${data.slug}`;
-        statusPageLink.style.display = '';
-      } else {
-        statusPageStatusEl.textContent = data.error || 'Failed.';
-        statusPageStatusEl.className = 'backup-status error';
-      }
-    } catch {
-      statusPageStatusEl.textContent = 'Network error.';
-      statusPageStatusEl.className = 'backup-status error';
-    }
+        statusPageStatusEl.textContent = 'Saved.'; statusPageStatusEl.className = 'backup-status success';
+        statusPageLink.href = `/status/${data.slug}`; statusPageLink.style.display = '';
+      } else { statusPageStatusEl.textContent = data.error || 'Failed.'; statusPageStatusEl.className = 'backup-status error'; }
+    } catch { statusPageStatusEl.textContent = 'Network error.'; statusPageStatusEl.className = 'backup-status error'; }
   });
 
   loadStatusPage();
 
-  // --- Backups ---
+  // ── Backups ──
+  const backupList = document.getElementById('backupList')!;
+  const createBtn = document.getElementById('createBackupBtn')!;
+  const statusEl = document.getElementById('backupStatus')!;
+
   async function loadBackups() {
     try {
       const res = await fetch('/app/api/backups');
       const data = await res.json();
-      if (!data.backups || data.backups.length === 0) {
-        backupList.innerHTML = '<div class="empty mono">No backups yet.</div>';
-        return;
-      }
+      if (!data.backups || data.backups.length === 0) { backupList.innerHTML = '<div class="empty mono">No backups yet.</div>'; return; }
       backupList.innerHTML = data.backups.map((b: any) => `
         <div class="backup-row">
           <div class="backup-info">
@@ -1452,79 +1293,35 @@ const isPaid = tier !== 'free';
           <button class="btn btn-ghost btn-sm restore-btn" data-filename="${escapeAttr(b.filename)}">Restore</button>
         </div>
       `).join('');
-
-      // Attach restore handlers
       document.querySelectorAll('.restore-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const filename = btn.getAttribute('data-filename');
           if (!confirm('Restore this backup? This will replace your current data.')) return;
-          statusEl.textContent = 'Restoring...';
-          statusEl.className = 'backup-status';
+          statusEl.textContent = 'Restoring...'; statusEl.className = 'backup-status';
           try {
-            const res = await fetch('/app/api/backups', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'restore', filename }),
-            });
+            const res = await fetch('/app/api/backups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'restore', filename }) });
             const data = await res.json();
-            if (data.restored) {
-              statusEl.textContent = 'Restored successfully. Reloading...';
-              statusEl.className = 'backup-status success';
-              setTimeout(() => window.location.reload(), 1000);
-            } else {
-              statusEl.textContent = data.error || 'Restore failed.';
-              statusEl.className = 'backup-status error';
-            }
-          } catch {
-            statusEl.textContent = 'Network error.';
-            statusEl.className = 'backup-status error';
-          }
+            if (data.restored) { statusEl.textContent = 'Restored. Reloading...'; statusEl.className = 'backup-status success'; setTimeout(() => window.location.reload(), 1000); }
+            else { statusEl.textContent = data.error || 'Restore failed.'; statusEl.className = 'backup-status error'; }
+          } catch { statusEl.textContent = 'Network error.'; statusEl.className = 'backup-status error'; }
         });
       });
-    } catch {
-      backupList.innerHTML = '<div class="empty mono">Failed to load backups.</div>';
-    }
+    } catch { backupList.innerHTML = '<div class="empty mono">Failed to load backups.</div>'; }
   }
 
   createBtn.addEventListener('click', async () => {
     createBtn.setAttribute('disabled', '');
-    statusEl.textContent = 'Creating backup...';
-    statusEl.className = 'backup-status';
+    statusEl.textContent = 'Creating backup...'; statusEl.className = 'backup-status';
     try {
-      const res = await fetch('/app/api/backups', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'create' }),
-      });
+      const res = await fetch('/app/api/backups', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'create' }) });
       const data = await res.json();
-      if (data.backup) {
-        statusEl.textContent = 'Backup created.';
-        statusEl.className = 'backup-status success';
-        loadBackups();
-      } else {
-        statusEl.textContent = data.error || 'Backup failed.';
-        statusEl.className = 'backup-status error';
-      }
-    } catch {
-      statusEl.textContent = 'Network error.';
-      statusEl.className = 'backup-status error';
-    }
+      if (data.backup) { statusEl.textContent = 'Backup created.'; statusEl.className = 'backup-status success'; loadBackups(); }
+      else { statusEl.textContent = data.error || 'Backup failed.'; statusEl.className = 'backup-status error'; }
+    } catch { statusEl.textContent = 'Network error.'; statusEl.className = 'backup-status error'; }
     createBtn.removeAttribute('disabled');
   });
 
-  function formatDate(iso: string) {
-    try { return new Date(iso).toLocaleString(); } catch { return iso; }
-  }
-  function formatSize(bytes: number) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / 1048576).toFixed(1) + ' MB';
-  }
-  function escapeAttr(s: string) {
-    return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
-  }
-
-  // Tokens
+  // ── API Tokens ──
   const tokenList = document.getElementById('tokenList')!;
   const tokenNameInput = document.getElementById('tokenNameInput') as HTMLInputElement;
   const createTokenBtn = document.getElementById('createTokenBtn')!;
@@ -1536,10 +1333,7 @@ const isPaid = tier !== 'free';
     try {
       const res = await fetch('/app/api/tokens');
       const data = await res.json();
-      if (!data.tokens || data.tokens.length === 0) {
-        tokenList.innerHTML = '<div class="empty mono">No tokens.</div>';
-        return;
-      }
+      if (!data.tokens || data.tokens.length === 0) { tokenList.innerHTML = '<div class="empty mono">No tokens.</div>'; return; }
       tokenList.innerHTML = data.tokens.map((t: any) => `
         <div class="backup-row">
           <div class="backup-info">
@@ -1549,7 +1343,6 @@ const isPaid = tier !== 'free';
           <button class="btn btn-danger btn-sm revoke-btn" data-id="${t.id}">Revoke</button>
         </div>
       `).join('');
-
       document.querySelectorAll('.revoke-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-id');
@@ -1558,9 +1351,7 @@ const isPaid = tier !== 'free';
           loadTokens();
         });
       });
-    } catch {
-      tokenList.innerHTML = '<div class="empty mono">Failed to load tokens.</div>';
-    }
+    } catch { tokenList.innerHTML = '<div class="empty mono">Failed to load tokens.</div>'; }
   }
 
   createTokenBtn.addEventListener('click', async () => {
@@ -1576,120 +1367,192 @@ const isPaid = tier !== 'free';
         tokenReveal.style.display = 'block';
         tokenNameInput.value = '';
         loadTokens();
-      } else {
-        tokenStatusEl.textContent = data.error || 'Failed.';
-        tokenStatusEl.className = 'backup-status error';
-      }
-    } catch {
-      tokenStatusEl.textContent = 'Network error.';
-      tokenStatusEl.className = 'backup-status error';
-    }
+      } else { tokenStatusEl.textContent = data.error || 'Failed.'; tokenStatusEl.className = 'backup-status error'; }
+    } catch { tokenStatusEl.textContent = 'Network error.'; tokenStatusEl.className = 'backup-status error'; }
   });
 
   loadTokens();
+  loadBackups();
 
-  // Delete account
+  // ── Delete account ──
   const deleteBtn = document.getElementById('deleteAccountBtn') as HTMLButtonElement;
   const deleteInput = document.getElementById('deleteConfirmInput') as HTMLInputElement;
   const deleteStatusEl = document.getElementById('deleteStatus')!;
 
-  deleteInput?.addEventListener('input', () => {
-    deleteBtn.disabled = deleteInput.value !== 'DELETE';
-  });
+  deleteInput?.addEventListener('input', () => { deleteBtn.disabled = deleteInput.value !== 'DELETE'; });
 
   deleteBtn?.addEventListener('click', async () => {
     if (deleteInput.value !== 'DELETE') return;
     deleteBtn.disabled = true;
-    deleteStatusEl.textContent = 'Deactivating account...';
-    deleteStatusEl.className = 'backup-status';
+    deleteStatusEl.textContent = 'Deactivating account...'; deleteStatusEl.className = 'backup-status';
     try {
-      const res = await fetch('/app/api/account', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ confirmation: 'DELETE' }),
-      });
+      const res = await fetch('/app/api/account', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirmation: 'DELETE' }) });
       const data = await res.json();
       if (data.deleted) {
-        deleteStatusEl.textContent = 'Account deactivated. Data retained for 14 days. Redirecting...';
-        deleteStatusEl.className = 'backup-status success';
+        deleteStatusEl.textContent = 'Account deactivated. Data retained for 14 days. Redirecting...'; deleteStatusEl.className = 'backup-status success';
         setTimeout(() => window.location.href = '/app/login', 2000);
-      } else {
-        deleteStatusEl.textContent = data.error || 'Delete failed.';
-        deleteStatusEl.className = 'backup-status error';
-        deleteBtn.disabled = false;
-      }
-    } catch {
-      deleteStatusEl.textContent = 'Network error.';
-      deleteStatusEl.className = 'backup-status error';
-      deleteBtn.disabled = false;
-    }
+      } else { deleteStatusEl.textContent = data.error || 'Delete failed.'; deleteStatusEl.className = 'backup-status error'; deleteBtn.disabled = false; }
+    } catch { deleteStatusEl.textContent = 'Network error.'; deleteStatusEl.className = 'backup-status error'; deleteBtn.disabled = false; }
   });
 
-  loadBackups();
+  // ── Helpers ──
+  function formatDate(iso: string) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+  function formatSize(bytes: number) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
+  }
+  function escapeAttr(s: string) { return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
 </script>
 
 <style>
-  .settings-page { max-width: 640px; margin: 0 auto; }
-  .settings-page h1 { font-size: 20px; margin-bottom: 8px; }
+  /* ── Page layout ── */
+  .settings-page { max-width: 680px; margin: 0 auto; padding-bottom: 4rem; }
+  .settings-header { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .settings-header h1 { font-size: 1.4rem; font-weight: 700; margin: 0; }
+  .version-label { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
 
-  /* Version & Update */
-  .version-row { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
-  .version-label { font-size: 12px; color: var(--text-muted); }
-  .update-banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.25); border-radius: var(--radius); font-size: 12px; color: #22d3ee; text-decoration: none; transition: background 150ms; }
+  /* ── Update banner ── */
+  .update-banner { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; background: rgba(34,211,238,0.08); border: 1px solid rgba(34,211,238,0.25); border-radius: var(--radius); font-size: 12px; color: #22d3ee; text-decoration: none; transition: background 150ms; margin-bottom: 1rem; }
   .update-banner:hover { background: rgba(34,211,238,0.14); }
-  .update-banner svg { flex-shrink: 0; }
-  .section { margin-bottom: 32px; }
-  .section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
-  .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+
+  /* ── Tab bar ── */
+  .settings-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1.75rem;
+  }
+  .tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 0.6rem 1.1rem;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-bottom: -1px;
+    transition: color 0.15s, border-color 0.15s;
+    letter-spacing: 0.01em;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  /* ── Tab panels ── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ── Sections ── */
+  .section { margin-bottom: 2rem; }
+  .section h2 { font-size: 13px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  .section-desc { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+  .section-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+  .section-link:hover { text-decoration: underline; }
+
+  /* ── Profile ── */
   .profile-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
   .profile-row:last-child { border-bottom: none; }
   .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
   .value { font-size: 13px; }
-  .backup-list { margin-bottom: 12px; }
-  .backup-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
-  .backup-info { display: flex; gap: 16px; align-items: center; }
-  .backup-date { font-size: 13px; }
-  .backup-size { font-size: 11px; color: var(--text-muted); }
-  .backup-actions { display: flex; gap: 12px; align-items: center; }
-  .backup-status { font-size: 12px; font-family: var(--font-mono); }
-  .backup-status.success { color: var(--low); }
-  .backup-status.error { color: var(--critical); }
-  .loading, .empty { font-size: 13px; color: var(--text-muted); padding: 16px 0; }
-  .danger-zone h2 { color: var(--critical); }
-  .danger-actions { display: flex; gap: 8px; }
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
-  .btn-sm { padding: 5px 10px; font-size: 11px; }
-  .btn-primary { background: var(--accent-btn); color: #fff; }
-  .btn-primary:hover { background: var(--accent-light); }
-  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
-  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
-  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
-  .btn-danger:hover { background: var(--critical-dim); }
-  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
-  .token-create { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-  .token-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 6px 10px; flex: 1; }
-  .token-input:focus { border-color: var(--accent); outline: none; }
-  .token-reveal { margin-top: 12px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: var(--radius-sm); }
-  .token-warning { font-size: 12px; color: var(--accent-light); font-weight: 600; margin-bottom: 8px; }
-  .token-value { display: block; font-family: var(--font-mono); font-size: 11px; word-break: break-all; color: var(--text); user-select: all; }
+
+  /* ── Billing ── */
+  .billing-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .tier-card { padding: 20px; }
+  .tier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .tier-name { font-size: 18px; font-weight: 700; }
+  .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
+  .tier-badge.warning { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .tier-badge.success { background: rgba(34,197,94,0.15); color: #22c55e; }
+  .tier-badge.muted { background: var(--bg-surface); color: var(--text-muted); }
+  .tier-limits { display: grid; }
+  .limit-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .limit-row:last-child { border-bottom: none; }
+  .limit-row span:first-child { color: var(--text-secondary); }
+  .limit-row span:last-child { font-weight: 600; }
+  .tier-upgrade { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .tier-upgrade p { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
+  .upgrade-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; text-decoration: none; cursor: pointer; }
+  .btn-secondary:hover { background: var(--bg-hover); }
+
+  /* ── Team ── */
+  .team-section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .team-list { margin-bottom: 16px; }
+  .team-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .team-row:last-child { border-bottom: none; }
+  .team-info { display: flex; align-items: center; gap: 8px; }
+  .team-email { font-size: 13px; }
+  .team-role-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--text-secondary); font-weight: 600; }
+  .team-role-badge.admin { background: rgba(139,92,246,0.14); color: #a78bfa; }
+  .team-role-badge.editor { background: rgba(16,185,129,0.14); color: #34d399; }
+  .team-role-badge.pending { background: rgba(245,158,11,0.12); color: #f59e0b; }
+  .team-actions { display: flex; gap: 8px; align-items: center; }
+  .team-invite { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .team-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
+  .team-loading { font-size: 13px; color: var(--text-muted); }
+
+  /* ── Branding ── */
   .brand-form { display: flex; flex-direction: column; gap: 12px; }
   .brand-form label { display: flex; flex-direction: column; gap: 4px; }
   .brand-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
-  .settings-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; }
-  .settings-input:focus { border-color: var(--accent); outline: none; }
   .color-row { display: flex; gap: 8px; align-items: center; }
   .color-picker { width: 40px; height: 34px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg-surface); cursor: pointer; padding: 2px; }
+
+  /* ── Notifications ── */
   .notif-add { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-  .delete-zone { margin-top: 12px; padding: 16px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15); border-radius: var(--radius); }
-  .delete-warning { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
-  .delete-confirm-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-  .delete-confirm-label span { font-size: 12px; font-weight: 600; color: var(--critical); text-transform: uppercase; letter-spacing: 0.04em; }
-  .mono { font-family: var(--font-mono); }
-  .scanner-cmd-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
-  .scanner-cmd-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
-  .scanner-cmd-pre { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; overflow-x: auto; }
-  .scanner-cmd-pre code { font-family: var(--font-mono); font-size: 11px; color: var(--text); white-space: pre; user-select: all; }
+
+  /* ── Toggle ── */
+  .toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+  .toggle-label { display: flex; flex-direction: column; gap: 3px; }
+  .toggle-label span:first-child { font-size: 13px; font-weight: 600; }
+  .toggle-hint { font-size: 12px; color: var(--text-muted); }
+
+  /* ── Status page ── */
+  .status-page-form { display: flex; flex-direction: column; gap: 12px; }
+  .status-page-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
+  .sp-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .sp-row label { display: flex; flex-direction: column; gap: 4px; }
+  .slug-preview { display: flex; align-items: center; }
+  .slug-base { font-size: 13px; color: var(--text-muted); padding: 8px 0 8px 10px; background: var(--bg-surface); border: 1px solid var(--border); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .slug-preview .settings-input { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .sp-monitors { margin-top: 4px; }
+  .sp-monitor-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .sp-options { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+
+  /* ── AI Providers ── */
+  .ai-provider-card { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; transition: border-color 0.15s; }
+  .ai-provider-card:hover { border-color: var(--border-hover, rgba(255,255,255,0.14)); }
+  .ai-provider-card.has-key { flex-wrap: wrap; gap: 8px; }
+  .ai-provider-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ai-provider-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .ai-provider-name { font-weight: 600; font-size: 14px; }
+  .ai-provider-state { font-size: 11px; font-weight: 600; }
+  .ai-provider-fingerprint { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); }
+  .ai-provider-status { font-size: 12px; font-weight: 500; }
+  .ai-provider-validated { font-size: 11px; color: var(--text-muted); }
+  .ai-provider-nokey { font-size: 12px; color: var(--muted); }
+
+  /* ── Data Sources ── */
+  .ds-add-form { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .ds-form-header { display: flex; justify-content: space-between; align-items: center; }
+  .ds-form-header h3 { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
+  .ds-form-body { display: flex; flex-direction: column; gap: 8px; }
+  .ds-form-actions { display: flex; gap: 8px; margin-top: 0.75rem; }
+  .ds-row { display: flex; gap: 10px; }
+  .ds-actions { display: flex; gap: 8px; margin-top: 4px; }
+  .ds-bottom { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+  .ds-status-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .ds-status-dot.ds-ok { background: var(--low); box-shadow: 0 0 6px var(--low-glow); }
+  .ds-status-dot.ds-error { background: var(--critical); box-shadow: 0 0 6px var(--critical-glow); }
+  .ds-status-dot.ds-unknown { background: var(--text-muted); }
+  .ds-rec-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--border); }
+  .ds-rec-type { font-size: 11px; color: var(--accent-light); text-transform: uppercase; }
+  .ds-rec-text { font-size: 12px; color: var(--text-secondary); }
+  .ds-rec-reco { font-size: 11px; color: var(--text-muted); }
+
+  /* ── Scanner ── */
   .scanner-form { display: flex; flex-direction: column; gap: 14px; }
   .scanner-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
   .scanner-row { display: flex; gap: 12px; flex-wrap: wrap; }
@@ -1706,114 +1569,53 @@ const isPaid = tier !== 'free';
   .scanner-toggle { display: flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
   .scanner-toggle input { accent-color: var(--accent); }
   .scanner-toggle span { font-weight: 400 !important; text-transform: none !important; letter-spacing: normal !important; }
-  .status-page-form { display: flex; flex-direction: column; gap: 12px; }
-  .status-page-form label span { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
-  .sp-row { display: flex; gap: 12px; flex-wrap: wrap; }
-  .sp-row label { display: flex; flex-direction: column; gap: 4px; }
-  .slug-preview { display: flex; align-items: center; gap: 0; }
-  .slug-base { font-size: 13px; color: var(--text-muted); padding: 8px 0 8px 10px; background: var(--bg-surface); border: 1px solid var(--border); border-right: none; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
-  .slug-preview .settings-input { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-  .sp-monitors { margin-top: 4px; }
-  .sp-monitor-checks { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
-  .sp-options { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 
-  /* Billing */
-  .billing-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .tier-card { padding: 20px; }
-  .tier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-  .tier-name { font-size: 18px; font-weight: 700; }
-  .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 600; }
-  .tier-badge.warning { background: #FEF3C7; color: #92400E; }
-  .tier-badge.success { background: rgba(34,197,94,0.15); color: #22c55e; }
-  .tier-badge.muted { background: var(--bg-surface); color: var(--text-muted); }
-  .tier-limits { display: grid; gap: 0; }
-  .limit-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .limit-row:last-child { border-bottom: none; }
-  .limit-row span:first-child { color: var(--text-secondary); }
-  .limit-row span:last-child { font-weight: 600; }
-  .tier-upgrade { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
-  .tier-upgrade p { font-size: 13px; color: var(--text-secondary); margin-bottom: 12px; }
-  .upgrade-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-  .btn-secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; text-decoration: none; cursor: pointer; }
-  .btn-secondary:hover { background: var(--bg-hover); }
+  /* ── Backups ── */
+  .backup-list { margin-bottom: 12px; }
+  .backup-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .backup-info { display: flex; gap: 16px; align-items: center; }
+  .backup-date { font-size: 13px; }
+  .backup-size { font-size: 11px; color: var(--text-muted); }
+  .backup-actions { display: flex; gap: 12px; align-items: center; }
+  .backup-status { font-size: 12px; font-family: var(--font-mono); }
+  .backup-status.success { color: var(--low); }
+  .backup-status.error { color: var(--critical); }
 
-  /* Team */
-  .team-section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
-  .team-list { margin-bottom: 16px; }
-  .team-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
-  .team-row:last-child { border-bottom: none; }
-  .team-info { display: flex; align-items: center; gap: 8px; }
-  .team-email { font-size: 13px; }
-  .team-role-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--text-secondary); font-weight: 600; }
-  .team-role-badge.admin { background: #DBEAFE; color: #1E40AF; }
-  .team-role-badge.editor { background: #D1FAE5; color: #065F46; }
-  .team-role-badge.pending { background: #FEF3C7; color: #92400E; }
-  .team-actions { display: flex; gap: 8px; align-items: center; }
-  .team-invite { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .team-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
-  .team-loading { font-size: 13px; color: var(--text-muted); }
+  /* ── API Tokens ── */
+  .token-create { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .token-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 6px 10px; flex: 1; }
+  .token-input:focus { border-color: var(--accent); outline: none; }
+  .token-reveal { margin-top: 12px; padding: 12px; background: var(--bg-surface); border: 1px solid var(--accent); border-radius: var(--radius-sm); }
+  .token-warning { font-size: 12px; color: var(--accent-light); font-weight: 600; margin-bottom: 8px; }
+  .token-value { display: block; font-family: var(--font-mono); font-size: 11px; word-break: break-all; color: var(--text); user-select: all; }
+  .scanner-cmd-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .scanner-cmd-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+  .scanner-cmd-pre { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; overflow-x: auto; }
+  .scanner-cmd-pre code { font-family: var(--font-mono); font-size: 11px; color: var(--text); white-space: pre; user-select: all; }
 
-  /* AI Providers */
-  .ai-provider-card {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    margin-bottom: 6px;
-    transition: border-color 0.15s;
-  }
-  .ai-provider-card:hover { border-color: var(--border-hover, rgba(255,255,255,0.14)); }
-  .ai-provider-card.has-key { flex-wrap: wrap; gap: 8px; }
-  .ai-provider-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .ai-provider-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .ai-provider-name { font-weight: 600; font-size: 14px; }
-  .ai-provider-state { font-size: 11px; font-weight: 600; }
-  .ai-provider-fingerprint { font-size: 11px; color: var(--muted); background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 3px; font-family: var(--font-mono); }
-  .ai-provider-status { font-size: 12px; font-weight: 500; }
-  .ai-provider-validated { font-size: 11px; color: var(--text-muted); }
-  .ai-provider-nokey { font-size: 12px; color: var(--muted); }
+  /* ── Danger Zone ── */
+  .danger-zone h2 { color: var(--critical); border-bottom-color: rgba(239,68,68,0.2); }
+  .danger-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .delete-zone { margin-top: 12px; padding: 16px; background: rgba(239,68,68,0.04); border: 1px solid rgba(239,68,68,0.15); border-radius: var(--radius); }
+  .delete-warning { font-size: 12px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+  .delete-confirm-label { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+  .delete-confirm-label span { font-size: 12px; font-weight: 600; color: var(--critical); text-transform: uppercase; letter-spacing: 0.04em; }
+
+  /* ── Shared inputs ── */
+  .settings-input { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 13px; padding: 8px 10px; }
+  .settings-input:focus { border-color: var(--accent); outline: none; }
   .empty-hint { font-size: 13px; color: var(--muted); padding: 12px 0; }
-  .ds-form-body { display: flex; flex-direction: column; gap: 8px; }
-  .ds-form-actions { display: flex; gap: 8px; margin-top: 0.75rem; }
+  .loading, .empty { font-size: 13px; color: var(--text-muted); padding: 16px 0; }
+  .mono { font-family: var(--font-mono); }
 
-  /* Data Sources */
-  .ds-add-form {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-top: 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .ds-form-header { display: flex; justify-content: space-between; align-items: center; }
-  .ds-form-header h3 { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
-  .ds-row { display: flex; gap: 10px; }
-  .ds-actions { display: flex; gap: 8px; margin-top: 4px; }
-  .ds-bottom { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
-  .ds-status-dot {
-    display: inline-block;
-    width: 7px;
-    height: 7px;
-    border-radius: 50%;
-    margin-right: 6px;
-    vertical-align: middle;
-  }
-  .ds-status-dot.ds-ok { background: var(--low); box-shadow: 0 0 6px var(--low-glow); }
-  .ds-status-dot.ds-error { background: var(--critical); box-shadow: 0 0 6px var(--critical-glow); }
-  .ds-status-dot.ds-unknown { background: var(--text-muted); }
-  .ds-rec-row {
-    display: grid;
-    grid-template-columns: 110px 1fr auto;
-    gap: 10px;
-    align-items: start;
-    padding: 8px 0;
-    border-top: 1px solid var(--border);
-  }
-  .ds-rec-type { font-size: 11px; color: var(--accent-light); text-transform: uppercase; }
-  .ds-rec-text { font-size: 12px; color: var(--text-secondary); }
-  .ds-rec-reco { font-size: 11px; color: var(--text-muted); }
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-primary { background: var(--accent-btn); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
+  .btn-danger:hover { background: var(--critical-dim); }
+  .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
 </style>

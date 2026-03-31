@@ -1,3 +1,83 @@
 ---
-return Astro.redirect('/docs/scanner', 301);
+import '../../styles/global.css';
 ---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut documentation — Scanner, Incidents, API reference, and self-hosting guide." />
+  <title>Documentation — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/docs" class="ln-link active">Docs</a>
+      <a href="/docs/scanner" class="ln-link">Scanner</a>
+      <a href="/docs/incidents" class="ln-link">Incidents</a>
+      <a href="/docs/api" class="ln-link">API</a>
+      <a href="/docs/self-host" class="ln-link">Self-Host</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Documentation</h1>
+    <p class="updated mono">Everything you need to get the most out of StdOut</p>
+
+    <div class="doc-grid">
+      <a href="/docs/scanner" class="doc-card">
+        <div class="doc-card-title">Scanner</div>
+        <div class="doc-card-desc">Automated infrastructure discovery. Docker containers, network devices, TLS certs, auth layers — discovered and pushed to your dashboard.</div>
+      </a>
+
+      <a href="/docs/incidents" class="doc-card">
+        <div class="doc-card-title">Incidents</div>
+        <div class="doc-card-desc">Log and resolve failures. AI diagnosis, resolution similarity matching, full-text search across your incident history.</div>
+      </a>
+
+      <a href="/docs/api" class="doc-card">
+        <div class="doc-card-title">API Reference</div>
+        <div class="doc-card-desc">Push incidents from scripts and automation tools. Pull your infrastructure data. Manage tokens and scanner schedules programmatically.</div>
+      </a>
+
+      <a href="/docs/self-host" class="doc-card">
+        <div class="doc-card-title">Self-Hosting</div>
+        <div class="doc-card-desc">Run StdOut on your own hardware with Docker Compose. Your data stays local. One-time license, no subscription required.</div>
+      </a>
+    </div>
+
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-link.active { color: var(--accent-light); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal a { color: var(--accent-light); }
+  .doc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 8px; }
+  .doc-card { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; text-decoration: none; transition: border-color 0.15s; }
+  .doc-card:hover { border-color: var(--accent-light); }
+  .doc-card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+  .doc-card-desc { font-size: 13px; line-height: 1.6; color: var(--text-muted); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+  @media (max-width: 540px) { .doc-grid { grid-template-columns: 1fr; } }
+</style>

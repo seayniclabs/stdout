@@ -1,0 +1,184 @@
+---
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut Incidents — log, track, and resolve infrastructure failures. AI diagnosis built in." />
+  <title>Incidents — StdOut</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../../styles/fonts.css';</style>
+</head>
+<body>
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/docs" class="ln-link">Docs</a>
+      <a href="/docs/scanner" class="ln-link">Scanner</a>
+      <a href="/docs/incidents" class="ln-link active">Incidents</a>
+      <a href="/docs/api" class="ln-link">API</a>
+      <a href="/docs/self-host" class="ln-link">Self-Host</a>
+      <a href="/app/login" class="ln-link">Log in</a>
+    </div>
+  </nav>
+
+  <main class="legal">
+    <h1>Incidents</h1>
+    <p class="updated mono">Log, track, and resolve infrastructure failures — with AI diagnosis built in</p>
+
+    <p>Incidents are the core record in StdOut. Every failure, outage, or unexpected behavior gets an incident — a timestamped log with a title, severity, notes, and an eventual resolution. Over time, your incident history becomes a searchable knowledge base of how your infrastructure actually behaves.</p>
+
+    <h2>Creating an incident</h2>
+
+    <h3>From the dashboard</h3>
+
+    <p>Click <strong>New Incident</strong> from your dashboard or the incidents list. Fill in:</p>
+
+    <ul>
+      <li><strong>Title</strong> — one line describing what failed</li>
+      <li><strong>Severity</strong> — low, medium, high, or critical</li>
+      <li><strong>Body</strong> — paste error output, logs, or anything relevant. Markdown supported.</li>
+      <li><strong>Tags</strong> — optional labels for filtering (e.g. <code>docker</code>, <code>nas</code>, <code>network</code>)</li>
+    </ul>
+
+    <h3>From an external system</h3>
+
+    <p>Any script, automation, or monitoring tool can open an incident via the API. See <a href="/docs/api#incidents">API Reference → Incidents</a> for the full webhook spec.</p>
+
+    <p>Quick example — open an incident when a cron job fails:</p>
+
+    <pre><code>curl -s -X POST https://app.stdout.run/app/api/incidents/webhook \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Nightly backup failed",
+    "severity": "high",
+    "source": "cron",
+    "body": "Exit code 1. /mnt/backup not mounted."
+  }'</code></pre>
+
+    <h2>Severity levels</h2>
+
+    <table>
+      <thead>
+        <tr><th>Level</th><th>When to use</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>critical</code></td><td>Service is completely down; active user impact</td></tr>
+        <tr><td><code>high</code></td><td>Major functionality broken; data at risk</td></tr>
+        <tr><td><code>medium</code></td><td>Degraded performance or partial failure; workaround exists</td></tr>
+        <tr><td><code>low</code></td><td>Minor issue; no immediate impact; informational</td></tr>
+      </tbody>
+    </table>
+
+    <h2>AI diagnosis</h2>
+
+    <p>On any open incident, click <strong>Diagnose</strong>. StdOut sends the incident title and body to Claude and returns a structured analysis:</p>
+
+    <ul>
+      <li><strong>Likely cause</strong> — what probably went wrong, based on the error patterns</li>
+      <li><strong>Suggested steps</strong> — ordered action list to investigate and fix</li>
+      <li><strong>Related considerations</strong> — edge cases or secondary issues worth checking</li>
+    </ul>
+
+    <p>Diagnosis doesn't modify your incident — it adds a collapsible panel you can reference while working. You decide what's useful and what to note in the resolution.</p>
+
+    <p>AI diagnosis is rate-limited based on your plan (5/hour on Free, 20/hour on paid plans).</p>
+
+    <h2>Resolution similarity</h2>
+
+    <p>When you open a new incident, StdOut checks your past incidents for similar titles and error patterns. If a match is found, it surfaces the resolution from the earlier incident inline — so you don't have to search.</p>
+
+    <p>This gets more useful over time. The more incidents you resolve with detailed notes, the better the suggestions.</p>
+
+    <h2>Resolving an incident</h2>
+
+    <p>When you've fixed the issue, open the incident and click <strong>Resolve</strong>. Add a resolution note — what caused it and what you did to fix it. This is the most valuable part: a future search for the same error will surface your resolution.</p>
+
+    <p>Good resolutions include:</p>
+    <ul>
+      <li>Root cause (not just symptoms)</li>
+      <li>The exact commands or config changes that fixed it</li>
+      <li>How to prevent recurrence</li>
+    </ul>
+
+    <p>Resolved incidents stay in your history. You can reopen them if the same issue resurfaces.</p>
+
+    <h2>Searching incidents</h2>
+
+    <p>The search bar at the top of the incidents list runs full-text search across incident titles, bodies, and resolutions. Use it to find:</p>
+
+    <ul>
+      <li>Past incidents for a specific service — search the container or hostname</li>
+      <li>All failures matching an error message — paste the error text</li>
+      <li>Everything tagged with a label — search the tag name</li>
+    </ul>
+
+    <p>Search also covers your knowledge base docs, so one query surfaces both incidents and how-to guides relevant to your problem.</p>
+
+    <h2>Tags</h2>
+
+    <p>Tags are free-text labels you set when creating or editing an incident. They appear in the incidents list and are searchable. Consistent tagging makes it easy to filter by service, host, or failure type — for example, <code>plex</code>, <code>docker</code>, <code>nas01</code>, <code>networking</code>.</p>
+
+    <h2>Status</h2>
+
+    <table>
+      <thead>
+        <tr><th>Status</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Open</strong></td><td>Active — not yet resolved</td></tr>
+        <tr><td><strong>Resolved</strong></td><td>Fixed — resolution recorded</td></tr>
+        <tr><td><strong>Reopened</strong></td><td>Previously resolved; the issue came back</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Exporting incidents</h2>
+
+    <p>Your full incident history is included in the account export. Go to <strong>Settings → Export</strong>, or use the API:</p>
+
+    <pre><code>GET /app/api/export
+Authorization: Bearer YOUR_TOKEN</code></pre>
+
+    <p>Returns JSON with all incidents, resolutions, and tags. Useful for backups or migrating to a self-hosted instance.</p>
+
+  </main>
+
+  <footer class="lf">
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 800px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
+  .ln-link:hover { color: var(--text); }
+  .ln-link.active { color: var(--accent-light); }
+  .legal { max-width: 700px; margin: 0 auto; padding: 40px 24px 60px; }
+  .legal h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+  .updated { font-size: 12px; color: var(--text-muted); margin-bottom: 32px; }
+  .legal h2 { font-size: 16px; font-weight: 600; margin: 28px 0 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+  .legal h3 { font-size: 14px; font-weight: 600; margin: 16px 0 8px; color: var(--text-secondary); }
+  .legal p { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 12px; }
+  .legal ul { padding-left: 20px; margin-bottom: 12px; }
+  .legal li { font-size: 14px; line-height: 1.7; color: var(--text-secondary); margin-bottom: 4px; }
+  .legal a { color: var(--accent-light); }
+  .legal code { font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface); padding: 2px 6px; border-radius: 3px; }
+  .legal pre { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin: 12px 0; overflow-x: auto; }
+  .legal pre code { background: none; padding: 0; font-size: 12px; line-height: 1.7; }
+  .legal table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+  .legal th, .legal td { text-align: left; padding: 8px 12px; border: 1px solid var(--border); }
+  .legal th { background: var(--bg-surface); font-weight: 600; color: var(--text); font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .legal td { color: var(--text-secondary); }
+  .legal strong { color: var(--text); }
+  .lf { text-align: center; padding: 20px; border-top: 1px solid var(--border); }
+  .mono { font-family: var(--font-mono); }
+</style>
