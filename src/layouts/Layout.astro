@@ -2,6 +2,7 @@
 import '../styles/global.css';
 import { getTenantDb, tenantSchema } from '../lib/db';
 import { getUserWorkspaces } from '../lib/rbac';
+import { getUserLimits } from '../lib/tiers';
 import { eq } from 'drizzle-orm';
 
 interface Props {
@@ -26,6 +27,13 @@ const mobileNav = [
   { href: '/app/search', label: 'Search' },
   { href: '/app/settings', label: 'Settings' },
 ];
+
+// Team nav link: only visible for Shop (rbacEnabled) users
+let showTeamNav = false;
+if (user) {
+  const { limits } = getUserLimits(user);
+  showTeamNav = limits.rbacEnabled;
+}
 
 // Load tenant branding — use workspace owner's DB if in a team workspace
 let workspaceName = 'StdOut';
@@ -100,6 +108,9 @@ const currentWsId = ws?.ownerId || user?.id;
           }]}
         >{label}</a>
       ))}
+      {showTeamNav && (
+        <a href="/app/team" class:list={[{ active: path.startsWith('/app/team') }]}>Team</a>
+      )}
     </div>
 
     <form class="nav-search" action="/app/search" method="get" role="search">
@@ -161,6 +172,9 @@ const currentWsId = ws?.ownerId || user?.id;
         }]}
       >{label}</a>
     ))}
+    {showTeamNav && (
+      <a href="/app/team" class:list={['nav-mobile-link', { active: path.startsWith('/app/team') }]}>Team</a>
+    )}
     <div class="nav-mobile-divider"></div>
     <div class="nav-mobile-auth" id="mobileAuthNav">
       <a href="/app/login" class="nav-mobile-link">Log in</a>
