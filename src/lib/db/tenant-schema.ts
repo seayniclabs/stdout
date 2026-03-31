@@ -281,6 +281,26 @@ export const windlassConfig = sqliteTable('windlass_config', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Feature Requests ---
+
+export const featureRequests = sqliteTable('feature_requests', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+  category: text('category', {
+    enum: ['feature', 'improvement', 'integration', 'bug', 'other'],
+  }).notNull().default('feature'),
+  status: text('status', {
+    enum: ['submitted', 'reviewing', 'planned', 'in_progress', 'shipped', 'declined'],
+  }).notNull().default('submitted'),
+  adminNotes: text('admin_notes'),         // Internal notes (not shown to user)
+  responseToUser: text('response_to_user'), // Visible response to submitter
+  votes: integer('votes').notNull().default(1),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- Windlass Alert Router ---
 
 export const alertChannels = sqliteTable('alert_channels', {

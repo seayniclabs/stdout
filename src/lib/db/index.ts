@@ -64,6 +64,24 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'windlass_services', 'override_until', 'INTEGER');
   safeAddColumn(sqlite, 'windlass_services', 'override_reason', 'TEXT');
 
+  // Feature requests (2026-03-31)
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS feature_requests (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'feature',
+      status TEXT NOT NULL DEFAULT 'submitted',
+      admin_notes TEXT,
+      response_to_user TEXT,
+      votes INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_feature_requests_user ON feature_requests(user_id);
+  `);
+
   // Windlass: alert router tables (2026-03-30)
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS alert_channels (

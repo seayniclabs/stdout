@@ -120,6 +120,40 @@ const isPaid = tier !== 'free';
       </section>
     )}
 
+    <!-- Feature Requests -->
+    <section class="section">
+      <h2>Feature Requests</h2>
+      <p class="section-desc">Request features or improvements. We read every submission.</p>
+
+      <div id="featureRequestList" class="backup-list">
+        <div class="loading mono">Loading...</div>
+      </div>
+
+      <div id="featureRequestForm" style="display:none; margin-top: 0.75rem;">
+        <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
+          <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
+          <input type="text" id="frTitle" class="settings-input" placeholder="Short description of what you need" />
+          <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
+          <select id="frCategory" class="settings-input">
+            <option value="feature">New Feature</option>
+            <option value="improvement">Improvement</option>
+            <option value="integration">Integration</option>
+            <option value="bug">Bug Report</option>
+            <option value="other">Other</option>
+          </select>
+          <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Description</label>
+          <textarea id="frDescription" class="settings-input" rows="4" placeholder="What problem does this solve? How would you use it?"></textarea>
+          <div style="display: flex; gap: 8px; margin-top: 8px;">
+            <button id="frSubmitBtn" class="btn btn-primary btn-sm">Submit</button>
+            <button id="frCancelBtn" class="btn btn-ghost btn-sm">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <button id="frAddBtn" class="btn btn-ghost btn-sm" style="margin-top: 0.5rem;">Request a feature</button>
+      <div id="frStatus" class="backup-status"></div>
+    </section>
+
     <!-- Branding (Solo+) -->
     <section class="section">
       <h2>Workspace Branding</h2>
@@ -683,6 +717,83 @@ const isPaid = tier !== 'free';
       }).catch(() => {});
     });
   }
+
+  // --- Feature Requests ---
+  async function loadFeatureRequests() {
+    const list = document.getElementById('featureRequestList');
+    if (!list) return;
+
+    const res = await window.stdoutFetch('/app/api/feature-requests');
+    if (!res?.ok) { list.innerHTML = '<div class="empty-hint">Failed to load</div>'; return; }
+    const { requests } = await res.json();
+
+    if (!requests || requests.length === 0) {
+      list.innerHTML = '<div class="empty-hint">No feature requests yet. Be the first!</div>';
+      return;
+    }
+
+    const statusColors: Record<string, string> = {
+      submitted: '#94a3b8', reviewing: '#60A5FA', planned: '#A855F7',
+      in_progress: '#F97316', shipped: '#4ade80', declined: '#EF4444',
+    };
+
+    list.innerHTML = requests.map((r: any) => {
+      const color = statusColors[r.status] || '#94a3b8';
+      const date = new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border:1px solid rgba(255,255,255,0.08);border-radius:8px;margin-bottom:6px;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:13px;">${r.title}</div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:2px;">${r.description.slice(0, 100)}${r.description.length > 100 ? '...' : ''}</div>
+          ${r.responseToUser ? `<div style="font-size:11px;color:#60A5FA;margin-top:4px;padding:4px 8px;background:rgba(96,165,250,0.08);border-radius:4px;">Response: ${r.responseToUser}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+          <span style="font-size:10px;padding:2px 6px;border-radius:3px;background:${color}22;color:${color};font-weight:600;text-transform:uppercase;">${r.status.replace('_', ' ')}</span>
+          <span style="font-size:10px;color:#64748b;">${date}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  document.getElementById('frAddBtn')?.addEventListener('click', () => {
+    document.getElementById('featureRequestForm')!.style.display = 'block';
+    document.getElementById('frAddBtn')!.style.display = 'none';
+  });
+  document.getElementById('frCancelBtn')?.addEventListener('click', () => {
+    document.getElementById('featureRequestForm')!.style.display = 'none';
+    document.getElementById('frAddBtn')!.style.display = '';
+  });
+
+  document.getElementById('frSubmitBtn')?.addEventListener('click', async () => {
+    const title = (document.getElementById('frTitle') as HTMLInputElement)?.value.trim();
+    const description = (document.getElementById('frDescription') as HTMLTextAreaElement)?.value.trim();
+    const category = (document.getElementById('frCategory') as HTMLSelectElement)?.value;
+
+    if (!title || !description) { window.showToast?.('Title and description are required', 'error'); return; }
+
+    const btn = document.getElementById('frSubmitBtn') as HTMLElement;
+    btn.textContent = 'Submitting...';
+
+    const res = await window.stdoutFetch('/app/api/feature-requests', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, description, category }),
+    });
+
+    if (res?.ok) {
+      window.showToast?.('Feature request submitted!', 'success');
+      document.getElementById('featureRequestForm')!.style.display = 'none';
+      document.getElementById('frAddBtn')!.style.display = '';
+      (document.getElementById('frTitle') as HTMLInputElement).value = '';
+      (document.getElementById('frDescription') as HTMLTextAreaElement).value = '';
+      loadFeatureRequests();
+    } else {
+      const data = await res?.json().catch(() => ({}));
+      window.showToast?.(data?.error || 'Submission failed', 'error');
+    }
+    btn.textContent = 'Submit';
+  });
+
+  loadFeatureRequests();
 
   // --- AI Providers (BYOK) ---
   let aiProvidersData: any[] = [];
