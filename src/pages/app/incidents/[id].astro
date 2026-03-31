@@ -647,9 +647,10 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
 
   /* Steps */
   .autofix-steps { display: flex; flex-direction: column; gap: 0.5rem; }
-  .autofix-step { background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 0; transition: opacity 0.2s; }
-  .autofix-step.step-done { opacity: 0.5; }
-  .autofix-step.step-done .step-desc { text-decoration: line-through; }
+  .autofix-step { background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 0; transition: opacity 0.2s, border-color 0.15s; }
+  .autofix-step:hover { border-color: var(--border-hover, rgba(255,255,255,0.14)); }
+  .autofix-step.step-done { opacity: 0.45; }
+  .autofix-step.step-done .step-desc { text-decoration: line-through; color: var(--muted); }
 
   .step-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.75rem; }
   .step-checkbox { width: 16px; height: 16px; accent-color: var(--low, #4ade80); cursor: pointer; flex-shrink: 0; }
@@ -660,7 +661,7 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .step-toggle.open { transform: rotate(180deg); }
 
   /* Step details (collapsible) */
-  .step-details { padding: 0 0.75rem 0.75rem; border-top: 1px solid var(--border); }
+  .step-details { padding: 0.6rem 0.75rem 0.75rem; border-top: 1px solid var(--border); }
   .step-section { margin-top: 0.6rem; }
   .step-section-label { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; margin-bottom: 0.3rem; }
   .step-section-muted { opacity: 0.7; }
