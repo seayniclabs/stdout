@@ -14,7 +14,7 @@ export interface SeedDoc {
   tags: string;
 }
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 
 export const seedDocs: SeedDoc[] = [
   // ── Getting Started Onboarding Guides ──────────────────────────────
@@ -1279,5 +1279,149 @@ StdOut doesn't directly start or stop containers. It sends commands to Windlass,
 | Manual control doesn't take effect | Windlass processes commands on its next cycle | Wait up to 5 minutes, or run \`windlass --run\` manually |`,
     docType: 'guide',
     tags: 'windlass,scheduling,containers,docker,alerts',
+  },
+
+  // ── Auto-Fix & Host Execution — Privacy & Security ───────────────────
+  {
+    id: 'community_guide_autofix_exec',
+    title: 'Auto-Fix Host Execution — Privacy & Security Guide',
+    content: `## What Is Auto-Fix?
+
+Auto-Fix is StdOut's AI-powered remediation feature. When an incident occurs, it generates a step-by-step fix plan using your AI provider key (BYOK), then lets you execute approved commands directly from the StdOut interface.
+
+## How It Works
+
+1. **You click "Generate Fix Plan"** on any active incident
+2. **AI analyzes** the incident against your stack context and past resolutions
+3. **A structured plan** is generated with numbered steps, commands, file changes, and verification steps
+4. **You review each step** — check the commands, read the risk assessment
+5. **You click Run** on individual commands you approve — or copy them to run manually
+6. **Results appear inline** — stdout/stderr displayed directly in the UI
+
+## Where Commands Execute
+
+This is the most important thing to understand about Auto-Fix:
+
+**Commands run on your Docker host, not inside the StdOut container.**
+
+StdOut sends approved commands to the **Windlass server** running on your host machine. The Windlass server executes them with the permissions of the user running the server process. This means:
+
+- Commands have access to your host filesystem, Docker socket, and network
+- The output is real — it's your actual infrastructure responding
+- Changes are permanent — there is no sandbox or rollback beyond what the plan suggests
+
+## Security Model
+
+### Command Allowlist
+
+The Windlass exec endpoint only allows commands starting with these prefixes:
+
+| Category | Allowed Commands |
+|----------|-----------------|
+| **DNS/Network** | \`dig\`, \`curl\`, \`wget\`, \`openssl\`, \`nslookup\`, \`host\`, \`ping\`, \`traceroute\`, \`nc\` |
+| **Docker** | \`docker\`, \`docker-compose\`, \`docker compose\` |
+| **File inspection** | \`cat\`, \`ls\`, \`stat\`, \`head\`, \`tail\`, \`grep\`, \`find\`, \`wc\` |
+| **System info** | \`df\`, \`du\`, \`free\`, \`uptime\`, \`top -bn1\`, \`ps\` |
+| **Services** | \`systemctl status\`, \`journalctl\`, \`nginx -t\`, \`certbot\` |
+
+Any command not in this list is **rejected** with an error message.
+
+### Blocked Patterns
+
+These patterns are always blocked, even if they start with an allowed prefix:
+
+- \`rm -rf /\` — recursive delete from root
+- \`mkfs\` — filesystem formatting
+- \`dd if=\` — raw disk writes
+- \`shutdown\`, \`reboot\`, \`halt\` — system power commands
+- Piped shell execution (\`curl|sh\`, \`wget|bash\`)
+
+### Network Restrictions
+
+The Windlass exec endpoint **only accepts connections from**:
+
+- \`127.0.0.1\` (localhost)
+- \`::1\` (IPv6 localhost)
+- \`172.x.x.x\` (Docker bridge networks)
+- \`10.x.x.x\` (Docker overlay networks)
+
+External requests are rejected with a 403 error. The endpoint is never exposed to the public internet.
+
+### Human Approval Gate
+
+Every command requires **explicit user approval** before execution:
+
+1. The AI generates commands as part of a plan — they are NOT auto-executed
+2. Each command has a **Run** button that requires a click
+3. A confirmation dialog shows the exact command before execution
+4. The \`approved: true\` flag must be set in the API request
+
+There is no path from AI generation to execution without human interaction.
+
+## Privacy
+
+### What StdOut Sees
+
+- The incident description you wrote
+- Your stack context (infrastructure description)
+- AI-generated plans and commands (sent to your chosen AI provider via your API key)
+- Command output (stdout/stderr) displayed in the UI
+
+### What StdOut Does NOT Do
+
+- **Never sends command output to AI** — results stay local, they're displayed in your browser only
+- **Never stores command output** — it's returned in the HTTP response and rendered client-side
+- **Never auto-executes** — every command requires your click
+- **Never uses the platform API key for auto-fix** — only your BYOK key is used
+- **Never phones home** — self-hosted means self-hosted. No telemetry, no usage reporting, no external calls except to the AI provider you chose
+
+### What Your AI Provider Sees
+
+When you generate a fix plan, your chosen AI provider (Anthropic, OpenAI, or Gemini) receives:
+
+- Your incident title and description
+- Your stack description (from the Infrastructure page)
+- Past resolutions for similar incidents (if any)
+- The previous AI diagnosis (if one was run)
+
+Your AI provider does **NOT** receive:
+
+- Command execution results
+- Your API keys for other services
+- Your actual infrastructure data (container names, IPs, ports) beyond what's in your stack description
+- Any data from other StdOut features (HUD metrics, docs, team info)
+
+## Setup
+
+Auto-Fix requires two things:
+
+1. **A BYOK API key** — Go to Settings > AI Providers and add your Anthropic or OpenAI key
+2. **Windlass server with exec enabled** — The Windlass server must be running on your host with the \`/exec\` endpoint active
+
+If either is missing, the Auto-Fix button appears but returns a clear error explaining what's needed.
+
+## Disabling Host Execution
+
+If you don't want host execution:
+
+- **Don't run the Windlass server** — without it, Auto-Fix generates plans but the Run buttons show "Direct Docker execution not available. Run this command manually."
+- **Use copy buttons instead** — every command has a clipboard copy button for manual execution
+- **The plan is still valuable** — even without execution, the AI-generated steps, verification instructions, and rollback procedures save time
+
+## FAQ
+
+**Q: Can I add custom commands to the allowlist?**
+A: Yes — edit the \`ALLOWED_PREFIXES\` list in your Windlass server script. Add any command prefix you trust.
+
+**Q: What if a command hangs?**
+A: Commands have a 60-second maximum timeout. If exceeded, the process is killed and a timeout error is returned.
+
+**Q: Can team members run commands?**
+A: Yes, if they have the appropriate RBAC permissions. The same approval gate applies to all users.
+
+**Q: Is there an audit log?**
+A: Yes. Every auto-fix execution is logged in the \`ai_execution_audit\` table with the command, result, and which user approved it.`,
+    docType: 'guide',
+    tags: 'autofix,security,privacy,execution,windlass',
   },
 ];
