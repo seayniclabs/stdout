@@ -161,6 +161,29 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
       )}
     </section>
 
+    <!-- Auto-Fix (BYOK user key required) -->
+    {current.status !== 'resolved' && (
+      <section class="section">
+        <h2>Auto-Fix</h2>
+        <p class="section-hint">Generate a step-by-step remediation plan using your AI provider key. Requires a BYOK key in Settings.</p>
+
+        <div id="autofixContainer">
+          <button id="autofixPlanBtn" class="btn btn-primary" data-incident-id={current.id}>
+            Generate Fix Plan
+          </button>
+          <div id="autofixLoading" style="display:none;">
+            <span class="mono" style="color:var(--accent);">Generating remediation plan...</span>
+          </div>
+        </div>
+
+        <div id="autofixPlan" style="display:none;">
+          <div class="autofix-summary" id="autofixSummary"></div>
+          <div class="autofix-meta" id="autofixMeta"></div>
+          <div class="autofix-steps" id="autofixSteps"></div>
+        </div>
+      </section>
+    )}
+
     <!-- Resolutions -->
     <section class="section">
       <h2>Resolutions ({resolutions.length})</h2>
@@ -341,6 +364,110 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         </svg>
       </div>`;
   }
+
+  // --- Auto-Fix ---
+  const autofixPlanBtn = document.getElementById('autofixPlanBtn');
+  const autofixLoading = document.getElementById('autofixLoading');
+  const autofixContainer = document.getElementById('autofixContainer');
+  const autofixPlanDiv = document.getElementById('autofixPlan');
+
+  if (autofixPlanBtn) {
+    autofixPlanBtn.addEventListener('click', async () => {
+      const incidentId = (autofixPlanBtn as HTMLElement).dataset.incidentId;
+      autofixPlanBtn.style.display = 'none';
+      if (autofixLoading) autofixLoading.style.display = 'block';
+
+      try {
+        const res = await window.stdoutFetch('/app/api/incidents/autofix', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ incidentId, action: 'plan' }),
+        });
+
+        const data = await res?.json();
+
+        if (!res?.ok) {
+          window.showToast?.(data?.error || 'Auto-fix failed', 'error');
+          autofixPlanBtn.style.display = 'inline-flex';
+          if (autofixLoading) autofixLoading.style.display = 'none';
+          return;
+        }
+
+        // Render the plan
+        if (autofixPlanDiv) autofixPlanDiv.style.display = 'block';
+        if (autofixLoading) autofixLoading.style.display = 'none';
+
+        const plan = data.plan;
+        const summaryEl = document.getElementById('autofixSummary');
+        const metaEl = document.getElementById('autofixMeta');
+        const stepsEl = document.getElementById('autofixSteps');
+
+        if (summaryEl) {
+          summaryEl.innerHTML = `<strong>${plan.summary || 'Remediation plan generated'}</strong>`;
+          if (plan.totalRisk) {
+            const riskColor = plan.totalRisk === 'high' ? 'var(--high)' : plan.totalRisk === 'medium' ? '#F97316' : 'var(--low)';
+            summaryEl.innerHTML += ` <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${plan.totalRisk} risk</span>`;
+          }
+          if (plan.estimatedTime) {
+            summaryEl.innerHTML += ` <span class="time-badge">${plan.estimatedTime}</span>`;
+          }
+        }
+
+        if (metaEl) {
+          metaEl.innerHTML = `<span class="mono">${data.provider}/${data.model}</span> <span>${data.tokens.prompt} in / ${data.tokens.completion} out</span>`;
+        }
+
+        if (stepsEl && plan.steps && plan.steps.length > 0) {
+          stepsEl.innerHTML = plan.steps.map((step: any, i: number) => {
+            const riskColor = step.risk === 'high' ? 'var(--high)' : step.risk === 'medium' ? '#F97316' : 'var(--low)';
+            let html = `<div class="autofix-step">
+              <div class="step-header">
+                <span class="step-number">${step.order || i + 1}</span>
+                <span class="step-desc">${step.description}</span>
+                <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${step.risk || '?'}</span>
+              </div>`;
+
+            if (step.commands && step.commands.length > 0) {
+              html += `<div class="step-commands">${step.commands.map((c: string) => `<code class="command-line">${c}</code>`).join('')}</div>`;
+            }
+
+            if (step.files && step.files.length > 0) {
+              html += `<div class="step-files">${step.files.map((f: any) => `<div class="file-change"><code class="mono">${f.path}</code> — ${f.change}</div>`).join('')}</div>`;
+            }
+
+            if (step.verification) {
+              html += `<div class="step-verify"><strong>Verify:</strong> ${step.verification}</div>`;
+            }
+
+            if (step.rollback) {
+              html += `<div class="step-rollback"><strong>Rollback:</strong> ${step.rollback}</div>`;
+            }
+
+            html += '</div>';
+            return html;
+          }).join('');
+        } else if (stepsEl && plan.raw) {
+          // Fallback: show raw text if parsing failed
+          stepsEl.innerHTML = `<pre class="autofix-raw">${plan.raw}</pre>`;
+        }
+
+        // Show "Generate again" button
+        if (autofixContainer) {
+          autofixContainer.innerHTML = `<button id="autofixRetryBtn" class="btn btn-ghost btn-sm">Generate new plan</button>`;
+          document.getElementById('autofixRetryBtn')?.addEventListener('click', () => {
+            if (autofixPlanDiv) autofixPlanDiv.style.display = 'none';
+            autofixContainer.innerHTML = '';
+            autofixContainer.appendChild(autofixPlanBtn);
+            autofixPlanBtn.style.display = 'inline-flex';
+          });
+        }
+      } catch (err) {
+        window.showToast?.('Network error', 'error');
+        autofixPlanBtn.style.display = 'inline-flex';
+        if (autofixLoading) autofixLoading.style.display = 'none';
+      }
+    });
+  }
 </script>
 
 <style>
@@ -375,6 +502,26 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .commands { display: flex; flex-direction: column; gap: 4px; }
   .command-line { display: block; font-family: var(--font-mono); font-size: 12px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 4px; padding: 8px 12px; color: var(--accent-light); }
   .diagnosis-meta { margin-top: 12px; font-size: 11px; color: var(--text-muted); display: flex; gap: 16px; }
+
+  /* Auto-Fix */
+  .section-hint { font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; }
+  .autofix-summary { margin-bottom: 0.5rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .risk-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border: 1px solid; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+  .time-badge { font-size: 0.7rem; color: var(--muted); }
+  .autofix-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; display: flex; gap: 1rem; }
+  .autofix-steps { display: flex; flex-direction: column; gap: 0.75rem; }
+  .autofix-step { background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
+  .step-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .step-number { width: 22px; height: 22px; border-radius: 50%; background: var(--accent, #F97316); color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-desc { font-size: 0.85rem; font-weight: 500; }
+  .step-commands { margin: 0.5rem 0; }
+  .step-commands .command-line { display: block; margin-bottom: 0.25rem; }
+  .step-files { margin: 0.5rem 0; }
+  .file-change { font-size: 0.8rem; padding: 0.25rem 0; border-bottom: 1px solid var(--border); }
+  .file-change:last-child { border-bottom: none; }
+  .step-verify, .step-rollback { font-size: 0.8rem; color: var(--muted); margin-top: 0.35rem; }
+  .step-verify strong, .step-rollback strong { color: var(--text); }
+  .autofix-raw { font-size: 0.8rem; white-space: pre-wrap; background: var(--card-bg); padding: 1rem; border-radius: 6px; border: 1px solid var(--border); }
   .resolution-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
   .resolution-content { font-family: var(--font-mono); font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); }
   .resolution-meta { margin-top: 8px; font-size: 11px; color: var(--text-muted); }

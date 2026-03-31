@@ -60,6 +60,9 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   // Data sources: username/password columns (2026-03-28)
   safeAddColumn(sqlite, 'data_sources', 'username', 'TEXT');
   safeAddColumn(sqlite, 'data_sources', 'password', 'TEXT');
+  // Windlass: manual override (2026-03-30)
+  safeAddColumn(sqlite, 'windlass_services', 'override_until', 'INTEGER');
+  safeAddColumn(sqlite, 'windlass_services', 'override_reason', 'TEXT');
 }
 
 function seedCommunityDocs(sqlite: InstanceType<typeof Database>, userId: string): void {

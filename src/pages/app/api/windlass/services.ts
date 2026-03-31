@@ -81,6 +81,49 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
   }
 
+  if (action === 'override') {
+    const { serviceId, duration, reason } = body;
+    if (!serviceId) {
+      return new Response(JSON.stringify({ error: 'serviceId is required' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const db = getTenantDb(userId);
+    const service = getService(userId, serviceId);
+    if (!service) {
+      return new Response(JSON.stringify({ error: 'Service not found' }), {
+        status: 404, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // duration in minutes (0 = clear override, null/undefined = until next schedule eval)
+    let overrideUntil: Date | null = null;
+    if (duration === 0 || duration === 'clear') {
+      overrideUntil = null; // Clear the override
+    } else {
+      const mins = parseInt(duration) || 60; // Default 1 hour
+      overrideUntil = new Date(Date.now() + mins * 60 * 1000);
+    }
+
+    db.update(tenantSchema.windlassServices)
+      .set({
+        overrideUntil,
+        overrideReason: overrideUntil ? (reason || `Manual override for ${duration || 60} minutes`) : null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+      .run();
+
+    const { logEvent } = await import('../../../../lib/windlass');
+    logEvent(userId, serviceId, overrideUntil ? 'config_changed' : 'config_changed',
+      overrideUntil ? `Override set until ${overrideUntil.toISOString()} — ${reason || 'manual'}` : 'Override cleared');
+
+    return new Response(JSON.stringify({ ok: true, overrideUntil }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   return new Response(JSON.stringify({ error: 'Unknown action' }), {
     status: 400, headers: { 'Content-Type': 'application/json' },
   });

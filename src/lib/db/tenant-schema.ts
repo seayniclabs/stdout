@@ -246,6 +246,8 @@ export const windlassServices = sqliteTable('windlass_services', {
   expectedState: text('expected_state', {
     enum: ['running', 'stopped'],
   }).notNull().default('running'),
+  overrideUntil: integer('override_until', { mode: 'timestamp' }),  // Manual override — suppress mismatch until this time
+  overrideReason: text('override_reason'),                          // Why the override was set
   lastStateChange: integer('last_state_change', { mode: 'timestamp' }),
   lastStarted: integer('last_started', { mode: 'timestamp' }),
   lastStopped: integer('last_stopped', { mode: 'timestamp' }),

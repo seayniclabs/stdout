@@ -241,7 +241,7 @@ function timeAgo(date: Date) {
             </div>
           </div>
 
-          {/* Windlass widget (if configured) */}
+          {/* Windlass widget (if configured) — below gauges */}
           {windlassSummary && windlassSummary.total > 0 && (
             <a href="/app/tools/windlass" class="windlass-widget">
               <div class="ww-header">
@@ -673,11 +673,11 @@ function timeAgo(date: Date) {
 
   /* Service rows — control room list */
   /* Windlass widget */
-  .windlass-widget { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; text-decoration: none; color: var(--text); transition: border-color 0.15s; grid-column: 1 / -1; margin-bottom: 8px; }
+  .windlass-widget { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; text-decoration: none; color: var(--text); transition: border-color 0.15s; margin-top: 8px; }
   .windlass-widget:hover { border-color: var(--accent); }
   .ww-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); }
   .ww-title { font-size: 0.7rem; letter-spacing: 0.08em; }
-  .ww-stats { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .ww-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 1rem; }
   .ww-stat { font-size: 0.8rem; color: var(--muted); }
   .ww-num { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; margin-right: 2px; }
 

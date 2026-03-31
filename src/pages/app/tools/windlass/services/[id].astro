@@ -71,6 +71,44 @@ const stateColors: Record<string, string> = {
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
         Restart
       </button>
+      <div class="control-separator"></div>
+      {service.overrideUntil && new Date(service.overrideUntil) > new Date() ? (
+        <button class="btn btn-sm btn-ghost override-btn override-active" id="clearOverride" data-service={id}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+          Clear Override
+        </button>
+      ) : (
+        <button class="btn btn-sm btn-ghost override-btn" id="setOverride" data-service={id}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Override Schedule
+        </button>
+      )}
+    </div>
+
+    {/* Override banner */}
+    {service.overrideUntil && new Date(service.overrideUntil) > new Date() && (
+      <div class="override-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span>Manual override active until <strong class="mono">{new Date(service.overrideUntil).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Chicago' })}</strong></span>
+        {service.overrideReason && <span class="override-reason">— {service.overrideReason}</span>}
+      </div>
+    )}
+
+    {/* Override dialog */}
+    <div id="overrideDialog" class="override-dialog" style="display:none;">
+      <div class="override-dialog-body">
+        <h3>Set Manual Override</h3>
+        <p>Keep this service in its current state and suppress mismatch warnings for:</p>
+        <div class="override-options">
+          <button class="btn btn-sm btn-ghost override-duration" data-minutes="60">1 hour</button>
+          <button class="btn btn-sm btn-ghost override-duration" data-minutes="120">2 hours</button>
+          <button class="btn btn-sm btn-ghost override-duration" data-minutes="240">4 hours</button>
+          <button class="btn btn-sm btn-ghost override-duration" data-minutes="480">8 hours</button>
+          <button class="btn btn-sm btn-ghost override-duration" data-minutes="1440">24 hours</button>
+        </div>
+        <label style="margin-top: 0.5rem; font-size: 0.8rem;">Reason (optional)</label>
+        <input type="text" id="overrideReason" class="settings-input" placeholder="e.g., TTS batch processing" style="margin-top: 0.25rem;" />
+      </div>
     </div>
 
     {/* Properties */}
@@ -86,7 +124,7 @@ const stateColors: Record<string, string> = {
             <span class="prop-label">Expected State</span>
             <span class="prop-value">{service.expectedState}</span>
           </div>
-          {service.currentState !== service.expectedState && service.classification !== 'manual' && (
+          {service.currentState !== service.expectedState && service.classification !== 'manual' && !(service.overrideUntil && new Date(service.overrideUntil) > new Date()) && (
             <div class="state-warning">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               State mismatch — service is {service.currentState} but expected {service.expectedState}
@@ -213,8 +251,21 @@ const stateColors: Record<string, string> = {
     .detail-desc { color: var(--muted); font-size: 0.85rem; margin: 0 0 1rem; }
 
     /* Controls */
-    .control-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; padding: 0.75rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; }
+    .control-bar { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; padding: 0.75rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap; align-items: center; }
     .control-btn { display: flex; align-items: center; gap: 0.35rem; }
+    .control-separator { width: 1px; height: 24px; background: var(--border); margin: 0 0.25rem; }
+    .override-btn { display: flex; align-items: center; gap: 0.35rem; }
+    .override-active { color: #F97316; border-color: rgba(249, 115, 22, 0.3); }
+
+    .override-banner { display: flex; align-items: center; gap: 0.5rem; padding: 0.6rem 1rem; background: rgba(249, 115, 22, 0.08); border: 1px solid rgba(249, 115, 22, 0.2); border-radius: 8px; margin-bottom: 1.5rem; font-size: 0.8rem; color: #F97316; }
+    .override-reason { color: var(--muted); }
+
+    .override-dialog { margin-bottom: 1.5rem; }
+    .override-dialog-body { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+    .override-dialog h3 { margin: 0 0 0.35rem; font-size: 0.9rem; }
+    .override-dialog p { margin: 0 0 0.75rem; font-size: 0.8rem; color: var(--muted); }
+    .override-options { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .override-duration { font-family: var(--font-mono); }
 
     /* Properties grid */
     .detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
@@ -257,6 +308,47 @@ const stateColors: Record<string, string> = {
   </style>
 
   <script>
+    // Override controls
+    document.getElementById('setOverride')?.addEventListener('click', () => {
+      const dialog = document.getElementById('overrideDialog');
+      if (dialog) dialog.style.display = dialog.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.querySelectorAll('.override-duration').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const minutes = (btn as HTMLElement).dataset.minutes;
+        const serviceId = document.getElementById('setOverride')?.dataset.service;
+        const reason = (document.getElementById('overrideReason') as HTMLInputElement)?.value || '';
+
+        const res = await window.stdoutFetch('/app/api/windlass/services', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'override', serviceId, duration: minutes, reason }),
+        });
+
+        if (res?.ok) {
+          window.showToast?.(`Override set for ${minutes} minutes`, 'success');
+          setTimeout(() => location.reload(), 500);
+        } else {
+          const data = await res?.json().catch(() => ({}));
+          window.showToast?.(data?.error || 'Override failed', 'error');
+        }
+      });
+    });
+
+    document.getElementById('clearOverride')?.addEventListener('click', async () => {
+      const serviceId = (document.getElementById('clearOverride') as HTMLElement)?.dataset.service;
+      const res = await window.stdoutFetch('/app/api/windlass/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'override', serviceId, duration: 'clear' }),
+      });
+      if (res?.ok) {
+        window.showToast?.('Override cleared', 'success');
+        setTimeout(() => location.reload(), 500);
+      }
+    });
+
     document.querySelectorAll('.control-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const action = (btn as HTMLElement).dataset.action;
