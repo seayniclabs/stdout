@@ -28,6 +28,9 @@ const mobileNav = [
   { href: '/app/settings', label: 'Settings' },
 ];
 
+const user = Astro.locals.user;
+const ws = Astro.locals.workspace;
+
 // Team nav link: only visible for Shop (rbacEnabled) users
 let showTeamNav = false;
 if (user) {
@@ -39,8 +42,6 @@ if (user) {
 let workspaceName = 'StdOut';
 let accentOverride = '';
 let logoOverride = '';
-const user = Astro.locals.user;
-const ws = Astro.locals.workspace;
 const wsOwnerId = ws?.ownerId || user?.id;
 
 // Workspace switcher data

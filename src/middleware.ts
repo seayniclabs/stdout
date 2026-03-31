@@ -171,16 +171,19 @@ setInterval(() => {
 // Windlass auto-sync — runs every 60s, checks each user's configured interval
 setInterval(async () => {
   try {
-    const { getAllWindlassConfigs, syncFromEndpoint } = await import('./lib/windlass');
-    const configs = getAllWindlassConfigs();
+    const { syncFromEndpoint, getConfig } = await import('./lib/windlass');
+    const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
     const now = Date.now();
-    for (const cfg of configs) {
-      if (!cfg.enabled) continue;
-      const intervalMs = (cfg.syncIntervalSeconds || 60) * 1000;
-      const lastSync = cfg.lastSyncedAt ? new Date(cfg.lastSyncedAt).getTime() : 0;
-      if (now - lastSync >= intervalMs) {
-        syncFromEndpoint(cfg.userId).catch(() => {});
-      }
+    for (const u of users) {
+      try {
+        const cfg = getConfig(u.id);
+        if (!cfg || !cfg.enabled) continue;
+        const intervalMs = (cfg.syncIntervalSeconds || 60) * 1000;
+        const lastSync = cfg.lastSyncedAt ? new Date(cfg.lastSyncedAt).getTime() : 0;
+        if (now - lastSync >= intervalMs) {
+          syncFromEndpoint(u.id).catch(() => {});
+        }
+      } catch {}
     }
   } catch {}
 }, 60 * 1000);
