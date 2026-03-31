@@ -215,13 +215,19 @@ async function callProvider(
     };
   }
 
-  // Anthropic (default)
+  // Anthropic (default) — with prompt caching for system instructions
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey: credential.apiKey });
   const response = await client.messages.create({
     model: credential.model,
     max_tokens: 4096,
-    system: systemPrompt,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
     messages: [{ role: 'user', content: userMessage }],
   });
   return {

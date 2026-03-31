@@ -40,18 +40,7 @@ export async function sanitizeForCommunity(opts: {
 }): Promise<SanitizationResult> {
   const model = opts.model || 'claude-haiku-4-5-20251001';
 
-  const response = await getClient().messages.create({
-    model,
-    max_tokens: 4096,
-    messages: [
-      {
-        role: 'user',
-        content: `You are a document sanitizer for a community knowledge base of operational/DevOps documentation. Your job is to strip all identifying information while preserving technical accuracy.
-
-**Input document title:** ${opts.title}
-
-**Input document content:**
-${opts.content}
+  const systemPrompt = `You are a document sanitizer for a community knowledge base of operational/DevOps documentation. Your job is to strip all identifying information while preserving technical accuracy.
 
 **Instructions:**
 
@@ -73,7 +62,6 @@ ${opts.content}
    - Flag if it appears to be AI-generated boilerplate without real operational experience behind it
 
 3. **Output format (JSON only, no markdown wrapping):**
-\`\`\`
 {
   "sanitizedTitle": "...",
   "sanitizedContent": "...",
@@ -84,12 +72,26 @@ ${opts.content}
   "flagged": false,
   "flagReason": null
 }
-\`\`\`
 
 If the document is already generic/sanitized (no PII found), return it unchanged with an empty replacements array.
 If flagged, set flagged=true and explain in flagReason. Still sanitize the content even if flagged.
 
-Return ONLY valid JSON. No markdown code fences.`,
+Return ONLY valid JSON. No markdown code fences.`;
+
+  const response = await getClient().messages.create({
+    model,
+    max_tokens: 4096,
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },
+      },
+    ],
+    messages: [
+      {
+        role: 'user',
+        content: `**Input document title:** ${opts.title}\n\n**Input document content:**\n${opts.content}`,
       },
     ],
   });

@@ -104,7 +104,7 @@ export async function diagnoseIncident(opts: {
   model?: string;
   provider?: string;
 }): Promise<DiagnosisResult> {
-  const model = opts.model || (opts.tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001');
+  const model = opts.model || (opts.tier === 'paid' ? 'claude-sonnet-4-6-20250514' : 'claude-haiku-4-5-20251001');
 
   const pastResolutionsBlock = opts.pastResolutions.length > 0
     ? `\n\nPast resolutions for similar incidents:\n${opts.pastResolutions.map((r, i) => `${i + 1}. ${r}`).join('\n')}`
@@ -183,7 +183,13 @@ export async function diagnoseIncident(opts: {
       client.messages.create({
         model,
         max_tokens: 1024,
-        system: systemPrompt,
+        system: [
+          {
+            type: 'text',
+            text: systemPrompt,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
         messages: [
           { role: 'user', content: opts.incidentDescription },
         ],
