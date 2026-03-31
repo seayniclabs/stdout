@@ -420,34 +420,126 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         if (stepsEl && plan.steps && plan.steps.length > 0) {
           stepsEl.innerHTML = plan.steps.map((step: any, i: number) => {
             const riskColor = step.risk === 'high' ? 'var(--high)' : step.risk === 'medium' ? '#F97316' : 'var(--low)';
-            let html = `<div class="autofix-step">
+            const stepId = `step-${i}`;
+            const hasDetails = (step.commands?.length > 0) || (step.files?.length > 0) || step.verification || step.rollback;
+
+            let html = `<div class="autofix-step" id="${stepId}">
               <div class="step-header">
-                <span class="step-number">${step.order || i + 1}</span>
-                <span class="step-desc">${step.description}</span>
-                <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${step.risk || '?'}</span>
+                <label class="step-check">
+                  <input type="checkbox" class="step-checkbox" data-step="${i}" />
+                  <span class="step-number">${step.order || i + 1}</span>
+                </label>
+                <div class="step-header-text">
+                  <span class="step-desc">${step.description}</span>
+                  <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${step.risk || '?'}</span>
+                </div>
+                ${hasDetails ? `<button class="step-toggle" data-target="${stepId}-details" title="Show details">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+                </button>` : ''}
               </div>`;
 
-            if (step.commands && step.commands.length > 0) {
-              html += `<div class="step-commands">${step.commands.map((c: string) => `<code class="command-line">${c}</code>`).join('')}</div>`;
+            if (hasDetails) {
+              html += `<div class="step-details" id="${stepId}-details" style="display:none;">`;
+
+              if (step.commands && step.commands.length > 0) {
+                html += `<div class="step-section">
+                  <span class="step-section-label">Commands</span>
+                  <div class="step-commands">${step.commands.map((c: string) =>
+                    `<div class="command-row">
+                      <code class="command-line">${c}</code>
+                      <button class="copy-btn" data-copy="${c.replace(/"/g, '&quot;')}" title="Copy">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                    </div>`
+                  ).join('')}</div>
+                </div>`;
+              }
+
+              if (step.files && step.files.length > 0) {
+                html += `<div class="step-section">
+                  <span class="step-section-label">Files</span>
+                  ${step.files.map((f: any) => `<div class="file-change"><code class="mono">${f.path}</code><span class="file-change-desc">${f.change}</span></div>`).join('')}
+                </div>`;
+              }
+
+              if (step.verification) {
+                html += `<div class="step-section step-section-muted">
+                  <span class="step-section-label">Verification</span>
+                  <p>${step.verification}</p>
+                </div>`;
+              }
+
+              if (step.rollback) {
+                html += `<div class="step-section step-section-muted">
+                  <span class="step-section-label">Rollback</span>
+                  <p>${step.rollback}</p>
+                </div>`;
+              }
+
+              html += '</div>'; // close step-details
             }
 
-            if (step.files && step.files.length > 0) {
-              html += `<div class="step-files">${step.files.map((f: any) => `<div class="file-change"><code class="mono">${f.path}</code> — ${f.change}</div>`).join('')}</div>`;
-            }
-
-            if (step.verification) {
-              html += `<div class="step-verify"><strong>Verify:</strong> ${step.verification}</div>`;
-            }
-
-            if (step.rollback) {
-              html += `<div class="step-rollback"><strong>Rollback:</strong> ${step.rollback}</div>`;
-            }
-
-            html += '</div>';
+            html += '</div>'; // close autofix-step
             return html;
           }).join('');
+
+          // Progress bar
+          const total = plan.steps.length;
+          stepsEl.insertAdjacentHTML('beforebegin',
+            `<div class="autofix-progress">
+              <div class="progress-bar"><div class="progress-fill" id="autofixProgressFill" style="width: 0%"></div></div>
+              <span class="progress-text" id="autofixProgressText">0 / ${total} steps</span>
+            </div>`
+          );
+
+          // Bind toggles
+          stepsEl.querySelectorAll('.step-toggle').forEach((btn: Element) => {
+            btn.addEventListener('click', () => {
+              const targetId = (btn as HTMLElement).dataset.target;
+              const target = document.getElementById(targetId!);
+              if (target) {
+                const isOpen = target.style.display !== 'none';
+                target.style.display = isOpen ? 'none' : 'block';
+                (btn as HTMLElement).classList.toggle('open', !isOpen);
+              }
+            });
+          });
+
+          // Bind copy buttons
+          stepsEl.querySelectorAll('.copy-btn').forEach((btn: Element) => {
+            btn.addEventListener('click', () => {
+              const text = (btn as HTMLElement).dataset.copy || '';
+              navigator.clipboard.writeText(text).then(() => {
+                (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--low)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
+                setTimeout(() => {
+                  (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+                }, 1500);
+              });
+            });
+          });
+
+          // Bind checkboxes for progress tracking
+          stepsEl.querySelectorAll('.step-checkbox').forEach((cb: Element) => {
+            cb.addEventListener('change', () => {
+              const checked = stepsEl!.querySelectorAll('.step-checkbox:checked').length;
+              const fill = document.getElementById('autofixProgressFill');
+              const text = document.getElementById('autofixProgressText');
+              if (fill) fill.style.width = `${(checked / total) * 100}%`;
+              if (text) text.textContent = `${checked} / ${total} steps`;
+
+              // Dim completed steps
+              const stepEl = (cb as HTMLElement).closest('.autofix-step');
+              if (stepEl) stepEl.classList.toggle('step-done', (cb as HTMLInputElement).checked);
+            });
+          });
+
+          // Auto-expand the first step
+          const firstDetails = document.getElementById('step-0-details');
+          const firstToggle = stepsEl.querySelector('.step-toggle');
+          if (firstDetails) firstDetails.style.display = 'block';
+          if (firstToggle) firstToggle.classList.add('open');
+
         } else if (stepsEl && plan.raw) {
-          // Fallback: show raw text if parsing failed
           stepsEl.innerHTML = `<pre class="autofix-raw">${plan.raw}</pre>`;
         }
 
@@ -505,22 +597,51 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
 
   /* Auto-Fix */
   .section-hint { font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; }
-  .autofix-summary { margin-bottom: 0.5rem; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
-  .risk-badge { font-size: 0.7rem; padding: 0.1rem 0.4rem; border: 1px solid; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
-  .time-badge { font-size: 0.7rem; color: var(--muted); }
+  .autofix-summary { margin-bottom: 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+  .risk-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border: 1px solid; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .time-badge { font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono); }
   .autofix-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; display: flex; gap: 1rem; }
-  .autofix-steps { display: flex; flex-direction: column; gap: 0.75rem; }
-  .autofix-step { background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
-  .step-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+
+  /* Progress bar */
+  .autofix-progress { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+  .progress-bar { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--low, #4ade80); border-radius: 3px; transition: width 0.3s ease; }
+  .progress-text { font-size: 0.75rem; font-family: var(--font-mono); color: var(--muted); white-space: nowrap; }
+
+  /* Steps */
+  .autofix-steps { display: flex; flex-direction: column; gap: 0.5rem; }
+  .autofix-step { background: var(--card-bg, rgba(255,255,255,0.03)); border: 1px solid var(--border); border-radius: 8px; padding: 0; transition: opacity 0.2s; }
+  .autofix-step.step-done { opacity: 0.5; }
+  .autofix-step.step-done .step-desc { text-decoration: line-through; }
+
+  .step-header { display: flex; align-items: center; gap: 0.5rem; padding: 0.65rem 0.75rem; cursor: default; }
+  .step-check { display: flex; align-items: center; gap: 0.4rem; cursor: pointer; flex-shrink: 0; }
+  .step-checkbox { width: 16px; height: 16px; accent-color: var(--low, #4ade80); cursor: pointer; }
   .step-number { width: 22px; height: 22px; border-radius: 50%; background: var(--accent, #F97316); color: white; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-header-text { flex: 1; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .step-desc { font-size: 0.85rem; font-weight: 500; }
-  .step-commands { margin: 0.5rem 0; }
-  .step-commands .command-line { display: block; margin-bottom: 0.25rem; }
-  .step-files { margin: 0.5rem 0; }
-  .file-change { font-size: 0.8rem; padding: 0.25rem 0; border-bottom: 1px solid var(--border); }
-  .file-change:last-child { border-bottom: none; }
-  .step-verify, .step-rollback { font-size: 0.8rem; color: var(--muted); margin-top: 0.35rem; }
-  .step-verify strong, .step-rollback strong { color: var(--text); }
+  .step-toggle { background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px; border-radius: 4px; flex-shrink: 0; transition: transform 0.2s; }
+  .step-toggle:hover { color: var(--text); }
+  .step-toggle.open { transform: rotate(180deg); }
+
+  /* Step details (collapsible) */
+  .step-details { padding: 0 0.75rem 0.75rem; border-top: 1px solid var(--border); }
+  .step-section { margin-top: 0.6rem; }
+  .step-section-label { display: block; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); font-weight: 600; margin-bottom: 0.3rem; }
+  .step-section-muted { opacity: 0.7; }
+  .step-section-muted p { font-size: 0.8rem; margin: 0; color: var(--muted); line-height: 1.5; }
+
+  /* Commands with copy buttons */
+  .command-row { display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.25rem; }
+  .command-row .command-line { flex: 1; font-size: 0.8rem; overflow-x: auto; }
+  .copy-btn { background: none; border: 1px solid var(--border); border-radius: 4px; color: var(--muted); cursor: pointer; padding: 3px 5px; flex-shrink: 0; transition: color 0.15s, border-color 0.15s; }
+  .copy-btn:hover { color: var(--text); border-color: var(--text); }
+
+  /* Files */
+  .file-change { font-size: 0.8rem; padding: 0.3rem 0; display: flex; flex-direction: column; gap: 0.1rem; }
+  .file-change code { font-size: 0.75rem; color: var(--accent, #F97316); }
+  .file-change-desc { font-size: 0.78rem; color: var(--muted); }
+
   .autofix-raw { font-size: 0.8rem; white-space: pre-wrap; background: var(--card-bg); padding: 1rem; border-radius: 6px; border: 1px solid var(--border); }
   .resolution-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 8px; }
   .resolution-content { font-family: var(--font-mono); font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); }
