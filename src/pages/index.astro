@@ -143,6 +143,7 @@ const user = Astro.locals.user;
           <h3>Stack Scanner</h3>
         </div>
         <p>Auto-discovers Docker containers, compose projects, ports, networks, TLS certs, and SNMP devices. One command maps your entire infrastructure.</p>
+        <a href="/use-cases/docker-incident-management" class="feat-link">Docker incident management →</a>
       </div>
       <div class="feat">
         <div class="feat-head">
@@ -150,6 +151,7 @@ const user = Astro.locals.user;
           <h3>AI Diagnosis</h3>
         </div>
         <p>Claude analyzes your incident against your stack context and resolution history. Not generic answers &mdash; answers that know your infrastructure.</p>
+        <a href="/use-cases/solo-devops-incident-management" class="feat-link">Solo DevOps workflows →</a>
       </div>
       <div class="feat">
         <div class="feat-head">
@@ -157,6 +159,7 @@ const user = Astro.locals.user;
           <h3>Knowledge Base</h3>
         </div>
         <p>Turn resolutions into runbook pages, postmortems, and operational docs. Full-text search across everything you've ever written.</p>
+        <a href="/use-cases/homelab-runbook-builder" class="feat-link">Homelab runbooks →</a>
       </div>
       <div class="feat">
         <div class="feat-head">
@@ -164,6 +167,7 @@ const user = Astro.locals.user;
           <h3>HUD Monitoring</h3>
         </div>
         <p>Uptime monitoring for every service in your stack. Auto-creates incidents on downtime. A control room for your infrastructure.</p>
+        <a href="/use-cases/self-hosted-monitoring-dashboard" class="feat-link">Self-hosted monitoring →</a>
       </div>
       <div class="feat">
         <div class="feat-head">
@@ -178,8 +182,41 @@ const user = Astro.locals.user;
           <h3>Weekly Digest</h3>
         </div>
         <p>A weekly email summarizing incidents, resolutions, and stack health. Stay on top of your infrastructure without watching a dashboard.</p>
+        <a href="/use-cases/on-call-incident-companion" class="feat-link">On-call companion →</a>
       </div>
     </div>
+  </section>
+
+  <!-- Use Cases -->
+  <section class="use-cases-section">
+    <h2>Built for how you actually work</h2>
+    <div class="uc-grid">
+      <a href="/use-cases/stdout-for-homelab" class="uc-card">
+        <span class="uc-title">Homelab Infrastructure</span>
+        <span class="uc-desc">Manage 10-100+ containers with AI-assisted troubleshooting</span>
+      </a>
+      <a href="/use-cases/stdout-prometheus-integration" class="uc-card">
+        <span class="uc-title">Prometheus Integration</span>
+        <span class="uc-desc">Enrich incidents with metrics from your existing Prometheus stack</span>
+      </a>
+      <a href="/use-cases/self-hosted-postmortem-tool" class="uc-card">
+        <span class="uc-title">Post-Mortem Tool</span>
+        <span class="uc-desc">Turn every incident into documentation that compounds over time</span>
+      </a>
+      <a href="/use-cases/stdout-vs-pagerduty" class="uc-card">
+        <span class="uc-title">StdOut vs PagerDuty</span>
+        <span class="uc-desc">Self-hosted alternative without the enterprise price tag</span>
+      </a>
+      <a href="/use-cases/stdout-trivy-vulnerability-management" class="uc-card">
+        <span class="uc-title">Trivy Vulnerability Scanning</span>
+        <span class="uc-desc">Container CVE detection integrated into your incident workflow</span>
+      </a>
+      <a href="/use-cases/self-hosted-security-incident-response" class="uc-card">
+        <span class="uc-title">Security Incident Response</span>
+        <span class="uc-desc">CrowdSec + Trivy + Pi-hole data in one incident view</span>
+      </a>
+    </div>
+    <div class="uc-more"><a href="/use-cases">View all 22 use cases →</a></div>
   </section>
 
   <!-- Pricing -->
@@ -556,6 +593,50 @@ const user = Astro.locals.user;
     color: var(--text-secondary);
     line-height: 1.65;
   }
+  .feat-link {
+    display: inline-block;
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: none;
+    margin-top: 8px;
+    font-weight: 500;
+  }
+  .feat-link:hover { text-decoration: underline; }
+
+  /* Use cases grid */
+  .use-cases-section {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 80px 24px;
+    text-align: center;
+  }
+  .use-cases-section h2 {
+    font-size: 24px;
+    margin-bottom: 32px;
+  }
+  .uc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    text-align: left;
+  }
+  .uc-card {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px 20px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s;
+  }
+  .uc-card:hover { border-color: var(--accent); }
+  .uc-title { font-size: 13px; font-weight: 600; }
+  .uc-desc { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .uc-more { margin-top: 20px; }
+  .uc-more a { color: var(--accent); font-size: 13px; text-decoration: none; font-weight: 500; }
+  .uc-more a:hover { text-decoration: underline; }
 
   /* ── Pricing ───────────────────────────────── */
   .pricing {
@@ -904,6 +985,7 @@ const user = Astro.locals.user;
     .pipe-connector .pipe-line { width: 1px; height: 100%; }
     .pipe-step { flex: none; width: 100%; max-width: 320px; padding: 16px; }
     .feat-grid { grid-template-columns: 1fr; }
+    .uc-grid { grid-template-columns: 1fr; }
     .price-grid { grid-template-columns: 1fr; }
     .price-grid-cloud { grid-template-columns: 1fr; }
     .hud { margin: 0 auto; }

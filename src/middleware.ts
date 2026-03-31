@@ -168,6 +168,27 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// Weekly digest timer — runs every Monday at 8 AM CT (14:00 UTC)
+// Checks once per hour; only fires if it's Monday 14:xx UTC and hasn't run today
+let lastDigestDate = '';
+setInterval(async () => {
+  const now = new Date();
+  const dayOfWeek = now.getUTCDay(); // 0=Sun, 1=Mon
+  const hour = now.getUTCHours();
+  const dateStr = now.toISOString().split('T')[0];
+
+  if (dayOfWeek === 1 && hour === 14 && lastDigestDate !== dateStr) {
+    lastDigestDate = dateStr;
+    try {
+      const { sendWeeklyDigests } = await import('./lib/digest');
+      const sent = await sendWeeklyDigests();
+      console.log(`[digest] Weekly digest sent to ${sent} user(s)`);
+    } catch (err) {
+      console.error('[digest] Weekly digest failed:', err);
+    }
+  }
+}, 60 * 60 * 1000); // Check every hour
+
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.isPrerendered) return next();
 
