@@ -47,6 +47,16 @@ export const docPages: DocPage[] = [
   <li><strong>Infrastructure</strong> — Your stacks: containers, services, and their relationships</li>
   <li><strong>Knowledge Base</strong> — Runbooks, post-mortems, guides, and notes</li>
 </ul>
+
+<h3>Optional: Windlass</h3>
+<p><strong>Windlass is a separate component</strong> — you do not need it to use StdOut. It is a schedule-aware Docker service manager that starts and stops your Compose stacks on a schedule. Connect it if you want:</p>
+<ul>
+  <li>Schedule-aware alerting (alerts only when a service is unexpectedly down, not just off)</li>
+  <li>Automatic start/stop of Docker Compose stacks on a cron schedule</li>
+  <li>Dashboard controls for starting, stopping, and restarting services</li>
+  <li>Auto-fix plan execution directly on the host</li>
+</ul>
+<p>See the <a href="/app/docs/guide/windlass">Windlass setup guide</a> if you want to add it.</p>
 `,
   },
   {
@@ -397,6 +407,104 @@ Self-hosted: your configured domain and port.</p>
 `,
   },
   {
+    slug: 'windlass',
+    title: 'Windlass Setup',
+    description: 'Connect Windlass for schedule-aware service management and dashboard controls.',
+    content: `
+<h2>What is Windlass?</h2>
+<p>Windlass is a separate, optional component — a schedule-aware Docker service manager. It reads a <code>schedule.yaml</code> and automatically starts, stops, and monitors your Docker Compose stacks according to defined windows.</p>
+<p><strong>You do not need Windlass to use StdOut.</strong> It adds schedule-aware alerting, dashboard service controls, and auto-fix execution on the host. If you just want incident tracking, AI diagnostics, and a knowledge base, skip it.</p>
+
+<h3>Why Use Windlass?</h3>
+<ul>
+  <li><strong>Schedule-aware alerting</strong> — Alerts only when a service is unexpectedly down, not when it's scheduled to be off. No false pages at 3AM for a service that's supposed to stop at midnight.</li>
+  <li><strong>Automatic start/stop</strong> — Bring Docker Compose stacks up and down on a cron schedule (e.g., start a social media scheduler at 11PM, stop it at 4AM).</li>
+  <li><strong>Dashboard controls</strong> — Start, stop, and restart services from the StdOut UI without SSH.</li>
+  <li><strong>Auto-fix execution</strong> — StdOut auto-fix plans can run commands directly on the host via Windlass.</li>
+</ul>
+
+<h3>Architecture</h3>
+<p>Windlass runs alongside your Docker host and manages containers via the Docker socket. StdOut polls it over HTTP:</p>
+<pre><code>StdOut (port 8112)  ←── HTTP poll ──→  Windlass engine (port 8116)
+                                              │
+                                    reads schedule.yaml
+                                    manages Docker socket
+                                    tracks state.json</code></pre>
+
+<h2>Installation</h2>
+
+<h3>Step 1: Create the config directory</h3>
+<pre><code>sudo mkdir -p /opt/windlass</code></pre>
+
+<h3>Step 2: Write your schedule</h3>
+<p>Download the example and edit it to match your services:</p>
+<pre><code>curl -o /opt/windlass/schedule.yaml \\
+  https://raw.githubusercontent.com/seayniclabs/windlass/main/schedule.yaml.example</code></pre>
+
+<p>Example <code>schedule.yaml</code>:</p>
+<pre><code>services:
+  my-service:
+    compose_path: /opt/containers/my-service
+    containers: [my-service]
+    type: always
+    description: "Runs 24/7"
+
+  overnight-job:
+    compose_path: /opt/containers/overnight-job
+    containers: [overnight-job]
+    type: schedule
+    cron_start: "0 23 * * *"   # 11 PM
+    cron_stop:  "0 4 * * *"    # 4 AM
+    description: "Social scheduler, runs overnight"</code></pre>
+
+<h3>Service Types</h3>
+<table>
+  <thead><tr><th>Type</th><th>Behavior</th></tr></thead>
+  <tbody>
+    <tr><td><code>always</code></td><td>Restarted automatically if found stopped</td></tr>
+    <tr><td><code>schedule</code></td><td>Started/stopped on cron windows (<code>cron_start</code>, <code>cron_stop</code>)</td></tr>
+    <tr><td><code>on-demand</code></td><td>Tracked; auto-stopped after <code>idle_shutdown_minutes</code></td></tr>
+    <tr><td><code>manual</code></td><td>Tracked but never auto-managed</td></tr>
+  </tbody>
+</table>
+
+<h3>Step 3: Start Windlass with StdOut</h3>
+<p>If using the StdOut <code>docker-compose.yml</code>, Windlass is included as an optional profile:</p>
+<pre><code># Start both StdOut and Windlass
+docker compose --profile windlass up -d</code></pre>
+
+<p>Windlass starts on port 8116. StdOut starts on port 8112.</p>
+
+<h3>Step 4: Connect StdOut to Windlass</h3>
+<ol>
+  <li>Open StdOut and go to <strong>Windlass</strong> in the navigation</li>
+  <li>Enter <code>http://host.docker.internal:8116</code> as the endpoint URL</li>
+  <li>Click <strong>Connect</strong></li>
+  <li>Click <strong>Sync</strong> to pull in your service registry</li>
+</ol>
+<p>StdOut will now show your services, their schedule windows, and alert when something is down outside its expected window.</p>
+
+<h2>Windlass API</h2>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET</code></td><td><code>/status.json</code></td><td>Full service status, memory, upcoming events</td></tr>
+    <tr><td><code>POST</code></td><td><code>/commands.json</code></td><td>Start/stop/restart a service</td></tr>
+    <tr><td><code>POST</code></td><td><code>/exec</code></td><td>Run an allowlisted command on the host</td></tr>
+    <tr><td><code>GET</code></td><td><code>/health</code></td><td>Liveness check — returns <code>{"ok": true}</code></td></tr>
+  </tbody>
+</table>
+
+<h2>Troubleshooting</h2>
+<ul>
+  <li><strong>StdOut can't reach Windlass</strong> — Use <code>host.docker.internal:8116</code>, not <code>localhost:8116</code>. StdOut runs inside Docker; localhost resolves to the container, not the host.</li>
+  <li><strong>Services show as "unknown"</strong> — Check that container names in <code>schedule.yaml</code> match actual container names (<code>docker ps --format '{{.Names}}'</code>)</li>
+  <li><strong>schedule.yaml changes not picked up</strong> — Windlass reloads the schedule on each evaluation cycle (default 5 minutes). Restart Windlass to force an immediate reload.</li>
+  <li><strong>Compose path not found</strong> — Ensure the path in <code>compose_path</code> is an absolute path and is mounted into the Windlass container if using Docker.</li>
+</ul>
+`,
+  },
+  {
     slug: 'self-host',
     title: 'Self-Host Guide',
     description: 'Deploy StdOut on your own server with Docker.',
@@ -411,23 +519,17 @@ Self-hosted: your configured domain and port.</p>
 <h3>Quick Start</h3>
 <pre><code>mkdir stdout && cd stdout
 
-cat > docker-compose.yml &lt;&lt;'EOF'
-services:
-  stdout:
-    image: ghcr.io/charlieseay/stdout:latest
-    container_name: stdout
-    environment:
-      - TZ=America/Chicago
-      - STDOUT_MODE=selfhost
-      - DB_PATH=/data/stdout.db
-    volumes:
-      - ./data:/data
-    ports:
-      - "8112:4321"
-    restart: unless-stopped
-EOF
+# Download the compose file (includes optional Windlass profile)
+curl -o docker-compose.yml \\
+  https://raw.githubusercontent.com/seayniclabs/stdout/main/docker-compose.yml
 
-docker compose up -d</code></pre>
+# Start StdOut only
+docker compose up -d
+
+# Or start StdOut + Windlass together
+docker compose --profile windlass up -d</code></pre>
+
+<p>Open <code>http://localhost:8112</code>. StdOut runs on port 3000 inside the container, mapped to 8112 on the host.</p>
 
 <h3>Environment Variables</h3>
 <table>
@@ -436,11 +538,20 @@ docker compose up -d</code></pre>
     <tr><td><code>STDOUT_MODE</code></td><td><code>selfhost</code></td><td>Set to <code>saas</code> for multi-tenant mode</td></tr>
     <tr><td><code>DB_PATH</code></td><td><code>./data/stdout.db</code></td><td>SQLite database location</td></tr>
     <tr><td><code>TZ</code></td><td><code>UTC</code></td><td>Container timezone</td></tr>
-    <tr><td><code>ANTHROPIC_API_KEY</code></td><td>—</td><td>Required for AI diagnosis features</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code></td><td>—</td><td>Optional platform AI key; users can also bring their own in Settings</td></tr>
     <tr><td><code>RESEND_API_KEY</code></td><td>—</td><td>Required for email notifications</td></tr>
-    <tr><td><code>STRIPE_SECRET_KEY</code></td><td>—</td><td>Only needed if enabling billing</td></tr>
+    <tr><td><code>WINDLASS_URL</code></td><td><code>http://host.docker.internal:8116</code></td><td>Windlass engine URL — only needed if running Windlass</td></tr>
   </tbody>
 </table>
+
+<h3>Adding Windlass Later</h3>
+<p>Windlass is an optional schedule-aware service manager. If you decide to add it after initial setup:</p>
+<ol>
+  <li>Create <code>/opt/windlass/schedule.yaml</code> (see <a href="/app/docs/guide/windlass">Windlass guide</a>)</li>
+  <li>Uncomment the compose directory volume mount in <code>docker-compose.yml</code></li>
+  <li>Run <code>docker compose --profile windlass up -d</code></li>
+  <li>In StdOut, go to Windlass → enter <code>http://host.docker.internal:8116</code> → Connect → Sync</li>
+</ol>
 
 <h3>Reverse Proxy</h3>
 <p>If running behind a reverse proxy (nginx, Caddy, Traefik), forward to port 8112 (or whatever you mapped). Example nginx config:</p>
