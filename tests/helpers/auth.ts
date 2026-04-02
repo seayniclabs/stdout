@@ -128,9 +128,11 @@ export async function createAuthenticatedUser(
   if (testEmail && testPassword) {
     // storageState is pre-loaded — navigate to /app to confirm the session.
     // If a previous test logged out (invalidating the server-side session),
-    // use the API login path to refresh the session without browser form submission.
+    // clear the stale cookies first so apiLogin gets a fresh CSRF token,
+    // then re-authenticate via the API path.
     await page.goto('/app');
     if (page.url().includes('/login')) {
+      await page.context().clearCookies();
       await apiLogin(page, testEmail, testPassword);
     }
     return { email: testEmail, password: testPassword };

@@ -5,15 +5,14 @@ test.describe('AI Providers — BYOK Key Management', () => {
   test('BYOK1 — AI Providers section visible in settings (self-hosted)', async ({ page }) => {
     await createAuthenticatedUser(page);
     await page.goto('/app/settings');
-    await expect(page.locator('text=AI Providers')).toBeVisible();
+    await page.locator('.tab-btn[data-tab="integrations"]').click();
     await expect(page.locator('#aiProvidersList')).toBeVisible();
   });
 
   test('BYOK2 — Add Provider button shows form', async ({ page }) => {
     await createAuthenticatedUser(page);
     await page.goto('/app/settings');
-    // Wait for providers to load
-    await page.waitForTimeout(1000);
+    await page.locator('.tab-btn[data-tab="integrations"]').click();
     await page.locator('#aiAddBtn').click();
     await expect(page.locator('#aiProviderForm')).toBeVisible();
     await expect(page.locator('#aiProviderSelect')).toBeVisible();

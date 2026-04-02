@@ -9,8 +9,14 @@ import {
   TEST_DISPLAY_NAME,
 } from './helpers/auth';
 
+// When STDOUT_TEST_EMAIL is set the container has REGISTRATION_FREEZE=true.
+// Tests that require a fresh registration are skipped in this mode.
+const frozenEnv = !!(process.env.STDOUT_TEST_EMAIL);
+
+
 test.describe('Auth — Registration (F1-F10)', () => {
   test('F1 — Happy path register', async ({ page }) => {
+    test.skip(frozenEnv, 'Registration frozen — cannot test in this environment');
     const { email } = await registerUser(page);
     await page.waitForURL(/\/app/);
 
@@ -20,6 +26,7 @@ test.describe('Auth — Registration (F1-F10)', () => {
   });
 
   test('F2 — Duplicate email', async ({ page, browser }) => {
+    test.skip(frozenEnv, 'Registration frozen — cannot test in this environment');
     const email = testEmail('dup');
     await registerUser(page, { email });
     await page.waitForURL(/\/app/);
@@ -36,6 +43,8 @@ test.describe('Auth — Registration (F1-F10)', () => {
   });
 
   test('F3 — Password mismatch', async ({ page }) => {
+    // In frozen env the server rejects before reaching password validation.
+    test.skip(frozenEnv, 'Registration frozen — server rejects before password validation runs');
     await page.goto('/app/register');
     await page.locator('input[name="email"]').fill(testEmail());
     await page.locator('input[name="displayName"]').fill(TEST_DISPLAY_NAME);
@@ -47,6 +56,8 @@ test.describe('Auth — Registration (F1-F10)', () => {
   });
 
   test('F4 — Short password', async ({ page }) => {
+    // In frozen env the server rejects before reaching password validation.
+    test.skip(frozenEnv, 'Registration frozen — server rejects before password validation runs');
     await page.goto('/app/register');
     await page.locator('input[name="email"]').fill(testEmail());
     await page.locator('input[name="displayName"]').fill(TEST_DISPLAY_NAME);
@@ -62,37 +73,32 @@ test.describe('Auth — Registration (F1-F10)', () => {
   });
 
   test('F5 — Empty fields', async ({ page }) => {
+    // Clear session so the register page loads without an auth redirect.
+    // Each test gets its own browser context — clearing cookies here only affects this test.
+    await page.context().clearCookies();
     await page.goto('/app/register');
-    // Submit with empty fields — browser validation may prevent submission,
-    // but if it goes through, server should reject
     await page.locator('input[name="email"]').fill('');
     await page.locator('input[name="displayName"]').fill('');
     await page.locator('input[name="password"]').fill('');
     await page.locator('input[name="confirm"]').fill('');
-
-    // Try to submit — may be blocked by HTML required attribute
-    const submitButton = page.locator('button[type="submit"]');
-    await submitButton.click();
-
-    // Should still be on register page (either browser validation or server error)
+    await page.locator('button[type="submit"]').click();
     expect(page.url()).toContain('/register');
   });
 
   test('F6 — Invalid email format (browser validation)', async ({ page }) => {
+    // Clear session so the register page loads without an auth redirect.
+    await page.context().clearCookies();
     await page.goto('/app/register');
-    const emailInput = page.locator('input[name="email"]');
-    await emailInput.fill('notanemail');
+    await page.locator('input[name="email"]').fill('notanemail');
     await page.locator('input[name="displayName"]').fill(TEST_DISPLAY_NAME);
     await page.locator('input[name="password"]').fill(TEST_PASSWORD);
     await page.locator('input[name="confirm"]').fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
-
-    // Browser's native email validation should prevent submission
-    // The page should still be on /register
     expect(page.url()).toContain('/register');
   });
 
   test('F7 — Redirect after register', async ({ page }) => {
+    test.skip(frozenEnv, 'Registration frozen — cannot test in this environment');
     await registerUser(page, { redirect: '/app/incidents/new' });
     // The form has a hidden redirect field; after successful registration,
     // should redirect to the specified path
@@ -103,7 +109,7 @@ test.describe('Auth — Registration (F1-F10)', () => {
     await createAuthenticatedUser(page);
     await page.goto('/app/register');
     // Should redirect away from register since already logged in
-    await page.waitForURL(/\/app/);
+    await page.waitForURL(url => new URL(url).pathname.startsWith('/app') && !new URL(url).pathname.startsWith('/app/register'));
     expect(page.url()).not.toContain('/register');
   });
 });
@@ -121,6 +127,7 @@ test.describe('Auth — Login (F11-F17)', () => {
   });
 
   test('F16 — Redirect after login via register redirect', async ({ page }) => {
+    test.skip(frozenEnv, 'Registration frozen — cannot test in this environment');
     await registerUser(page, { redirect: '/app/stacks' });
     await page.waitForURL(/\/app/);
   });
@@ -129,7 +136,7 @@ test.describe('Auth — Login (F11-F17)', () => {
     await createAuthenticatedUser(page);
     await page.goto('/app/login');
     // Should redirect to /app (or OIDC), not stay on login
-    await page.waitForURL(/\/app/);
+    await page.waitForURL(url => new URL(url).pathname.startsWith('/app') && !new URL(url).pathname.includes('/login'));
   });
 });
 
@@ -137,20 +144,23 @@ test.describe('Auth — Login direct (F11-F14)', () => {
   // OIDC removed — login is now email/password directly.
 
   test('F11 — Happy path login', async ({ page }) => {
-    const { email } = await registerUser(page);
-    await logoutUser(page);
+    // Clear session so the login page loads without an auth redirect.
+    const email = frozenEnv ? process.env.STDOUT_TEST_EMAIL! : (await registerUser(page)).email;
+    const password = frozenEnv ? process.env.STDOUT_TEST_PASSWORD! : TEST_PASSWORD;
+    await page.context().clearCookies();
     await page.goto('/app/login');
     await page.locator('input[name="email"]').fill(email);
-    await page.locator('input[name="password"]').fill(TEST_PASSWORD);
+    await page.locator('input[name="password"]').fill(password);
     await page.locator('button[type="submit"]').click();
-    await page.waitForURL(/\/app/);
+    await page.waitForURL(url => new URL(url).pathname.startsWith('/app') && !new URL(url).pathname.includes('/login'));
     const session = await getSessionCookie(page);
     expect(session).toBeTruthy();
   });
 
   test('F12 — Wrong password shows error', async ({ page }) => {
-    const { email } = await registerUser(page);
-    await logoutUser(page);
+    // Clear session so the login page loads without an auth redirect.
+    const email = frozenEnv ? process.env.STDOUT_TEST_EMAIL! : (await registerUser(page)).email;
+    await page.context().clearCookies();
     await page.goto('/app/login');
     await page.locator('input[name="email"]').fill(email);
     await page.locator('input[name="password"]').fill('wrongpassword!');
@@ -159,6 +169,8 @@ test.describe('Auth — Login direct (F11-F14)', () => {
   });
 
   test('F13 — Unknown email same error as wrong password', async ({ page }) => {
+    // Clear session so the login page loads without an auth redirect.
+    await page.context().clearCookies();
     await page.goto('/app/login');
     await page.locator('input[name="email"]').fill('nobody@example.com');
     await page.locator('input[name="password"]').fill('somepassword!');
@@ -179,7 +191,8 @@ test.describe('Auth — Session (F24-F26)', () => {
   });
 
   test('F25 — Unauthenticated user redirected to login', async ({ page }) => {
-    // Visit protected route without session
+    // Clear session so the protected route redirects to login.
+    await page.context().clearCookies();
     await page.goto('/app/incidents/new');
     await page.waitForURL(/\/app\/login/);
     expect(page.url()).toContain('redirect=');
