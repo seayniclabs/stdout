@@ -53,8 +53,8 @@ if (process.env.APP_URL) {
   ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
 }
 
-// Always allow localhost for dev
-ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000');
+// Always allow localhost (dev server + local container ports)
+ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000', 'http://localhost:8112');
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -291,8 +291,6 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/webhooks/',
     '/app/api/billing-sync',
     '/app/api/community-sync', // public catalog sync; no auth (see community-sync.ts)
-    '/app/auth/oidc',
-    '/app/auth/callback',
     '/app/api/me',
   ];
   const isAppRoute = pathname.startsWith('/app/');

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createAuthenticatedUser, apiRequest, rawFetch, testEmail, TEST_PASSWORD, getCsrfCookie } from './helpers/auth';
+import { createAuthenticatedUser, loginUser, apiRequest, rawFetch, testEmail, TEST_PASSWORD, getCsrfCookie } from './helpers/auth';
 import { ssrfBlockedTargets, ssrfAllowedTarget, testMonitorHTTP, testWebhookNotification } from './helpers/fixtures';
 
 const BASE_URL = process.env.STDOUT_TEST_URL || 'http://localhost:4321';
@@ -84,7 +84,10 @@ test.describe('Security — Open Redirect (X4-X5)', () => {
   });
 });
 
+// X6-X8 operate on the auth forms without a session — clear storageState so
+// the user is not already logged in when these tests run.
 test.describe('Security — CSRF (X6-X8)', () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
   test('X6 — CSRF origin validation: wrong origin rejected', async () => {
     const { status } = await rawFetch('/app/login', {
       method: 'POST',
@@ -123,16 +126,28 @@ test.describe('Security — CSRF (X6-X8)', () => {
     await page.locator('input[name="confirm"]').fill(TEST_PASSWORD);
     await page.locator('button[type="submit"]').click();
 
-    // Should show error about invalid form submission
-    await expect(page.locator('.auth-error')).toContainText(/invalid form/i);
+    // Should show error about invalid form submission.
+    // When REGISTRATION_FREEZE=true, the page also renders a frozen banner as a
+    // separate .auth-error — check the last one for the CSRF validation error.
+    await expect(page.locator('.auth-error').last()).toContainText(/invalid form/i);
   });
 });
 
 test.describe('Security — Auth Bypass (X9-X10)', () => {
-  test('X9 — Protected route without session → redirect to login', async ({ page }) => {
-    await page.goto('/app/incidents/new');
-    await page.waitForURL(/\/app\/login/);
-    expect(page.url()).toContain('redirect=');
+  // X9 requires an unauthenticated context; X10 requires an authenticated one.
+  // Playwright's test.use applies per-describe, so split them or clear per-test.
+
+  test('X9 — Protected route without session → redirect to login', async ({ browser }) => {
+    // Use a clean context (no storageState) to verify unauthenticated redirect.
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto('/app/incidents/new');
+      await page.waitForURL(/\/app\/login/);
+      expect(page.url()).toContain('redirect=');
+    } finally {
+      await ctx.close();
+    }
   });
 
   test('X10 — Admin page as non-superadmin → redirect', async ({ page }) => {
@@ -179,8 +194,11 @@ test.describe('Security — Headers (X16-X17)', () => {
   test('X17 — Security headers present', async ({ page }) => {
     const response = await page.goto('/');
     const headers = response?.headers() || {};
-    expect(headers['x-frame-options']).toBe('DENY');
-    expect(headers['x-content-type-options']).toBe('nosniff');
+    // nginx and middleware both set security headers (defense-in-depth).
+    // Headers may appear as "DENY" or "DENY, DENY" depending on nginx config.
+    // Use toContain for all to handle both single and double-set values.
+    expect(headers['x-frame-options']).toContain('DENY');
+    expect(headers['x-content-type-options']).toContain('nosniff');
     expect(headers['strict-transport-security']).toContain('max-age=');
     expect(headers['referrer-policy']).toBeTruthy();
   });
@@ -322,7 +340,16 @@ test.describe('Security — FTS Injection (X45)', () => {
 
 test.describe('Security — Export Scoping (X40)', () => {
   test('X40 — Export only contains own data', async ({ page, browser }) => {
-    // Create data as User A
+    const userBEmail = process.env.STDOUT_TEST_USER_B_EMAIL;
+    const userBPassword = process.env.STDOUT_TEST_USER_B_PASSWORD;
+
+    if (!userBEmail || !userBPassword) {
+      // Skip when only one test user is configured — can't test cross-user isolation.
+      test.skip(true, 'STDOUT_TEST_USER_B_EMAIL not set — cross-user isolation test skipped');
+      return;
+    }
+
+    // Create data as User A (the primary test user)
     await createAuthenticatedUser(page);
     await page.goto('/app/incidents/new');
     await page.locator('input[name="title"]').fill('test_user_a_export_private');
@@ -330,10 +357,10 @@ test.describe('Security — Export Scoping (X40)', () => {
     await page.getByRole('button', { name: 'Log incident' }).click();
     await page.waitForURL(/\/app\/incidents\//);
 
-    // Export as User B
-    const context2 = await browser.newContext();
+    // Export as User B (must be a different account)
+    const context2 = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page2 = await context2.newPage();
-    await createAuthenticatedUser(page2);
+    await loginUser(page2, userBEmail, userBPassword);
 
     const { json } = await apiRequest(page2, 'GET', '/app/api/export');
     const titles = json.incidents.map((i: any) => i.title);
@@ -356,13 +383,7 @@ test.describe('Security — Backup Path Traversal (X41)', () => {
   });
 });
 
-test.describe('Security — OIDC State (X43)', () => {
-  test('X43 — OIDC callback with fake state rejected', async ({ page }) => {
-    await page.goto('/app/auth/callback?state=RANDOM_FAKE_STATE&code=fake');
-    await page.waitForURL(/\/app\/login/);
-    expect(page.url()).toContain('error=');
-  });
-});
+// X43 — OIDC removed; callback route no longer exists. Auth is email/password only.
 
 test.describe('Security — Token Scoping (X44)', () => {
   test('X44 — Token resolves to owner only', async ({ page, browser }) => {

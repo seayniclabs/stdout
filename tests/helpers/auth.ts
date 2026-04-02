@@ -58,10 +58,36 @@ export async function registerUser(
 }
 
 /**
- * Log in an existing user via the OIDC-less login form.
- * NOTE: StdOut login page auto-redirects to OIDC when enabled.
- * This helper works when OIDC is disabled (dev/test mode).
- * For OIDC-enabled environments, use loginViaAPI instead.
+ * Log in programmatically via Playwright's API request context.
+ * Extracts the CSRF token from the login page, POSTs credentials, and injects
+ * the returned session cookie into the page's browser context.
+ * Use this to avoid browser form Origin-header issues and the IP rate limiter.
+ */
+export async function apiLogin(page: Page, email: string, password: string): Promise<void> {
+  const context = page.context();
+  const reqCtx = await context.request;
+
+  // GET /app/login to get CSRF cookie + token
+  const loginPageResp = await reqCtx.get('/app/login');
+  const html = await loginPageResp.text();
+  const csrfMatch = html.match(/name="_csrf"\s+value="([^"]+)"/);
+  const csrfToken = csrfMatch?.[1] || '';
+
+  // POST credentials
+  await reqCtx.post('/app/login', {
+    form: { email, password, _csrf: csrfToken, redirect: '/app' },
+  });
+
+  // Navigate to /app — cookies from reqCtx are shared with the browser context
+  await page.goto('/app');
+  // If still on login, the login failed
+  if (page.url().includes('/login')) {
+    throw new Error(`apiLogin failed for ${email} — still on login page`);
+  }
+}
+
+/**
+ * Log in an existing user via the login form.
  */
 export async function loginUser(
   page: Page,
@@ -74,22 +100,45 @@ export async function loginUser(
     : '/app/login';
 
   await page.goto(url);
-  // The login page may auto-redirect to OIDC. If we see the OIDC button,
-  // it means password login is not available (OIDC-only mode).
-  // For tests, we register first (which sets a session cookie).
+  await dismissViteOverlay(page);
+
+  await page.locator('input[name="email"]').fill(email);
+  await page.locator('input[name="password"]').fill(password);
+  await page.locator('button[type="submit"]').click();
+
+  await page.waitForURL(/\/app(?!\/login)/);
 }
 
 /**
- * Register a fresh user and return an authenticated page.
- * This is the primary way to get an auth'd context for tests.
+ * Get or create an authenticated session for tests.
+ *
+ * When STDOUT_TEST_EMAIL + STDOUT_TEST_PASSWORD are set (frozen-registration env),
+ * the session is already loaded via storageState in playwright.config.ts — this
+ * function just navigates to /app to confirm the session is active.
+ *
+ * In open-registration environments (dev/local), registers a fresh user.
  */
 export async function createAuthenticatedUser(
   page: Page,
   options?: { email?: string }
 ): Promise<{ email: string; password: string }> {
+  const testEmail = process.env.STDOUT_TEST_EMAIL;
+  const testPassword = process.env.STDOUT_TEST_PASSWORD;
+
+  if (testEmail && testPassword) {
+    // storageState is pre-loaded — navigate to /app to confirm the session.
+    // If a previous test logged out (invalidating the server-side session),
+    // use the API login path to refresh the session without browser form submission.
+    await page.goto('/app');
+    if (page.url().includes('/login')) {
+      await apiLogin(page, testEmail, testPassword);
+    }
+    return { email: testEmail, password: testPassword };
+  }
+
   const result = await registerUser(page, { email: options?.email });
   // After registration, we should be redirected to /app (session cookie set)
-  await page.waitForURL(/\/app/);
+  await page.waitForURL(/\/app(?!\/register)/);
   return result;
 }
 

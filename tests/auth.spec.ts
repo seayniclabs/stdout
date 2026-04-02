@@ -133,29 +133,37 @@ test.describe('Auth — Login (F11-F17)', () => {
   });
 });
 
-test.describe('Auth — OIDC (F18-F23)', () => {
-  // OIDC tests require Authentik to be running at auth.seayniclabs.com.
-  // These are structural tests that verify the OIDC initiation flow exists.
+test.describe('Auth — Login direct (F11-F14)', () => {
+  // OIDC removed — login is now email/password directly.
 
-  test('F18 — OIDC login link exists on login page', async ({ page }) => {
+  test('F11 — Happy path login', async ({ page }) => {
+    const { email } = await registerUser(page);
+    await logoutUser(page);
     await page.goto('/app/login');
-    // Should have an OIDC sign-in link/button
-    const oidcLink = page.locator('a[href="/app/auth/oidc"]');
-    // May auto-redirect to OIDC — either the link exists or we were redirected
-    const isOnLogin = page.url().includes('/login');
-    if (isOnLogin) {
-      await expect(oidcLink).toBeVisible();
-    }
-    // If redirected to OIDC, that's also valid behavior
+    await page.locator('input[name="email"]').fill(email);
+    await page.locator('input[name="password"]').fill(TEST_PASSWORD);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL(/\/app/);
+    const session = await getSessionCookie(page);
+    expect(session).toBeTruthy();
   });
 
-  test('F21 — OIDC state validation: tampered state rejected', async ({ page }) => {
-    // Directly hit the callback with a fake state
-    const response = await page.goto('/app/auth/callback?state=FAKE_STATE_VALUE&code=fake_code');
-    // Should redirect to login with error (not crash)
-    await page.waitForURL(/\/app\/login/);
-    const url = page.url();
-    expect(url).toContain('error=');
+  test('F12 — Wrong password shows error', async ({ page }) => {
+    const { email } = await registerUser(page);
+    await logoutUser(page);
+    await page.goto('/app/login');
+    await page.locator('input[name="email"]').fill(email);
+    await page.locator('input[name="password"]').fill('wrongpassword!');
+    await page.locator('button[type="submit"]').click();
+    await expect(page.locator('.auth-error')).toContainText(/invalid/i);
+  });
+
+  test('F13 — Unknown email same error as wrong password', async ({ page }) => {
+    await page.goto('/app/login');
+    await page.locator('input[name="email"]').fill('nobody@example.com');
+    await page.locator('input[name="password"]').fill('somepassword!');
+    await page.locator('button[type="submit"]').click();
+    await expect(page.locator('.auth-error')).toContainText(/invalid/i);
   });
 });
 
