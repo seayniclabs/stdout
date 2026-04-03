@@ -3,13 +3,13 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { nanoid } from 'nanoid';
 import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
-import { hashPassword, createSession, SESSION_COOKIE } from '../../lib/auth';
+import { createSession, SESSION_COOKIE } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
-import { sendVerificationEmail, sendWelcomeEmail } from '../../lib/email';
+import { sendVerificationEmail } from '../../lib/email';
 import { isRegistrationFrozen, canRegister } from '../../lib/freeze';
-import crypto from 'node:crypto';
+import { registerWithStore } from '../../lib/store-auth';
 
 const frozen = isRegistrationFrozen();
 let error = '';
@@ -17,7 +17,6 @@ let email = '';
 let displayName = '';
 
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
-// New users go to Knowledge Base → StdOut guides for onboarding
 const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app/docs?filter=stdout';
 
 if (Astro.request.method === 'POST') {
@@ -47,50 +46,60 @@ if (Astro.request.method === 'POST') {
     } else if (!canRegister(email)) {
       error = 'Registration is currently closed. Check back soon.';
     } else {
-      const existing = getCentralDb().select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
+      // Check if already registered locally (avoid duplicate store call)
+      const existing = getCentralDb()
+        .select()
+        .from(centralSchema.users)
+        .where(eq(centralSchema.users.email, email))
+        .get();
+
       if (existing) {
         error = 'An account with that email already exists.';
       } else {
-        const id = nanoid();
-        const now = new Date();
-        const passwordHash = await hashPassword(password);
-        getCentralDb().insert(centralSchema.users).values({
-          id,
-          email,
-          passwordHash,
-          displayName: displayName || null,
-          subscriptionStatus: 'none',
-          role: 'member',
-          createdAt: now,
-          updatedAt: now,
-        }).run();
+        let storeUser = null;
+        try {
+          const result = await registerWithStore(email, password, displayName || null);
+          if ('error' in result) {
+            error = result.error === 'Email already registered'
+              ? 'An account with that email already exists.'
+              : result.error;
+          } else {
+            storeUser = result;
+          }
+        } catch {
+          error = 'Unable to reach account service. Please try again shortly.';
+        }
 
-        // Provision tenant DB (creates file + tables on first access)
-        getTenantDb(id);
-        logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
+        if (storeUser) {
+          const id = nanoid();
+          const now = new Date();
+          getCentralDb().insert(centralSchema.users).values({
+            id,
+            email: storeUser.email,
+            passwordHash: 'store-auth', // auth delegated to store; local hash unused
+            displayName: storeUser.displayName,
+            subscriptionStatus: 'none',
+            role: 'member',
+            createdAt: now,
+            updatedAt: now,
+          }).run();
 
-        // Send verification email
-        const verifyToken = crypto.randomBytes(32).toString('hex');
-        getCentralDb().insert(centralSchema.emailVerifications).values({
-          id: nanoid(),
-          userId: id,
-          token: verifyToken,
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
-          createdAt: new Date(),
-        }).run();
-        sendVerificationEmail(email, verifyToken);
-        sendWelcomeEmail(email, displayName || null).catch(() => {});
+          getTenantDb(id);
+          logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
 
-        const sessionId = await createSession(id);
-        Astro.cookies.set(SESSION_COOKIE, sessionId, {
-          path: '/',
-          httpOnly: true,
-          secure: true,
-          sameSite: 'lax',
-          maxAge: 30 * 24 * 60 * 60,
-          domain: undefined,
-        });
-        return Astro.redirect(destination);
+          // Send StdOut-specific verification email
+          sendVerificationEmail(storeUser.email, id).catch(() => {});
+
+          const sessionId = await createSession(id);
+          Astro.cookies.set(SESSION_COOKIE, sessionId, {
+            path: '/',
+            httpOnly: true,
+            secure: true,
+            sameSite: 'lax',
+            maxAge: 30 * 24 * 60 * 60,
+          });
+          return Astro.redirect(destination);
+        }
       }
     }
   }

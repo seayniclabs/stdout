@@ -10,3 +10,5 @@ hone
 playwright-report/
 test-results/
 marketing-assets/
+playwright/.auth/
+tests/playwright/.auth/
