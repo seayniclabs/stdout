@@ -49,9 +49,50 @@ if (Astro.request.method === 'POST') {
       let targetStackId = (saveMode === 'existing' && existingStackId) ? existingStackId : '';
 
       if (targetStackId) {
+        // Merge: preserve existing containers not covered by this scan
+        const existingStack = db.select().from(tenantSchema.stacks)
+          .where(eq(tenantSchema.stacks.id, existingStackId)).get();
+
+        let finalMarkdown = markdown;
+
+        if (existingStack?.description) {
+          // Parse container sections out of existing markdown (### name blocks)
+          const existingSections = new Map<string, string>();
+          const existingLines = existingStack.description.split('\n');
+          let currentName: string | null = null;
+          let currentLines: string[] = [];
+
+          for (const line of existingLines) {
+            const m = line.match(/^### (\S+)/);
+            if (m) {
+              if (currentName) existingSections.set(currentName, currentLines.join('\n'));
+              currentName = m[1];
+              currentLines = [line];
+            } else if (currentName) {
+              currentLines.push(line);
+            }
+          }
+          if (currentName) existingSections.set(currentName, currentLines.join('\n'));
+
+          // Containers in existing stack but NOT in the new scan — keep them
+          const newContainerNames = new Set(
+            (rawData.containers || []).map((c: any) => c.name as string)
+          );
+          const preserved: string[] = [];
+          for (const [name, section] of existingSections) {
+            if (!newContainerNames.has(name)) {
+              preserved.push(section.trimEnd());
+            }
+          }
+
+          if (preserved.length > 0) {
+            finalMarkdown = markdown.trimEnd() + '\n\n' + preserved.join('\n\n') + '\n';
+          }
+        }
+
         // Update existing stack
         db.update(tenantSchema.stacks).set({
-          description: markdown,
+          description: finalMarkdown,
           updatedAt: new Date(),
         }).where(eq(tenantSchema.stacks.id, existingStackId)).run();
       } else {
