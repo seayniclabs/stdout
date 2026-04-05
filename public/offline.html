@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Offline — StdOut</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #07070C;
+      color: #E2E8F0;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .container {
+      text-align: center;
+      max-width: 360px;
+    }
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 1.5rem;
+      opacity: 0.6;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #F97316;
+      margin-bottom: 0.75rem;
+    }
+    p {
+      font-size: 0.925rem;
+      color: #94A3B8;
+      line-height: 1.6;
+    }
+    .retry {
+      display: inline-block;
+      margin-top: 2rem;
+      padding: 0.6rem 1.5rem;
+      border: 1px solid rgba(249, 115, 22, 0.4);
+      border-radius: 8px;
+      color: #F97316;
+      font-size: 0.9rem;
+      text-decoration: none;
+      cursor: pointer;
+      background: transparent;
+    }
+    .retry:hover {
+      background: rgba(249, 115, 22, 0.08);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">📡</div>
+    <h1>You're Offline</h1>
+    <p>StdOut needs a connection to monitor your infrastructure and manage incidents.</p>
+    <button class="retry" onclick="window.location.reload()">Try Again</button>
+  </div>
+</body>
+</html>

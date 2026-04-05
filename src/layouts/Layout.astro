@@ -83,10 +83,22 @@ const currentWsId = ws?.ownerId || user?.id;
   <link rel="sitemap" href="/sitemap-index.xml" />
   <meta name="theme-color" content="#F97316" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="StdOut" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <style>@import '../styles/fonts.css';</style>
   {accentOverride && <style set:html={`:root { --accent: ${accentOverride}; --accent-light: ${accentOverride}; --accent-dim: ${accentOverride}1f; --accent-glow: ${accentOverride}40; }`}></style>}
   <meta name="csrf-token" content={csrfToken} />
   <script defer src="https://analytics.seaynicroute.com/data" data-website-id="6794355e-d87a-4022-9062-4d473bdc4716"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+      });
+    }
+  </script>
 </head>
 <body>
   <a href="#main-content" class="skip-link">Skip to content</a>
