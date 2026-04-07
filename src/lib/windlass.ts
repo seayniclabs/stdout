@@ -207,6 +207,54 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     }
   }
 
+  // --- Reconciliation: mark missing services as decommissioned ---
+  // Services that haven't been seen for 24+ hours are marked as stale
+  const allServices = db.select().from(tenantSchema.windlassServices)
+    .where(eq(tenantSchema.windlassServices.userId, userId))
+    .all();
+
+  const syncedServiceNames = new Set(status.services.map(s => s.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')));
+  const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+  for (const svc of allServices) {
+    if (!syncedServiceNames.has(svc.id)) {
+      // Service is missing from latest sync
+      if (!svc.decommissionedAt && svc.updatedAt < oneDayAgo) {
+        // Mark as decommissioned if it's been missing for 24+ hours
+        db.update(tenantSchema.windlassServices)
+          .set({
+            decommissionedAt: now,
+            updatedAt: now,
+          })
+          .where(and(eq(tenantSchema.windlassServices.id, svc.id), eq(tenantSchema.windlassServices.userId, userId)))
+          .run();
+
+        logEvent(userId, svc.id, 'decommissioned', `Service auto-decommissioned: no longer appears in Windlass endpoint`);
+
+        // Fire notification
+        fireAlert({
+          userId,
+          serviceId: svc.id,
+          eventType: 'service_decommissioned',
+          severity: 'info',
+          title: `${svc.name} has been decommissioned`,
+          detail: `This service hasn't appeared in Windlass scans for 24+ hours and has been moved to archive.`,
+        }).catch(err => console.error('Alert fire error:', err));
+      }
+    } else if (svc.decommissionedAt) {
+      // Service is back — un-decommission it
+      db.update(tenantSchema.windlassServices)
+        .set({
+          decommissionedAt: null,
+          updatedAt: now,
+        })
+        .where(and(eq(tenantSchema.windlassServices.id, svc.id), eq(tenantSchema.windlassServices.userId, userId)))
+        .run();
+
+      logEvent(userId, svc.id, 'reactivated', `Service reactivated: appeared again in Windlass endpoint`);
+    }
+  }
+
   // Update sync status
   db.update(tenantSchema.windlassConfig)
     .set({ lastSyncAt: now, lastSyncStatus: 'ok', updatedAt: now })

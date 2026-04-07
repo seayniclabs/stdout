@@ -252,6 +252,7 @@ export const windlassServices = sqliteTable('windlass_services', {
   lastStarted: integer('last_started', { mode: 'timestamp' }),
   lastStopped: integer('last_stopped', { mode: 'timestamp' }),
   containers: text('containers'),             // JSON array of container names
+  decommissionedAt: integer('decommissioned_at', { mode: 'timestamp' }), // Set when service hasn't appeared in sync for 24+ hours
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -263,7 +264,7 @@ export const windlassEvents = sqliteTable('windlass_events', {
   eventType: text('event_type', {
     enum: ['service_started', 'service_stopped', 'service_crashed', 'service_recovered',
            'schedule_start', 'schedule_stop', 'manual_start', 'manual_stop',
-           'memory_shed', 'sync_completed', 'config_changed'],
+           'memory_shed', 'sync_completed', 'config_changed', 'decommissioned', 'reactivated'],
   }).notNull(),
   detail: text('detail'),                     // Human-readable description
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),

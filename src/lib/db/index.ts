@@ -63,6 +63,8 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   // Windlass: manual override (2026-03-30)
   safeAddColumn(sqlite, 'windlass_services', 'override_until', 'INTEGER');
   safeAddColumn(sqlite, 'windlass_services', 'override_reason', 'TEXT');
+  // Windlass: service decommissioning (2026-04-07)
+  safeAddColumn(sqlite, 'windlass_services', 'decommissioned_at', 'INTEGER');
 
   // Feature requests (2026-03-31)
   sqlite.exec(`
