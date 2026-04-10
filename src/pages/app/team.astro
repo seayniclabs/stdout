@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getUserLimits, getUpgradeUrl } from '../../lib/tiers';
-import { getTeamMembers } from '../../lib/rbac';
+import { getTeamMembers, getWorkspaceOwnerId } from '../../lib/rbac';
 import { getCentralDb, centralSchema } from '../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm';
@@ -18,7 +18,7 @@ let members: any[] = [];
 let activityLog: any[] = [];
 
 if (limits.rbacEnabled && isOwnWorkspace) {
-  members = getTeamMembers(user.id);
+  members = getTeamMembers(getWorkspaceOwnerId(Astro.locals));
   try {
     const db = getCentralDb();
     activityLog = db.select({

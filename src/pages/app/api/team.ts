@@ -3,16 +3,17 @@ import { nanoid } from 'nanoid';
 import { getCentralDb, centralSchema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getUserLimits } from '../../../lib/tiers';
-import { getTeamMembers } from '../../../lib/rbac';
+import { checkRBAC, getTeamMembers, getWorkspaceOwnerId } from '../../../lib/rbac';
 import { logAudit, getClientIp } from '../../../lib/audit';
 
 export const prerender = false;
 
-// GET — list team members
+// GET — list team members for the active workspace (owner roster when viewing a team workspace)
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const members = getTeamMembers(locals.user.id);
+  const workspaceOwnerId = getWorkspaceOwnerId(locals);
+  const members = getTeamMembers(workspaceOwnerId);
 
   return new Response(JSON.stringify({ members }), {
     headers: { 'Content-Type': 'application/json' },
@@ -31,6 +32,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       upgradeUrl: 'https://store.seayniclabs.com/products/stdout-shop',
     }), { status: 403, headers: { 'Content-Type': 'application/json' } });
   }
+
+  const workspaceOwnerId = getWorkspaceOwnerId(locals);
+  const teamBlock = checkRBAC(locals, 'manage_team');
+  if (teamBlock) return teamBlock;
 
   let body: any;
   try { body = await request.json(); } catch {
@@ -57,7 +62,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // Check seat limit
-    const existing = getTeamMembers(locals.user.id);
+    const existing = getTeamMembers(workspaceOwnerId);
     const activeCount = existing.filter(m => m.status !== 'revoked').length;
     if (activeCount >= limits.maxSeats - 1) { // -1 because owner counts as a seat
       return new Response(JSON.stringify({ error: `Seat limit reached (${limits.maxSeats} on ${tier} plan)` }), {
@@ -81,7 +86,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     db.insert(centralSchema.teamMembers).values({
       id,
-      ownerId: locals.user.id,
+      ownerId: workspaceOwnerId,
       userId: invitee?.id || null,
       email,
       role,
@@ -117,7 +122,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const member = db.select().from(centralSchema.teamMembers)
       .where(and(
         eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, locals.user.id),
+        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
       )).get();
 
     if (!member) {
@@ -128,7 +133,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     db.update(centralSchema.teamMembers)
       .set({ role: newRole })
-      .where(eq(centralSchema.teamMembers.id, memberId))
+      .where(and(
+        eq(centralSchema.teamMembers.id, memberId),
+        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+      ))
       .run();
 
     logAudit('team_role_update', {
@@ -154,7 +162,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const member = db.select().from(centralSchema.teamMembers)
       .where(and(
         eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, locals.user.id),
+        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
       )).get();
 
     if (!member) {
@@ -165,7 +173,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     db.update(centralSchema.teamMembers)
       .set({ status: 'revoked' })
-      .where(eq(centralSchema.teamMembers.id, memberId))
+      .where(and(
+        eq(centralSchema.teamMembers.id, memberId),
+        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+      ))
       .run();
 
     logAudit('team_remove', {

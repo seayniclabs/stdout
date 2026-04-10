@@ -80,7 +80,8 @@ const ROLE_PERMISSIONS: Record<TeamRole, RBACAction[]> = {
 };
 
 /**
- * Get all team members for an owner.
+ * Get team members for a workspace. `ownerId` is the workspace owner’s user id
+ * (same as `getWorkspaceOwnerId` for that workspace), not an arbitrary filter.
  */
 export function getTeamMembers(ownerId: string) {
   const db = getCentralDb();

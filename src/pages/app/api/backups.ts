@@ -1,12 +1,19 @@
 import type { APIRoute } from 'astro';
 import { createBackup, listBackups, restoreBackup } from '../../../lib/backup';
 import { logAudit, getClientIp } from '../../../lib/audit';
+import { checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
+  const tenantOwnerId = getWorkspaceOwnerId(locals);
+  if (tenantOwnerId !== locals.user.id) {
+    const blocked = checkRBAC(locals, 'read');
+    if (blocked) return blocked;
+  }
+
   try {
-    const backups = listBackups(locals.user.id);
+    const backups = listBackups(tenantOwnerId);
     return new Response(JSON.stringify({ backups }), {
       headers: { 'Content-Type': 'application/json' },
     });
@@ -20,7 +27,6 @@ export const GET: APIRoute = async ({ locals }) => {
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
-  const { checkRBAC } = await import('../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'create_backup');
   if (rbacBlock) return rbacBlock;
 
@@ -37,8 +43,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const gate = checkFeature(locals.user, 'backupsEnabled');
     if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 
+    const tenantOwnerId = getWorkspaceOwnerId(locals);
+    if (tenantOwnerId !== locals.user.id) {
+      const blocked = checkRBAC(locals, 'create_backup');
+      if (blocked) return blocked;
+    }
+
     try {
-      const backup = createBackup(locals.user.id);
+      const backup = createBackup(tenantOwnerId);
       logAudit('backup_create', { userId: locals.user.id, ip: getClientIp(request), details: { filename: backup.filename } });
       return new Response(JSON.stringify({ backup }), {
         headers: { 'Content-Type': 'application/json' },
@@ -60,8 +72,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
+    const tenantOwnerId = getWorkspaceOwnerId(locals);
+    if (tenantOwnerId !== locals.user.id) {
+      const blocked = checkRBAC(locals, 'create_backup');
+      if (blocked) return blocked;
+    }
+
     try {
-      restoreBackup(locals.user.id, filename);
+      restoreBackup(tenantOwnerId, filename);
       logAudit('backup_restore', { userId: locals.user.id, ip: getClientIp(request), details: { filename } });
       return new Response(JSON.stringify({ restored: true, filename }), {
         headers: { 'Content-Type': 'application/json' },

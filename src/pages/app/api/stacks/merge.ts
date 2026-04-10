@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { eq, and } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
-import { checkRBAC } from '../../../../lib/rbac';
+import { checkRBAC, getWorkspaceOwnerId } from '../../../../lib/rbac';
 
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -27,18 +27,20 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
+  const workspaceOwnerId = getWorkspaceOwnerId(locals);
+  const allowedStackUserIds = new Set([locals.user.id, workspaceOwnerId]);
 
-  // Validate both stacks belong to the user
+  // Validate both stacks belong to this workspace (owner and/or current member rows)
   const source = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, sourceId)).get();
   const target = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, targetId)).get();
 
-  if (!source || source.userId !== locals.user.id) {
+  if (!source || !allowedStackUserIds.has(source.userId)) {
     return new Response(JSON.stringify({ error: 'Source stack not found' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  if (!target || target.userId !== locals.user.id) {
+  if (!target || !allowedStackUserIds.has(target.userId)) {
     return new Response(JSON.stringify({ error: 'Target stack not found' }), {
       status: 404,
       headers: { 'Content-Type': 'application/json' },
