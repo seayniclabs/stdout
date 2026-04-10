@@ -87,7 +87,7 @@ const productHuntScreenshots: ScreenshotDef[] = [
   {
     name: '01-hud-dashboard',
     route: '/app/hud',
-    addressBarUrl: 'stdout.seaynicroute.com/app/hud',
+    addressBarUrl: 'stdout.seayniclabs.com/app/hud',
     viewportWidth: PH_WIDTH,
     viewportHeight: PH_HEIGHT - FRAME_CHROME_HEIGHT,
     setup: async (page) => {
@@ -101,7 +101,7 @@ const productHuntScreenshots: ScreenshotDef[] = [
   {
     name: '02-scanner-results',
     route: '/app/stacks',
-    addressBarUrl: 'stdout.seaynicroute.com/app/stacks',
+    addressBarUrl: 'stdout.seayniclabs.com/app/stacks',
     viewportWidth: PH_WIDTH,
     viewportHeight: PH_HEIGHT - FRAME_CHROME_HEIGHT,
     setup: async (page) => {
@@ -115,7 +115,7 @@ const productHuntScreenshots: ScreenshotDef[] = [
   {
     name: '03-incident-detail',
     route: '/app/incidents/demo-nginx-502-1774898333',
-    addressBarUrl: 'stdout.seaynicroute.com/app/incidents/nginx-502',
+    addressBarUrl: 'stdout.seayniclabs.com/app/incidents/nginx-502',
     viewportWidth: PH_WIDTH,
     viewportHeight: PH_HEIGHT - FRAME_CHROME_HEIGHT,
     setup: async (page) => {
@@ -129,7 +129,7 @@ const productHuntScreenshots: ScreenshotDef[] = [
   {
     name: '04-knowledge-base',
     route: '/app/search',
-    addressBarUrl: 'stdout.seaynicroute.com/app/search',
+    addressBarUrl: 'stdout.seayniclabs.com/app/search',
     viewportWidth: PH_WIDTH,
     viewportHeight: PH_HEIGHT - FRAME_CHROME_HEIGHT,
     setup: async (page) => {
