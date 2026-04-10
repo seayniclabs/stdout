@@ -161,7 +161,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     db.update(tenantSchema.aiProviderKeys)
       .set(updates)
-      .where(eq(tenantSchema.aiProviderKeys.id, existing.id))
+      .where(and(
+        eq(tenantSchema.aiProviderKeys.id, existing.id),
+        eq(tenantSchema.aiProviderKeys.userId, userId),
+      ))
       .run();
 
     return new Response(JSON.stringify({ ok: true }), {

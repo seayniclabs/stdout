@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // GET — returns the user's scan schedule (used by scanner polling)
 // Also accepts Bearer token auth so the scanner can poll this
@@ -90,7 +90,10 @@ export const PUT: APIRoute = async ({ locals, request }) => {
 
   if (existing) {
     db.update(tenantSchema.scannerSchedule).set(values)
-      .where(eq(tenantSchema.scannerSchedule.id, existing.id)).run();
+      .where(and(
+        eq(tenantSchema.scannerSchedule.id, existing.id),
+        eq(tenantSchema.scannerSchedule.userId, locals.user.id),
+      )).run();
   } else {
     db.insert(tenantSchema.scannerSchedule).values({
       id: nanoid(), userId: locals.user.id, ...values,

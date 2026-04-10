@@ -158,6 +158,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const id = body.id;
     if (!id) return new Response(JSON.stringify({ error: 'Monitor ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
+    const owned = db.select().from(tenantSchema.monitors)
+      .where(and(eq(tenantSchema.monitors.id, id), eq(tenantSchema.monitors.userId, locals.user.id)))
+      .get();
+    if (!owned) {
+      return new Response(JSON.stringify({ error: 'Monitor not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+    }
+
     stopMonitor(id);
 
     // Delete check results first (no FK cascade in SQLite without pragma)

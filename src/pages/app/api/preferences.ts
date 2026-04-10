@@ -49,7 +49,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     if (existing) {
       db.update(tenantSchema.tenantPreferences).set(values)
-        .where(eq(tenantSchema.tenantPreferences.id, existing.id)).run();
+        .where(and(
+          eq(tenantSchema.tenantPreferences.id, existing.id),
+          eq(tenantSchema.tenantPreferences.userId, locals.user.id),
+        )).run();
     } else {
       db.insert(tenantSchema.tenantPreferences).values({
         id: nanoid(), userId: locals.user.id, ...values,
@@ -129,7 +132,10 @@ export const PUT: APIRoute = async ({ locals, request }) => {
 
   if (existing) {
     db.update(tenantSchema.tenantPreferences).set(updates)
-      .where(eq(tenantSchema.tenantPreferences.id, existing.id)).run();
+      .where(and(
+        eq(tenantSchema.tenantPreferences.id, existing.id),
+        eq(tenantSchema.tenantPreferences.userId, locals.user.id),
+      )).run();
   } else {
     db.insert(tenantSchema.tenantPreferences).values({
       id: nanoid(), userId: locals.user.id, ...updates,

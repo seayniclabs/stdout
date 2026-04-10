@@ -160,7 +160,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (status === 'resolved') updates.resolvedAt = new Date();
 
     db.update(tenantSchema.incidents).set(updates)
-      .where(eq(tenantSchema.incidents.id, incidentId)).run();
+      .where(and(
+        eq(tenantSchema.incidents.id, incidentId),
+        eq(tenantSchema.incidents.userId, locals.user.id),
+      )).run();
 
     return new Response(JSON.stringify({ ok: true, incidentId, status }), {
       headers: { 'Content-Type': 'application/json' },
@@ -242,10 +245,13 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  // Delete resolutions and diagnoses first
+  // Delete resolutions and diagnoses first (incident already verified; resolutions may be authored by multiple users)
   db.delete(tenantSchema.resolutions).where(eq(tenantSchema.resolutions.incidentId, id)).run();
   db.delete(tenantSchema.diagnoses).where(eq(tenantSchema.diagnoses.incidentId, id)).run();
-  db.delete(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, id)).run();
+  db.delete(tenantSchema.incidents).where(and(
+    eq(tenantSchema.incidents.id, id),
+    eq(tenantSchema.incidents.userId, incident.userId),
+  )).run();
 
   return new Response(JSON.stringify({ ok: true, deleted: id }), {
     headers: { 'Content-Type': 'application/json' },

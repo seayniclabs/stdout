@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ locals }) => {
 
   db.update(tenantSchema.tenantPreferences)
     .set({ addonsDismissed: true })
-    .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id))
+    .where(eq(tenantSchema.tenantPreferences.userId, userId))
     .run();
 
   return Response.json({ ok: true });

@@ -57,36 +57,33 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
   }
 
-  // Update target stack description
+  // Scope mutations by each row's owner userId (team workspace: stacks may belong to workspace owner)
   db.update(tenantSchema.stacks).set({
     description: mergedDescription,
     previousDescription: target.description, // allow undo
     updatedAt: new Date(),
   }).where(and(
     eq(tenantSchema.stacks.id, targetId),
-    eq(tenantSchema.stacks.userId, locals.user.id),
+    eq(tenantSchema.stacks.userId, target.userId),
   )).run();
 
-  // Move incidents from source to target
   db.update(tenantSchema.incidents).set({
     stackId: targetId,
   }).where(and(
     eq(tenantSchema.incidents.stackId, sourceId),
-    eq(tenantSchema.incidents.userId, locals.user.id),
+    eq(tenantSchema.incidents.userId, source.userId),
   )).run();
 
-  // Move docs from source to target
   db.update(tenantSchema.docs).set({
     stackId: targetId,
   }).where(and(
     eq(tenantSchema.docs.stackId, sourceId),
-    eq(tenantSchema.docs.userId, locals.user.id),
+    eq(tenantSchema.docs.userId, source.userId),
   )).run();
 
-  // Delete the source stack
   db.delete(tenantSchema.stacks).where(and(
     eq(tenantSchema.stacks.id, sourceId),
-    eq(tenantSchema.stacks.userId, locals.user.id),
+    eq(tenantSchema.stacks.userId, source.userId),
   )).run();
 
   return new Response(JSON.stringify({ ok: true, targetId }), {

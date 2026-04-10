@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 // GET — return current status page config
 export const GET: APIRoute = async ({ locals }) => {
@@ -65,7 +65,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   if (existing) {
     db.update(tenantSchema.statusPage).set(values)
-      .where(eq(tenantSchema.statusPage.id, existing.id)).run();
+      .where(and(
+        eq(tenantSchema.statusPage.id, existing.id),
+        eq(tenantSchema.statusPage.userId, locals.user.id),
+      )).run();
   } else {
     db.insert(tenantSchema.statusPage).values({
       id: nanoid(), userId: locals.user.id, createdAt: new Date(), ...values,

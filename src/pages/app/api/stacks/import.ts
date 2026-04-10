@@ -216,7 +216,10 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
         lastTestedAt: now,
         lastTestStatus: testStatus,
         updatedAt: now,
-      }).where(eq(tenantSchema.dataSources.id, existing.id)).run();
+      }).where(and(
+        eq(tenantSchema.dataSources.id, existing.id),
+        eq(tenantSchema.dataSources.userId, existing.userId),
+      )).run();
     } else {
       // Use tool name for label, not hardcoded "Prometheus"
       const typeLabels: Record<string, string> = {
