@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { checkRBAC } from '../../../../lib/rbac';
 
@@ -60,20 +60,32 @@ export const POST: APIRoute = async ({ locals, request }) => {
     description: mergedDescription,
     previousDescription: target.description, // allow undo
     updatedAt: new Date(),
-  }).where(eq(tenantSchema.stacks.id, targetId)).run();
+  }).where(and(
+    eq(tenantSchema.stacks.id, targetId),
+    eq(tenantSchema.stacks.userId, locals.user.id),
+  )).run();
 
   // Move incidents from source to target
   db.update(tenantSchema.incidents).set({
     stackId: targetId,
-  }).where(eq(tenantSchema.incidents.stackId, sourceId)).run();
+  }).where(and(
+    eq(tenantSchema.incidents.stackId, sourceId),
+    eq(tenantSchema.incidents.userId, locals.user.id),
+  )).run();
 
   // Move docs from source to target
   db.update(tenantSchema.docs).set({
     stackId: targetId,
-  }).where(eq(tenantSchema.docs.stackId, sourceId)).run();
+  }).where(and(
+    eq(tenantSchema.docs.stackId, sourceId),
+    eq(tenantSchema.docs.userId, locals.user.id),
+  )).run();
 
   // Delete the source stack
-  db.delete(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, sourceId)).run();
+  db.delete(tenantSchema.stacks).where(and(
+    eq(tenantSchema.stacks.id, sourceId),
+    eq(tenantSchema.stacks.userId, locals.user.id),
+  )).run();
 
   return new Response(JSON.stringify({ ok: true, targetId }), {
     status: 200,

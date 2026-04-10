@@ -155,7 +155,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     db.update(tenantSchema.dataSources).set(updates)
-      .where(eq(tenantSchema.dataSources.id, dsId)).run();
+      .where(and(
+        eq(tenantSchema.dataSources.id, dsId),
+        eq(tenantSchema.dataSources.userId, locals.user.id),
+      )).run();
 
     return new Response(JSON.stringify({ updated: true }), {
       headers: { 'Content-Type': 'application/json' },
