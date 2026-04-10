@@ -37,7 +37,7 @@ async function checkWindlassSidecar(): Promise<'ok' | 'degraded'> {
   // Best-effort: 1-second timeout, never fails the overall healthz.
   // Windlass is a sidecar and can be down without StdOut being down.
   try {
-    const url = process.env.WINDLASS_URL || 'http://windlass:8118/healthz';
+    const url = process.env.WINDLASS_URL || 'http://windlass:8116/health';
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1000);
     const resp = await fetch(url, { signal: controller.signal });
