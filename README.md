@@ -109,6 +109,67 @@ StdOut will now show your services, their schedule windows, and alert when somet
 
 ---
 
+## Windlass Deployment Notes
+
+Three things that trip up new Windlass deployments.
+
+### schedule.yaml — compose_path and container names
+
+`compose_path` must be the **absolute path to the directory containing `docker-compose.yml`** — not the file itself.
+
+```yaml
+# Correct
+services:
+  my-service:
+    compose_path: /opt/containers/my-service
+
+# Wrong — points to the file
+    compose_path: /opt/containers/my-service/docker-compose.yml
+```
+
+The `containers` list takes **actual Docker container names** as shown in `docker ps`, not Compose service names. If you don't pin container names with `container_name:` in your compose file, Docker generates names like `my-service-app-1`. Run `docker ps --format '{{.Names}}'` to confirm names before filling in `schedule.yaml`.
+
+```yaml
+services:
+  postiz:
+    compose_path: /opt/containers/postiz
+    containers: [postiz-app, postiz-worker, postiz-postgres, postiz-redis]
+    type: schedule
+    cron_start: "0 4 * * *"   # UTC — see note below
+    cron_stop:  "0 10 * * *"
+```
+
+### Docker socket must be mounted :rw
+
+Windlass needs read-write access to the Docker socket to start and stop containers. The default mount (no mode flag) is read-write and is correct. The `:ro` flag breaks container control.
+
+```yaml
+# Correct — rw is the default
+- /var/run/docker.sock:/var/run/docker.sock
+
+# Wrong — breaks start/stop
+- /var/run/docker.sock:/var/run/docker.sock:ro
+```
+
+With `:ro`, Windlass will connect and report status correctly, but all start/stop/restart operations will fail silently. Services will appear managed but will not actually be controlled.
+
+### Cron times are always UTC
+
+`cron_start` and `cron_stop` are evaluated in UTC regardless of the `TZ` environment variable. Setting `TZ=America/Chicago` adjusts log timestamps only — it does not shift when schedule windows fire.
+
+Convert your intended local time to UTC before writing cron expressions:
+
+| Intent (America/Chicago) | cron value (UTC) |
+|--------------------------|------------------|
+| 11 PM CT in winter (CST, UTC−6) | `0 5 * * *` |
+| 11 PM CT in summer (CDT, UTC−5) | `0 4 * * *` |
+| 4 AM CT in winter | `0 10 * * *` |
+| 4 AM CT in summer | `0 9 * * *` |
+
+After deploying, verify by checking `/status.json` → `upcoming_events` — the next scheduled window should reflect your expected UTC time.
+
+---
+
 ## Starting without Windlass
 
 ```bash
