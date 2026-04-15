@@ -90,6 +90,9 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
   for (const svc of status.services) {
     const id = svc.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
     const classification = TYPE_MAP[svc.type] || 'manual';
+    const serviceType = ['always', 'schedule', 'on-demand', 'manual'].includes(svc.type)
+      ? svc.type
+      : 'manual';
 
     // Determine expected state based on classification and schedule
     let expectedState = 'running';
@@ -166,6 +169,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       db.update(tenantSchema.windlassServices)
         .set({
           name: svc.name,
+          serviceType,
           classification,
           memoryMb: svc.memory_mb,
           priority: svc.priority,
@@ -188,6 +192,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         id,
         userId,
         name: svc.name,
+        serviceType,
         classification,
         memoryMb: svc.memory_mb,
         priority: svc.priority,

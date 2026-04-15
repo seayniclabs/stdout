@@ -34,6 +34,13 @@ const classLabels: Record<string, string> = {
   manual: 'Manual',
 };
 
+const serviceTypeLabels: Record<string, string> = {
+  always: 'Always',
+  schedule: 'Schedule',
+  'on-demand': 'On-demand',
+  manual: 'Manual',
+};
+
 const stateColors: Record<string, string> = {
   running: 'var(--low)',
   stopped: 'var(--muted)',
@@ -133,6 +140,10 @@ const stateColors: Record<string, string> = {
           <div class="prop-row">
             <span class="prop-label">Priority</span>
             <span class="prop-value mono">{service.priority} / 5</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Service Type</span>
+            <span class="prop-value">{serviceTypeLabels[service.serviceType || 'manual'] || (service.serviceType || 'manual')}</span>
           </div>
           <div class="prop-row">
             <span class="prop-label">Last State Change</span>

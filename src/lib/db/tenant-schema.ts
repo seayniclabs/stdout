@@ -228,6 +228,9 @@ export const windlassServices = sqliteTable('windlass_services', {
   id: text('id').primaryKey(),                // e.g. "postiz", "grafana"
   userId: text('user_id').notNull(),
   name: text('name').notNull(),               // Display name
+  serviceType: text('service_type', {
+    enum: ['always', 'schedule', 'on-demand', 'manual'],
+  }).notNull().default('manual'),
   classification: text('classification', {
     enum: ['always_on', 'scheduled', 'on_demand', 'manual'],
   }).notNull(),

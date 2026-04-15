@@ -65,6 +65,19 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'windlass_services', 'override_reason', 'TEXT');
   // Windlass: service decommissioning (2026-04-07)
   safeAddColumn(sqlite, 'windlass_services', 'decommissioned_at', 'INTEGER');
+  // Windlass: preserve raw service type for assessment engine (2026-04-15)
+  safeAddColumn(sqlite, 'windlass_services', 'service_type', "TEXT NOT NULL DEFAULT 'manual'");
+  sqlite.exec(`
+    UPDATE windlass_services
+    SET service_type = CASE classification
+      WHEN 'always_on' THEN 'always'
+      WHEN 'scheduled' THEN 'schedule'
+      WHEN 'on_demand' THEN 'on-demand'
+      WHEN 'manual' THEN 'manual'
+      ELSE 'manual'
+    END
+    WHERE service_type = 'manual';
+  `);
 
   // Feature requests (2026-03-31)
   sqlite.exec(`
@@ -463,6 +476,7 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
       name TEXT NOT NULL,
+      service_type TEXT NOT NULL DEFAULT 'manual',
       classification TEXT NOT NULL,
       compose_path TEXT,
       container_count INTEGER,
