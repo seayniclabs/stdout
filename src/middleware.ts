@@ -4,6 +4,10 @@ import { getCentralDb, centralSchema } from './lib/db';
 import { getWorkspaceContext } from './lib/rbac';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
+import { startHeartbeat } from './lib/scanner-heartbeat';
+import { scheduleCveScanner } from './lib/scanner-cve';
+import { scheduleDockerHubScanner } from './lib/scanner-docker-hub';
+import { scheduleShodanScanner } from './lib/scanner-shodan';
 
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event'];
@@ -208,6 +212,12 @@ setInterval(async () => {
     }
   }
 }, 60 * 60 * 1000); // Check every hour
+
+// Windlass Phase 3 — native scanner modules (replace n8n heartbeat + weekly scanners)
+startHeartbeat();
+scheduleCveScanner();
+scheduleDockerHubScanner();
+scheduleShodanScanner();
 
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.isPrerendered) return next();
