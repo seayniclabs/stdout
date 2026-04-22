@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
 
 // --- Bearer Token Auth (for scanner API) ---
-const BEARER_PATHS = ['/app/api/stacks/import'];
+const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event'];
 
 function validateBearerToken(request: Request): { userId: string } | null {
   const authHeader = request.headers.get('authorization');
