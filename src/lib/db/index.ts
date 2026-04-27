@@ -67,6 +67,11 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'windlass_services', 'decommissioned_at', 'INTEGER');
   // Windlass: preserve raw service type for assessment engine (2026-04-15)
   safeAddColumn(sqlite, 'windlass_services', 'service_type', "TEXT NOT NULL DEFAULT 'manual'");
+  safeAddColumn(sqlite, 'windlass_services', 'usage_analytics', 'TEXT');
+  safeAddColumn(sqlite, 'windlass_services', 'utilization_pct', 'INTEGER');
+  safeAddColumn(sqlite, 'windlass_services', 'idle_hours_per_day', 'INTEGER');
+  safeAddColumn(sqlite, 'windlass_services', 'scheduling_suggestion', 'TEXT');
+  safeAddColumn(sqlite, 'windlass_config', 'last_weekly_digest_at', 'INTEGER');
   sqlite.exec(`
     UPDATE windlass_services
     SET service_type = CASE classification
@@ -493,6 +498,10 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       last_started INTEGER,
       last_stopped INTEGER,
       containers TEXT,
+      usage_analytics TEXT,
+      utilization_pct INTEGER,
+      idle_hours_per_day INTEGER,
+      scheduling_suggestion TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
@@ -514,6 +523,7 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       enabled INTEGER NOT NULL DEFAULT 1,
       last_sync_at INTEGER,
       last_sync_status TEXT,
+      last_weekly_digest_at INTEGER,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );

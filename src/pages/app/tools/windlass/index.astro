@@ -11,6 +11,17 @@ const config = getConfig(userId);
 const services = getAllServices(userId);
 const summary = getServiceSummary(userId);
 const events = getRecentEvents(userId, 20);
+const suggestionServices = services.filter(s => s.schedulingSuggestion);
+const estimatedRecoveredGbHours = services.reduce((sum, s) => {
+  if (!s.memoryMb || !s.usageAnalytics) return sum;
+  try {
+    const analytics = JSON.parse(s.usageAnalytics);
+    const idleMinutes = analytics?.idle_minutes_total || 0;
+    return sum + ((s.memoryMb / 1024) * (idleMinutes / 60));
+  } catch {
+    return sum;
+  }
+}, 0);
 
 // Group services by classification
 const groups = {
@@ -165,6 +176,13 @@ const stateColors: Record<string, string> = {
             )}
           </div>
         )}
+
+        <div class="sync-status">
+          Weekly savings estimate: <span class="mono">{estimatedRecoveredGbHours.toFixed(2)} GB-hours recovered</span>
+          {suggestionServices.length > 0 && (
+            <span class="sync-error"> — {suggestionServices.length} services idle 18h+/day (suggest scheduling)</span>
+          )}
+        </div>
 
         {/* Service groups */}
         {Object.entries(groups).map(([classification, svcList]) => svcList.length > 0 && (

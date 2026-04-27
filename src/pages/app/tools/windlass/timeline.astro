@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../../layouts/Layout.astro';
-import { getAllServices, getConfig } from '../../../../lib/windlass';
+import { getAllServices, getConfig, getN8nWorkflowWindows } from '../../../../lib/windlass';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -9,6 +9,7 @@ if (!user) return Astro.redirect('/app/login');
 const userId = Astro.locals.workspace?.ownerId || user.id;
 const config = getConfig(userId);
 const services = getAllServices(userId);
+const n8nWindows = await getN8nWorkflowWindows(userId);
 
 if (!config || services.length === 0) return Astro.redirect('/app/tools/windlass');
 
@@ -37,6 +38,11 @@ const stateColors: Record<string, string> = {
   error: 'var(--high)',
   unknown: 'var(--border)',
 };
+
+function toPercent(iso: string) {
+  const date = new Date(iso);
+  return ((date.getHours() + date.getMinutes() / 60) / 24) * 100;
+}
 ---
 <Layout title="Timeline — Windlass">
   <div class="timeline-page">
@@ -113,12 +119,33 @@ const stateColors: Record<string, string> = {
           </a>
         );
       })}
+
+      {/* n8n workflow rows */}
+      {n8nWindows.map(wf => (
+        <div class="timeline-row workflow-row">
+          <div class="timeline-label">
+            <span class="tl-dot workflow-dot"></span>
+            <span class="tl-name">{wf.name}</span>
+            <span class="tl-class">n8n</span>
+          </div>
+          <div class="timeline-bar">
+            {wf.windows.map(win => {
+              const start = toPercent(win.start);
+              const end = toPercent(win.end);
+              return (
+                <div class="tl-block tl-workflow" style={`left:${start}%; width:${Math.max(0.5, end - start)}%`} title={`${new Date(win.start).toLocaleTimeString()} (${wf.cron})`}></div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
 
     <div class="timeline-legend">
       <div class="legend-item"><span class="legend-swatch tl-always"></span> Always On</div>
       <div class="legend-item"><span class="legend-swatch tl-scheduled"></span> Scheduled Window</div>
       <div class="legend-item"><span class="legend-swatch tl-ondemand"></span> On-Demand (active)</div>
+      <div class="legend-item"><span class="legend-swatch tl-workflow"></span> n8n Workflow Window</div>
     </div>
   </div>
 
@@ -151,6 +178,9 @@ const stateColors: Record<string, string> = {
     .tl-always { background: var(--low); opacity: 0.2; }
     .tl-scheduled { background: #60A5FA; opacity: 0.5; }
     .tl-ondemand { background: #F97316; opacity: 0.25; }
+    .tl-workflow { background: #A855F7; opacity: 0.55; }
+    .workflow-row { opacity: 0.95; }
+    .workflow-dot { background: #A855F7; }
 
     .now-marker { position: absolute; top: 0; bottom: 0; z-index: 10; pointer-events: none; }
     .now-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--accent, #F97316); }
@@ -162,6 +192,7 @@ const stateColors: Record<string, string> = {
     .legend-swatch.tl-always { background: var(--low); opacity: 0.4; }
     .legend-swatch.tl-scheduled { background: #60A5FA; opacity: 0.7; }
     .legend-swatch.tl-ondemand { background: #F97316; opacity: 0.5; }
+    .legend-swatch.tl-workflow { background: #A855F7; opacity: 0.75; }
 
     @media (max-width: 640px) {
       .timeline-label { width: 90px; min-width: 90px; }

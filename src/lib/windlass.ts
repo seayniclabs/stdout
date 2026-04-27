@@ -10,6 +10,7 @@ import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 import { fireAlert } from './alert-router';
+import { sendWindlassWeeklyDigest } from './alert-router';
 
 // --- Types ---
 
@@ -28,6 +29,12 @@ export interface WindlassStatus {
   upcoming_events: { time: string; service: string; action: string }[];
   recent_events: { timestamp: string; service: string; action: string; reason: string }[];
   schedule_windows: { service: string; windows: { start: string; end: string }[] }[];
+  n8n_workflow_windows?: { name: string; cron: string; windows: { start: string; end: string }[] }[];
+  service_analytics?: Record<string, {
+    hourly?: Record<string, { running: number; idle: number; total: number }>;
+    idle_minutes_total?: number;
+    samples?: number;
+  }>;
 }
 
 export interface WindlassServiceState {
@@ -129,6 +136,17 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       .where(and(eq(tenantSchema.windlassServices.id, id), eq(tenantSchema.windlassServices.userId, userId)))
       .get();
 
+    const rawAnalytics = status.service_analytics?.[svc.name] || null;
+    const samples = rawAnalytics?.samples || 0;
+    const runningSamples = Object.values(rawAnalytics?.hourly || {})
+      .reduce((sum, bucket: any) => sum + (bucket.running || 0), 0);
+    const utilizationPct = samples > 0 ? Math.round((runningSamples / samples) * 100) : null;
+    const idleMinutesTotal = rawAnalytics?.idle_minutes_total || 0;
+    const idleHoursPerDay = samples > 0 ? Math.round((idleMinutesTotal / 60) * (24 / Math.max(1, samples))) : null;
+    const schedulingSuggestion = idleHoursPerDay && idleHoursPerDay >= 18
+      ? `${svc.name} idle ${idleHoursPerDay}h/day — suggest scheduling?`
+      : null;
+
     if (existing) {
       // Detect state change → log event + fire alert
       if (existing.currentState !== svc.state) {
@@ -183,6 +201,10 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
           lastStateChange: existing.currentState !== svc.state ? now : existing.lastStateChange,
           containers: JSON.stringify(svc.containers),
           containerCount: svc.containers?.length || 0,
+          usageAnalytics: rawAnalytics ? JSON.stringify(rawAnalytics) : null,
+          utilizationPct,
+          idleHoursPerDay,
+          schedulingSuggestion,
           updatedAt: now,
         })
         .where(and(eq(tenantSchema.windlassServices.id, id), eq(tenantSchema.windlassServices.userId, userId)))
@@ -206,8 +228,47 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         lastStateChange: now,
         containers: JSON.stringify(svc.containers),
         containerCount: svc.containers?.length || 0,
+        usageAnalytics: rawAnalytics ? JSON.stringify(rawAnalytics) : null,
+        utilizationPct,
+        idleHoursPerDay,
+        schedulingSuggestion,
         createdAt: now,
         updatedAt: now,
+      }).run();
+    }
+  }
+
+  // Ingest Windlass recent events (includes memory pressure auto-shedding).
+  for (const evt of status.recent_events || []) {
+    const eventAt = evt.timestamp ? new Date(evt.timestamp) : now;
+    const serviceId = evt.service && evt.service !== 'system'
+      ? evt.service.toLowerCase().replace(/[^a-z0-9-]/g, '-')
+      : null;
+    const eventType = evt.action === 'memory_shed' ? 'memory_shed'
+      : evt.action === 'manual_start' ? 'manual_start'
+      : evt.action === 'manual_stop' ? 'manual_stop'
+      : evt.action === 'sync_completed' ? 'sync_completed'
+      : evt.action === 'service_started' ? 'service_started'
+      : evt.action === 'service_stopped' ? 'service_stopped'
+      : 'config_changed';
+
+    const existingEvent = db.select().from(tenantSchema.windlassEvents)
+      .where(and(
+        eq(tenantSchema.windlassEvents.userId, userId),
+        eq(tenantSchema.windlassEvents.serviceId, serviceId),
+        eq(tenantSchema.windlassEvents.eventType, eventType as any),
+        eq(tenantSchema.windlassEvents.createdAt, eventAt),
+      ))
+      .get();
+
+    if (!existingEvent) {
+      db.insert(tenantSchema.windlassEvents).values({
+        id: nanoid(),
+        userId,
+        serviceId,
+        eventType: eventType as any,
+        detail: evt.reason || '',
+        createdAt: eventAt,
       }).run();
     }
   }
@@ -266,10 +327,67 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     .where(eq(tenantSchema.windlassConfig.userId, userId))
     .run();
 
+  await maybeSendWeeklyDigest(userId);
+
   // Log sync event
   logEvent(userId, null, 'sync_completed', `Synced ${status.services.length} services`);
 
   return { synced: status.services.length, summary: status.summary };
+}
+
+async function maybeSendWeeklyDigest(userId: string): Promise<void> {
+  const db = getTenantDb(userId);
+  const config = db.select().from(tenantSchema.windlassConfig)
+    .where(eq(tenantSchema.windlassConfig.userId, userId))
+    .get();
+  if (!config) return;
+
+  const now = new Date();
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const alreadySentThisWeek = config.lastWeeklyDigestAt
+    && (now.getTime() - new Date(config.lastWeeklyDigestAt).getTime()) < (6 * 24 * 60 * 60 * 1000);
+  if (alreadySentThisWeek || now.getUTCDay() !== 0) return;
+
+  const services = db.select().from(tenantSchema.windlassServices)
+    .where(eq(tenantSchema.windlassServices.userId, userId))
+    .all();
+
+  let recoveredGbHours = 0;
+  for (const service of services) {
+    if (!service.memoryMb || !service.usageAnalytics) continue;
+    try {
+      const analytics = JSON.parse(service.usageAnalytics);
+      const idleMinutes = analytics?.idle_minutes_total || 0;
+      recoveredGbHours += (service.memoryMb / 1024) * (idleMinutes / 60);
+    } catch {
+      // ignore malformed analytics blob
+    }
+  }
+
+  if (recoveredGbHours <= 0) return;
+  await sendWindlassWeeklyDigest(userId, {
+    recoveredGbHours,
+    serviceCount: services.length,
+    weekLabel: sevenDaysAgo.toISOString().slice(0, 10) + ' to ' + now.toISOString().slice(0, 10),
+  });
+
+  db.update(tenantSchema.windlassConfig)
+    .set({ lastWeeklyDigestAt: now, updatedAt: now })
+    .where(eq(tenantSchema.windlassConfig.userId, userId))
+    .run();
+}
+
+export async function getN8nWorkflowWindows(userId: string): Promise<{ name: string; cron: string; windows: { start: string; end: string }[] }[]> {
+  const config = getConfig(userId);
+  if (!config?.endpointUrl) return [];
+  try {
+    const res = await fetch(config.endpointUrl.replace(/\/$/, '') + '/status.json', { signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const status = await res.json() as WindlassStatus;
+    return status.n8n_workflow_windows || [];
+  } catch {
+    return [];
+  }
 }
 
 // --- Service Control ---

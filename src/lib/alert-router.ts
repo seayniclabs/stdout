@@ -383,3 +383,35 @@ export async function testChannel(userId: string, channelId: string): Promise<{ 
     return { success: false, error: err.message };
   }
 }
+
+export async function sendWindlassWeeklyDigest(
+  userId: string,
+  summary: { recoveredGbHours: number; serviceCount: number; weekLabel: string }
+): Promise<void> {
+  const db = getTenantDb(userId);
+  const channels = db.select().from(tenantSchema.alertChannels)
+    .where(and(
+      eq(tenantSchema.alertChannels.userId, userId),
+      eq(tenantSchema.alertChannels.enabled, true),
+    ))
+    .all()
+    .filter(ch => ch.type === 'email' || ch.type === 'telegram');
+
+  const title = `Windlass Weekly Summary (${summary.weekLabel})`;
+  const detail = `Recovered ${summary.recoveredGbHours.toFixed(2)} GB-hours across ${summary.serviceCount} services.`;
+
+  for (const channel of channels) {
+    try {
+      await dispatchToChannel(channel, {
+        userId,
+        serviceId: null,
+        eventType: 'weekly_summary',
+        severity: 'info',
+        title,
+        detail,
+      });
+    } catch (err) {
+      console.error('Weekly digest dispatch failed:', err);
+    }
+  }
+}

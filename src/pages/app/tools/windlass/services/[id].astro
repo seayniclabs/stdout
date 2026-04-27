@@ -14,6 +14,9 @@ if (!service) return Astro.redirect('/app/tools/windlass');
 
 const events = getServiceEvents(userId, id!, 50);
 const containers = service.containers ? JSON.parse(service.containers) : [];
+const usageAnalytics = service.usageAnalytics ? JSON.parse(service.usageAnalytics) : null;
+const hourly = usageAnalytics?.hourly || {};
+const lastMemoryShed = events.find(evt => evt.eventType === 'memory_shed');
 
 function timeAgo(date: Date | null) {
   if (!date) return 'never';
@@ -180,6 +183,12 @@ const stateColors: Record<string, string> = {
             </div>
           </div>
         )}
+        {lastMemoryShed && (
+          <div class="state-warning" style="margin-top:0.75rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>
+            Last auto-shed reason: {lastMemoryShed.detail}
+          </div>
+        )}
       </div>
 
       {service.classification === 'scheduled' && (
@@ -221,6 +230,33 @@ const stateColors: Record<string, string> = {
           </div>
         </div>
       </div>
+
+      {(service.utilizationPct !== null || usageAnalytics) && (
+        <div class="detail-card">
+          <h3>Utilization Heatmap</h3>
+          <div class="prop-row">
+            <span class="prop-label">Rolling Utilization</span>
+            <span class="prop-value mono">{service.utilizationPct ?? 0}%</span>
+          </div>
+          <div class="prop-row">
+            <span class="prop-label">Estimated Idle</span>
+            <span class="prop-value mono">{service.idleHoursPerDay ?? 0}h/day</span>
+          </div>
+          <div class="heatmap">
+            {Array.from({ length: 24 }, (_, h) => {
+              const key = String(h).padStart(2, '0');
+              const bucket = hourly[key] || { running: 0, total: 0 };
+              const ratio = bucket.total > 0 ? bucket.running / bucket.total : 0;
+              return <span class="heat-cell" style={`opacity:${Math.max(0.15, ratio)};`} title={`${key}:00 - ${Math.round(ratio * 100)}% running`}></span>;
+            })}
+          </div>
+          {service.schedulingSuggestion && (
+            <div class="state-warning" style="margin-top:0.75rem;">
+              {service.schedulingSuggestion}
+            </div>
+          )}
+        </div>
+      )}
     </div>
 
     {/* Event history */}
@@ -296,6 +332,8 @@ const stateColors: Record<string, string> = {
     .container-list { margin-top: 0.75rem; }
     .container-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
     .container-tag { font-size: 0.7rem; font-family: var(--font-mono); padding: 0.15rem 0.4rem; background: var(--border); border-radius: 3px; }
+    .heatmap { margin-top: 0.75rem; display: grid; grid-template-columns: repeat(24, 1fr); gap: 4px; }
+    .heat-cell { height: 12px; border-radius: 2px; background: #60A5FA; display: block; }
 
     .mono { font-family: var(--font-mono); }
 
