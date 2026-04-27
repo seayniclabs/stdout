@@ -17,6 +17,7 @@ const containers = service.containers ? JSON.parse(service.containers) : [];
 const usageAnalytics = service.usageAnalytics ? JSON.parse(service.usageAnalytics) : null;
 const hourly = usageAnalytics?.hourly || {};
 const lastMemoryShed = events.find(evt => evt.eventType === 'memory_shed');
+const memoryShedEvents = events.filter(evt => evt.eventType === 'memory_shed');
 
 function timeAgo(date: Date | null) {
   if (!date) return 'never';
@@ -28,6 +29,11 @@ function timeAgo(date: Date | null) {
   if (hrs < 24) return `${hrs}h ago`;
   const days = Math.floor(hrs / 24);
   return `${days}d ago`;
+}
+
+function formatMemoryShedReason(detail: string | null) {
+  if (!detail) return 'memory_shed';
+  return detail.includes('memory_shed') ? detail : `memory_shed ${detail}`;
 }
 
 const classLabels: Record<string, string> = {
@@ -247,7 +253,8 @@ const stateColors: Record<string, string> = {
               const key = String(h).padStart(2, '0');
               const bucket = hourly[key] || { running: 0, total: 0 };
               const ratio = bucket.total > 0 ? bucket.running / bucket.total : 0;
-              return <span class="heat-cell" style={`opacity:${Math.max(0.15, ratio)};`} title={`${key}:00 - ${Math.round(ratio * 100)}% running`}></span>;
+              const state = bucket.total === 0 ? 'none' : ratio > 0 ? 'running' : 'idle';
+              return <span class={`heat-cell heat-${state}`} title={`${key}:00 - ${Math.round(ratio * 100)}% running`}></span>;
             })}
           </div>
           {service.schedulingSuggestion && (
@@ -260,6 +267,30 @@ const stateColors: Record<string, string> = {
     </div>
 
     {/* Event history */}
+    {memoryShedEvents.length > 0 && (
+      <div class="events-section">
+        <h2>Memory Shed Events</h2>
+        <div class="events-table">
+          <table>
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {memoryShedEvents.map(evt => (
+                <tr>
+                  <td class="mono">{new Date(evt.createdAt).toLocaleString('en-US', { timeZone: 'America/Chicago' })}</td>
+                  <td class="event-detail">{formatMemoryShedReason(evt.detail)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
     {events.length > 0 && (
       <div class="events-section">
         <h2>Event History</h2>
@@ -333,7 +364,10 @@ const stateColors: Record<string, string> = {
     .container-tags { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.35rem; }
     .container-tag { font-size: 0.7rem; font-family: var(--font-mono); padding: 0.15rem 0.4rem; background: var(--border); border-radius: 3px; }
     .heatmap { margin-top: 0.75rem; display: grid; grid-template-columns: repeat(24, 1fr); gap: 4px; }
-    .heat-cell { height: 12px; border-radius: 2px; background: #60A5FA; display: block; }
+    .heat-cell { height: 12px; border-radius: 2px; display: block; border: 1px solid var(--border); }
+    .heat-running { background: rgba(74, 222, 128, 0.65); border-color: rgba(74, 222, 128, 0.3); }
+    .heat-idle { background: rgba(148, 163, 184, 0.35); border-color: rgba(148, 163, 184, 0.3); }
+    .heat-none { background: #fff; border-color: var(--border); }
 
     .mono { font-family: var(--font-mono); }
 

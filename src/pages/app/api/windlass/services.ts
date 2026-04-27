@@ -124,6 +124,47 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
+  if (action === 'suggest_schedule') {
+    const { serviceId, runtimeWindowStart, runtimeWindowEnd } = body;
+    if (!serviceId || !runtimeWindowStart || !runtimeWindowEnd) {
+      return new Response(JSON.stringify({ error: 'serviceId, runtimeWindowStart, and runtimeWindowEnd are required' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const db = getTenantDb(userId);
+    const service = getService(userId, serviceId);
+    if (!service) {
+      return new Response(JSON.stringify({ error: 'Service not found' }), {
+        status: 404, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    db.update(tenantSchema.windlassServices)
+      .set({
+        serviceType: 'schedule',
+        classification: 'scheduled',
+        runtimeWindowStart,
+        runtimeWindowEnd,
+        schedulingSuggestion: null,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+      .run();
+
+    const { logEvent } = await import('../../../../lib/windlass');
+    logEvent(
+      userId,
+      serviceId,
+      'config_changed',
+      `Schedule suggested and applied: ${runtimeWindowStart}-${runtimeWindowEnd}`,
+    );
+
+    return new Response(JSON.stringify({ ok: true }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   return new Response(JSON.stringify({ error: 'Unknown action' }), {
     status: 400, headers: { 'Content-Type': 'application/json' },
   });

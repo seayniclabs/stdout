@@ -227,6 +227,21 @@ const stateColors: Record<string, string> = {
                     {svc.description && (
                       <p class="service-desc">{svc.description}</p>
                     )}
+                    {svc.schedulingSuggestion && (
+                      <div class="schedule-suggestion-banner">
+                        <span>{svc.schedulingSuggestion}</span>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-ghost suggest-schedule-btn"
+                          data-service-id={svc.id}
+                          data-service-name={svc.name}
+                          data-current-start={svc.runtimeWindowStart || ''}
+                          data-current-end={svc.runtimeWindowEnd || ''}
+                        >
+                          Suggest schedule
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </a>
               ))}
@@ -264,6 +279,23 @@ const stateColors: Record<string, string> = {
         )}
       </Fragment>
     )}
+  </div>
+
+  <div id="scheduleEditorDialog" class="schedule-editor-dialog" style="display:none;">
+    <div class="schedule-editor-body">
+      <h3>Suggest Schedule</h3>
+      <p id="scheduleEditorServiceName">Set runtime window</p>
+      <div class="schedule-editor-grid">
+        <label class="form-label" for="scheduleStart">Start</label>
+        <input type="time" id="scheduleStart" class="form-input" value="08:00" />
+        <label class="form-label" for="scheduleEnd">End</label>
+        <input type="time" id="scheduleEnd" class="form-input" value="20:00" />
+      </div>
+      <div class="schedule-editor-actions">
+        <button type="button" id="scheduleCancelBtn" class="btn btn-ghost btn-sm">Cancel</button>
+        <button type="button" id="scheduleSaveBtn" class="btn btn-primary btn-sm">Apply</button>
+      </div>
+    </div>
   </div>
 
   <style>
@@ -319,6 +351,52 @@ const stateColors: Record<string, string> = {
 
     .service-schedule { display: flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--muted); margin-top: 0.5rem; font-family: var(--font-mono); }
     .service-desc { font-size: 0.75rem; color: var(--muted); margin: 0.35rem 0 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .schedule-suggestion-banner {
+      margin-top: 0.6rem;
+      padding: 0.5rem 0.6rem;
+      border-radius: 6px;
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      background: rgba(250, 204, 21, 0.13);
+      color: #facc15;
+      font-size: 0.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .suggest-schedule-btn { color: #facc15; border-color: rgba(250, 204, 21, 0.3); font-size: 0.7rem; }
+
+    .schedule-editor-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .schedule-editor-body {
+      width: min(420px, 100%);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .schedule-editor-body h3 { margin: 0 0 0.25rem; font-size: 0.95rem; }
+    .schedule-editor-body p { margin: 0 0 0.75rem; font-size: 0.8rem; color: var(--muted); }
+    .schedule-editor-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .schedule-editor-actions {
+      margin-top: 0.9rem;
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
 
     /* Events */
     .events-section { margin-top: 2rem; }
@@ -368,6 +446,52 @@ const stateColors: Record<string, string> = {
   </style>
 
   <script>
+    let selectedServiceId = '';
+    const scheduleDialog = document.getElementById('scheduleEditorDialog');
+    const scheduleStart = document.getElementById('scheduleStart') as HTMLInputElement | null;
+    const scheduleEnd = document.getElementById('scheduleEnd') as HTMLInputElement | null;
+    const scheduleServiceName = document.getElementById('scheduleEditorServiceName');
+
+    document.querySelectorAll('.suggest-schedule-btn').forEach(btn => {
+      btn.addEventListener('click', (evt) => {
+        evt.preventDefault();
+        evt.stopPropagation();
+        const el = btn as HTMLElement;
+        selectedServiceId = el.dataset.serviceId || '';
+        const name = el.dataset.serviceName || 'Service';
+        if (scheduleServiceName) scheduleServiceName.textContent = `${name}: set runtime window`;
+        if (scheduleStart) scheduleStart.value = el.dataset.currentStart || '08:00';
+        if (scheduleEnd) scheduleEnd.value = el.dataset.currentEnd || '20:00';
+        if (scheduleDialog) scheduleDialog.style.display = 'flex';
+      });
+    });
+
+    document.getElementById('scheduleCancelBtn')?.addEventListener('click', () => {
+      if (scheduleDialog) scheduleDialog.style.display = 'none';
+      selectedServiceId = '';
+    });
+
+    document.getElementById('scheduleSaveBtn')?.addEventListener('click', async () => {
+      if (!selectedServiceId || !scheduleStart?.value || !scheduleEnd?.value) return;
+      const res = await window.stdoutFetch('/app/api/windlass/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'suggest_schedule',
+          serviceId: selectedServiceId,
+          runtimeWindowStart: scheduleStart.value,
+          runtimeWindowEnd: scheduleEnd.value,
+        }),
+      });
+      if (res?.ok) {
+        window.showToast?.('Schedule applied', 'success');
+        location.reload();
+      } else {
+        const data = await res?.json().catch(() => ({}));
+        window.showToast?.(data?.error || 'Unable to apply schedule', 'error');
+      }
+    });
+
     // Connect / Setup
     document.getElementById('connectBtn')?.addEventListener('click', async () => {
       const input = document.getElementById('endpointUrl') as HTMLInputElement;

@@ -37,6 +37,12 @@ export interface WindlassStatus {
   }>;
 }
 
+export interface N8nWorkflowWindow {
+  name: string;
+  cron: string;
+  windows: { start: string; end: string }[];
+}
+
 export interface WindlassServiceState {
   name: string;
   type: 'always' | 'schedule' | 'on-demand' | 'manual';
@@ -377,14 +383,53 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
     .run();
 }
 
-export async function getN8nWorkflowWindows(userId: string): Promise<{ name: string; cron: string; windows: { start: string; end: string }[] }[]> {
-  const config = getConfig(userId);
-  if (!config?.endpointUrl) return [];
+export async function getN8nWorkflowWindows(_userId: string): Promise<N8nWorkflowWindow[]> {
+  const apiKey = process.env.N8N_API_KEY;
+  if (!apiKey) return [];
+
   try {
-    const res = await fetch(config.endpointUrl.replace(/\/$/, '') + '/status.json', { signal: AbortSignal.timeout(8000) });
+    const res = await fetch('http://localhost:5678/api/v1/workflows', {
+      headers: { 'X-N8N-API-KEY': apiKey },
+      signal: AbortSignal.timeout(8000),
+    });
     if (!res.ok) return [];
-    const status = await res.json() as WindlassStatus;
-    return status.n8n_workflow_windows || [];
+
+    const payload = await res.json() as { data?: any[] };
+    const workflows = payload?.data || [];
+
+    const now = new Date();
+    return workflows
+      .filter((wf: any) => wf?.active)
+      .map((wf: any) => {
+        const cronNode = (wf?.nodes || []).find((node: any) =>
+          node?.type === 'n8n-nodes-base.cron' || node?.type?.includes('.cron'),
+        );
+        if (!cronNode) return null;
+
+        const cronExpression = cronNode.parameters?.cronExpression
+          || cronNode.parameters?.rule?.expression
+          || cronNode.parameters?.triggerTimes?.item?.[0]?.cronExpression
+          || '';
+        if (!cronExpression) return null;
+
+        const minuteHour = cronExpression.trim().split(/\s+/);
+        if (minuteHour.length < 2) return null;
+        const minute = Number(minuteHour[0]);
+        const hour = Number(minuteHour[1]);
+        if (!Number.isInteger(minute) || !Number.isInteger(hour)) return null;
+        if (minute < 0 || minute > 59 || hour < 0 || hour > 23) return null;
+
+        const start = new Date(now);
+        start.setHours(hour, minute, 0, 0);
+        const end = new Date(start.getTime() + 15 * 60 * 1000);
+
+        return {
+          name: wf.name || wf.id || 'n8n workflow',
+          cron: cronExpression,
+          windows: [{ start: start.toISOString(), end: end.toISOString() }],
+        } as N8nWorkflowWindow;
+      })
+      .filter(Boolean) as N8nWorkflowWindow[];
   } catch {
     return [];
   }
