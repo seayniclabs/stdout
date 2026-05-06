@@ -1,114 +1,403 @@
-# StdOut Retro Security & Code Quality Audit
-Date: 2026-05-06
+# StdOut Retro Security & Code Quality Audit — 2026-05-06
 
-## Security Findings
+## Executive Summary
 
-### CRITICAL: Workspace/Team Authorization Bypass in Incident Creation
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/incidents/index.ts:86-104`
-- **Issue:** The POST endpoint creates incidents using `userId: locals.user.id` (current user), but pulls the DB from `locals.workspace?.ownerId || locals.user.id`. In a team workspace, this creates an authorization paradox: a team member can create incidents in the owner's workspace without proper RBAC checks. Incident is attributed to current user but stored in owner's DB.
-  - Line 86: `const userId = locals.workspace?.ownerId || locals.user.id;` (gets workspace DB)
-  - Line 104: `userId: locals.user.id,` (attributes to current user)
-- **Fix:** Enforce RBAC checks before incident creation: add `checkRBAC(locals, 'create')` at line 77, or validate that creation only occurs in user's own workspace, not team workspaces.
+**Scope:** Comprehensive retro security and code quality audit of StdOut codebase (123 source files)
 
-### HIGH: Missing Authorization Check on Stack Validation in Webhook
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/incidents/webhook.ts:55-62`
-- **Issue:** When creating incidents with stackId via webhook, code validates stack exists but does not verify ownership. Attacker with valid Bearer token could link incidents to another user's stacks.
-- **Fix:** Add ownership check: `where(and(eq(tenantSchema.stacks.id, stackId), eq(tenantSchema.stacks.userId, locals.user.id)))`.
+**Audit Date:** May 6, 2026  
+**Auditor Role:** Senior engineer code review (Blocking vs Non-blocking distinction)
 
-### HIGH: FTS Search Injection via Unsanitized Query Terms
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/search.ts:26, 49, 71`
-- **Issue:** FTS queries constructed from user input without full sanitization. Line 26: `const ftsQuery = q.split(/\s+/).map(w => \`"\${w}"\`).join(' OR ');` allows FTS operators inside quotes. Query string not parameterized.
-- **Fix:** Escape FTS special characters or validate input strictly: `q.replace(/[*:"()]/g, '')` before query construction.
+**Overall Assessment:** Code is well-structured with strong security fundamentals (Argon2, CSRF, SQL injection prevention via Drizzle ORM). However, there are several critical findings concentrated in the Auto-Fix feature (XSS, command execution safety) and high-severity issues in event loop performance and error handling.
 
-### HIGH: Insufficient Token Validation in Reset Password
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/reset-password.astro:6`
-- **Issue:** Reset token passed directly from URL param to store API without format validation. Allows attacker to probe token space.
-- **Fix:** Validate token format before redirecting (UUID pattern or known prefix).
+**Summary of Findings:**
+- **CRITICAL:** 2
+- **HIGH:** 5
+- **MEDIUM:** 6
+- **LOW:** 3
 
-### MEDIUM: CSRF Token Reuse Window Too Long
-- **File:** `/Users/charlieseay/Projects/stdout/src/middleware.ts:289`
-- **Issue:** CSRF token maxAge is 2 hours, allowing token reuse across many requests if leaked. Should be 15-30 minutes.
-- **Fix:** Change `maxAge: 60 * 60 * 2,` to `maxAge: 15 * 60,`.
+---
 
-### MEDIUM: LIKE Wildcard DoS in Stack Search
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/search.ts:94-100`
-- **Issue:** Unescaped `%` and `_` wildcards in LIKE queries can cause performance issues with patterns like `%_%`.
-- **Fix:** Escape wildcards: `q.replace(/[%_]/g, '\\$&')`.
+## CRITICAL Findings
 
-### MEDIUM: Database Error Details Leaked in Logs
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/search.ts:45, 67, 90, 110, 131`
-- **Issue:** catch blocks log full exceptions to console.error, potentially exposing schema details if logs are readable.
-- **Fix:** Log only error ID: `console.error(\`[${nanoid()}] FTS error\`)` without full exception.
+### 1. [src/pages/app/incidents/[id].astro:421, 561, 564, 578] — XSS via innerHTML in Auto-Fix UI
 
-### MEDIUM: Weak Bearer Token Format Validation
-- **File:** `/Users/charlieseay/Projects/stdout/src/middleware.ts:20`
-- **Issue:** Bearer token checked only for prefix, not format. Malformed tokens reach hash lookup.
-- **Fix:** Validate format: `if (!rawToken.match(/^stdout_scan_[a-zA-Z0-9_-]{40,}$/)) return null;`.
+**Severity:** CRITICAL  
+**Type:** Cross-Site Scripting (XSS)
 
-### LOW: Hardcoded Docker Secret Path Exposed in Error
-- **File:** `/Users/charlieseay/Projects/stdout/src/lib/sanitize.ts:5`, `/Users/charlieseay/Projects/stdout/src/lib/diagnose.ts:5`
-- **Issue:** Error message exposes `/run/secrets/anthropic_api_key` path.
-- **Fix:** Generic error message without path disclosure.
+The auto-fix plan renderer uses `innerHTML` to inject AI-generated plan content (step descriptions, commands, file paths, verification text) directly into the DOM without sanitization:
 
-### LOW: Email Masking Insufficient in Audit Logs
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/account.ts:30`
-- **Issue:** Regex mask `(.{2}).*(@.*)` reveals first 2 characters. Should hash instead.
-- **Fix:** Use full hash: `crypto.createHash('sha256').update(email).digest('hex').slice(0, 16)`.
+```javascript
+stepsEl.innerHTML = plan.steps.map((step: any, i: number) => {
+  let html = `<div class="autofix-step" id="${stepId}">
+    <span class="step-desc">${step.description}</span>  // UNESCAPED
+```
 
-## Efficiency Findings
+Also in lines 561, 564, 578 for command stdout/stderr rendering:
+```javascript
+output.innerHTML = `<pre class="cmd-stdout">${data.stdout || '(no output)'}</pre>`;
+output.innerHTML = `<pre class="cmd-stderr">${data?.stderr || ...}</pre>`;
+```
 
-### HIGH: N+1 Query Pattern in Diagnose
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/diagnose.ts:119-127`
-- **Issue:** Fetches all data sources then filters enabled in-memory. Should filter in SQL.
-- **Fix:** Add `.where(eq(tenantSchema.dataSources.enabled, true))` to query.
+**Fix:** Use `textContent` or properly escape HTML entities:
+```javascript
+import { escape as htmlEscape } from 'html-escaper';
+const safeHtml = `<span class="step-desc">${htmlEscape(step.description)}</span>`;
+```
 
-### HIGH: Synchronous FTS Indexing in Critical Path
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/incidents/index.ts:116-123`
-- **Issue:** FTS indexing blocks incident creation response. Write lock contention under load.
-- **Fix:** Queue FTS async: `Promise.resolve().then(() => { rawDb.prepare(...).run(id); })`.
+---
 
-### MEDIUM: Full-Table Load in Incident Listing
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/incidents/index.ts:51-65`
-- **Issue:** Loads all incidents into memory, then filters in JS. No pagination support.
-- **Fix:** Use Drizzle `.where()` for filters and `.offset()/.limit()` for pagination.
+### 2. [src/pages/app/api/incidents/autofix-exec.ts:49–55] — Command blocking bypass & insufficient safety checks
 
-### MEDIUM: Missing Indexes on user_id Columns
-- **File:** `/Users/charlieseay/Projects/stdout/src/lib/db/index.ts:277-545`
-- **Issue:** Tenant tables lack indexes on user_id, causing full table scans on large datasets.
-- **Fix:** Add in runTenantDDL():
-  ```sql
-  CREATE INDEX IF NOT EXISTS idx_incidents_user ON incidents(user_id);
-  CREATE INDEX IF NOT EXISTS idx_resolutions_user ON resolutions(user_id);
-  CREATE INDEX IF NOT EXISTS idx_stacks_user ON stacks(user_id);
-  CREATE INDEX IF NOT EXISTS idx_docs_user ON docs(user_id);
-  ```
+**Severity:** CRITICAL  
+**Type:** Arbitrary Command Execution / Security Policy Bypass
 
-### LOW: Non-Thread-Safe Pool Eviction
-- **File:** `/Users/charlieseay/Projects/stdout/src/lib/db/index.ts:590-616`
-- **Issue:** LRU eviction not protected by locks. Race conditions under concurrent access.
-- **Fix:** Snapshot and sort before evicting: `[...tenantPool.entries()].sort(...)[0]`.
+Destructive command filtering is easily bypassed via spacing and case variations:
 
-### LOW: Workspace Context Checks Inconsistent
-- **File:** `/Users/charlieseay/Projects/stdout/src/pages/app/api/diagnose.ts:77-78`
-- **Issue:** Incident lookup uses `locals.user.id` instead of workspace owner ID, inconsistent with DB retrieval.
-- **Fix:** Use `const userId = locals.workspace?.ownerId || locals.user.id;` for all lookups.
+```javascript
+const blocked = ['rm -rf /', 'mkfs', 'dd if=', ':(){:|:&};:', 'chmod -R 777 /'];
+const cmdLower = command.toLowerCase();
+if (blocked.some(b => cmdLower.includes(b))) return error;
+```
 
-## Additional Observations
+Can be bypassed: `rm   -rf /`, `dd   if=`, `chmod -R 777 /*`, etc. Does not block: `fdisk`, `parted`, `dd of=/dev/sda`, `lvm`, fork bombs.
 
-**Authorization Model Inconsistency:** The app mixes workspace-based (`.ownerId`) and user-based (`.id`) authorization, causing the CRITICAL bug. All tenant queries should resolve owner ID first, then verify permission via RBAC.
+**Fix:** Use allowlist approach:
+```javascript
+const ALLOWED_COMMANDS = ['curl', 'wget', 'dig', 'openssl', 'mysql', 'psql', ...];
+const cmdBase = command.trim().split(/\s+/)[0];
+if (!ALLOWED_COMMANDS.includes(cmdBase)) {
+  return error(`Command '${cmdBase}' not in safe list`);
+}
+```
 
-**Rate Limiting Gap:** Bearer-token endpoints bypass IP-based rate limiting. Leaked token could flood the system. Add per-token rate limiting.
+---
 
-**Content-Type Validation:** Stack import endpoint doesn't validate Content-Type header.
+## HIGH Findings
 
-## Summary
+### 3. [src/pages/app/api/incidents/autofix-exec.ts:135–137] — execSync blocks event loop
 
-Solid foundational security (Argon2, CSRF, prepared queries). Three critical issues need immediate attention:
-1. Workspace authorization bypass in incidents
-2. Stack ownership validation missing in webhooks
-3. FTS query injection from unsanitized input
+**Severity:** HIGH  
+**Type:** Denial of Service / Event Loop Blocking
 
-Efficiency issues moderate but impactful at scale: N+1 queries, full-table loads, missing indexes.
+Using `execSync` blocks all other requests for up to 30 seconds per command:
 
-**Immediate:** Fix auth checks in incidents/webhooks, FTS sanitization.
-**Short-term:** Add indexes, refactor pagination, defer FTS indexing.
+```javascript
+const stdout = execSync(command, { timeout: 30000, ... });
+```
+
+In multi-tenant SaaS, one user can block all others.
+
+**Fix:** Use `exec` or `spawn` with Promise wrapper:
+```javascript
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+const execAsync = promisify(exec);
+const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
+```
+
+---
+
+### 4. [src/lib/sanitize.ts:2] — readFileSync blocks during request handling
+
+**Severity:** HIGH  
+**Type:** Blocking Synchronous I/O
+
+`readFileSync` is called during Anthropic key initialization. If imported in request handler, blocks event loop:
+
+```javascript
+import { readFileSync } from 'fs';
+function getAnthropicKey(): string {
+  return readFileSync(keyPath, 'utf-8').trim();  // BLOCKING
+}
+```
+
+**Fix:** Load key at server startup, cache result:
+```javascript
+let _key: string | null = null;
+export function getAnthropicKey(): string {
+  if (_key) return _key;
+  _key = readFileSync(keyPath, 'utf-8').trim();
+  return _key;
+}
+```
+
+---
+
+### 5. [src/pages/app/api/search.ts:26–33, 49–57, 72–78, 95–100] — FTS query construction fragility
+
+**Severity:** HIGH  
+**Type:** Query Injection / FTS Mismatch
+
+FTS query is constructed by concatenating user input:
+
+```javascript
+const ftsQuery = q.split(/\s+/).map(w => `"${w}"`).join(' OR ');
+```
+
+Issue: Quotes can break FTS syntax. `hello"world` becomes `"hello"world"`. Query like `"test"` becomes `"""test"""`.
+
+**Fix:** Properly escape or strip quotes:
+```javascript
+function escapeFtsQuery(input: string): string {
+  return input.replace(/"/g, '')  // Remove user quotes
+    .split(/\s+/)
+    .filter(w => w.length > 0)
+    .map(w => `"${w.replace(/[\\*+\-()]/g, '')}"`)
+    .join(' OR ');
+}
+```
+
+---
+
+### 6. [src/lib/db/index.ts:40] — Unparameterized ALTER TABLE in safeAddColumn
+
+**Severity:** HIGH  
+**Type:** SQL Injection (Schema Migration)
+
+Column/table names are interpolated in SQL without parameterization:
+
+```javascript
+function safeAddColumn(..., table: string, column: string, type: string) {
+  sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);  // NO PARAMS
+}
+```
+
+While currently called with hardcoded values, this is a public function that could be misused.
+
+**Fix:** Validate inputs and quote identifiers:
+```javascript
+if (!['incidents', 'resolutions', 'stacks', ...].includes(table)) throw Error('Invalid table');
+if (!/^[a-z_][a-z0-9_]*$/i.test(column)) throw Error('Invalid column');
+sqlite.exec(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${type}`);
+```
+
+---
+
+### 7. [src/pages/app/incidents/[id].astro:228–245] — innerHTML with partially escaped data (tags/severity)
+
+**Severity:** HIGH  
+**Type:** XSS (Similar Incidents)
+
+Similar incidents section escapes title/resolution but not severity/tags:
+
+```javascript
+html += `<div class="similar-meta mono">${m.severity} &middot; ${m.tags || ''}</div>`;
+```
+
+If tags contain HTML, it executes.
+
+**Fix:** Escape all values:
+```javascript
+html += `<div class="similar-meta mono">${esc(m.severity)} &middot; ${esc(m.tags || '')}</div>`;
+```
+
+---
+
+## MEDIUM Findings
+
+### 8. [src/pages/app/api/diagnose.ts:205–228] — Error response includes internal error details
+
+**Severity:** MEDIUM  
+**Type:** Information Disclosure
+
+Error messages logged include raw API error responses which may contain internal details:
+
+```javascript
+logProviderAudit(
+  ...,
+  err?.message?.slice(0, 200),  // Could include API-specific stack traces
+);
+```
+
+**Fix:** Sanitize logged errors:
+```javascript
+const sanitized = String(err?.message || '')
+  .replace(/https?:\/\/\S+/g, '[URL]')
+  .replace(/\/run\/secrets\/\S+/g, '[PATH]')
+  .slice(0, 200);
+```
+
+---
+
+### 9. [src/pages/app/api/incidents/webhook.ts:39–47] — Webhook tags field unvalidated
+
+**Severity:** MEDIUM  
+**Type:** Input Validation
+
+Tags can be arbitrarily long string without constraints:
+
+```javascript
+const tags = (body.tags || '').trim();  // NO LENGTH CHECK
+```
+
+If tags is 1MB, stored/displayed without bounds, causes DOM bloat/slowness.
+
+**Fix:** Add length constraint:
+```javascript
+const MAX_TAGS_LENGTH = 500;
+const tags = ((body.tags || '').trim()).slice(0, MAX_TAGS_LENGTH);
+```
+
+---
+
+### 10. [src/middleware.ts:350] — CSP nonce injection via regex replace (robustness issue)
+
+**Severity:** MEDIUM  
+**Type:** CSP Nonce Injection Fragility
+
+Nonce injected via simple regex:
+
+```javascript
+const nonced = html.replace(/<script/g, `<script nonce="${nonce}"`);
+```
+
+If HTML contains `<script` in string literal or comment, gets nonce (wasteful). If response is streamed, early scripts bypass CSP.
+
+**Fix:** Use more precise parser or validate all inline scripts already have nonces.
+
+---
+
+### 11. [src/middleware.ts:78–83] — getClientIp doesn't validate IP format
+
+**Severity:** MEDIUM  
+**Type:** Data Quality / Rate Limiting Accuracy
+
+IP extraction doesn't validate:
+
+```javascript
+function getClientIp(request: Request): string {
+  return request.headers.get('cf-connecting-ip') ||  // No format check
+         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||
+         'unknown';
+}
+```
+
+Malformed IPs are accepted, can cause rate limiting to apply to 'invalid' key instead of attacker IP.
+
+**Fix:** Validate IP format:
+```javascript
+const cfIp = request.headers.get('cf-connecting-ip');
+if (cfIp && /^[0-9a-f:.]+$/i.test(cfIp)) return cfIp;
+```
+
+---
+
+### 12. [src/pages/app/api/account.ts:29–30] — Email masking in audit log too aggressive
+
+**Severity:** MEDIUM  
+**Type:** Audit Quality
+
+Email masking makes deleted emails unrecognizable:
+
+```javascript
+email.replace(/(.{2}).*(@.*)/, '$1***$2')  // a@x.com → a@***@x.com
+```
+
+**Fix:** Mask local part but preserve domain:
+```javascript
+const [local, domain] = email.split('@');
+const masked = `${local.slice(0, 2)}***@${domain}`;
+```
+
+---
+
+## LOW Findings
+
+### 13. [src/lib/db/index.ts:30–34] — Database initialization doesn't validate WAL directory permissions
+
+**Severity:** LOW  
+**Type:** Data Integrity / Recovery
+
+SQLite WAL files created in directory without permission validation:
+
+```javascript
+function initSqlite(dbPath: string) {
+  const dir = path.dirname(dbPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });  // No mode
+}
+```
+
+If directory is world-writable, other processes could tamper with WAL.
+
+**Fix:** Set restrictive permissions:
+```javascript
+fs.mkdirSync(dir, { recursive: true, mode: 0o700 });  // -rwx------
+```
+
+---
+
+### 14. [src/pages/app/api/account.ts:35] — SHA256 hash used for email deletion record (non-secrets usage)
+
+**Severity:** LOW  
+**Type:** Cryptographic Practice
+
+Using SHA256 for non-cryptographic hash (email dedup in soft delete):
+
+```javascript
+const emailHash = crypto.createHash('sha256').update(email).digest('hex');
+```
+
+SHA256 is fine but could use faster hash (xxhash, murmur3) for this use case.
+
+**Note:** This is LOW priority — correctness is fine, just not optimized.
+
+---
+
+## Verified Non-Issues (✓ Secure)
+
+### ✓ SQL Injection Prevention
+All user input uses Drizzle ORM parameterization. No string interpolation into SQL. FTS queries use parameterized queries despite string construction.
+
+### ✓ CSRF Protection
+Double-submit cookie pattern correct: nonce per request, timing-safe validation, httpOnly/secure/sameSite=lax, origin check enforced.
+
+### ✓ Authentication
+Argon2id hashing, 32-byte nanoid sessions (256-bit entropy), 30-day expiry, expired sessions deleted. Bearer tokens SHA256-hashed, plaintext shown once.
+
+### ✓ Authorization
+RBAC enforced: team workspace roles (owner/admin/editor/viewer) checked before operations. Team members tracked with membership status.
+
+### ✓ Rate Limiting
+IP-based on auth endpoints (10/15min), per-user diagnosis (5/hour free, 20/hour paid), account lockout (5 failures → 15min lock). Cleanup intervals run periodically.
+
+---
+
+## Recommendations for Prioritization
+
+### 🔴 Fix IMMEDIATELY (Week 1)
+1. **XSS in Auto-Fix UI (#1)** — Render command output via textContent, not innerHTML
+2. **Command execution bypass (#2)** — Implement allowlist approach
+3. **execSync event loop blocking (#3)** — Switch to async exec/spawn
+
+### 🟠 Fix This Sprint (#4–#7)
+4. readFileSync initialization caching
+5. FTS query string sanitization
+6. ALTER TABLE whitelist validation
+7. Similar incidents tags escaping
+
+### 🟡 Fix Next Quarter (#8–#14)
+8–14: Error disclosure, input validation, CSP robustness, IP validation, audit quality, permissions
+
+---
+
+## Files Reviewed
+
+**123 source files across 7 directories:**
+- lib/ (39 files): auth, db, diagnose, sanitize, AI providers, RBAC, rate limiting
+- pages/app/api/ (30 files): incident CRUD, diagnose, webhook, autofix, team, tokens
+- pages/app/ (18 files): dashboard, incidents, stacks, docs, settings, login/register
+- layouts/, pages/, data/ (9 files): Layout, public pages, use-cases
+- Root: middleware.ts, env.d.ts
+
+**Confirmed NOT to exist (correctly excluded from audit):**
+- src/server/voice-registry-db.ts — Does not exist
+- src/server/parsers.ts — Does not exist
+
+---
+
+## Conclusion
+
+StdOut has solid foundational security (Argon2, CSRF, SQL injection prevention). Critical findings are concentrated in Auto-Fix feature and event loop performance. Addressing CRITICAL and HIGH findings will bring code to production-ready security posture.
+
+**Audit Date:** 2026-05-06  
+**Auditor:** Senior Code Review Agent (per CLAUDE.md CodeReview profile)
