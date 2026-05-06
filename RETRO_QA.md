@@ -7,12 +7,12 @@
 **Audit Date:** May 6, 2026  
 **Auditor Role:** Senior engineer code review (Blocking vs Non-blocking distinction)
 
-**Overall Assessment:** Code is well-structured with strong security fundamentals (Argon2, CSRF, SQL injection prevention via Drizzle ORM). However, there are several critical findings concentrated in the Auto-Fix feature (XSS, command execution safety) and high-severity issues in event loop performance and error handling.
+**Overall Assessment:** Code is well-structured with strong security fundamentals (Argon2, CSRF, SQL injection prevention via Drizzle ORM). Critical findings are concentrated in the Auto-Fix feature (XSS via `innerHTML`, command blocklist bypass) and one high-severity issue in event loop performance (`execSync`). All other findings are medium or lower.
 
 **Summary of Findings:**
 - **CRITICAL:** 2
-- **HIGH:** 5
-- **MEDIUM:** 6
+- **HIGH:** 4
+- **MEDIUM:** 7
 - **LOW:** 3
 
 ---
@@ -97,26 +97,41 @@ const { stdout, stderr } = await execAsync(command, { timeout: 30000 });
 
 ---
 
-### 4. [src/lib/sanitize.ts:2] — readFileSync blocks during request handling
+### 4. [src/lib/sanitize.ts:4–13] — readFileSync in uncached key helper
 
-**Severity:** HIGH  
-**Type:** Blocking Synchronous I/O
+**Severity:** MEDIUM  
+**Type:** Blocking Synchronous I/O (one-time, not per-request)
 
-`readFileSync` is called during Anthropic key initialization. If imported in request handler, blocks event loop:
+`getAnthropicKey()` calls `readFileSync` synchronously, but is only invoked when `_client` is null (once per server lifecycle). The Anthropic client is cached via a module-level singleton so subsequent calls do not re-read the file. The risk is latency on the very first `sanitizeForCommunity()` call, plus brittleness if a future code change breaks the cache assumption.
 
 ```javascript
-import { readFileSync } from 'fs';
+// sanitize.ts — actual code
 function getAnthropicKey(): string {
-  return readFileSync(keyPath, 'utf-8').trim();  // BLOCKING
+  const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
+  try {
+    return readFileSync(keyPath, 'utf-8').trim();  // synchronous — runs once on first call
+  } catch {
+    if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+    throw new Error(`Anthropic API key not found ...`);
+  }
+}
+
+let _client: Anthropic | null = null;  // ← client cached; key read only when _client is null
+function getClient(): Anthropic {
+  if (!_client) _client = new Anthropic({ apiKey: getAnthropicKey() });
+  return _client;
 }
 ```
 
-**Fix:** Load key at server startup, cache result:
+**Fix:** Cache the key string independently so future refactors can't accidentally bypass the client cache:
 ```javascript
 let _key: string | null = null;
-export function getAnthropicKey(): string {
+function getAnthropicKey(): string {
   if (_key) return _key;
-  _key = readFileSync(keyPath, 'utf-8').trim();
+  const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
+  try { _key = readFileSync(keyPath, 'utf-8').trim(); }
+  catch { _key = process.env.ANTHROPIC_API_KEY || ''; }
+  if (!_key) throw new Error('Anthropic API key not found');
   return _key;
 }
 ```
@@ -370,13 +385,12 @@ IP-based on auth endpoints (10/15min), per-user diagnosis (5/hour free, 20/hour 
 3. **execSync event loop blocking (#3)** — Switch to async exec/spawn
 
 ### 🟠 Fix This Sprint (#4–#7)
-4. readFileSync initialization caching
-5. FTS query string sanitization
-6. ALTER TABLE whitelist validation
-7. Similar incidents tags escaping
+4. FTS query string sanitization (#5)
+5. ALTER TABLE identifier validation (#6)
+6. Similar incidents severity/tags escaping (#7)
 
-### 🟡 Fix Next Quarter (#8–#14)
-8–14: Error disclosure, input validation, CSP robustness, IP validation, audit quality, permissions
+### 🟡 Fix Next Quarter (#8–#15)
+8–15: readFileSync key caching (#4), error disclosure, input validation, CSP robustness, IP validation, audit quality, permissions
 
 ---
 
