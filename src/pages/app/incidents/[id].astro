@@ -251,7 +251,12 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   }
 
   function esc(s: string) {
-    return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return (s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   const btn = document.getElementById('diagnoseBtn');

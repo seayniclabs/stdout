@@ -25,9 +25,10 @@ function computeRecoveredGbHours(userId: string): { recoveredGbHours: number; se
   return { recoveredGbHours, serviceCount: services.length };
 }
 
-function digestSecretMatches(request: Request): boolean {
+/** Cron / curl must present the secret; browser sessions are already authenticated. */
+function digestSecretMatches(request: Request, hasSession: boolean): boolean {
   const secret = process.env.WINDLASS_WEEKLY_DIGEST_SECRET;
-  if (!secret) return true;
+  if (!secret || hasSession) return true;
   const hdr = request.headers.get('x-windlass-digest-secret');
   return hdr === secret;
 }
@@ -100,13 +101,13 @@ async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<R
 /**
  * POST /app/api/windlass/weekly-digest
  * Trigger the weekly savings digest (GB-hours from Windlass usage analytics).
- * When WINDLASS_WEEKLY_DIGEST_SECRET is set, require header X-Windlass-Digest-Secret (UI, curl, or cron).
+ * When WINDLASS_WEEKLY_DIGEST_SECRET is set, require header X-Windlass-Digest-Secret for unauthenticated calls (curl/cron). Logged-in UI requests do not need the header.
  *
  * Self-host only, no session: same secret header + STDOUT_MODE !== saas runs digest for every user
  * that has Windlass enabled (typically one) — supports machine cron without a browser cookie.
  */
 export const POST: APIRoute = async ({ locals, request }) => {
-  if (!digestSecretMatches(request)) {
+  if (!digestSecretMatches(request, !!locals.user)) {
     return new Response(JSON.stringify({ error: 'Invalid digest secret' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
@@ -165,16 +166,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
 /**
  * GET /app/api/windlass/weekly-digest?secret=…&force=1
  * Convenience for curl in crontab (self-host only). Same secret as WINDLASS_WEEKLY_DIGEST_SECRET.
+ * Logged-in users may call GET without query secret (session auth).
  */
 export const GET: APIRoute = async ({ locals, url }) => {
   const secret = process.env.WINDLASS_WEEKLY_DIGEST_SECRET;
   const q = url.searchParams.get('secret');
-  if (!secret || q !== secret) {
-    return new Response(JSON.stringify({ error: 'Invalid or missing secret' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
 
   if (locals.user) {
@@ -184,6 +180,12 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
   if (!SELF_HOST) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!secret || q !== secret) {
+    return new Response(JSON.stringify({ error: 'Invalid or missing secret' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },
     });
   }
