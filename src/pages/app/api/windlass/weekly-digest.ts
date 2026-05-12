@@ -1,7 +1,9 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getCentralDb, getTenantDb, tenantSchema, centralSchema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { sendWindlassWeeklyDigest } from '../../../../lib/alert-router';
+
+const SELF_HOST = process.env.STDOUT_MODE !== 'saas';
 
 function computeRecoveredGbHours(userId: string): { recoveredGbHours: number; serviceCount: number } {
   const db = getTenantDb(userId);
@@ -23,35 +25,15 @@ function computeRecoveredGbHours(userId: string): { recoveredGbHours: number; se
   return { recoveredGbHours, serviceCount: services.length };
 }
 
-/**
- * POST /app/api/windlass/weekly-digest
- * Manually trigger the weekly savings digest (same GB-hours model as automatic Sunday send).
- * When WINDLASS_WEEKLY_DIGEST_SECRET is set, require header X-Windlass-Digest-Secret matching it (cron / operator).
- */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
-
+function digestSecretMatches(request: Request): boolean {
   const secret = process.env.WINDLASS_WEEKLY_DIGEST_SECRET;
-  if (secret) {
-    const hdr = request.headers.get('x-windlass-digest-secret');
-    if (hdr !== secret) {
-      return new Response(JSON.stringify({ error: 'Invalid digest secret' }), {
-        status: 401, headers: { 'Content-Type': 'application/json' },
-      });
-    }
-  }
+  if (!secret) return true;
+  const hdr = request.headers.get('x-windlass-digest-secret');
+  return hdr === secret;
+}
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
+async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<Response> {
   const db = getTenantDb(userId);
-
-  let body: { force?: boolean } = {};
-  try {
-    if (request.headers.get('Content-Type')?.includes('application/json')) {
-      body = await request.json();
-    }
-  } catch {
-    body = {};
-  }
 
   const { recoveredGbHours, serviceCount } = computeRecoveredGbHours(userId);
 
@@ -64,7 +46,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  if (!body.force) {
+  if (!force) {
     const cfg = db.select().from(tenantSchema.windlassConfig)
       .where(eq(tenantSchema.windlassConfig.userId, userId))
       .get();
@@ -73,7 +55,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return new Response(JSON.stringify({
         ok: false,
         skipped: 'weekly_digest_cooldown',
-        message: 'Digest sent within the last 6 days. Pass {"force":true} to override.',
+        message: 'Digest sent within the last 6 days. Pass {"force":true} or ?force=1 to override.',
       }), {
         status: 409, headers: { 'Content-Type': 'application/json' },
       });
@@ -111,6 +93,118 @@ export const POST: APIRoute = async ({ locals, request }) => {
       weekLabel,
     },
   }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/**
+ * POST /app/api/windlass/weekly-digest
+ * Trigger the weekly savings digest (GB-hours from Windlass usage analytics).
+ * When WINDLASS_WEEKLY_DIGEST_SECRET is set, require header X-Windlass-Digest-Secret (UI, curl, or cron).
+ *
+ * Self-host only, no session: same secret header + STDOUT_MODE !== saas runs digest for every user
+ * that has Windlass enabled (typically one) — supports machine cron without a browser cookie.
+ */
+export const POST: APIRoute = async ({ locals, request }) => {
+  if (!digestSecretMatches(request)) {
+    return new Response(JSON.stringify({ error: 'Invalid digest secret' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  let body: { force?: boolean } = {};
+  try {
+    if (request.headers.get('Content-Type')?.includes('application/json')) {
+      body = await request.json();
+    }
+  } catch {
+    body = {};
+  }
+  const force = body.force === true;
+
+  if (locals.user) {
+    const userId = locals.workspace?.ownerId || locals.user.id;
+    return runWeeklyDigestForUser(userId, force);
+  }
+
+  if (!SELF_HOST) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (!process.env.WINDLASS_WEEKLY_DIGEST_SECRET) {
+    return new Response(JSON.stringify({
+      error: 'Unauthenticated digest requires WINDLASS_WEEKLY_DIGEST_SECRET to be set.',
+    }), {
+      status: 403, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+  const results: { userId: string; status: number; body: unknown }[] = [];
+
+  for (const { id } of users) {
+    const cfg = getTenantDb(id).select().from(tenantSchema.windlassConfig)
+      .where(eq(tenantSchema.windlassConfig.userId, id))
+      .get();
+    if (!cfg?.enabled) continue;
+
+    const res = await runWeeklyDigestForUser(id, force);
+    const status = res.status;
+    let parsed: unknown;
+    try { parsed = JSON.parse(await res.text()); } catch { parsed = {}; }
+    results.push({ userId: id, status, body: parsed });
+  }
+
+  return new Response(JSON.stringify({ ok: true, cron: true, results }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
+
+/**
+ * GET /app/api/windlass/weekly-digest?secret=…&force=1
+ * Convenience for curl in crontab (self-host only). Same secret as WINDLASS_WEEKLY_DIGEST_SECRET.
+ */
+export const GET: APIRoute = async ({ locals, url }) => {
+  const secret = process.env.WINDLASS_WEEKLY_DIGEST_SECRET;
+  const q = url.searchParams.get('secret');
+  if (!secret || q !== secret) {
+    return new Response(JSON.stringify({ error: 'Invalid or missing secret' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const force = url.searchParams.get('force') === '1' || url.searchParams.get('force') === 'true';
+
+  if (locals.user) {
+    const userId = locals.workspace?.ownerId || locals.user.id;
+    return runWeeklyDigestForUser(userId, force);
+  }
+
+  if (!SELF_HOST) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+  const results: { userId: string; status: number; body: unknown }[] = [];
+
+  for (const { id } of users) {
+    const cfg = getTenantDb(id).select().from(tenantSchema.windlassConfig)
+      .where(eq(tenantSchema.windlassConfig.userId, id))
+      .get();
+    if (!cfg?.enabled) continue;
+
+    const res = await runWeeklyDigestForUser(id, force);
+    const status = res.status;
+    let parsed: unknown;
+    try { parsed = JSON.parse(await res.text()); } catch { parsed = {}; }
+    results.push({ userId: id, status, body: parsed });
+  }
+
+  return new Response(JSON.stringify({ ok: true, cron: true, results }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };

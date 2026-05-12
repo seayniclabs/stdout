@@ -1,7 +1,10 @@
 import type { APIRoute } from 'astro';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
+
+const execAsync = promisify(exec);
 
 /**
  * POST /app/api/incidents/autofix-exec
@@ -45,11 +48,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  // Safety: block obviously destructive commands
-  const blocked = ['rm -rf /', 'mkfs', 'dd if=', ':(){:|:&};:', 'chmod -R 777 /'];
-  const cmdLower = command.toLowerCase();
-  if (blocked.some(b => cmdLower.includes(b))) {
-    return new Response(JSON.stringify({ error: 'Command blocked by safety policy' }), {
+  const policyErr = assertAutofixCommandAllowed(command);
+  if (policyErr) {
+    return new Response(JSON.stringify({ error: policyErr }), {
       status: 403, headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -131,16 +132,51 @@ async function executeCommand(command: string): Promise<{ exitCode: number; stdo
     };
   }
 
-  // For non-Docker commands (curl, dig, openssl, etc.), try running inside the container
-  const { execSync } = await import('node:child_process');
+  // For non-Docker commands (curl, dig, openssl, etc.), run via async exec (non-blocking vs execSync)
   try {
-    const stdout = execSync(command, { timeout: 30000, encoding: 'utf-8', maxBuffer: 1024 * 1024 });
-    return { exitCode: 0, stdout, stderr: '' };
+    const { stdout, stderr } = await execAsync(command, {
+      timeout: 30000,
+      maxBuffer: 1024 * 1024,
+      encoding: 'utf-8',
+    });
+    return { exitCode: 0, stdout, stderr: stderr || '' };
   } catch (err: any) {
+    const code = typeof err?.status === 'number' ? err.status : 1;
     return {
-      exitCode: err.status || 1,
+      exitCode: code,
       stdout: err.stdout || '',
       stderr: err.stderr || err.message || 'Command failed',
     };
   }
+}
+
+/** Reject shell chaining / substitution and token-splitting bypasses of naive substring checks. */
+function assertAutofixCommandAllowed(command: string): string | null {
+  const trimmed = command.trim();
+  if (!trimmed) return 'Empty command';
+  if (/[\x00\n\r]/.test(command)) return 'Command blocked: newlines and NUL are not allowed';
+  // Block command substitution, pipes, and sequential chaining (still allows & for URL query strings)
+  if (/[;|$\x60]/.test(command)) return 'Command blocked: shell metacharacters are not allowed';
+
+  const norm = trimmed.replace(/\s+/g, ' ').toLowerCase();
+
+  const blockedRes = [
+    /\brm\b[\s\S]{0,200}?(-rf|--recursive|-r\s+-f)\b/,
+    /\bmkfs\b/,
+    /\bdd\s+if=/,
+    /:\(\)\{/,
+    /\bchmod\b[\s\S]{0,120}?\b777\b/,
+    />\s*\/dev\/(sd|hd|nvme|disk)/,
+    /\|\s*(ba)?sh\b/,
+    /\bcurl\b[\s\S]{0,400}?\|\s*(ba)?sh\b/,
+    /\bwget\b[\s\S]{0,400}?\|\s*(ba)?sh\b/,
+  ];
+  for (const re of blockedRes) {
+    if (re.test(norm)) return 'Command blocked by safety policy';
+  }
+
+  const legacy = [':(){:|:&};:', 'rm -rf /', 'rm -fr /', 'chmod -r 777 /'];
+  if (legacy.some(b => norm.includes(b))) return 'Command blocked by safety policy';
+
+  return null;
 }

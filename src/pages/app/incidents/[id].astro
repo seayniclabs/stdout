@@ -403,18 +403,18 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         const stepsEl = document.getElementById('autofixSteps');
 
         if (summaryEl) {
-          summaryEl.innerHTML = `<strong>${plan.summary || 'Remediation plan generated'}</strong>`;
+          summaryEl.innerHTML = `<strong>${esc(plan.summary || 'Remediation plan generated')}</strong>`;
           if (plan.totalRisk) {
             const riskColor = plan.totalRisk === 'high' ? 'var(--high)' : plan.totalRisk === 'medium' ? '#F97316' : 'var(--low)';
-            summaryEl.innerHTML += ` <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${plan.totalRisk} risk</span>`;
+            summaryEl.innerHTML += ` <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${esc(plan.totalRisk)} risk</span>`;
           }
           if (plan.estimatedTime) {
-            summaryEl.innerHTML += ` <span class="time-badge">${plan.estimatedTime}</span>`;
+            summaryEl.innerHTML += ` <span class="time-badge">${esc(plan.estimatedTime)}</span>`;
           }
         }
 
         if (metaEl) {
-          metaEl.innerHTML = `<span class="mono">${data.provider}/${data.model}</span> <span>${data.tokens.prompt} in / ${data.tokens.completion} out</span>`;
+          metaEl.innerHTML = `<span class="mono">${esc(data.provider)}/${esc(data.model)}</span> <span>${esc(String(data.tokens.prompt))} in / ${esc(String(data.tokens.completion))} out</span>`;
         }
 
         if (stepsEl && plan.steps && plan.steps.length > 0) {
@@ -426,9 +426,9 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
             let html = `<div class="autofix-step" id="${stepId}">
               <div class="step-header">
                 <input type="checkbox" class="step-checkbox" data-step="${i}" />
-                <span class="step-number">${step.order || i + 1}</span>
-                <span class="step-desc">${step.description}</span>
-                <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${step.risk || '?'}</span>
+                <span class="step-number">${esc(String(step.order ?? i + 1))}</span>
+                <span class="step-desc">${esc(step.description || '')}</span>
+                <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${esc(step.risk || '?')}</span>
                 ${hasDetails ? `<button class="step-toggle" data-target="${stepId}-details" title="Show details">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
                 </button>` : ''}
@@ -442,11 +442,11 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
                   <span class="step-section-label">Commands</span>
                   <div class="step-commands">${step.commands.map((c: string, ci: number) =>
                     `<div class="command-row">
-                      <code class="command-line">${c}</code>
-                      <button class="copy-btn" data-copy="${c.replace(/"/g, '&quot;')}" title="Copy">
+                      <code class="command-line">${esc(c)}</code>
+                      <button class="copy-btn" data-copy="${esc(c)}" title="Copy">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                       </button>
-                      <button class="run-btn" data-cmd="${c.replace(/"/g, '&quot;')}" data-step="${i}" title="Execute">
+                      <button class="run-btn" data-cmd="${esc(c)}" data-step="${i}" title="Execute">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                       </button>
                     </div>`
@@ -457,21 +457,21 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
               if (step.files && step.files.length > 0) {
                 html += `<div class="step-section">
                   <span class="step-section-label">Files</span>
-                  ${step.files.map((f: any) => `<div class="file-change"><code class="mono">${f.path}</code><span class="file-change-desc">${f.change}</span></div>`).join('')}
+                  ${step.files.map((f: any) => `<div class="file-change"><code class="mono">${esc(f.path || '')}</code><span class="file-change-desc">${esc(f.change || '')}</span></div>`).join('')}
                 </div>`;
               }
 
               if (step.verification) {
                 html += `<div class="step-section step-section-muted">
                   <span class="step-section-label">Verification</span>
-                  <p>${step.verification}</p>
+                  <p>${esc(step.verification)}</p>
                 </div>`;
               }
 
               if (step.rollback) {
                 html += `<div class="step-section step-section-muted">
                   <span class="step-section-label">Rollback</span>
-                  <p>${step.rollback}</p>
+                  <p>${esc(step.rollback)}</p>
                 </div>`;
               }
 
@@ -557,11 +557,15 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
 
               const output = document.createElement('div');
               output.className = 'cmd-output';
+              const preOut = document.createElement('pre');
+              preOut.className = data?.ok ? 'cmd-stdout' : 'cmd-stderr';
+              preOut.textContent = data?.ok
+                ? (data.stdout || '(no output)')
+                : (data?.stderr || data?.error || 'Command failed');
+              output.appendChild(preOut);
               if (data?.ok) {
-                output.innerHTML = `<pre class="cmd-stdout">${data.stdout || '(no output)'}</pre>`;
                 (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--low)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
               } else {
-                output.innerHTML = `<pre class="cmd-stderr">${data?.stderr || data?.error || 'Command failed'}</pre>`;
                 (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--high)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
               }
               row?.after(output);
@@ -575,7 +579,11 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
           if (firstToggle) firstToggle.classList.add('open');
 
         } else if (stepsEl && plan.raw) {
-          stepsEl.innerHTML = `<pre class="autofix-raw">${plan.raw}</pre>`;
+          stepsEl.textContent = '';
+          const rawPre = document.createElement('pre');
+          rawPre.className = 'autofix-raw';
+          rawPre.textContent = plan.raw;
+          stepsEl.appendChild(rawPre);
         }
 
         // Show "Generate again" button

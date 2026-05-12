@@ -257,7 +257,7 @@ const stateColors: Record<string, string> = {
           <div class="heatmap">
             {Array.from({ length: 24 }, (_, h) => {
               const key = String(h).padStart(2, '0');
-              const bucket = hourly[key] || { running: 0, total: 0 };
+              const bucket = hourly[key] || hourly[h] || hourly[String(h)] || { running: 0, total: 0 };
               const ratio = bucket.total > 0 ? bucket.running / bucket.total : 0;
               const state = bucket.total === 0 ? 'none' : ratio > 0 ? 'running' : 'idle';
               return <span class={`heat-cell heat-${state}`} title={`${key}:00 - ${Math.round(ratio * 100)}% running`}></span>;
