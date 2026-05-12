@@ -24,6 +24,7 @@ export interface WindlassStatus {
     docker_memory_limit_mb: number;
     system_memory_total_mb: number;
     system_memory_free_mb: number;
+    scheduler_interval_sec?: number;
   };
   services: WindlassServiceState[];
   upcoming_events: { time: string; service: string; action: string }[];
@@ -56,6 +57,7 @@ export interface WindlassServiceState {
   priority: number;
   description: string;
   containers: string[];
+  last_memory_shed_reason?: string | null;
 }
 
 // Map Windlass engine types to StdOut classifications
@@ -148,10 +150,15 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       .reduce((sum, bucket: any) => sum + (bucket.running || 0), 0);
     const utilizationPct = samples > 0 ? Math.round((runningSamples / samples) * 100) : null;
     const idleMinutesTotal = rawAnalytics?.idle_minutes_total || 0;
-    const idleHoursPerDay = samples > 0 ? Math.round((idleMinutesTotal / 60) * (24 / Math.max(1, samples))) : null;
-    const schedulingSuggestion = idleHoursPerDay && idleHoursPerDay >= 18
-      ? `${svc.name} idle ${idleHoursPerDay}h/day — suggest scheduling?`
+    const intervalSec = status.summary.scheduler_interval_sec || 300;
+    const observationDays = Math.max((samples * intervalSec) / 86400, 0.01);
+    const idleHoursPerDay = idleMinutesTotal > 0 && samples > 0
+      ? Math.min(24, Math.round((idleMinutesTotal / 60) / observationDays))
       : null;
+    const schedulingSuggestion = idleHoursPerDay !== null && idleHoursPerDay >= 18
+      ? `${svc.name} idle ~${idleHoursPerDay}h/day — suggest scheduling?`
+      : null;
+    const lastMemoryShedReason = (svc as WindlassServiceState).last_memory_shed_reason ?? null;
 
     if (existing) {
       // Detect state change → log event + fire alert
@@ -211,6 +218,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
           utilizationPct,
           idleHoursPerDay,
           schedulingSuggestion,
+          lastMemoryShedReason,
           updatedAt: now,
         })
         .where(and(eq(tenantSchema.windlassServices.id, id), eq(tenantSchema.windlassServices.userId, userId)))
@@ -238,6 +246,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         utilizationPct,
         idleHoursPerDay,
         schedulingSuggestion,
+        lastMemoryShedReason,
         createdAt: now,
         updatedAt: now,
       }).run();
@@ -276,6 +285,14 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         detail: evt.reason || '',
         createdAt: eventAt,
       }).run();
+    }
+
+    if (eventType === 'memory_shed' && serviceId) {
+      const reason = evt.reason || '';
+      db.update(tenantSchema.windlassServices)
+        .set({ lastMemoryShedReason: reason, updatedAt: now })
+        .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+        .run();
     }
   }
 
@@ -327,9 +344,16 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     }
   }
 
-  // Update sync status
+  const n8nSnapshot = JSON.stringify(status.n8n_workflow_windows ?? []);
+
+  // Update sync status + last n8n windows from engine (timeline reads this; avoids StdOut→localhost n8n hop)
   db.update(tenantSchema.windlassConfig)
-    .set({ lastSyncAt: now, lastSyncStatus: 'ok', updatedAt: now })
+    .set({
+      lastSyncAt: now,
+      lastSyncStatus: 'ok',
+      n8nWorkflowWindowsJson: n8nSnapshot,
+      updatedAt: now,
+    })
     .where(eq(tenantSchema.windlassConfig.userId, userId))
     .run();
 
@@ -339,6 +363,26 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
   logEvent(userId, null, 'sync_completed', `Synced ${status.services.length} services`);
 
   return { synced: status.services.length, summary: status.summary };
+}
+
+/** n8n execution windows last synced from the Windlass engine (preferred for timeline UI). */
+export function getCachedN8nWorkflowWindows(userId: string): N8nWorkflowWindow[] {
+  const cfg = getConfig(userId);
+  const raw = cfg?.n8nWorkflowWindowsJson;
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as N8nWorkflowWindow[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Cached engine snapshot first; optional live n8n when `N8N_API_KEY` is set and cache is empty (dev / co-hosted). */
+export async function getN8nWorkflowWindowsForDisplay(userId: string): Promise<N8nWorkflowWindow[]> {
+  const cached = getCachedN8nWorkflowWindows(userId);
+  if (cached.length) return cached;
+  return getN8nWorkflowWindows(userId);
 }
 
 async function maybeSendWeeklyDigest(userId: string): Promise<void> {
@@ -371,11 +415,12 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
   }
 
   if (recoveredGbHours <= 0) return;
-  await sendWindlassWeeklyDigest(userId, {
+  const sent = await sendWindlassWeeklyDigest(userId, {
     recoveredGbHours,
     serviceCount: services.length,
     weekLabel: sevenDaysAgo.toISOString().slice(0, 10) + ' to ' + now.toISOString().slice(0, 10),
-  });
+  }, { skipCooldown: true });
+  if (!sent.sent) return;
 
   db.update(tenantSchema.windlassConfig)
     .set({ lastWeeklyDigestAt: now, updatedAt: now })
@@ -387,8 +432,10 @@ export async function getN8nWorkflowWindows(_userId: string): Promise<N8nWorkflo
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) return [];
 
+  const base = (process.env.N8N_BASE_URL || 'http://localhost:5678/api/v1').replace(/\/$/, '');
+
   try {
-    const res = await fetch('http://localhost:5678/api/v1/workflows', {
+    const res = await fetch(`${base}/workflows`, {
       headers: { 'X-N8N-API-KEY': apiKey },
       signal: AbortSignal.timeout(8000),
     });

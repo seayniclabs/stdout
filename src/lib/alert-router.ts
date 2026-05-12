@@ -386,9 +386,21 @@ export async function testChannel(userId: string, channelId: string): Promise<{ 
 
 export async function sendWindlassWeeklyDigest(
   userId: string,
-  summary: { recoveredGbHours: number; serviceCount: number; weekLabel: string }
-): Promise<void> {
+  summary: { recoveredGbHours: number; serviceCount: number; weekLabel: string },
+  opts?: { skipCooldown?: boolean },
+): Promise<{ sent: boolean; skipped?: string }> {
   const db = getTenantDb(userId);
+
+  if (!opts?.skipCooldown) {
+    const cfg = db.select().from(tenantSchema.windlassConfig)
+      .where(eq(tenantSchema.windlassConfig.userId, userId))
+      .get();
+    const last = cfg?.lastWeeklyDigestAt ? new Date(cfg.lastWeeklyDigestAt).getTime() : 0;
+    if (last && Date.now() - last < 6 * 24 * 60 * 60 * 1000) {
+      return { sent: false, skipped: 'weekly_digest_cooldown' };
+    }
+  }
+
   const channels = db.select().from(tenantSchema.alertChannels)
     .where(and(
       eq(tenantSchema.alertChannels.userId, userId),
@@ -396,6 +408,10 @@ export async function sendWindlassWeeklyDigest(
     ))
     .all()
     .filter(ch => ch.type === 'email' || ch.type === 'telegram');
+
+  if (channels.length === 0) {
+    return { sent: false, skipped: 'no_channels' };
+  }
 
   const title = `Windlass Weekly Summary (${summary.weekLabel})`;
   const detail = `Recovered ${summary.recoveredGbHours.toFixed(2)} GB-hours across ${summary.serviceCount} services.`;
@@ -414,4 +430,6 @@ export async function sendWindlassWeeklyDigest(
       console.error('Weekly digest dispatch failed:', err);
     }
   }
+
+  return { sent: true };
 }

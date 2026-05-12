@@ -189,6 +189,12 @@ const stateColors: Record<string, string> = {
             </div>
           </div>
         )}
+        {service.lastMemoryShedReason && (
+          <div class="prop-row" style="margin-top:0.5rem;">
+            <span class="prop-label">Last memory shed</span>
+            <span class="prop-value mono" style="text-align:right;max-width:65%;font-size:0.75rem;">{service.lastMemoryShedReason}</span>
+          </div>
+        )}
         {lastMemoryShed && (
           <div class="state-warning" style="margin-top:0.75rem;">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>

@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../../layouts/Layout.astro';
-import { getAllServices, getConfig, getN8nWorkflowWindows } from '../../../../lib/windlass';
+import { getAllServices, getConfig, getN8nWorkflowWindowsForDisplay } from '../../../../lib/windlass';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -9,7 +9,7 @@ if (!user) return Astro.redirect('/app/login');
 const userId = Astro.locals.workspace?.ownerId || user.id;
 const config = getConfig(userId);
 const services = getAllServices(userId);
-const n8nWindows = await getN8nWorkflowWindows(userId);
+const n8nWindows = await getN8nWorkflowWindowsForDisplay(userId);
 
 if (!config || services.length === 0) return Astro.redirect('/app/tools/windlass');
 

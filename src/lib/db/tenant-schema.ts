@@ -260,6 +260,7 @@ export const windlassServices = sqliteTable('windlass_services', {
   utilizationPct: integer('utilization_pct'),    // Rolling utilization percent (0-100)
   idleHoursPerDay: integer('idle_hours_per_day'),// Rounded daily idle hours estimate
   schedulingSuggestion: text('scheduling_suggestion'),
+  lastMemoryShedReason: text('last_memory_shed_reason'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
@@ -286,6 +287,7 @@ export const windlassConfig = sqliteTable('windlass_config', {
   lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }),
   lastSyncStatus: text('last_sync_status'),    // 'ok' | error message
   lastWeeklyDigestAt: integer('last_weekly_digest_at', { mode: 'timestamp' }),
+  n8nWorkflowWindowsJson: text('n8n_workflow_windows_json'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

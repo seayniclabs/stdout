@@ -72,6 +72,8 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'windlass_services', 'idle_hours_per_day', 'INTEGER');
   safeAddColumn(sqlite, 'windlass_services', 'scheduling_suggestion', 'TEXT');
   safeAddColumn(sqlite, 'windlass_config', 'last_weekly_digest_at', 'INTEGER');
+  safeAddColumn(sqlite, 'windlass_config', 'n8n_workflow_windows_json', 'TEXT');
+  safeAddColumn(sqlite, 'windlass_services', 'last_memory_shed_reason', 'TEXT');
   sqlite.exec(`
     UPDATE windlass_services
     SET service_type = CASE classification
@@ -524,6 +526,7 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
       last_sync_at INTEGER,
       last_sync_status TEXT,
       last_weekly_digest_at INTEGER,
+      n8n_workflow_windows_json TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
     );
