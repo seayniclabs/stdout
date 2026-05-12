@@ -226,18 +226,18 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
           let html = '';
           if (matches && matches.length > 0) {
             html += matches.map((m: any) => `
-              <a href="/app/incidents/${m.incidentId}" class="similar-card">
+              <a href="/app/incidents/${encodeURIComponent(String(m.incidentId || ''))}" class="similar-card">
                 <div class="similar-title">${esc(m.title)}</div>
                 <div class="similar-resolution">${esc(m.resolution)}</div>
-                <div class="similar-meta mono">${m.severity} &middot; ${m.tags || ''}</div>
+                <div class="similar-meta mono">${esc(String(m.severity ?? ''))} &middot; ${esc(String(m.tags || ''))}</div>
               </a>
             `).join('');
           }
           if (docs && docs.length > 0) {
             html += '<div class="similar-divider mono">Related docs</div>';
             html += docs.map((d: any) => `
-              <a href="/app/docs/${d.docId}" class="similar-card">
-                <div class="similar-title">${esc(d.title)} <span class="similar-type">${d.docType}</span></div>
+              <a href="/app/docs/${encodeURIComponent(String(d.docId || ''))}" class="similar-card">
+                <div class="similar-title">${esc(d.title)} <span class="similar-type">${esc(String(d.docType ?? ''))}</span></div>
                 <div class="similar-resolution">${esc(d.snippet)}</div>
               </a>
             `).join('');

@@ -155,6 +155,9 @@ function assertAutofixCommandAllowed(command: string): string | null {
   const trimmed = command.trim();
   if (!trimmed) return 'Empty command';
   if (/[\x00\n\r]/.test(command)) return 'Command blocked: newlines and NUL are not allowed';
+  if (command.includes('&&') || command.includes('||')) {
+    return 'Command blocked: shell chaining (&& or ||) is not allowed';
+  }
   // Block command substitution, pipes, and sequential chaining (still allows & for URL query strings)
   if (/[;|$\x60]/.test(command)) return 'Command blocked: shell metacharacters are not allowed';
 
