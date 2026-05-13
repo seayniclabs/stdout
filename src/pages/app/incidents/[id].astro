@@ -259,6 +259,13 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
       .replace(/'/g, '&#39;');
   }
 
+  function autofixRiskClass(risk: string) {
+    const r = (risk || '').toLowerCase();
+    if (r === 'high') return 'risk-high';
+    if (r === 'medium') return 'risk-medium';
+    return 'risk-low';
+  }
+
   const btn = document.getElementById('diagnoseBtn');
   const loading = document.getElementById('diagnoseLoading');
   if (btn) {
@@ -398,7 +405,7 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
           return;
         }
 
-        // Render the plan
+        // Render the plan (DOM APIs — model output is never parsed as HTML)
         if (autofixPlanDiv) autofixPlanDiv.style.display = 'block';
         if (autofixLoading) autofixLoading.style.display = 'none';
 
@@ -407,96 +414,195 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
         const metaEl = document.getElementById('autofixMeta');
         const stepsEl = document.getElementById('autofixSteps');
 
+        autofixPlanDiv?.querySelector('.autofix-progress')?.remove();
+        summaryEl?.replaceChildren();
+        metaEl?.replaceChildren();
+        stepsEl?.replaceChildren();
+
         if (summaryEl) {
-          summaryEl.innerHTML = `<strong>${esc(plan.summary || 'Remediation plan generated')}</strong>`;
+          const strong = document.createElement('strong');
+          strong.textContent = (plan.summary != null && String(plan.summary).trim() !== '')
+            ? String(plan.summary)
+            : 'Remediation plan generated';
+          summaryEl.appendChild(strong);
           if (plan.totalRisk) {
-            const riskColor = plan.totalRisk === 'high' ? 'var(--high)' : plan.totalRisk === 'medium' ? '#F97316' : 'var(--low)';
-            summaryEl.innerHTML += ` <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${esc(plan.totalRisk)} risk</span>`;
+            summaryEl.appendChild(document.createTextNode(' '));
+            const badge = document.createElement('span');
+            badge.className = `risk-badge ${autofixRiskClass(String(plan.totalRisk))}`;
+            badge.textContent = `${String(plan.totalRisk)} risk`;
+            summaryEl.appendChild(badge);
           }
           if (plan.estimatedTime) {
-            summaryEl.innerHTML += ` <span class="time-badge">${esc(plan.estimatedTime)}</span>`;
+            summaryEl.appendChild(document.createTextNode(' '));
+            const timeB = document.createElement('span');
+            timeB.className = 'time-badge';
+            timeB.textContent = String(plan.estimatedTime);
+            summaryEl.appendChild(timeB);
           }
         }
 
         if (metaEl) {
-          metaEl.innerHTML = `<span class="mono">${esc(data.provider)}/${esc(data.model)}</span> <span>${esc(String(data.tokens.prompt))} in / ${esc(String(data.tokens.completion))} out</span>`;
+          const mono = document.createElement('span');
+          mono.className = 'mono';
+          mono.textContent = `${data.provider}/${data.model}`;
+          metaEl.appendChild(mono);
+          metaEl.appendChild(document.createTextNode(' '));
+          const tok = document.createElement('span');
+          tok.textContent = `${data.tokens.prompt} in / ${data.tokens.completion} out`;
+          metaEl.appendChild(tok);
         }
 
         if (stepsEl && plan.steps && plan.steps.length > 0) {
-          stepsEl.innerHTML = plan.steps.map((step: any, i: number) => {
-            const riskColor = step.risk === 'high' ? 'var(--high)' : step.risk === 'medium' ? '#F97316' : 'var(--low)';
+          stepsEl.replaceChildren();
+          const total = plan.steps.length;
+
+          plan.steps.forEach((step: any, i: number) => {
             const stepId = `step-${i}`;
             const hasDetails = (step.commands?.length > 0) || (step.files?.length > 0) || step.verification || step.rollback;
 
-            let html = `<div class="autofix-step" id="${stepId}">
-              <div class="step-header">
-                <input type="checkbox" class="step-checkbox" data-step="${i}" />
-                <span class="step-number">${esc(String(step.order ?? i + 1))}</span>
-                <span class="step-desc">${esc(step.description || '')}</span>
-                <span class="risk-badge" style="color: ${riskColor}; border-color: ${riskColor};">${esc(step.risk || '?')}</span>
-                ${hasDetails ? `<button class="step-toggle" data-target="${stepId}-details" title="Show details">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
-                </button>` : ''}
-              </div>`;
+            const stepWrap = document.createElement('div');
+            stepWrap.className = 'autofix-step';
+            stepWrap.id = stepId;
+
+            const header = document.createElement('div');
+            header.className = 'step-header';
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'step-checkbox';
+            cb.dataset.step = String(i);
+            header.appendChild(cb);
+
+            const num = document.createElement('span');
+            num.className = 'step-number';
+            num.textContent = String(step.order ?? i + 1);
+            header.appendChild(num);
+
+            const desc = document.createElement('span');
+            desc.className = 'step-desc';
+            desc.textContent = step.description != null ? String(step.description) : '';
+            header.appendChild(desc);
+
+            const riskB = document.createElement('span');
+            riskB.className = `risk-badge ${autofixRiskClass(String(step.risk || ''))}`;
+            riskB.textContent = step.risk != null ? String(step.risk) : '?';
+            header.appendChild(riskB);
 
             if (hasDetails) {
-              html += `<div class="step-details" id="${stepId}-details" style="display:none;">`;
+              const toggle = document.createElement('button');
+              toggle.type = 'button';
+              toggle.className = 'step-toggle';
+              toggle.dataset.target = `${stepId}-details`;
+              toggle.title = 'Show details';
+              toggle.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+              header.appendChild(toggle);
+            }
+
+            stepWrap.appendChild(header);
+
+            if (hasDetails) {
+              const details = document.createElement('div');
+              details.className = 'step-details';
+              details.id = `${stepId}-details`;
+              details.style.display = 'none';
 
               if (step.commands && step.commands.length > 0) {
-                html += `<div class="step-section">
-                  <span class="step-section-label">Commands</span>
-                  <div class="step-commands">${step.commands.map((c: string, ci: number) =>
-                    `<div class="command-row">
-                      <code class="command-line">${esc(c)}</code>
-                      <button class="copy-btn" data-copy="${esc(c)}" title="Copy">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      </button>
-                      <button class="run-btn" data-cmd="${esc(c)}" data-step="${i}" title="Execute">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                      </button>
-                    </div>`
-                  ).join('')}</div>
-                </div>`;
+                const sec = document.createElement('div');
+                sec.className = 'step-section';
+                const lab = document.createElement('span');
+                lab.className = 'step-section-label';
+                lab.textContent = 'Commands';
+                sec.appendChild(lab);
+                const cmdWrap = document.createElement('div');
+                cmdWrap.className = 'step-commands';
+                for (const c of step.commands as string[]) {
+                  const row = document.createElement('div');
+                  row.className = 'command-row';
+                  const code = document.createElement('code');
+                  code.className = 'command-line';
+                  code.textContent = c;
+                  const copyBtn = document.createElement('button');
+                  copyBtn.type = 'button';
+                  copyBtn.className = 'copy-btn';
+                  copyBtn.title = 'Copy';
+                  copyBtn.dataset.copy = c;
+                  copyBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+                  const runBtn = document.createElement('button');
+                  runBtn.type = 'button';
+                  runBtn.className = 'run-btn';
+                  runBtn.title = 'Execute';
+                  runBtn.dataset.cmd = c;
+                  runBtn.dataset.step = String(i);
+                  runBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>';
+                  row.appendChild(code);
+                  row.appendChild(copyBtn);
+                  row.appendChild(runBtn);
+                  cmdWrap.appendChild(row);
+                }
+                sec.appendChild(cmdWrap);
+                details.appendChild(sec);
               }
 
               if (step.files && step.files.length > 0) {
-                html += `<div class="step-section">
-                  <span class="step-section-label">Files</span>
-                  ${step.files.map((f: any) => `<div class="file-change"><code class="mono">${esc(f.path || '')}</code><span class="file-change-desc">${esc(f.change || '')}</span></div>`).join('')}
-                </div>`;
+                const sec = document.createElement('div');
+                sec.className = 'step-section';
+                const lab = document.createElement('span');
+                lab.className = 'step-section-label';
+                lab.textContent = 'Files';
+                sec.appendChild(lab);
+                for (const f of step.files as any[]) {
+                  const row = document.createElement('div');
+                  row.className = 'file-change';
+                  const pathEl = document.createElement('code');
+                  pathEl.className = 'mono';
+                  pathEl.textContent = f.path != null ? String(f.path) : '';
+                  const ch = document.createElement('span');
+                  ch.className = 'file-change-desc';
+                  ch.textContent = f.change != null ? String(f.change) : '';
+                  row.appendChild(pathEl);
+                  row.appendChild(ch);
+                  sec.appendChild(row);
+                }
+                details.appendChild(sec);
               }
 
               if (step.verification) {
-                html += `<div class="step-section step-section-muted">
-                  <span class="step-section-label">Verification</span>
-                  <p>${esc(step.verification)}</p>
-                </div>`;
+                const sec = document.createElement('div');
+                sec.className = 'step-section step-section-muted';
+                const lab = document.createElement('span');
+                lab.className = 'step-section-label';
+                lab.textContent = 'Verification';
+                sec.appendChild(lab);
+                const p = document.createElement('p');
+                p.textContent = String(step.verification);
+                sec.appendChild(p);
+                details.appendChild(sec);
               }
 
               if (step.rollback) {
-                html += `<div class="step-section step-section-muted">
-                  <span class="step-section-label">Rollback</span>
-                  <p>${esc(step.rollback)}</p>
-                </div>`;
+                const sec = document.createElement('div');
+                sec.className = 'step-section step-section-muted';
+                const lab = document.createElement('span');
+                lab.className = 'step-section-label';
+                lab.textContent = 'Rollback';
+                sec.appendChild(lab);
+                const p = document.createElement('p');
+                p.textContent = String(step.rollback);
+                sec.appendChild(p);
+                details.appendChild(sec);
               }
 
-              html += '</div>'; // close step-details
+              stepWrap.appendChild(details);
             }
 
-            html += '</div>'; // close autofix-step
-            return html;
-          }).join('');
+            stepsEl.appendChild(stepWrap);
+          });
 
-          // Progress bar
-          const total = plan.steps.length;
-          stepsEl.insertAdjacentHTML('beforebegin',
-            `<div class="autofix-progress">
-              <div class="progress-bar"><div class="progress-fill" id="autofixProgressFill" style="width: 0%"></div></div>
-              <span class="progress-text" id="autofixProgressText">0 / ${total} steps</span>
-            </div>`
-          );
+          const prog = document.createElement('div');
+          prog.className = 'autofix-progress';
+          prog.innerHTML = '<div class="progress-bar"><div class="progress-fill" id="autofixProgressFill" style="width: 0%"></div></div><span class="progress-text" id="autofixProgressText">0 / ' + total + ' steps</span>';
+          stepsEl.before(prog);
 
-          // Bind toggles
           stepsEl.querySelectorAll('.step-toggle').forEach((btn: Element) => {
             btn.addEventListener('click', () => {
               const targetId = (btn as HTMLElement).dataset.target;
@@ -509,7 +615,6 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
             });
           });
 
-          // Bind copy buttons
           stepsEl.querySelectorAll('.copy-btn').forEach((btn: Element) => {
             btn.addEventListener('click', () => {
               const text = (btn as HTMLElement).dataset.copy || '';
@@ -522,7 +627,6 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
             });
           });
 
-          // Bind checkboxes for progress tracking
           stepsEl.querySelectorAll('.step-checkbox').forEach((cb: Element) => {
             cb.addEventListener('change', () => {
               const checked = stepsEl!.querySelectorAll('.step-checkbox:checked').length;
@@ -530,14 +634,11 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
               const text = document.getElementById('autofixProgressText');
               if (fill) fill.style.width = `${(checked / total) * 100}%`;
               if (text) text.textContent = `${checked} / ${total} steps`;
-
-              // Dim completed steps
               const stepEl = (cb as HTMLElement).closest('.autofix-step');
               if (stepEl) stepEl.classList.toggle('step-done', (cb as HTMLInputElement).checked);
             });
           });
 
-          // Bind run buttons
           stepsEl.querySelectorAll('.run-btn').forEach((btn: Element) => {
             btn.addEventListener('click', async () => {
               const cmd = (btn as HTMLElement).dataset.cmd || '';
@@ -553,9 +654,8 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
                 body: JSON.stringify({ command: cmd, incidentId, stepIndex: stepIdx, approved: true }),
               });
 
-              const data = await res?.json().catch(() => ({ ok: false, error: 'Parse error' }));
+              const execData = await res?.json().catch(() => ({ ok: false, error: 'Parse error' }));
 
-              // Show output below the command
               const row = (btn as HTMLElement).closest('.command-row');
               let outputEl = row?.nextElementSibling;
               if (outputEl?.classList.contains('cmd-output')) outputEl.remove();
@@ -563,12 +663,12 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
               const output = document.createElement('div');
               output.className = 'cmd-output';
               const preOut = document.createElement('pre');
-              preOut.className = data?.ok ? 'cmd-stdout' : 'cmd-stderr';
-              preOut.textContent = data?.ok
-                ? (data.stdout || '(no output)')
-                : (data?.stderr || data?.error || 'Command failed');
+              preOut.className = execData?.ok ? 'cmd-stdout' : 'cmd-stderr';
+              preOut.textContent = execData?.ok
+                ? (execData.stdout || '(no output)')
+                : (execData?.stderr || execData?.error || 'Command failed');
               output.appendChild(preOut);
-              if (data?.ok) {
+              if (execData?.ok) {
                 (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--low)" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
               } else {
                 (btn as HTMLElement).innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--high)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
@@ -577,29 +677,33 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
             });
           });
 
-          // Auto-expand the first step
           const firstDetails = document.getElementById('step-0-details');
           const firstToggle = stepsEl.querySelector('.step-toggle');
           if (firstDetails) firstDetails.style.display = 'block';
           if (firstToggle) firstToggle.classList.add('open');
 
         } else if (stepsEl && plan.raw) {
-          stepsEl.textContent = '';
+          stepsEl.replaceChildren();
           const rawPre = document.createElement('pre');
           rawPre.className = 'autofix-raw';
-          rawPre.textContent = plan.raw;
+          rawPre.textContent = typeof plan.raw === 'string' ? plan.raw : String(plan.raw);
           stepsEl.appendChild(rawPre);
         }
 
-        // Show "Generate again" button
         if (autofixContainer) {
-          autofixContainer.innerHTML = `<button id="autofixRetryBtn" class="btn btn-ghost btn-sm">Generate new plan</button>`;
-          document.getElementById('autofixRetryBtn')?.addEventListener('click', () => {
+          autofixContainer.replaceChildren();
+          const retry = document.createElement('button');
+          retry.id = 'autofixRetryBtn';
+          retry.type = 'button';
+          retry.className = 'btn btn-ghost btn-sm';
+          retry.textContent = 'Generate new plan';
+          retry.addEventListener('click', () => {
             if (autofixPlanDiv) autofixPlanDiv.style.display = 'none';
-            autofixContainer.innerHTML = '';
+            autofixContainer.replaceChildren();
             autofixContainer.appendChild(autofixPlanBtn);
             autofixPlanBtn.style.display = 'inline-flex';
           });
+          autofixContainer.appendChild(retry);
         }
       } catch (err) {
         window.showToast?.('Network error', 'error');
@@ -649,6 +753,9 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
   .section-hint { font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; }
   .autofix-summary { margin-bottom: 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
   .risk-badge { font-size: 0.65rem; padding: 0.15rem 0.5rem; border: 1px solid; border-radius: 4px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .risk-badge.risk-high { color: var(--high); border-color: var(--high); }
+  .risk-badge.risk-medium { color: #F97316; border-color: #F97316; }
+  .risk-badge.risk-low { color: var(--low); border-color: var(--low); }
   .time-badge { font-size: 0.7rem; color: var(--muted); font-family: var(--font-mono); }
   .autofix-meta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1rem; display: flex; gap: 1rem; }
 

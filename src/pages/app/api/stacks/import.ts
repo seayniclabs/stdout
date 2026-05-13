@@ -147,6 +147,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
     reviewUrl: `/app/stacks/import/${importId}`,
     dataSourcesRegistered,
     autoDetectedSources,
+    /** Full rendered markdown (same as DB) so scanners / QA can verify the review payload without a second fetch. */
+    renderedMarkdown: markdown,
+    scanSummary: {
+      version: body.version,
+      containerCount: Array.isArray(body.containers) ? body.containers.length : 0,
+      rawJsonChars: JSON.stringify(body).length,
+      markdownChars: markdown.length,
+    },
   }), {
     status: 201,
     headers: { 'Content-Type': 'application/json' },

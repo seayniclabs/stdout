@@ -410,6 +410,63 @@ test.describe('Security — Token Scoping (X44)', () => {
   });
 });
 
+test.describe('Security — Auto-Fix exec policy (AF1-AF3)', () => {
+  test.beforeEach(async ({ page }) => {
+    await createAuthenticatedUser(page);
+  });
+
+  test('AF1 — blocks curl with command chaining', async ({ page }) => {
+    const { status, json: cj } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      action: 'create',
+      title: 'autofix policy test',
+      description: 'x',
+      severity: 'low',
+    });
+    expect(status).toBe(201);
+    const incidentId = cj.id;
+
+    const { status: ex, json } = await apiRequest(page, 'POST', '/app/api/incidents/autofix-exec', {
+      command: 'curl -fsS https://example.com && rm -rf /',
+      incidentId,
+      approved: true,
+    });
+    expect(ex).toBe(403);
+    expect(String(json?.error || '')).toMatch(/chaining|blocked|not an allowed|metachar/i);
+  });
+
+  test('AF2 — blocks non-allowlist prefix', async ({ page }) => {
+    const { status, json: cj } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      action: 'create',
+      title: 'autofix policy test 2',
+      description: 'x',
+      severity: 'low',
+    });
+    expect(status).toBe(201);
+    const { status: ex } = await apiRequest(page, 'POST', '/app/api/incidents/autofix-exec', {
+      command: 'wget -qO- https://example.com',
+      incidentId: cj.id,
+      approved: true,
+    });
+    expect(ex).toBe(403);
+  });
+
+  test('AF3 — blocks semicolon metacharacter', async ({ page }) => {
+    const { status, json: cj } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      action: 'create',
+      title: 'autofix policy test 3',
+      description: 'x',
+      severity: 'low',
+    });
+    expect(status).toBe(201);
+    const { status: ex } = await apiRequest(page, 'POST', '/app/api/incidents/autofix-exec', {
+      command: 'curl -fsS https://example.com; id',
+      incidentId: cj.id,
+      approved: true,
+    });
+    expect(ex).toBe(403);
+  });
+});
+
 test.describe('Security — Community Doc Tamper (X47)', () => {
   test('X47 — Community doc cannot be edited', async ({ page }) => {
     await createAuthenticatedUser(page);

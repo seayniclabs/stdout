@@ -50,18 +50,27 @@ function timeAgo(date: Date | null): string {
   return date.toLocaleDateString();
 }
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function activityLabel(action: string, details: string | null): string {
   let d: any = {};
   try { d = JSON.parse(details || '{}'); } catch {}
   switch (action) {
     case 'team_invite':
-      return `Invited <strong>${d.email || 'member'}</strong> as ${d.role || 'viewer'}${d.autoAccepted ? ' · auto-accepted' : ' · invite pending'}`;
+      return `Invited <strong>${escapeHtml(String(d.email || 'member'))}</strong> as ${escapeHtml(String(d.role || 'viewer'))}${d.autoAccepted ? ' · auto-accepted' : ' · invite pending'}`;
     case 'team_role_update':
-      return `Changed <strong>${d.email || 'member'}</strong>: ${d.oldRole} → ${d.newRole}`;
+      return `Changed <strong>${escapeHtml(String(d.email || 'member'))}</strong>: ${escapeHtml(String(d.oldRole ?? ''))} → ${escapeHtml(String(d.newRole ?? ''))}`;
     case 'team_remove':
-      return `Removed <strong>${d.email || 'member'}</strong> from team`;
+      return `Removed <strong>${escapeHtml(String(d.email || 'member'))}</strong> from team`;
     default:
-      return action;
+      return escapeHtml(action);
   }
 }
 ---

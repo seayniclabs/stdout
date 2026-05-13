@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getCentralDb, getTenantDb, tenantSchema, centralSchema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { sendWindlassWeeklyDigest } from '../../../../lib/alert-router';
+import { sumRecoveredGbHoursFromServices } from '../../../../lib/windlass-weekly-digest-math';
 
 const SELF_HOST = process.env.STDOUT_MODE !== 'saas';
 
@@ -10,19 +11,7 @@ function computeRecoveredGbHours(userId: string): { recoveredGbHours: number; se
   const services = db.select().from(tenantSchema.windlassServices)
     .where(eq(tenantSchema.windlassServices.userId, userId))
     .all();
-
-  let recoveredGbHours = 0;
-  for (const service of services) {
-    if (!service.memoryMb || !service.usageAnalytics) continue;
-    try {
-      const analytics = JSON.parse(service.usageAnalytics);
-      const idleMinutes = analytics?.idle_minutes_total || 0;
-      recoveredGbHours += (service.memoryMb / 1024) * (idleMinutes / 60);
-    } catch {
-      // ignore malformed analytics blob
-    }
-  }
-  return { recoveredGbHours, serviceCount: services.length };
+  return { recoveredGbHours: sumRecoveredGbHoursFromServices(services), serviceCount: services.length };
 }
 
 /** Cron / curl must present the secret; browser sessions are already authenticated. */

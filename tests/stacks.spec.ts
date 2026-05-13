@@ -90,6 +90,9 @@ test.describe('Stacks (F42-F47)', () => {
       const importJson = await importResponse.json();
       expect(importJson.importId).toBeTruthy();
       expect(importJson.reviewUrl).toContain('/app/stacks/import/');
+      expect(importJson.renderedMarkdown).toContain('# Infrastructure Stack');
+      expect(importJson.scanSummary?.containerCount).toBeGreaterThan(0);
+      expect(importJson.scanSummary?.markdownChars).toBeGreaterThan(0);
     }
   });
 });

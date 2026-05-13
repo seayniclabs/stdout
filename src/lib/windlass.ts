@@ -11,6 +11,7 @@ import { getTenantDb, tenantSchema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 import { fireAlert } from './alert-router';
 import { sendWindlassWeeklyDigest } from './alert-router';
+import { sumRecoveredGbHoursFromServices } from './windlass-weekly-digest-math';
 
 // --- Types ---
 
@@ -402,17 +403,7 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
     .where(eq(tenantSchema.windlassServices.userId, userId))
     .all();
 
-  let recoveredGbHours = 0;
-  for (const service of services) {
-    if (!service.memoryMb || !service.usageAnalytics) continue;
-    try {
-      const analytics = JSON.parse(service.usageAnalytics);
-      const idleMinutes = analytics?.idle_minutes_total || 0;
-      recoveredGbHours += (service.memoryMb / 1024) * (idleMinutes / 60);
-    } catch {
-      // ignore malformed analytics blob
-    }
-  }
+  const recoveredGbHours = sumRecoveredGbHoursFromServices(services);
 
   if (recoveredGbHours <= 0) return;
   const sent = await sendWindlassWeeklyDigest(userId, {

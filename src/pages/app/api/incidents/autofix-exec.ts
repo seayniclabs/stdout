@@ -3,6 +3,7 @@ import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
+import { assertAutofixCommandAllowed } from '../../../../lib/autofix-exec-policy';
 
 const execAsync = promisify(exec);
 
@@ -86,10 +87,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({
       ok: false,
-      error: err.message,
+      error: message,
       command,
     }), {
       status: 500, headers: { 'Content-Type': 'application/json' },
@@ -140,46 +142,13 @@ async function executeCommand(command: string): Promise<{ exitCode: number; stdo
       encoding: 'utf-8',
     });
     return { exitCode: 0, stdout, stderr: stderr || '' };
-  } catch (err: any) {
-    const code = typeof err?.status === 'number' ? err.status : 1;
+  } catch (err: unknown) {
+    const e = err as { status?: number; stdout?: string; stderr?: string; message?: string };
+    const code = typeof e?.status === 'number' ? e.status : 1;
     return {
       exitCode: code,
-      stdout: err.stdout || '',
-      stderr: err.stderr || err.message || 'Command failed',
+      stdout: e.stdout || '',
+      stderr: e.stderr || e.message || 'Command failed',
     };
   }
-}
-
-/** Reject shell chaining / substitution and token-splitting bypasses of naive substring checks. */
-function assertAutofixCommandAllowed(command: string): string | null {
-  const trimmed = command.trim();
-  if (!trimmed) return 'Empty command';
-  if (/[\x00\n\r]/.test(command)) return 'Command blocked: newlines and NUL are not allowed';
-  if (command.includes('&&') || command.includes('||')) {
-    return 'Command blocked: shell chaining (&& or ||) is not allowed';
-  }
-  // Block command substitution, pipes, and sequential chaining (still allows & for URL query strings)
-  if (/[;|$\x60]/.test(command)) return 'Command blocked: shell metacharacters are not allowed';
-
-  const norm = trimmed.replace(/\s+/g, ' ').toLowerCase();
-
-  const blockedRes = [
-    /\brm\b[\s\S]{0,200}?(-rf|--recursive|-r\s+-f)\b/,
-    /\bmkfs\b/,
-    /\bdd\s+if=/,
-    /:\(\)\{/,
-    /\bchmod\b[\s\S]{0,120}?\b777\b/,
-    />\s*\/dev\/(sd|hd|nvme|disk)/,
-    /\|\s*(ba)?sh\b/,
-    /\bcurl\b[\s\S]{0,400}?\|\s*(ba)?sh\b/,
-    /\bwget\b[\s\S]{0,400}?\|\s*(ba)?sh\b/,
-  ];
-  for (const re of blockedRes) {
-    if (re.test(norm)) return 'Command blocked by safety policy';
-  }
-
-  const legacy = [':(){:|:&};:', 'rm -rf /', 'rm -fr /', 'chmod -r 777 /'];
-  if (legacy.some(b => norm.includes(b))) return 'Command blocked by safety policy';
-
-  return null;
 }
