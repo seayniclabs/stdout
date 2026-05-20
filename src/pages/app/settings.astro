@@ -244,9 +244,8 @@ const licenseNotice = getLicenseNotice();
     <!-- ── TAB 2: INTEGRATIONS ── -->
     <div id="tab-integrations" class="tab-panel" role="tabpanel">
 
-      <!-- AI Providers (BYOK — self-hosted only) -->
-      {mode !== 'saas' && (
-        <section class="section">
+      <!-- AI Providers (BYOK) -->
+      <section class="section">
           <h2>AI Providers</h2>
           <p class="section-desc">Bring your own API key for AI diagnostics and auto-fix. Your key is used first; the platform key is a fallback.</p>
           <div id="aiProvidersList" class="backup-list">
@@ -281,7 +280,6 @@ const licenseNotice = getLicenseNotice();
           </button>
           <div id="aiStatus" class="backup-status"></div>
         </section>
-      )}
 
       <!-- Scanner Schedule -->
       <section class="section">

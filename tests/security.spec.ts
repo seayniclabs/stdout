@@ -159,13 +159,16 @@ test.describe('Security — Auth Bypass (X9-X10)', () => {
 });
 
 test.describe('Security — Cookie Flags (X14-X15)', () => {
+  const baseUrl = process.env.STDOUT_TEST_URL || 'http://localhost:4321';
+  const expectSecure = baseUrl.startsWith('https://');
+
   test('X14 — Session cookie flags', async ({ page }) => {
     await createAuthenticatedUser(page);
     const cookies = await page.context().cookies();
     const session = cookies.find(c => c.name === 'sl_session');
     expect(session).toBeTruthy();
     expect(session!.httpOnly).toBe(true);
-    expect(session!.secure).toBe(true);
+    expect(session!.secure).toBe(expectSecure);
     expect(session!.sameSite).toBe('Lax');
   });
 
@@ -175,7 +178,7 @@ test.describe('Security — Cookie Flags (X14-X15)', () => {
     const csrf = cookies.find(c => c.name === 'sl_csrf');
     expect(csrf).toBeTruthy();
     expect(csrf!.httpOnly).toBe(true);
-    expect(csrf!.secure).toBe(true);
+    expect(csrf!.secure).toBe(expectSecure);
     expect(csrf!.sameSite).toBe('Lax');
   });
 });
