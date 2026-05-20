@@ -1,7 +1,8 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getUserLimits, getUpgradeUrl, type TierName } from '../../lib/tiers';
+import { getUserLimits } from '../../lib/tiers';
+import { getLicenseNotice } from '../../lib/update-check';
 import { checkForUpdate, type UpdateCheckResult } from '../../lib/update-check';
 
 const user = Astro.locals.user;
@@ -13,18 +14,8 @@ try {
 } catch {}
 const currentVersion = updateInfo?.currentVersion ?? '1.2.0';
 const hasUpdate = updateInfo?.hasUpdate ?? false;
-const mode = process.env.STDOUT_MODE || 'saas';
-
-const { tier, limits } = getUserLimits(user);
-const tierLabels: Record<TierName, string> = {
-  free: 'Free',
-  solo: 'Solo ($12/mo)',
-  shop: 'Shop ($24/mo)',
-  'self-host': 'Self-Host',
-};
-const tierLabel = tierLabels[tier] || 'Free';
-const upgradeUrl = getUpgradeUrl('solo');
-const isPaid = tier !== 'free';
+const { limits } = getUserLimits(user);
+const licenseNotice = getLicenseNotice();
 ---
 <Layout title="Settings — StdOut">
   <div class="settings-page">
@@ -64,54 +55,36 @@ const isPaid = tier !== 'free';
             <span class="value">{user.displayName || '—'}</span>
           </div>
           <div class="profile-row">
-            <span class="label">Plan</span>
-            <span class="value">{tierLabel}</span>
-            {!isPaid && <a href={upgradeUrl} class="btn btn-primary btn-sm" style="margin-left: 12px;" target="_blank" rel="noopener">Upgrade</a>}
+            <span class="label">Edition</span>
+            <span class="value">Self-Hosted</span>
           </div>
         </div>
       </section>
 
-      <!-- Plan & Billing -->
-      <section class="section">
-        <h2>Plan &amp; Billing</h2>
-        <div class="billing-info">
-          <div class="tier-card">
-            <div class="tier-header">
-              <span class="tier-name">{tierLabel}</span>
-              {user.subscriptionStatus === 'active' && <span class="tier-badge success">Active</span>}
-              {user.subscriptionStatus === 'past_due' && <span class="tier-badge warning">Payment past due</span>}
-              {user.subscriptionStatus === 'cancelled' && <span class="tier-badge muted">Cancelled</span>}
-              {tier === 'self-host' && user.subscriptionStatus !== 'past_due' && <span class="tier-badge success">Lifetime license</span>}
-            </div>
-            <div class="tier-limits">
-              <div class="limit-row"><span>Stacks</span><span>{limits.maxStacks === Infinity ? 'Unlimited' : limits.maxStacks}</span></div>
-              <div class="limit-row"><span>Incidents/month</span><span>{limits.maxIncidentsPerMonth === Infinity ? 'Unlimited' : limits.maxIncidentsPerMonth}</span></div>
-              <div class="limit-row"><span>Doc storage</span><span>{limits.maxDocsStorageMB === Infinity ? 'Unlimited' : `${limits.maxDocsStorageMB}MB`}</span></div>
-              <div class="limit-row"><span>Monitors</span><span>{limits.maxMonitors === Infinity ? 'Unlimited' : limits.maxMonitors}</span></div>
-              <div class="limit-row"><span>AI model</span><span>{limits.aiModel === 'sonnet' ? 'Sonnet' : 'Haiku'}</span></div>
-              <div class="limit-row"><span>Team seats</span><span>{limits.maxSeats === 1 ? '1 (Solo)' : limits.maxSeats}</span></div>
-              <div class="limit-row"><span>Backups</span><span>{limits.backupsEnabled ? 'Yes' : 'No'}</span></div>
-              <div class="limit-row"><span>Public status pages</span><span>{limits.publicStatusPages ? 'Yes' : 'No'}</span></div>
-            </div>
-            {!isPaid && (
-              <div class="tier-upgrade">
-                <p>Upgrade for unlimited stacks, incidents, Sonnet AI, backups, team seats, and more.</p>
-                <div class="upgrade-buttons">
-                  <a href="https://store.seayniclabs.com/products/stdout-solo" class="btn btn-primary" target="_blank" rel="noopener">Solo — $12/mo</a>
-                  <a href="https://store.seayniclabs.com/products/stdout-shop" class="btn btn-secondary" target="_blank" rel="noopener">Shop — $24/mo</a>
-                  <a href="https://store.seayniclabs.com/products/stdout-self-host" class="btn btn-secondary" target="_blank" rel="noopener">Self-Host — $149</a>
-                </div>
-              </div>
-            )}
-          </div>
+      <section class="section" id="license">
+        <h2>License</h2>
+        <p class="section-desc">Enter your self-host license key from stdout.seayniclabs.com. Optional during evaluation.</p>
+        <div class="brand-form">
+          <label>
+            <span>License key</span>
+            <input type="text" id="licenseKey" placeholder="XXXX-XXXX-XXXX-XXXX" class="settings-input mono" autocomplete="off" />
+          </label>
+          <button type="button" id="saveLicenseBtn" class="btn btn-primary btn-sm">Save license</button>
+          <div id="licenseStatus" class="backup-status"></div>
         </div>
       </section>
 
-      <!-- Team (Shop) -->
+      {licenseNotice && !licenseNotice.valid && (
+        <section class="section">
+          <p class="section-desc" style="color: var(--warning);">{licenseNotice.message}</p>
+        </section>
+      )}
+
+      <!-- Team -->
       {limits.rbacEnabled && (
         <section class="section">
           <h2>Team Members</h2>
-          <p class="section-desc">Manage your team. Shop plan includes up to {limits.maxSeats} seats. <a href="/app/team" class="section-link">Open Team panel &rarr;</a></p>
+          <p class="section-desc">Invite team members with role-based access. <a href="/app/team" class="section-link">Open Team panel &rarr;</a></p>
           <div class="team-section">
             <div id="teamList" class="team-list">
               <div class="team-loading">Loading team...</div>
@@ -709,9 +682,52 @@ const isPaid = tier !== 'free';
       });
       brandingStatusEl.textContent = 'Saved. Reload to see changes.';
       brandingStatusEl.className = 'backup-status success';
+      await fetch('/app/api/onboarding', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', step: 'environment' }),
+      });
     } catch {
       brandingStatusEl.textContent = 'Failed.';
       brandingStatusEl.className = 'backup-status error';
+    }
+  });
+
+  const saveLicenseBtn = document.getElementById('saveLicenseBtn');
+  const licenseKeyEl = document.getElementById('licenseKey') as HTMLInputElement | null;
+  const licenseStatusEl = document.getElementById('licenseStatus');
+
+  async function loadLicense() {
+    try {
+      const res = await fetch('/app/api/license');
+      const data = await res.json();
+      if (data.activated && licenseKeyEl) {
+        licenseStatusEl && (licenseStatusEl.textContent = `Licensed (${data.edition || 'self-host'}) — ${data.email || ''}`);
+      }
+    } catch {}
+  }
+  loadLicense();
+
+  saveLicenseBtn?.addEventListener('click', async () => {
+    const key = licenseKeyEl?.value.trim();
+    if (!key) {
+      licenseStatusEl && (licenseStatusEl.textContent = 'Enter a license key.');
+      return;
+    }
+    const res = await fetch('/app/api/license', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      licenseStatusEl && (licenseStatusEl.textContent = 'License saved.');
+      await fetch('/app/api/onboarding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', step: 'license' }),
+      });
+    } else {
+      licenseStatusEl && (licenseStatusEl.textContent = data.error || 'Failed to save license.');
     }
   });
 

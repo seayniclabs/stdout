@@ -1,0 +1,87 @@
+---
+export const prerender = false;
+import Layout from '../layouts/Layout.astro';
+import { nanoid } from 'nanoid';
+import { getCentralDb, getTenantDb, centralSchema } from '../lib/db';
+import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword, getUserCount } from '../lib/auth';
+import { validateCsrf } from '../middleware';
+
+if (getUserCount() > 0) return Astro.redirect('/app/login');
+
+let error = '';
+let email = '';
+let displayName = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const csrfToken = form.get('_csrf') as string || '';
+
+  if (!validateCsrf(csrfToken, Astro.cookies)) {
+    error = 'Invalid form submission. Please try again.';
+  } else if (getUserCount() > 0) {
+    return Astro.redirect('/app/login');
+  } else {
+    email = (form.get('email') as string || '').trim().toLowerCase();
+    displayName = (form.get('displayName') as string || '').trim();
+    const password = form.get('password') as string || '';
+    const confirm = form.get('confirm') as string || '';
+
+    if (!email || !password || !displayName) {
+      error = 'All fields are required.';
+    } else if (password.length < 8) {
+      error = 'Password must be at least 8 characters.';
+    } else if (password !== confirm) {
+      error = "Passwords don't match.";
+    } else {
+      const id = nanoid();
+      const now = new Date();
+      const passwordHash = await hashPassword(password);
+      getCentralDb().insert(centralSchema.users).values({
+        id,
+        email,
+        passwordHash,
+        displayName,
+        role: 'admin',
+        emailVerified: true,
+        emailVerifiedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }).run();
+      getTenantDb(id);
+
+      const sessionId = await createSession(id);
+      Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
+      return Astro.redirect('/app');
+    }
+  }
+}
+---
+<Layout title="Set up StdOut">
+  <div class="auth-page">
+    <h1>Set up StdOut</h1>
+    <p class="auth-subtitle">Create the administrator account for this installation.</p>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+      <label>
+        <span>Display name</span>
+        <input type="text" name="displayName" value={displayName} required autocomplete="name" />
+      </label>
+      <label>
+        <span>Email</span>
+        <input type="email" name="email" value={email} required autocomplete="email" />
+      </label>
+      <label>
+        <span>Password</span>
+        <input type="password" name="password" required minlength="8" autocomplete="new-password" />
+      </label>
+      <label>
+        <span>Confirm password</span>
+        <input type="password" name="confirm" required minlength="8" autocomplete="new-password" />
+      </label>
+      <button type="submit">Create admin account</button>
+    </form>
+  </div>
+</Layout>

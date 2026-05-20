@@ -1,5 +1,5 @@
 import { defineMiddleware } from 'astro:middleware';
-import { validateSession, getSessionFromCookies, SESSION_COOKIE } from './lib/auth';
+import { validateSession, getSessionFromCookies, SESSION_COOKIE, getUserCount, sessionCookieOptions } from './lib/auth';
 import { getCentralDb, centralSchema } from './lib/db';
 import { getWorkspaceContext } from './lib/rbac';
 import { eq } from 'drizzle-orm';
@@ -44,20 +44,10 @@ function validateBearerToken(request: Request): { userId: string } | null {
 // --- CSRF Origin Check ---
 const ALLOWED_ORIGINS: string[] = [];
 
-// SaaS mode: allow the production domains
-if (!process.env.STDOUT_MODE || process.env.STDOUT_MODE === 'saas') {
-  ALLOWED_ORIGINS.push(
-    'https://stdout.seayniclabs.com',
-    'https://seayniclabs.com',
-  );
-}
-
-// Self-hosted mode: allow the configured APP_URL
 if (process.env.APP_URL) {
   ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
 }
 
-// Always allow localhost (dev server + local container ports)
 ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000', 'http://localhost:8112');
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -241,7 +231,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const tokenAuth = validateBearerToken(context.request);
     if (tokenAuth) {
       // Minimal user object for API token auth
-      context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, subscriptionStatus: 'none', subscriptionTier: null, role: 'member', stripeCustomerId: null };
+      context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, role: 'member' };
     } else {
       // Invalid/revoked bearer token — return 401, don't redirect to login
       return new Response(JSON.stringify({ error: 'Invalid or revoked token' }), {
@@ -266,9 +256,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
     // Persist workspace selection in cookie
     if (wsParam && wsParam !== context.locals.user.id) {
-      context.cookies.set('sl_workspace', wsParam, {
-        path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60,
-      });
+      context.cookies.set('sl_workspace', wsParam, sessionCookieOptions(30 * 24 * 60 * 60));
     }
   } else {
     context.locals.workspace = null;
@@ -281,14 +269,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // CSRF token
   let csrfToken = context.cookies.get(CSRF_COOKIE)?.value;
   if (!csrfToken) csrfToken = generateCsrfToken();
-  context.cookies.set(CSRF_COOKIE, csrfToken, {
-    path: '/',
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-    maxAge: 60 * 60 * 2,
-    domain: undefined,  // No cross-domain sharing needed yet; set to .seayniclabs.com when SaaS launches
-  });
+  const csrfOpts = sessionCookieOptions(60 * 60 * 2);
+  context.cookies.set(CSRF_COOKIE, csrfToken, { ...csrfOpts, domain: undefined });
   context.locals.csrfToken = csrfToken;
 
   // Protect /app/* routes (except login, register, forgot-password)
@@ -299,13 +281,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/reset-password',
     '/app/verify-email',
     '/app/api/webhooks/',
-    '/app/api/billing-sync',
-    '/app/api/community-sync', // public catalog sync; no auth (see community-sync.ts)
+    '/app/api/community-sync',
     '/app/api/me',
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
-  // These redirects fall through to security-header injection below
+
+  if (pathname === '/setup') {
+    if (getUserCount() > 0) {
+      return context.redirect('/app/login');
+    }
+  } else if (getUserCount() === 0 && (isAppRoute || pathname === '/app') && !isPublicApp) {
+    return context.redirect('/setup');
+  }
+
   let response: Response;
 
   if (isAppRoute && !isPublicApp && !context.locals.user) {

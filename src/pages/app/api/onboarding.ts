@@ -3,7 +3,16 @@ import { getTenantDb, tenantSchema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
-const VALID_STEPS = ['env', 'token', 'scanner', 'incident', 'diagnose', 'resolution'];
+export const VALID_STEPS = [
+  'license',
+  'environment',
+  'token',
+  'scanner',
+  'review',
+  'windlass',
+  'monitors',
+  'done',
+] as const;
 
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -63,7 +72,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  if (action === 'complete' && step && VALID_STEPS.includes(step) && !completed.includes(step)) {
+  if (action === 'complete' && step && (VALID_STEPS as readonly string[]).includes(step) && !completed.includes(step)) {
     completed.push(step);
     db.update(tenantSchema.tenantPreferences)
       .set({

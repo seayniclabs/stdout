@@ -3,7 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats } from '../../lib/hud';
-import { checkForUpdate, type UpdateCheckResult } from '../../lib/update-check';
+import { checkForUpdate, getLicenseNotice, type UpdateCheckResult } from '../../lib/update-check';
+import { getStoredLicense } from '../../lib/license';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -14,6 +15,7 @@ try {
   updateInfo = await checkForUpdate();
 } catch {}
 const hasUpdate = updateInfo?.hasUpdate ?? false;
+const licenseNotice = getLicenseNotice();
 
 const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
 
@@ -73,19 +75,26 @@ const prefs = db.select().from(tenantSchema.tenantPreferences)
 const onboardingDismissed = prefs?.onboardingDismissed ?? false;
 const savedProgress: string[] = prefs?.onboardingProgress ? JSON.parse(prefs.onboardingProgress) : [];
 
-// Auto-detect completed steps from actual data
+const confirmedImport = db.select().from(tenantSchema.stackImports)
+  .where(eq(tenantSchema.stackImports.status, 'confirmed'))
+  .all()
+  .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
+
+const windlassCfg = db.select().from(tenantSchema.windlassConfig)
+  .where(eq(tenantSchema.windlassConfig.userId, user.id))
+  .get();
+
 const autoCompleted = new Set(savedProgress);
-if (prefs?.workspaceName) autoCompleted.add('env');
+if (getStoredLicense()) autoCompleted.add('license');
+if (prefs?.workspaceName) autoCompleted.add('environment');
 if (hasToken) autoCompleted.add('token');
-if (stacksCount > 0) autoCompleted.add('scanner');
-if (allIncidents.length > 0) autoCompleted.add('incident');
-// Check for diagnoses and resolutions
-const hasDiagnosis = db.select().from(tenantSchema.diagnoses).all().length > 0;
-const hasResolution = db.select().from(tenantSchema.resolutions).all().length > 0;
-if (hasDiagnosis) autoCompleted.add('diagnose');
-if (hasResolution) autoCompleted.add('resolution');
+if (stacksCount > 0 || pendingImports.length > 0) autoCompleted.add('scanner');
+if (confirmedImport) autoCompleted.add('review');
+if (windlassCfg?.lastSyncedAt) autoCompleted.add('windlass');
+if (totalMonitors > 0) autoCompleted.add('monitors');
 const completedSteps = Array.from(autoCompleted);
-const totalSteps = 7;
+const totalSteps = 8;
+const allDone = completedSteps.length >= totalSteps || completedSteps.includes('done');
 
 // --- Add-ons banner state ---
 const addonsHidden = prefs?.addonsHidden ?? false;
@@ -93,7 +102,6 @@ const addonsDismissed = prefs?.addonsDismissed ?? false;
 const showAddonsBanner = !addonsHidden && !addonsDismissed;
 const completedCount = completedSteps.length;
 const progressPct = Math.round((completedCount / totalSteps) * 100);
-const allDone = completedCount >= totalSteps;
 const isNewUser = !onboardingDismissed && !allDone && (stacksCount === 0 && allIncidents.length === 0 && totalMonitors === 0);
 const showOnboarding = !onboardingDismissed && !allDone;
 
@@ -132,6 +140,12 @@ function timeAgo(date: Date) {
     )}
 
     {/* Update available banner */}
+    {licenseNotice && !licenseNotice.valid && (
+      <div class="update-banner" style="border-color: var(--warning);">
+        <span>{licenseNotice.message}</span>
+      </div>
+    )}
+
     {hasUpdate && updateInfo && (
       <div class="update-banner" id="updateBanner">
         <a href={updateInfo.releaseUrl} class="update-banner-link" target="_blank" rel="noopener">
@@ -174,79 +188,71 @@ function timeAgo(date: Date) {
           <span class="progress-label mono">{completedCount}/{totalSteps} complete</span>
         </div>
 
-        <div class="onboarding-steps">
-          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('env') ? 'done' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('env') ? '\u2713' : '1'}</div>
+        <div class="onboarding-steps" id="onboarding-steps">
+          <a href="/app/settings#license" class={`onboard-step ${completedSteps.includes('license') ? 'done' : 'active'}`} data-step="license">
+            <div class="step-num">{completedSteps.includes('license') ? '\u2713' : '1'}</div>
+            <div class="step-content">
+              <h4>Activate your license</h4>
+              <p>Enter the key from your purchase email, or skip to evaluate for 14 days.</p>
+            </div>
+            <span class="step-arrow">&rarr;</span>
+          </a>
+          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('environment') ? 'done' : ''}`} data-step="environment">
+            <div class="step-num">{completedSteps.includes('environment') ? '\u2713' : '2'}</div>
             <div class="step-content">
               <h4>Name your environment</h4>
-              <p>{completedSteps.includes('env') ? 'Workspace named.' : 'Give your setup an identity — "Home Lab," "Production," etc.'}</p>
+              <p>Label this install (e.g. Home Lab, Office Server).</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('token') ? 'done' : !completedSteps.includes('env') ? '' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('token') ? '\u2713' : '2'}</div>
+          <a href="/app/settings" class={`onboard-step ${completedSteps.includes('token') ? 'done' : ''}`} data-step="token">
+            <div class="step-num">{completedSteps.includes('token') ? '\u2713' : '3'}</div>
             <div class="step-content">
-              <h4>Generate an API key</h4>
-              <p>{completedSteps.includes('token') ? 'API token created.' : 'The scanner needs a token to push results.'}</p>
+              <h4>Create a scanner token</h4>
+              <p>Generate the API token the scanner uses to send data here.</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/docs/guide/scanner-setup" class={`onboard-step ${completedSteps.includes('scanner') ? 'done' : !completedSteps.includes('token') ? '' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('scanner') ? '\u2713' : '3'}</div>
+          <a href="/app/docs/guide/scanner-setup" class={`onboard-step ${completedSteps.includes('scanner') ? 'done' : ''}`} data-step="scanner">
+            <div class="step-num">{completedSteps.includes('scanner') ? '\u2713' : '4'}</div>
             <div class="step-content">
-              <h4>Install and run the scanner</h4>
-              <p>{completedSteps.includes('scanner') ? 'Scanner ran — infrastructure documented.' : 'Discover your containers, networks, and services automatically.'}</p>
+              <h4>Run the scanner</h4>
+              <p>Run the docker command on your host to discover stacks and containers.</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/incidents/new" class={`onboard-step ${completedSteps.includes('incident') ? 'done' : !completedSteps.includes('scanner') ? '' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('incident') ? '\u2713' : '4'}</div>
+          <a href={pendingImports[0] ? `/app/stacks/import/${pendingImports[0].id}` : '/app/stacks'} class={`onboard-step ${completedSteps.includes('review') ? 'done' : ''}`} data-step="review">
+            <div class="step-num">{completedSteps.includes('review') ? '\u2713' : '5'}</div>
             <div class="step-content">
-              <h4>Log your first incident</h4>
-              <p>{completedSteps.includes('incident') ? 'First incident logged.' : 'When something breaks, log it here.'}</p>
+              <h4>Review your environment</h4>
+              <p>Confirm discovered stacks and containers from the scan.</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/docs/guide/ai-features" class={`onboard-step ${completedSteps.includes('diagnose') ? 'done' : !completedSteps.includes('incident') ? '' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('diagnose') ? '\u2713' : '5'}</div>
+          <a href="/app/windlass" class={`onboard-step ${completedSteps.includes('windlass') ? 'done' : ''}`} data-step="windlass">
+            <div class="step-num">{completedSteps.includes('windlass') ? '\u2713' : '6'}</div>
             <div class="step-content">
-              <h4>Run AI diagnosis</h4>
-              <p>{completedSteps.includes('diagnose') ? 'AI diagnosis used.' : 'Let AI analyze your incident against your stack context.'}</p>
+              <h4>Configure Windlass</h4>
+              <p>Apply a generated schedule so Windlass can watch your services.</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/docs/guide/incidents" class={`onboard-step ${completedSteps.includes('resolution') ? 'done' : !completedSteps.includes('diagnose') ? '' : 'active'}`}>
-            <div class="step-num">{completedSteps.includes('resolution') ? '\u2713' : '6'}</div>
+          <a href="/app/hud" class={`onboard-step ${completedSteps.includes('monitors') ? 'done' : ''}`} data-step="monitors">
+            <div class="step-num">{completedSteps.includes('monitors') ? '\u2713' : '7'}</div>
             <div class="step-content">
-              <h4>Add your first resolution</h4>
-              <p>{completedSteps.includes('resolution') ? 'Resolution recorded.' : 'Document what actually fixed it — this builds your living runbook.'}</p>
+              <h4>Set up health checks</h4>
+              <p>Add monitors from your confirmed stacks (one-click suggestions on the HUD).</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-
-          <a href="/app/docs/guide/getting-started" class={`onboard-step ${allDone ? 'done' : ''}`}>
-            <div class="step-num">7</div>
+          <div class={`onboard-step ${allDone ? 'done' : ''}`} data-step="done">
+            <div class="step-num">{allDone ? '\u2713' : '8'}</div>
             <div class="step-content">
-              <h4>Read the docs</h4>
-              <p>Explore the full documentation to unlock everything StdOut offers.</p>
+              <h4>You're set up</h4>
+              <p>{stacksCount} stacks, {totalMonitors} monitors{windlassCfg?.lastSyncedAt ? ', Windlass connected' : ''}.</p>
             </div>
-            <span class="step-arrow">&rarr;</span>
-          </a>
-        </div>
-
-        {isNewUser && (
-          <div class="onboarding-alt">
-            <span class="alt-text">or skip setup and</span>
-            <a href="/app/incidents/new" class="alt-link">log an incident directly</a>
-            <span class="alt-text">&middot;</span>
-            <a href="/app/stacks" class="alt-link">describe a stack manually</a>
           </div>
-        )}
+        </div>
       </div>
     )}
 

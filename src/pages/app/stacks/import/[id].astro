@@ -267,6 +267,21 @@ function renderFilteredMarkdown(data: any): string {
           <pre class="preview-block">{importRecord.renderedMarkdown}</pre>
         </section>
 
+        {process.env.WINDLASS_URL && (
+          <section class="section" id="windlass-section">
+            <h2>Windlass (optional)</h2>
+            <p class="section-desc">After you confirm, generate a schedule.yaml for Windlass from this scan.</p>
+            <button type="button" class="btn btn-secondary" id="windlass-preview-btn">Configure Windlass</button>
+            <div id="windlass-panel" hidden>
+              <textarea id="windlass-yaml" class="windlass-yaml" rows="14" spellcheck="false"></textarea>
+              <div class="import-actions" style="border-top: none; padding-top: 8px;">
+                <button type="button" class="btn btn-primary" id="windlass-apply-btn">Apply configuration</button>
+                <span id="windlass-status" class="section-desc"></span>
+              </div>
+            </div>
+          </section>
+        )}
+
         <!-- Actions -->
         <div class="import-actions">
           <button type="submit" name="action" value="confirm" class="btn btn-primary">Confirm &amp; save stack</button>
@@ -276,6 +291,49 @@ function renderFilteredMarkdown(data: any): string {
     )}
   </div>
 </Layout>
+
+<script>
+  const previewBtn = document.getElementById('windlass-preview-btn');
+  const panel = document.getElementById('windlass-panel');
+  const yamlEl = document.getElementById('windlass-yaml') as HTMLTextAreaElement | null;
+  const applyBtn = document.getElementById('windlass-apply-btn');
+  const statusEl = document.getElementById('windlass-status');
+
+  previewBtn?.addEventListener('click', async () => {
+    if (!panel || !yamlEl) return;
+    statusEl && (statusEl.textContent = 'Generating…');
+    const res = await fetch('/app/api/windlass/generate-schedule', { method: 'POST', credentials: 'same-origin' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      statusEl && (statusEl.textContent = data.error || 'Generation failed');
+      return;
+    }
+    yamlEl.value = data.yaml || '';
+    panel.hidden = false;
+    statusEl && (statusEl.textContent = '');
+  });
+
+  applyBtn?.addEventListener('click', async () => {
+    if (!yamlEl) return;
+    statusEl && (statusEl.textContent = 'Applying…');
+    const res = await fetch('/app/api/windlass/schedule', {
+      method: 'PUT',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ yaml: yamlEl.value }),
+    });
+    const data = await res.json().catch(() => ({}));
+    statusEl && (statusEl.textContent = res.ok ? 'Schedule applied.' : (data.error || 'Apply failed'));
+    if (res.ok) {
+      await fetch('/app/api/onboarding', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'complete', step: 'windlass' }),
+      });
+    }
+  });
+</script>
 
 <style>
   .import-page { max-width: 800px; margin: 0 auto; }
@@ -310,6 +368,8 @@ function renderFilteredMarkdown(data: any): string {
   .import-actions { display: flex; gap: 12px; padding-top: 16px; border-top: 1px solid var(--border); }
   .import-done { text-align: center; padding: 40px; }
   .import-done p { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; }
+  .windlass-yaml { width: 100%; font-family: var(--font-mono); font-size: 11px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); padding: 12px; margin-top: 12px; }
+  .btn-secondary { background: var(--bg-surface); color: var(--text); border: 1px solid var(--border); }
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 20px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; cursor: pointer; text-decoration: none; transition: var(--transition); }
   .btn-primary { background: var(--accent-btn); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }

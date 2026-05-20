@@ -1,31 +1,27 @@
 import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
 
-// --- Central DB: auth, billing, API tokens, audit ---
-// Lives in data/central.db (SaaS) or data/stdout.db (self-host)
-
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
   email: text('email').notNull().unique(),
   passwordHash: text('password_hash').notNull(),
   displayName: text('display_name'),
-  subscriptionStatus: text('subscription_status', {
-    enum: ['active', 'free', 'past_due', 'expired', 'none'],
-  }).notNull().default('none'),
-  subscriptionTier: text('subscription_tier', {
-    enum: ['solo', 'shop', 'self-host'],
-  }),
-  subscriptionPeriodEnd: integer('subscription_period_end', { mode: 'timestamp' }),
   role: text('role', {
     enum: ['superadmin', 'admin', 'member'],
   }).notNull().default('member'),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   emailVerifiedAt: integer('email_verified_at', { mode: 'timestamp' }),
-  oidcSub: text('oidc_sub'),
-  stripeCustomerId: text('stripe_customer_id'),
   privacyAcceptedAt: integer('privacy_accepted_at', { mode: 'timestamp' }),
   dpaAcceptedAt: integer('dpa_accepted_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const license = sqliteTable('license', {
+  key: text('key').primaryKey(),
+  email: text('email').notNull(),
+  edition: text('edition').notNull().default('self-host'),
+  activatedAt: integer('activated_at', { mode: 'timestamp' }).notNull(),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
 });
 
 export const sessions = sqliteTable('sessions', {
@@ -65,18 +61,16 @@ export const auditLog = sqliteTable('audit_log', {
   id: text('id').primaryKey(),
   userId: text('user_id'),
   action: text('action').notNull(),
-  details: text('details'), // JSON context
+  details: text('details'),
   ip: text('ip'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
-// --- Team / RBAC (Shop tier) ---
-
 export const teamMembers = sqliteTable('team_members', {
   id: text('id').primaryKey(),
   ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // null until accepted
-  email: text('email').notNull(), // invited email
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
+  email: text('email').notNull(),
   role: text('role', {
     enum: ['admin', 'editor', 'viewer'],
   }).notNull().default('viewer'),
@@ -93,18 +87,16 @@ export const deletions = sqliteTable('deletions', {
   deletedAt: integer('deleted_at', { mode: 'timestamp' }).notNull(),
 });
 
-// --- Community Knowledge Base ---
-
 export const communitySubmissions = sqliteTable('community_submissions', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(), // submitter
-  originalDocId: text('original_doc_id').notNull(), // source doc in tenant DB
+  userId: text('user_id').notNull(),
+  originalDocId: text('original_doc_id').notNull(),
   sanitizedTitle: text('sanitized_title').notNull(),
   sanitizedContent: text('sanitized_content').notNull(),
   docType: text('doc_type').notNull().default('note'),
   tags: text('tags'),
-  sanitizationLog: text('sanitization_log'), // JSON: replacements made
-  valueScore: integer('value_score'), // 0-100
+  sanitizationLog: text('sanitization_log'),
+  valueScore: integer('value_score'),
   status: text('status', {
     enum: ['pending', 'published', 'rejected', 'withdrawn'],
   }).notNull().default('pending'),

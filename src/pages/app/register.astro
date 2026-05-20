@@ -3,21 +3,18 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { nanoid } from 'nanoid';
 import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
-import { createSession, SESSION_COOKIE } from '../../lib/auth';
+import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
 import { sendVerificationEmail } from '../../lib/email';
-import { isRegistrationFrozen, canRegister } from '../../lib/freeze';
-import { registerWithStore } from '../../lib/store-auth';
 
-const frozen = isRegistrationFrozen();
 let error = '';
 let email = '';
 let displayName = '';
 
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
-const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app/docs?filter=stdout';
+const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
@@ -43,10 +40,7 @@ if (Astro.request.method === 'POST') {
       error = 'Password must be at least 8 characters.';
     } else if (password !== confirm) {
       error = "Passwords don't match.";
-    } else if (!canRegister(email)) {
-      error = 'Registration is currently closed. Check back soon.';
     } else {
-      // Check if already registered locally (avoid duplicate store call)
       const existing = getCentralDb()
         .select()
         .from(centralSchema.users)
@@ -56,50 +50,26 @@ if (Astro.request.method === 'POST') {
       if (existing) {
         error = 'An account with that email already exists.';
       } else {
-        let storeUser = null;
-        try {
-          const result = await registerWithStore(email, password, displayName || null);
-          if ('error' in result) {
-            error = result.error === 'Email already registered'
-              ? 'An account with that email already exists.'
-              : result.error;
-          } else {
-            storeUser = result;
-          }
-        } catch {
-          error = 'Unable to reach account service. Please try again shortly.';
-        }
+        const id = nanoid();
+        const now = new Date();
+        const passwordHash = await hashPassword(password);
+        getCentralDb().insert(centralSchema.users).values({
+          id,
+          email,
+          passwordHash,
+          displayName,
+          role: 'member',
+          createdAt: now,
+          updatedAt: now,
+        }).run();
 
-        if (storeUser) {
-          const id = nanoid();
-          const now = new Date();
-          getCentralDb().insert(centralSchema.users).values({
-            id,
-            email: storeUser.email,
-            passwordHash: 'store-auth', // auth delegated to store; local hash unused
-            displayName: storeUser.displayName,
-            subscriptionStatus: 'none',
-            role: 'member',
-            createdAt: now,
-            updatedAt: now,
-          }).run();
+        getTenantDb(id);
+        logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
+        sendVerificationEmail(email, id).catch(() => {});
 
-          getTenantDb(id);
-          logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
-
-          // Send StdOut-specific verification email
-          sendVerificationEmail(storeUser.email, id).catch(() => {});
-
-          const sessionId = await createSession(id);
-          Astro.cookies.set(SESSION_COOKIE, sessionId, {
-            path: '/',
-            httpOnly: true,
-            secure: true,
-            sameSite: 'lax',
-            maxAge: 30 * 24 * 60 * 60,
-          });
-          return Astro.redirect(destination);
-        }
+        const sessionId = await createSession(id);
+        Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
+        return Astro.redirect(destination);
       }
     }
   }
@@ -112,7 +82,6 @@ if (Astro.locals.user) return Astro.redirect('/app');
     <h1>Create an account</h1>
     <p class="auth-subtitle">Start logging incidents and building your runbook.</p>
 
-    {frozen && <div class="auth-error">Registration is currently closed. Check back soon.</div>}
     {error && <div class="auth-error">{error}</div>}
 
     <form method="POST" class="auth-form">

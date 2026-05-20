@@ -17,7 +17,9 @@ COPY --from=build /app/package-lock.json ./
 RUN npm ci --omit=dev
 RUN apk del python3 make g++
 COPY --from=build /app/drizzle.config.ts ./
-COPY --from=build /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
+COPY --from=build /app/src/lib/db/central-schema.ts ./src/lib/db/central-schema.ts
+COPY --from=build /app/src/lib/db/tenant-schema.ts ./src/lib/db/tenant-schema.ts
+COPY --from=build /app/src/lib/db/index.ts ./src/lib/db/index.ts
 COPY --from=build /app/scripts ./scripts
 RUN chmod +x scripts/start.sh
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production

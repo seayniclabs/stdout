@@ -8,7 +8,6 @@ export const GET: APIRoute = async ({ locals }) => {
     id: locals.user.id,
     email: locals.user.email,
     displayName: locals.user.displayName,
-    subscriptionStatus: locals.user.subscriptionStatus,
     role: locals.user.role,
   }), { headers: { 'Content-Type': 'application/json' } });
 };

@@ -189,6 +189,16 @@ function runMigrations(sqlite: InstanceType<typeof Database>): void {
     CREATE INDEX IF NOT EXISTS idx_team_members_user ON team_members(user_id);
   `);
 
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS license (
+      key TEXT PRIMARY KEY NOT NULL,
+      email TEXT NOT NULL,
+      edition TEXT NOT NULL DEFAULT 'self-host',
+      activated_at INTEGER NOT NULL,
+      last_checked_at INTEGER
+    );
+  `);
+
   // Community Knowledge Base submissions (central DB)
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS community_submissions (
@@ -220,16 +230,20 @@ function runCentralDDL(sqlite: InstanceType<typeof Database>): void {
       email TEXT NOT NULL UNIQUE,
       password_hash TEXT NOT NULL,
       display_name TEXT,
-      subscription_status TEXT NOT NULL DEFAULT 'none',
       role TEXT NOT NULL DEFAULT 'member',
       email_verified INTEGER NOT NULL DEFAULT 0,
       email_verified_at INTEGER,
-      oidc_sub TEXT,
-      stripe_customer_id TEXT,
       privacy_accepted_at INTEGER,
       dpa_accepted_at INTEGER,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS license (
+      key TEXT PRIMARY KEY NOT NULL,
+      email TEXT NOT NULL,
+      edition TEXT NOT NULL DEFAULT 'self-host',
+      activated_at INTEGER NOT NULL,
+      last_checked_at INTEGER
     );
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,

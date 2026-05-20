@@ -24,15 +24,6 @@ export const GET: APIRoute = async ({ locals }) => {
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  // Tier gate: RBAC requires Shop
-  const { tier, limits } = getUserLimits(locals.user);
-  if (!limits.rbacEnabled) {
-    return new Response(JSON.stringify({
-      error: 'Team management requires the Shop plan.',
-      upgradeUrl: 'https://store.seayniclabs.com/products/stdout-shop',
-    }), { status: 403, headers: { 'Content-Type': 'application/json' } });
-  }
-
   const workspaceOwnerId = getWorkspaceOwnerId(locals);
   const teamBlock = checkRBAC(locals, 'manage_team');
   if (teamBlock) return teamBlock;

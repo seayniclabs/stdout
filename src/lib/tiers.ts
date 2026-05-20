@@ -1,7 +1,6 @@
-// Tier definitions and limit enforcement for StdOut subscriptions.
-// Tiers: free (default), solo ($12/mo), shop ($24/mo), self-host ($149 one-time)
+// Self-hosted StdOut — single tier, everything unlocked.
 
-export type TierName = 'free' | 'solo' | 'shop' | 'self-host';
+export type TierName = 'selfhost';
 
 export interface TierLimits {
   maxStacks: number;
@@ -17,114 +16,34 @@ export interface TierLimits {
   weeklyDigest: boolean;
 }
 
-const TIER_LIMITS: Record<TierName, TierLimits> = {
-  free: {
-    maxStacks: 1,
-    maxIncidentsPerMonth: 10,
-    maxDocsStorageMB: 100,
-    maxMonitors: 3,
-    aiModel: 'haiku',
-    backupsEnabled: false,
-    templatesEnabled: false,
-    maxSeats: 1,
-    rbacEnabled: false,
-    publicStatusPages: false,
-    weeklyDigest: false,
-  },
-  solo: {
-    maxStacks: Infinity,
-    maxIncidentsPerMonth: Infinity,
-    maxDocsStorageMB: 1024,
-    maxMonitors: 25,
-    aiModel: 'sonnet',
-    backupsEnabled: true,
-    templatesEnabled: true,
-    maxSeats: 1,
-    rbacEnabled: false,
-    publicStatusPages: true,
-    weeklyDigest: true,
-  },
-  shop: {
-    maxStacks: Infinity,
-    maxIncidentsPerMonth: Infinity,
-    maxDocsStorageMB: 5120,
-    maxMonitors: 100,
-    aiModel: 'sonnet',
-    backupsEnabled: true,
-    templatesEnabled: true,
-    maxSeats: 5,
-    rbacEnabled: true,
-    publicStatusPages: true,
-    weeklyDigest: true,
-  },
-  'self-host': {
-    maxStacks: Infinity,
-    maxIncidentsPerMonth: Infinity,
-    maxDocsStorageMB: Infinity,
-    maxMonitors: Infinity,
-    aiModel: 'sonnet',
-    backupsEnabled: true,
-    templatesEnabled: true,
-    maxSeats: 1,
-    rbacEnabled: false,
-    publicStatusPages: true,
-    weeklyDigest: true,
-  },
+const SELFHOST_LIMITS: TierLimits = {
+  maxStacks: Infinity,
+  maxIncidentsPerMonth: Infinity,
+  maxDocsStorageMB: Infinity,
+  maxMonitors: Infinity,
+  aiModel: 'sonnet',
+  backupsEnabled: true,
+  templatesEnabled: true,
+  maxSeats: Infinity,
+  rbacEnabled: true,
+  publicStatusPages: true,
+  weeklyDigest: true,
 };
 
-/**
- * Resolve the effective tier for a user based on their subscription status and tier.
- * Superadmins always get full access.
- */
-export function getEffectiveTier(
-  subscriptionStatus: string,
-  subscriptionTier: string | null,
-  role?: string
-): TierName {
-  // Superadmins bypass all limits
-  if (role === 'superadmin') return 'self-host';
-
-  // Active subscription → use their tier
-  if (subscriptionStatus === 'active' || subscriptionStatus === 'past_due') {
-    const tier = subscriptionTier as TierName;
-    if (tier && TIER_LIMITS[tier]) return tier;
-    return 'solo'; // fallback if tier is missing but status is active
-  }
-
-  return 'free';
+export function getEffectiveTier(_subscriptionStatus?: string, _subscriptionTier?: string | null, role?: string): TierName {
+  if (role === 'superadmin') return 'selfhost';
+  return 'selfhost';
 }
 
-/**
- * Get the limits for a tier.
- */
-export function getTierLimits(tier: TierName): TierLimits {
-  return TIER_LIMITS[tier];
+export function getTierLimits(_tier: TierName = 'selfhost'): TierLimits {
+  return SELFHOST_LIMITS;
 }
 
-/**
- * Get limits for a user based on their session data.
- */
-export function getUserLimits(user: {
-  subscriptionStatus: string;
-  subscriptionTier: string | null;
-  role: string;
-}): { tier: TierName; limits: TierLimits } {
-  const tier = getEffectiveTier(user.subscriptionStatus, user.subscriptionTier, user.role);
+export function getUserLimits(user: { role: string }): { tier: TierName; limits: TierLimits } {
+  const tier = getEffectiveTier(undefined, undefined, user.role);
   return { tier, limits: getTierLimits(tier) };
 }
 
-/**
- * Store upgrade URL — points to the store product page.
- */
-export function getUpgradeUrl(targetTier?: TierName): string {
-  switch (targetTier) {
-    case 'solo':
-      return 'https://store.seayniclabs.com/products/stdout-solo';
-    case 'shop':
-      return 'https://store.seayniclabs.com/products/stdout-shop';
-    case 'self-host':
-      return 'https://store.seayniclabs.com/products/stdout-self-host';
-    default:
-      return 'https://store.seayniclabs.com/products/stdout-solo';
-  }
+export function getUpgradeUrl(): string {
+  return 'https://stdout.seayniclabs.com';
 }

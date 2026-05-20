@@ -1,16 +1,13 @@
 /**
- * Update check — fetches the latest published version from the store
- * and compares it against the local version from package.json.
- *
- * - 5-second timeout, silent failure (never blocks the app)
- * - Caches result for 24 hours in a module-level variable
+ * Update check — contacts stdout.seayniclabs.com with version + license key.
+ * Offline-first: network failure never locks the app.
  */
 
-// Version injected at build time via astro.config.mjs define, or fallback to env var
-const CURRENT_VERSION = import.meta.env.STDOUT_VERSION || process.env.STDOUT_VERSION || '1.1.0';
+import { getLicenseKeyForUpdateCheck, touchLicenseCheckedAt } from './license';
 
-const STORE_URL = 'https://seayniclabs.com/api/products/stdout-self-host/latest.json';
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CURRENT_VERSION = import.meta.env.STDOUT_VERSION || process.env.STDOUT_VERSION || '1.1.0';
+const UPDATE_URL = 'https://stdout.seayniclabs.com/api/updates';
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5_000;
 
 export interface UpdateCheckResult {
@@ -18,15 +15,19 @@ export interface UpdateCheckResult {
   currentVersion: string;
   latestVersion: string;
   releaseUrl: string;
+  licenseValid?: boolean;
+  licenseMessage?: string;
 }
 
 let cachedResult: UpdateCheckResult | null = null;
 let cachedAt = 0;
 
-/**
- * Compare two semver strings (major.minor.patch).
- * Returns true if remote is newer than local.
- */
+let licenseNotice: { valid: boolean; message: string } | null = null;
+
+export function getLicenseNotice(): { valid: boolean; message: string } | null {
+  return licenseNotice;
+}
+
 function isNewer(remote: string, local: string): boolean {
   const r = remote.split('.').map(Number);
   const l = local.split('.').map(Number);
@@ -37,44 +38,66 @@ function isNewer(remote: string, local: string): boolean {
   return false;
 }
 
-/**
- * Check for available updates. Returns the result or null on any error.
- * Cached for 24 hours to avoid hammering the store.
- */
 export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
-  // Return cached result if still fresh
   if (cachedResult && Date.now() - cachedAt < CACHE_TTL_MS) {
     return cachedResult;
   }
+
+  const licenseKey = getLicenseKeyForUpdateCheck();
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const res = await fetch(STORE_URL, {
+    const res = await fetch(UPDATE_URL, {
+      method: 'POST',
       signal: controller.signal,
-      headers: { Accept: 'application/json' },
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        version: CURRENT_VERSION,
+        licenseKey: licenseKey || undefined,
+      }),
     });
     clearTimeout(timeout);
 
     if (!res.ok) return null;
 
-    const data = await res.json() as { version: string; releaseUrl: string };
+    const data = await res.json() as {
+      version?: string;
+      latestVersion?: string;
+      updateAvailable?: boolean;
+      releaseUrl?: string;
+      licenseValid?: boolean;
+      message?: string;
+    };
+
+    touchLicenseCheckedAt();
+
+    const latestVersion = data.latestVersion || data.version || CURRENT_VERSION;
     const currentVersion: string = CURRENT_VERSION;
-    const latestVersion = data.version;
+
+    if (data.licenseValid === false) {
+      licenseNotice = {
+        valid: false,
+        message: data.message || 'Your license could not be verified — visit stdout.seayniclabs.com to reactivate.',
+      };
+    } else {
+      licenseNotice = null;
+    }
 
     const result: UpdateCheckResult = {
-      hasUpdate: isNewer(latestVersion, currentVersion),
+      hasUpdate: data.updateAvailable ?? isNewer(latestVersion, currentVersion),
       currentVersion,
       latestVersion,
-      releaseUrl: data.releaseUrl || 'https://store.seayniclabs.com/account/downloads',
+      releaseUrl: data.releaseUrl || 'https://stdout.seayniclabs.com',
+      licenseValid: data.licenseValid ?? true,
+      licenseMessage: data.message,
     };
 
     cachedResult = result;
     cachedAt = Date.now();
     return result;
   } catch {
-    // Silent failure — network errors, timeouts, parse errors all return null
     return null;
   }
 }

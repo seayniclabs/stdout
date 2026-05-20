@@ -45,7 +45,6 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
   getCentralDb().update(centralSchema.users).set({
     email: `deleted_${emailHash.substring(0, 12)}@deleted`,
     role: 'member' as const,
-    subscriptionStatus: 'none' as const,
     updatedAt: new Date(),
   }).where(eq(centralSchema.users.id, userId)).run();
 

@@ -11,51 +11,43 @@ services:
       - TZ=America/Chicago
       - STDOUT_MODE=selfhost
       - DB_PATH=/data/stdout.db
-      # Optional: add your own AI keys for diagnostics (BYOK)
+      - APP_URL=http://localhost:8112
+      - WINDLASS_URL=http://windlass:8116
+      # - SECRET_KEY=<generate-32-char-random>
       # - ANTHROPIC_API_KEY=sk-ant-...
-      # - OPENAI_API_KEY=sk-...
-      # Optional: email notifications
       # - RESEND_API_KEY=re_...
-      # Optional: connect to Windlass engine (if running separately)
-      # - WINDLASS_URL=http://host.docker.internal:8116
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      windlass:
+        condition: service_healthy
     networks:
       - stdout-net
 
-  # -------------------------------------------------------------------------
-  # Windlass (optional) — schedule-aware Docker service manager
-  #
-  # Windlass is a separate component. You do NOT need it to use StdOut.
-  # Add it if you want to automatically start/stop Docker Compose stacks
-  # on a schedule and have StdOut monitor them with schedule-aware alerting.
-  #
-  # To start StdOut + Windlass together:
-  #   docker compose --profile windlass up -d
-  #
-  # To start StdOut only:
-  #   docker compose up -d
-  #
-  # After starting Windlass, go to StdOut → Windlass → enter
-  # http://host.docker.internal:8116 → Connect → Sync.
-  # -------------------------------------------------------------------------
   windlass:
-    profiles: [windlass]
     image: ghcr.io/seayniclabs/windlass:latest
     container_name: windlass
     restart: unless-stopped
     ports:
       - "8116:8116"
     volumes:
-      # Your schedule.yaml and state live here
-      - /opt/windlass:/opt/windlass
-      # Docker socket — required so Windlass can start/stop containers on the host
+      - ./windlass-config:/opt/windlass
       - /var/run/docker.sock:/var/run/docker.sock
-      # Mount your compose directories so Windlass can manage them
-      # Add one line per compose stack in your schedule.yaml, e.g.:
-      # - /opt/containers:/opt/containers
     environment:
       - TZ=America/Chicago
       - WINDLASS_CONFIG=/opt/windlass
       - WINDLASS_INTERVAL=300
+      - STDOUT_URL=http://stdout:3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8116/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     networks:
       - stdout-net
 

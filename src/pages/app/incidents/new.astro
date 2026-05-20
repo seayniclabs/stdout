@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
 import { notify } from '../../../lib/notify';
-import { getUserLimits, getUpgradeUrl } from '../../../lib/tiers';
+import { getUserLimits } from '../../../lib/tiers';
 import { canPerform } from '../../../lib/rbac';
 
 const user = Astro.locals.user;

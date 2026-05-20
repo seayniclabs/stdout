@@ -1,6 +1,6 @@
 import { hash, verify } from '@node-rs/argon2';
 import { nanoid } from 'nanoid';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { getCentralDb, centralSchema } from './db';
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -10,6 +10,7 @@ export async function hashPassword(password: string): Promise<string> {
 }
 
 export async function verifyPassword(storedHash: string, password: string): Promise<boolean> {
+  if (storedHash === 'store-auth') return false;
   return verify(storedHash, password);
 }
 
@@ -24,11 +25,16 @@ export type SessionUser = {
   id: string;
   email: string;
   displayName: string | null;
-  subscriptionStatus: string;
-  subscriptionTier: string | null;
   role: 'superadmin' | 'admin' | 'member';
-  stripeCustomerId: string | null;
 };
+
+export function getUserCount(): number {
+  const row = getCentralDb()
+    .select({ count: sql<number>`count(*)` })
+    .from(centralSchema.users)
+    .get();
+  return Number(row?.count ?? 0);
+}
 
 export function validateSession(sessionId: string): SessionUser | null {
   const row = getCentralDb()
@@ -38,10 +44,7 @@ export function validateSession(sessionId: string): SessionUser | null {
       userId: centralSchema.users.id,
       email: centralSchema.users.email,
       displayName: centralSchema.users.displayName,
-      subscriptionStatus: centralSchema.users.subscriptionStatus,
-      subscriptionTier: centralSchema.users.subscriptionTier,
       role: centralSchema.users.role,
-      stripeCustomerId: centralSchema.users.stripeCustomerId,
     })
     .from(centralSchema.sessions)
     .innerJoin(centralSchema.users, eq(centralSchema.sessions.userId, centralSchema.users.id))
@@ -55,7 +58,6 @@ export function validateSession(sessionId: string): SessionUser | null {
   if (rawExpiresAt instanceof Date) {
     expiresAtMs = rawExpiresAt.getTime();
   } else if (typeof rawExpiresAt === 'number') {
-    // SQLite integer timestamps may come back as seconds since epoch.
     expiresAtMs = rawExpiresAt > 1_000_000_000_000 ? rawExpiresAt : rawExpiresAt * 1000;
   } else if (typeof rawExpiresAt === 'string' && /^\d+$/.test(rawExpiresAt)) {
     const n = Number(rawExpiresAt);
@@ -73,10 +75,7 @@ export function validateSession(sessionId: string): SessionUser | null {
     id: row.userId,
     email: row.email,
     displayName: row.displayName,
-    subscriptionStatus: row.subscriptionStatus,
-    subscriptionTier: row.subscriptionTier,
     role: row.role as SessionUser['role'],
-    stripeCustomerId: row.stripeCustomerId,
   };
 }
 
@@ -84,8 +83,19 @@ export function deleteSession(sessionId: string): void {
   getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
 }
 
-// Cookie name: shared across .seayniclabs.com domain
 export const SESSION_COOKIE = 'sl_session';
+
+/** Secure cookies only when APP_URL is HTTPS (local HTTP dev/tests need secure: false). */
+export function sessionCookieOptions(maxAge: number) {
+  const secure = (process.env.APP_URL || '').startsWith('https://');
+  return {
+    path: '/',
+    httpOnly: true,
+    secure,
+    sameSite: 'lax' as const,
+    maxAge,
+  };
+}
 
 export function getSessionFromCookies(cookies: any): string | undefined {
   return cookies.get(SESSION_COOKIE)?.value;

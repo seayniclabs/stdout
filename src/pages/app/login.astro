@@ -2,12 +2,10 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
-import { createSession, SESSION_COOKIE } from '../../lib/auth';
+import { createSession, SESSION_COOKIE, sessionCookieOptions, verifyPassword } from '../../lib/auth';
 import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
-import { validateWithStore } from '../../lib/store-auth';
 import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
 
 const rawRedirect = Astro.url.searchParams.get('redirect') || '';
 const redirectTo = (rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')) ? rawRedirect : '/app';
@@ -38,57 +36,27 @@ if (Astro.request.method === 'POST') {
         const mins = Math.ceil((lockout.retryAfterSec || 0) / 60);
         error = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
       } else {
-        let storeUser = null;
-        try {
-          storeUser = await validateWithStore(email, password);
-        } catch {
-          error = 'Unable to reach account service. Please try again shortly.';
-        }
+        const localUser = getCentralDb()
+          .select()
+          .from(centralSchema.users)
+          .where(eq(centralSchema.users.email, email))
+          .get();
 
-        if (!error) {
-          if (!storeUser) {
+        if (!localUser) {
+          recordFailedLogin(email);
+          error = 'Invalid email or password.';
+        } else if (localUser.passwordHash === 'store-auth') {
+          error = 'This account was created via the hosted service. Please reset your password to continue.';
+        } else {
+          const valid = await verifyPassword(localUser.passwordHash, password);
+          if (!valid) {
             recordFailedLogin(email);
             error = 'Invalid email or password.';
           } else {
             resetLoginAttempts(email);
-
-            // Find or create the local StdOut user record (keyed by email)
-            let localUser = getCentralDb()
-              .select()
-              .from(centralSchema.users)
-              .where(eq(centralSchema.users.email, storeUser.email))
-              .get();
-
-            if (!localUser) {
-              const id = nanoid();
-              const now = new Date();
-              getCentralDb().insert(centralSchema.users).values({
-                id,
-                email: storeUser.email,
-                passwordHash: 'store-auth', // auth delegated to store; local hash unused
-                displayName: storeUser.displayName,
-                subscriptionStatus: 'none',
-                role: 'member',
-                createdAt: now,
-                updatedAt: now,
-              }).run();
-              getTenantDb(id);
-              localUser = getCentralDb()
-                .select()
-                .from(centralSchema.users)
-                .where(eq(centralSchema.users.email, storeUser.email))
-                .get()!;
-            }
-
             const sessionId = await createSession(localUser.id);
-            logAudit('login', { userId: localUser.id, ip: getClientIp(Astro.request), details: { method: 'store-auth' } });
-            Astro.cookies.set(SESSION_COOKIE, sessionId, {
-              path: '/',
-              httpOnly: true,
-              secure: true,
-              sameSite: 'lax',
-              maxAge: 30 * 24 * 60 * 60,
-            });
+            logAudit('login', { userId: localUser.id, ip: getClientIp(Astro.request), details: { method: 'local' } });
+            Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
             return Astro.redirect(destination);
           }
         }

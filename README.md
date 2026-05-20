@@ -7,14 +7,15 @@ AI-assisted incident companion for self-hosters and solo developers. Turns your 
 ```bash
 mkdir stdout && cd stdout
 
-# Download the compose file
 curl -o docker-compose.yml https://raw.githubusercontent.com/seayniclabs/stdout/main/docker-compose.yml
+curl -o .env.example https://raw.githubusercontent.com/seayniclabs/stdout/main/.env.example
+cp .env.example .env
+# Edit .env: set APP_URL and SECRET_KEY (32+ random characters)
 
-# Start StdOut
 docker compose up -d
 ```
 
-Open `http://localhost:8112` to get started.
+Open `APP_URL` (default `http://localhost:8112`) and complete the setup wizard to create your admin account. StdOut and Windlass start together.
 
 ---
 
@@ -22,7 +23,7 @@ Open `http://localhost:8112` to get started.
 
 StdOut is one Docker container. It includes the web UI, API, AI diagnostic engine, scanner, HUD, and knowledge base — everything runs in a single image.
 
-**Windlass is a separate, optional component.** It is not required to use StdOut.
+**Windlass ships in the default `docker compose` stack** and is optional to configure after install.
 
 ```
 ┌─────────────────────────────────────────┐
