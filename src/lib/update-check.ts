@@ -1,12 +1,14 @@
 /**
- * Update check — contacts stdout.seayniclabs.com with version + license key.
+ * Update check — store.seayniclabs.com updates API.
  * Offline-first: network failure never locks the app.
  */
 
 import { getLicenseKeyForUpdateCheck, touchLicenseCheckedAt } from './license';
 
 const CURRENT_VERSION = import.meta.env.STDOUT_VERSION || process.env.STDOUT_VERSION || '1.1.0';
-const UPDATE_URL = 'https://stdout.seayniclabs.com/api/updates';
+const STORE_UPDATE_URL =
+  process.env.STORE_UPDATE_URL || 'https://store.seayniclabs.com/api/updates/stdout-self-host/stable';
+const STORE_PRODUCT_URL = 'https://store.seayniclabs.com/products/stdout-self-host';
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const FETCH_TIMEOUT_MS = 5_000;
 
@@ -15,8 +17,13 @@ export interface UpdateCheckResult {
   currentVersion: string;
   latestVersion: string;
   releaseUrl: string;
+  /** @deprecated use subscriptionActive — true when subscription_active or lifetime */
   licenseValid?: boolean;
   licenseMessage?: string;
+  subscriptionActive: boolean;
+  entitledVersion: string | null;
+  lifetime: boolean;
+  fileHash: string | null;
 }
 
 let cachedResult: UpdateCheckResult | null = null;
@@ -44,54 +51,88 @@ export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
   }
 
   const licenseKey = getLicenseKeyForUpdateCheck();
+  if (!licenseKey) {
+    licenseNotice = {
+      valid: false,
+      message: 'No license key configured. Add your key in Settings to check for updates.',
+    };
+    return null;
+  }
 
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-    const res = await fetch(UPDATE_URL, {
-      method: 'POST',
+    const res = await fetch(STORE_UPDATE_URL, {
+      method: 'GET',
       signal: controller.signal,
-      headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        version: CURRENT_VERSION,
-        licenseKey: licenseKey || undefined,
-      }),
+      headers: {
+        Accept: 'application/json',
+        'X-License-Key': licenseKey,
+        'X-Current-Version': CURRENT_VERSION,
+      },
     });
     clearTimeout(timeout);
+
+    if (res.status === 401) {
+      let errMsg = 'Invalid or expired license key.';
+      try {
+        const err = await res.json() as { error?: string; reason?: string };
+        errMsg = err.error || err.reason || errMsg;
+      } catch { /* ignore */ }
+      licenseNotice = { valid: false, message: errMsg };
+      const invalid: UpdateCheckResult = {
+        hasUpdate: false,
+        currentVersion: CURRENT_VERSION,
+        latestVersion: CURRENT_VERSION,
+        releaseUrl: STORE_PRODUCT_URL,
+        licenseValid: false,
+        licenseMessage: errMsg,
+        subscriptionActive: false,
+        entitledVersion: null,
+        lifetime: false,
+        fileHash: null,
+      };
+      cachedResult = invalid;
+      cachedAt = Date.now();
+      return invalid;
+    }
 
     if (!res.ok) return null;
 
     const data = await res.json() as {
-      version?: string;
-      latestVersion?: string;
-      updateAvailable?: boolean;
-      releaseUrl?: string;
-      licenseValid?: boolean;
-      message?: string;
+      update_available?: boolean;
+      latest_version?: string | null;
+      download_url?: string | null;
+      file_hash?: string | null;
+      subscription_active?: boolean;
+      entitled_version?: string | null;
+      lifetime?: boolean;
+      message?: string | null;
     };
 
     touchLicenseCheckedAt();
 
-    const latestVersion = data.latestVersion || data.version || CURRENT_VERSION;
-    const currentVersion: string = CURRENT_VERSION;
+    const lifetime = data.lifetime === true;
+    const subscriptionActive = lifetime || data.subscription_active === true;
+    const latestVersion = data.latest_version || CURRENT_VERSION;
 
-    if (data.licenseValid === false) {
-      licenseNotice = {
-        valid: false,
-        message: data.message || 'Your license could not be verified — visit stdout.seayniclabs.com to reactivate.',
-      };
-    } else {
-      licenseNotice = null;
+    licenseNotice = null;
+    if (!subscriptionActive && !lifetime && data.message) {
+      licenseNotice = { valid: false, message: data.message };
     }
 
     const result: UpdateCheckResult = {
-      hasUpdate: data.updateAvailable ?? isNewer(latestVersion, currentVersion),
-      currentVersion,
+      hasUpdate: data.update_available ?? isNewer(latestVersion, CURRENT_VERSION),
+      currentVersion: CURRENT_VERSION,
       latestVersion,
-      releaseUrl: data.releaseUrl || 'https://stdout.seayniclabs.com',
-      licenseValid: data.licenseValid ?? true,
-      licenseMessage: data.message,
+      releaseUrl: data.download_url || STORE_PRODUCT_URL,
+      licenseValid: subscriptionActive,
+      licenseMessage: data.message || undefined,
+      subscriptionActive,
+      entitledVersion: data.entitled_version ?? null,
+      lifetime,
+      fileHash: data.file_hash ?? null,
     };
 
     cachedResult = result;

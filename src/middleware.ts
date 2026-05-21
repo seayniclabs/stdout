@@ -203,6 +203,30 @@ setInterval(async () => {
   }
 }, 60 * 60 * 1000); // Check every hour
 
+// Community library sync — daily at 03:00 UTC, pulls new/updated docs from stdout.seayniclabs.com/library
+let lastCommunitySyncDate = '';
+setInterval(async () => {
+  const now = new Date();
+  const hour = now.getUTCHours();
+  const dateStr = now.toISOString().split('T')[0];
+  if (hour !== 3 || lastCommunitySyncDate === dateStr) return;
+  lastCommunitySyncDate = dateStr;
+  try {
+    const { syncCommunityLibrary } = await import('./lib/community-kb');
+    const { getCentralDb, centralSchema } = await import('./lib/db');
+    const users = getCentralDb().select({ id: centralSchema.users.id })
+      .from(centralSchema.users).all();
+    for (const u of users) {
+      const summary = await syncCommunityLibrary(u.id);
+      if (!summary.skipped && (summary.added || summary.updated || summary.removed)) {
+        console.log(`[community-sync] user=${u.id} +${summary.added}/~${summary.updated}/-${summary.removed} v=${summary.syncVersion}`);
+      }
+    }
+  } catch (err) {
+    console.error('[community-sync] daily sync failed:', err);
+  }
+}, 60 * 60 * 1000); // Check every hour, fires once at 03:xx UTC
+
 // Windlass Phase 3 — native scanner modules (replace n8n heartbeat + weekly scanners)
 startHeartbeat();
 scheduleCveScanner();

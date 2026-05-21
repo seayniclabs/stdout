@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getCentralDb, centralSchema } from '../../../lib/db';
 import { eq, gt, and } from 'drizzle-orm';
+import { syncCommunityLibrary } from '../../../lib/community-kb';
 
 /**
  * GET /app/api/community-sync?since_version=0
@@ -46,6 +47,24 @@ export const GET: APIRoute = async ({ url }) => {
     withdrawn: withdrawn.map(w => w.id),
     syncVersion: Math.max(sinceVersion, ...docs.map(d => d.version), 0),
   }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+};
+
+/**
+ * POST /app/api/community-sync
+ *
+ * Pulls new/updated community docs from stdout.seayniclabs.com/library and imports
+ * them into the local docs table with source='community'. Withdrawn docs are removed.
+ *
+ * Auth: requires an authenticated user. Sync is scoped to that user's workspace.
+ */
+export const POST: APIRoute = async ({ locals }) => {
+  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const workspaceUserId = locals.workspace?.ownerId || locals.user.id;
+  const summary = await syncCommunityLibrary(workspaceUserId);
+  return new Response(JSON.stringify(summary), {
+    status: summary.error ? 502 : 200,
     headers: { 'Content-Type': 'application/json' },
   });
 };
