@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { getCentralDb, centralSchema } from './db';
 
-const LICENSE_KEY_RE = /^[A-Z0-9]{4,8}(-[A-Z0-9]{4,8}){3,}$/i;
+const LICENSE_KEY_RE = /^[A-Z0-9]{2,8}(-[A-Z0-9]{4,32}){1,}$/i;
 
 export function isValidLicenseKeyFormat(key: string): boolean {
   const trimmed = key.trim();
