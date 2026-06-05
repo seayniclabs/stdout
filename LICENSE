@@ -33,6 +33,28 @@ To obtain a commercial license, visit: https://store.seayniclabs.com/products/st
 
 3. **No Warranty** - This software is provided "AS IS" without warranty of any kind, express or implied. In no event shall the authors be liable for any claim, damages, or other liability.
 
+### Disclaimer of Liability
+
+**USE AT YOUR OWN RISK.** Seaynic Labs LLC and Charlie Seay are not responsible for:
+
+- Any damage to your systems, infrastructure, or data
+- Security vulnerabilities in your environment
+- Service outages or downtime
+- Data loss or corruption
+- Actions you take based on StdOut's suggestions or AI-generated recommendations
+- Misconfigurations or incorrect deployments
+- Any other direct, indirect, incidental, or consequential damages
+
+StdOut is a tool. You are solely responsible for:
+- How you configure and deploy it
+- What systems you connect it to
+- Actions you take based on its output
+- Security and access control in your environment
+- Backup and disaster recovery procedures
+- Compliance with applicable laws and regulations
+
+By using this software, you acknowledge that infrastructure management is inherently risky and that automated tools can make mistakes. You agree to independently verify all recommendations before acting on them.
+
 4. **Attribution** - You must retain all copyright notices and license information in any copy or substantial portion of the software.
 
 ### Source Code Availability
