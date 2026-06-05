@@ -51,7 +51,7 @@ if (Astro.request.method === 'POST') {
 
       const sessionId = await createSession(id);
       Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
-      return Astro.redirect('/app');
+      return Astro.redirect('/setup/license');
     }
   }
 }

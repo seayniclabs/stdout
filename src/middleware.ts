@@ -8,6 +8,7 @@ import { startHeartbeat } from './lib/scanner-heartbeat';
 import { scheduleCveScanner } from './lib/scanner-cve';
 import { scheduleDockerHubScanner } from './lib/scanner-docker-hub';
 import { scheduleShodanScanner } from './lib/scanner-shodan';
+import { getStoredLicense } from './lib/license';
 
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event'];
@@ -315,8 +316,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (getUserCount() > 0) {
       return context.redirect('/app/login');
     }
+  } else if (pathname === '/setup/license') {
+    // Allow access to license page after admin creation
+    if (getUserCount() === 0) {
+      return context.redirect('/setup');
+    }
   } else if (getUserCount() === 0 && (isAppRoute || pathname === '/app') && !isPublicApp) {
     return context.redirect('/setup');
+  } else if (getUserCount() > 0 && !getStoredLicense() && (isAppRoute || pathname === '/app') && !isPublicApp) {
+    // License required for all /app/* routes (except public paths)
+    return context.redirect('/setup/license');
   }
 
   let response: Response;
