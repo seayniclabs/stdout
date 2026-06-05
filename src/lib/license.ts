@@ -36,3 +36,18 @@ export function touchLicenseCheckedAt(): void {
     .where(eq(centralSchema.license.key, row.key))
     .run();
 }
+
+export function hasValidLicense(): boolean {
+  return !!getStoredLicense();
+}
+
+export function requireLicense(): { valid: false; message: string } | { valid: true } {
+  const license = getStoredLicense();
+  if (!license) {
+    return {
+      valid: false,
+      message: 'This feature requires a valid license. Please activate your license in Settings.',
+    };
+  }
+  return { valid: true };
+}

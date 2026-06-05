@@ -2,9 +2,16 @@
 export const prerender = false;
 import Layout from '../../../../layouts/Layout.astro';
 import { getAllServices, getConfig, getRecentEvents, getServiceSummary } from '../../../../lib/windlass';
+import { requireLicense } from '../../../../lib/license';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+
+// License check
+const licenseCheck = requireLicense();
+if (!licenseCheck.valid) {
+  return Astro.redirect('/app/settings?error=' + encodeURIComponent(licenseCheck.message));
+}
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
 const config = getConfig(userId);

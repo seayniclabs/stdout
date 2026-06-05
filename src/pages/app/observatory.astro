@@ -1,9 +1,16 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
+import { requireLicense } from '../../lib/license';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
+
+// License check
+const licenseCheck = requireLicense();
+if (!licenseCheck.valid) {
+  return Astro.redirect('/app/settings?error=' + encodeURIComponent(licenseCheck.message));
+}
 
 // TODO: Fetch Observatory data from Sentinel API
 const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';

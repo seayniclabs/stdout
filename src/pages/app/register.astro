@@ -3,11 +3,13 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { nanoid } from 'nanoid';
 import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
-import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
+import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword, getUserCount } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
 import { sendVerificationEmail } from '../../lib/email';
+
+const MAX_USERS_BUILTIN = 10;
 
 let error = '';
 let email = '';
@@ -40,6 +42,8 @@ if (Astro.request.method === 'POST') {
       error = 'Password must be at least 8 characters.';
     } else if (password !== confirm) {
       error = "Passwords don't match.";
+    } else if (getUserCount() >= MAX_USERS_BUILTIN) {
+      error = 'Maximum user limit reached (10 users for builtin authentication). Contact your administrator or use OIDC.';
     } else {
       const existing = getCentralDb()
         .select()

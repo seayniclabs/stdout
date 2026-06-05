@@ -4,6 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
 import { checkRBAC } from '../../../../lib/rbac';
+import { requireLicense } from '../../../../lib/license';
 
 const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
 
@@ -24,6 +25,15 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
   const rbacBlock = checkRBAC(locals, 'create');
   if (rbacBlock) return rbacBlock;
+
+  // License check
+  const licenseCheck = requireLicense();
+  if (!licenseCheck.valid) {
+    return new Response(JSON.stringify({ error: licenseCheck.message }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   // Tier gate: stack count
   const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
