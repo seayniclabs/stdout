@@ -21,13 +21,15 @@ Open `APP_URL` (default `http://localhost:8112`) and complete the setup wizard t
 
 ## Architecture
 
-StdOut is one Docker container. It includes the web UI, API, AI diagnostic engine, scanner, HUD, and knowledge base — everything runs in a single image.
+StdOut is one Docker container with three optional components:
 
-**Windlass ships in the default `docker compose` stack** and is optional to configure after install.
+1. **StdOut Core** (port 8112) - Incident companion, dashboard, AI diagnostics, knowledge base
+2. **Windlass** (port 8116) - Schedule-aware Docker service manager *(optional)*
+3. **Observatory** (port 8080) - Proactive monitoring with AI agents *(optional)*
 
 ```
 ┌─────────────────────────────────────────┐
-│           StdOut  (port 3000)            │
+│           StdOut  (port 8112)            │
 │  Dashboard · Incidents · HUD · KB · AI  │
 └─────────────────┬───────────────────────┘
                   │  optional HTTP poll
@@ -36,6 +38,13 @@ StdOut is one Docker container. It includes the web UI, API, AI diagnostic engin
 │         Windlass Engine  (port 8116)     │
 │  Schedule-aware Docker service manager  │
 │  Runs on your host, manages containers  │
+└─────────────────────────────────────────┘
+                  │  auto-creates incidents
+                  ▼
+┌─────────────────────────────────────────┐
+│      Observatory Monitor  (port 8080)    │
+│  Watcher (3B) + Analyst (14B) AI agents │
+│  Prometheus · Loki · Tempo observability│
 └─────────────────────────────────────────┘
 ```
 
@@ -213,3 +222,135 @@ Back up the `./data/` directory. The SQLite database supports online backups —
 
 - [Windlass engine](https://github.com/seayniclabs/windlass) — separate repo, full format reference
 - [StdOut docs](https://seayniclabs.com/stdout) — guides, API reference, self-host walkthrough
+
+---
+
+## Observatory — Proactive Monitoring (Optional)
+
+Observatory adds **proactive monitoring** with AI-powered detection and diagnosis. While StdOut helps you fix incidents after they happen, Observatory tries to catch them before they become problems.
+
+### What Observatory Does
+
+- 🔍 **Active monitoring** - Continuously watches all your services
+- 🤖 **AI detection** - Llama 3.2 3B watches for anomalies every 5-60 minutes
+- 🧠 **AI diagnosis** - Qwen 2.5 14B analyzes root causes when issues are found
+- 📊 **Full observability** - Prometheus (metrics), Loki (logs), Tempo (traces)
+- 🎯 **Auto-incident creation** - Creates StdOut incidents automatically for critical issues
+
+### When You Want Observatory
+
+**Use Observatory if you:**
+- Monitor 10+ services and want proactive alerts
+- Need metrics/logs/traces in one place
+- Want AI to catch issues before users notice
+- Run critical services that can't have downtime
+- Like dashboards with graphs and real-time data
+
+**Skip Observatory if you:**
+- Just want incident tracking after problems happen
+- Have < 5 services and manual checks are fine
+- Don't want to run Ollama + LLM models locally
+- Prefer external monitoring (Datadog, New Relic, etc.)
+
+### Requirements
+
+- **Ollama** must be installed and running (for LLM models)
+- **16GB+ RAM** recommended (models use ~6GB)
+- **GPU optional** but makes LLM inference much faster
+
+### Starting with Observatory
+
+#### Step 1: Install Ollama
+
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull the models
+ollama pull llama3.2:3b-instruct-q4_K_M
+ollama pull qwen2.5:14b-instruct-q4_K_M
+```
+
+#### Step 2: Enable Observatory profile
+
+```bash
+# Edit .env and add Observatory config (see .env.example)
+nano .env
+
+# Start with Observatory profile
+docker compose --profile observatory up -d
+```
+
+#### Step 3: Access dashboards
+
+- **Observatory**: http://localhost:8080
+- **Prometheus**: http://localhost:9090
+- **StdOut** (main): http://localhost:8112
+
+### How It Works
+
+1. **Watcher Agent** (Llama 3.2 3B) runs every 5-60 minutes
+   - Queries Prometheus for service health
+   - Detects anomalies (services down, high CPU, memory spikes)
+   - Broadcasts alerts via WebSocket
+
+2. **Analyst Agent** (Qwen 2.5 14B) triggers on HIGH/CRITICAL alerts
+   - Fetches logs from Loki
+   - Fetches traces from Tempo
+   - Diagnoses root cause
+   - Recommends fixes
+
+3. **Auto-incident creation**
+   - CRITICAL alerts → StdOut incident created automatically
+   - Includes diagnosis, logs, and recommended fix
+   - Links back to Observatory traces/metrics
+
+### Configuration
+
+All Observatory settings are in `.env`:
+
+```bash
+# Ollama host
+OLLAMA_HOST=http://host.docker.internal:11434
+
+# LLM models (change if you want different models)
+WATCHER_MODEL=llama3.2:3b-instruct-q4_K_M
+ANALYST_MODEL=qwen2.5:14b-instruct-q4_K_M
+
+# Check intervals (seconds)
+CRITICAL_CHECK_INTERVAL=300      # 5 min for critical services
+PRODUCT_CHECK_INTERVAL=600       # 10 min for product services
+DEFAULT_CHECK_INTERVAL=3600      # 60 min for everything else
+
+# Alert channels
+SLACK_WEBHOOK_URL=https://hooks.slack.com/...
+HELMSMAN_API_URL=http://your-helmsman-api
+```
+
+### Monitoring Your Services
+
+Observatory auto-discovers Docker containers. To monitor external services:
+
+1. Add them to `observatory/config/prometheus.yml`
+2. Restart Observatory: `docker compose --profile observatory restart prometheus`
+
+Example:
+
+```yaml
+scrape_configs:
+  - job_name: 'my-api'
+    static_configs:
+      - targets: ['api.example.com:9090']
+```
+
+### Stopping Observatory
+
+```bash
+# Stop Observatory only (keeps StdOut running)
+docker compose --profile observatory down
+
+# Or stop everything
+docker compose down
+```
+
+---

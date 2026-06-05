@@ -1,4 +1,5 @@
 services:
+  # StdOut Incident Companion
   stdout:
     image: ghcr.io/seayniclabs/stdout:latest
     container_name: stdout
@@ -13,6 +14,7 @@ services:
       - DB_PATH=/data/stdout.db
       - APP_URL=http://localhost:8112
       - WINDLASS_URL=http://windlass:8116
+      - OBSERVATORY_URL=http://observatory-dashboard:8080
       # - SECRET_KEY=<generate-32-char-random>
       # - ANTHROPIC_API_KEY=sk-ant-...
       # - RESEND_API_KEY=re_...
@@ -28,6 +30,7 @@ services:
     networks:
       - stdout-net
 
+  # Windlass Scheduler
   windlass:
     image: ghcr.io/seayniclabs/windlass:latest
     container_name: windlass
@@ -50,6 +53,112 @@ services:
       start_period: 15s
     networks:
       - stdout-net
+
+  # Observatory Dashboard
+  observatory-dashboard:
+    build: ./observatory/dashboard
+    container_name: observatory-dashboard
+    restart: unless-stopped
+    ports:
+      - "${OBSERVATORY_PORT:-8080}:8080"
+    environment:
+      - SENTINEL_API=http://observatory-sentinel:8081
+      - PROMETHEUS_URL=http://prometheus:9090
+      - LOKI_URL=http://loki:3100
+      - TEMPO_URL=http://tempo:3200
+    profiles:
+      - observatory
+    networks:
+      - stdout-net
+    depends_on:
+      - observatory-sentinel
+
+  # Observatory Sentinel AI
+  observatory-sentinel:
+    build: ./observatory/sentinel
+    container_name: observatory-sentinel
+    restart: unless-stopped
+    ports:
+      - "${SENTINEL_API_PORT:-8081}:8081"
+    environment:
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - PROMETHEUS_URL=http://prometheus:9090
+      - LOKI_URL=http://loki:3100
+      - TEMPO_URL=http://tempo:3200
+      - WATCHER_MODEL=${WATCHER_MODEL:-llama3.2:3b-instruct-q4_K_M}
+      - ANALYST_MODEL=${ANALYST_MODEL:-qwen2.5:14b-instruct-q4_K_M}
+      - CRITICAL_CHECK_INTERVAL=${CRITICAL_CHECK_INTERVAL:-300}
+      - PRODUCT_CHECK_INTERVAL=${PRODUCT_CHECK_INTERVAL:-600}
+      - DEFAULT_CHECK_INTERVAL=${DEFAULT_CHECK_INTERVAL:-3600}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - HELMSMAN_API_URL=${HELMSMAN_API_URL:-}
+    profiles:
+      - observatory
+    networks:
+      - stdout-net
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  # Prometheus - Metrics Collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observatory/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    profiles:
+      - observatory
+    networks:
+      - stdout-net
+
+  # Loki - Log Aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./observatory/config/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    profiles:
+      - observatory
+    networks:
+      - stdout-net
+
+  # Tempo - Distributed Tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    restart: unless-stopped
+    ports:
+      - "3200:3200"  # HTTP
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    volumes:
+      - tempo-data:/var/tempo
+    command:
+      - '-config.file=/etc/tempo.yaml'
+    profiles:
+      - observatory
+    networks:
+      - stdout-net
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
 
 networks:
   stdout-net:

@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: stdout-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-remote-write-receiver'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    networks:
+      - stdout
+
+  # Loki - Log aggregation
+  loki:
+    image: grafana/loki:latest
+    container_name: stdout-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./config/loki-config.yml:/etc/loki/local-config.yaml
+      - loki-data:/loki
+    restart: unless-stopped
+    networks:
+      - stdout
+
+  # Tempo - Distributed tracing
+  tempo:
+    image: grafana/tempo:latest
+    container_name: stdout-tempo
+    command: [ "-config.file=/etc/tempo.yaml" ]
+    ports:
+      - "3200:3200"   # Tempo HTTP
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+    volumes:
+      - ./config/tempo-config.yml:/etc/tempo.yaml
+      - tempo-data:/var/tempo
+    restart: unless-stopped
+    networks:
+      - stdout
+
+  # Sentinel AI - Monitoring agent
+  sentinel:
+    build: ./sentinel
+    container_name: stdout-sentinel
+    ports:
+      - "8081:8081"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - PROMETHEUS_URL=http://prometheus:9090
+      - LOKI_URL=http://loki:3100
+      - TZ=America/Chicago
+    volumes:
+      - ./config/sentinel-config.yml:/app/config.yml
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - stdout
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Dashboard - Web UI
+  dashboard:
+    build: ./dashboard
+    container_name: stdout-dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - SENTINEL_API=http://sentinel:8081
+      - PROMETHEUS_URL=http://prometheus:9090
+      - LOKI_URL=http://loki:3100
+      - TZ=America/Chicago
+    restart: unless-stopped
+    networks:
+      - stdout
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+
+networks:
+  stdout:
+    name: stdout-network

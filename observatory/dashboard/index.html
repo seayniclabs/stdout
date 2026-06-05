@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StdOut Observatory</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: #07070C;
+            color: #F0F0F8;
+            overflow-x: hidden;
+        }
+
+        .grid-bg {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(249, 115, 22, 0.015) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(249, 115, 22, 0.015) 1px, transparent 1px);
+            background-size: 60px 60px;
+            animation: gridMove 20s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        .content {
+            position: relative;
+            z-index: 2;
+            padding: 20px;
+            max-width: 1920px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #1F1F35;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 4px;
+            color: #F97316;
+            text-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-ok {
+            background: #00FF00;
+            box-shadow: 0 0 10px #00FF00;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .panel {
+            background: #0E0E18;
+            border: 1px solid #1F1F35;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: border-color 0.2s;
+        }
+
+        .panel:hover {
+            border-color: #2D2D4A;
+        }
+
+        .panel-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            color: #FB923C;
+            font-weight: 600;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .metric {
+            text-align: center;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #A0A0B8;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #F97316;
+        }
+        
+        #log-stream {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #07070C;
+            padding: 10px;
+            border: 1px solid #1F1F35;
+            border-radius: 6px;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            padding: 5px;
+            border-left: 2px solid transparent;
+        }
+
+        .log-entry:hover {
+            background: rgba(249, 115, 22, 0.05);
+            border-left-color: #F97316;
+        }
+
+        .log-time { color: #5A5A72; }
+        .log-INFO { color: #22C55E; }
+        .log-WARN { color: #EAB308; }
+        .log-ERROR { color: #EF4444; }
+        
+        #chat-messages {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+        }
+        
+        .chat-msg {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: rgba(0,255,255,0.05);
+            border-left: 2px solid #00FFFF;
+        }
+        
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #chat-input {
+            flex: 1;
+            background: rgba(0,20,40,0.8);
+            border: 1px solid rgba(0,255,255,0.3);
+            color: #00FFFF;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+        }
+        
+        #chat-send {
+            background: rgba(0,255,255,0.2);
+            border: 1px solid #00FFFF;
+            color: #00FFFF;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+        
+        #chat-send:hover {
+            background: rgba(0,255,255,0.3);
+        }
+        
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="content">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <div class="logo">STDOUT</div>
+                <div style="font-size: 12px; color: rgba(0,255,255,0.6); letter-spacing: 4px;">OBSERVATORY</div>
+            </div>
+            <div>
+                <span class="status-indicator status-ok"></span>
+                <span id="status-text">OPERATIONAL</span>
+                <div style="font-size: 12px; color: rgba(0,255,255,0.6); margin-top: 5px;">
+                    <span id="current-time"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Metrics -->
+        <div class="panel">
+            <div class="panel-title">SYSTEM METRICS</div>
+            <div class="grid">
+                <div class="metric">
+                    <div class="metric-label">UPTIME</div>
+                    <div class="metric-value" id="uptime">99.9%</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">SERVICES</div>
+                    <div class="metric-value" id="services">3</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">ALERTS</div>
+                    <div class="metric-value" id="alerts">0</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-label">CONNECTIONS</div>
+                    <div class="metric-value" id="connections">0</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Team Chat -->
+        <div class="panel">
+            <div class="panel-title">TEAM COMMUNICATIONS</div>
+            <div id="chat-messages">
+                <div class="chat-msg">
+                    <strong>Sentinel AI:</strong> Connected and monitoring...
+                </div>
+            </div>
+            <div class="chat-input-row">
+                <input type="text" id="chat-input" placeholder="TRANSMIT MESSAGE...">
+                <button id="chat-send">SEND</button>
+            </div>
+        </div>
+        
+        <!-- Live Logs -->
+        <div class="panel">
+            <div class="panel-title">LIVE LOG STREAM</div>
+            <div id="log-stream">
+                <div class="log-entry">
+                    <span class="log-time" id="init-time"></span>
+                    <span class="log-INFO">INFO</span>
+                    <span>StdOut Observatory initialized</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleString('en-US', {hour12: false}) + ' CDT';
+            document.getElementById('init-time').textContent = 
+                now.toTimeString().split(' ')[0];
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+        
+        // WebSocket connection
+        let ws;
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                addChatMessage('System', 'WebSocket connected');
+                updateConnectionCount();
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'system') {
+                    addChatMessage('System', data.message);
+                } else if (data.sender) {
+                    addChatMessage(data.sender, data.message);
+                }
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket closed, reconnecting...');
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        // Chat functions
+        function addChatMessage(sender, message) {
+            const chatDiv = document.getElementById('chat-messages');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-msg';
+            msgDiv.innerHTML = `<strong>${sender}:</strong> ${message}`;
+            chatDiv.appendChild(msgDiv);
+            chatDiv.scrollTop = chatDiv.scrollHeight;
+        }
+        
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (message && ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    sender: 'User',
+                    message: message,
+                    timestamp: new Date().toISOString()
+                }));
+                addChatMessage('You', message);
+                input.value = '';
+            }
+        }
+        
+        document.getElementById('chat-send').onclick = sendChatMessage;
+        document.getElementById('chat-input').onkeypress = (e) => {
+            if (e.key === 'Enter') sendChatMessage();
+        };
+        
+        // Fetch status
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                document.getElementById('connections').textContent = data.active_connections;
+            } catch (error) {
+                console.error('Failed to fetch status:', error);
+            }
+        }
+        
+        function updateConnectionCount() {
+            updateStatus();
+        }
+        
+        // Simulate log stream
+        const logLevels = ['INFO', 'WARN', 'ERROR'];
+        const logMessages = [
+            'Health check passed',
+            'Metrics collected',
+            'Service monitoring active',
+            'Sentinel AI scanning',
+            'No anomalies detected'
+        ];
+        
+        function addLogEntry() {
+            const stream = document.getElementById('log-stream');
+            const time = new Date().toTimeString().split(' ')[0];
+            const level = logLevels[Math.floor(Math.random() * logLevels.length)];
+            const message = logMessages[Math.floor(Math.random() * logMessages.length)];
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">${time}</span>
+                <span class="log-${level}">${level}</span>
+                <span>${message}</span>
+            `;
+            
+            stream.insertBefore(entry, stream.firstChild);
+            
+            while (stream.children.length > 20) {
+                stream.removeChild(stream.lastChild);
+            }
+        }
+        
+        // Initialize
+        connectWebSocket();
+        setInterval(updateStatus, 5000);
+        setInterval(addLogEntry, 5000);
+    </script>
+</body>
+</html>
