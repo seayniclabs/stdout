@@ -140,20 +140,8 @@ services:
     networks:
       - stdout-net
 
-volumes:
-  prometheus-data:
-  loki-data:
-  tempo-data:
-
-networks:
-  stdout-net:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 10.21.0.0/24
-
   # Packet Capture & Analysis
-  pcap:
+  observatory-pcap:
     image: nicolaka/netshoot:latest
     container_name: observatory-pcap
     restart: unless-stopped
@@ -172,3 +160,15 @@ networks:
       "
     profiles:
       - observatory
+
+volumes:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+
+networks:
+  stdout-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.21.0.0/24
