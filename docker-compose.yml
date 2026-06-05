@@ -1,7 +1,8 @@
 services:
   # StdOut Incident Companion
   stdout:
-    image: ghcr.io/seayniclabs/stdout:latest
+    image: stdout:local
+    build: .
     container_name: stdout
     restart: unless-stopped
     ports:
@@ -10,14 +11,14 @@ services:
       - ./data:/data
     environment:
       - TZ=America/Chicago
-      - STDOUT_MODE=selfhost
-      - DB_PATH=/data/stdout.db
-      - APP_URL=http://localhost:8112
-      - WINDLASS_URL=http://windlass:8116
-      - SENTINEL_API_URL=http://observatory-sentinel:8081
-      # - SECRET_KEY=<generate-32-char-random>
-      # - ANTHROPIC_API_KEY=sk-ant-...
-      # - RESEND_API_KEY=re_...
+      - STDOUT_MODE=${STDOUT_MODE:-selfhost}
+      - DB_PATH=${DB_PATH:-/data/stdout.db}
+      - APP_URL=${APP_URL:-http://localhost:8112}
+      - WINDLASS_URL=${WINDLASS_URL:-http://windlass:8116}
+      - SENTINEL_API_URL=${SENTINEL_API_URL:-http://observatory-sentinel:8081}
+      - SECRET_KEY=${SECRET_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - RESEND_API_KEY=${RESEND_API_KEY}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
       interval: 30s
