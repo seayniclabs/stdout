@@ -8,12 +8,12 @@ RUN pip install --no-cache-dir \
     uvicorn==0.27.0 \
     requests==2.31.0 \
     pyyaml==6.0.1 \
-    websockets==12.0
+    websockets==12.0 \
+    aiohttp==3.9.0
 
 # Copy application
 COPY main.py /app/
-COPY watcher.py /app/
-COPY analyst.py /app/
+COPY agents.py /app/
 
 EXPOSE 8081
 

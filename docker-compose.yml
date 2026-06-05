@@ -24,9 +24,9 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    depends_on:
-      windlass:
-        condition: service_healthy
+    # depends_on:
+    #   windlass:
+    #     condition: service_healthy
     networks:
       - stdout-net
 
@@ -112,9 +112,9 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./observatory/config/loki-config.yml:/etc/loki/local-config.yaml
+      - ./observatory/config/loki-config.yml:/etc/loki/config.yaml
       - loki-data:/loki
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/config.yaml
     profiles:
       - observatory
     networks:
@@ -130,6 +130,7 @@ services:
       - "4317:4317"  # OTLP gRPC
       - "4318:4318"  # OTLP HTTP
     volumes:
+      - ./observatory/config/tempo-config.yml:/etc/tempo.yaml
       - tempo-data:/var/tempo
     command:
       - '-config.file=/etc/tempo.yaml'
