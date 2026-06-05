@@ -151,3 +151,24 @@ networks:
     ipam:
       config:
         - subnet: 10.21.0.0/24
+
+  # Packet Capture & Analysis
+  pcap:
+    image: nicolaka/netshoot:latest
+    container_name: observatory-pcap
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - ./observatory/captures:/captures
+    command: >
+      sh -c "
+        mkdir -p /captures &&
+        while true; do
+          tcpdump -i any -w /captures/capture_$(date +%Y%m%d_%H%M%S).pcap -G 3600 -W 24 -Z root 'not port 22'
+        done
+      "
+    profiles:
+      - observatory

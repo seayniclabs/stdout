@@ -1,0 +1,265 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { requireLicense } from '../../../lib/license';
+
+const licenseCheck = requireLicense();
+if (!licenseCheck.valid) {
+  return Astro.redirect('/app/settings?error=' + encodeURIComponent(licenseCheck.message));
+}
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+// In production, you'd list actual capture files from the filesystem
+// For now, we'll provide instructions
+---
+
+<Layout title="Traffic Analysis - Observatory">
+  <div class="traffic-page">
+    <div class="page-header">
+      <h1>Network Traffic Analysis</h1>
+      <p class="text-dim">Packet capture and analysis for deep network troubleshooting</p>
+    </div>
+
+    <div class="card">
+      <h2>Packet Capture Service</h2>
+      <p>Observatory includes continuous packet capture using tcpdump. Captures are stored in 1-hour rotating files.</p>
+
+      <div class="capture-info">
+        <div class="info-item">
+          <span class="label">Capture Location:</span>
+          <code>./observatory/captures/</code>
+        </div>
+        <div class="info-item">
+          <span class="label">Rotation:</span>
+          <span>1 hour per file, 24 files retained (24 hours)</span>
+        </div>
+        <div class="info-item">
+          <span class="label">Format:</span>
+          <code>capture_YYYYMMDD_HHMMSS.pcap</code>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>How to Analyze Captures</h2>
+
+      <div class="method">
+        <h3>Method 1: Command Line (tcpdump)</h3>
+        <pre><code># Read a specific capture
+tcpdump -r ~/stdout/observatory/captures/capture_20260605_140000.pcap
+
+# Filter by host
+tcpdump -r capture.pcap host 192.168.0.244
+
+# Filter by port
+tcpdump -r capture.pcap port 80 or port 443
+
+# Show HTTP requests
+tcpdump -r capture.pcap -A 'tcp port 80'</code></pre>
+      </div>
+
+      <div class="method">
+        <h3>Method 2: Wireshark (GUI)</h3>
+        <ol>
+          <li>Install Wireshark on your workstation</li>
+          <li>Copy capture file from server: <code>scp user@server:~/stdout/observatory/captures/capture_*.pcap .</code></li>
+          <li>Open in Wireshark: <code>wireshark capture.pcap</code></li>
+          <li>Use display filters: <code>http</code>, <code>dns</code>, <code>tcp.port == 8112</code></li>
+        </ol>
+      </div>
+
+      <div class="method">
+        <h3>Method 3: tshark (Terminal UI)</h3>
+        <pre><code># Install tshark
+brew install wireshark  # includes tshark
+
+# Analyze with tshark
+tshark -r capture.pcap
+
+# HTTP statistics
+tshark -r capture.pcap -q -z http,tree
+
+# DNS queries
+tshark -r capture.pcap -Y "dns" -T fields -e dns.qry.name</code></pre>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Common Use Cases</h2>
+
+      <div class="use-case">
+        <h4>🔍 Troubleshoot Connection Issues</h4>
+        <p>See if packets are reaching the server, check for TCP retransmissions</p>
+        <code>tcpdump -r capture.pcap 'tcp[tcpflags] & (tcp-syn|tcp-fin) != 0'</code>
+      </div>
+
+      <div class="use-case">
+        <h4>🌐 Debug API Calls</h4>
+        <p>View full HTTP request/response cycles</p>
+        <code>tcpdump -r capture.pcap -A 'host api.example.com and tcp port 443'</code>
+      </div>
+
+      <div class="use-case">
+        <h4>📊 Monitor Service Health</h4>
+        <p>Track connections to your services</p>
+        <code>tcpdump -r capture.pcap 'dst port 8112 or dst port 8081'</code>
+      </div>
+
+      <div class="use-case">
+        <h4>🔐 SSL/TLS Analysis</h4>
+        <p>See TLS handshakes and certificate exchanges</p>
+        <code>tcpdump -r capture.pcap 'tcp port 443'</code>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <strong>📝 Note:</strong> Packet captures contain raw network traffic. In production environments,
+      ensure captures are stored securely and comply with your data retention policies.
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .traffic-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-md);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-xl);
+  }
+
+  .page-header h1 {
+    margin-bottom: var(--space-xs);
+  }
+
+  .card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+  }
+
+  .card h2 {
+    font-size: 1.25rem;
+    margin-bottom: var(--space-md);
+  }
+
+  .capture-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+  }
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+  }
+
+  .info-item .label {
+    font-weight: 600;
+    min-width: 140px;
+    color: var(--color-text-dim);
+  }
+
+  .method {
+    margin-bottom: var(--space-xl);
+  }
+
+  .method:last-child {
+    margin-bottom: 0;
+  }
+
+  .method h3 {
+    font-size: 1.125rem;
+    margin-bottom: var(--space-md);
+    color: var(--color-primary);
+  }
+
+  .method ol {
+    margin-left: var(--space-lg);
+    margin-top: var(--space-sm);
+  }
+
+  .method ol li {
+    margin-bottom: var(--space-xs);
+  }
+
+  pre {
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    padding: var(--space-md);
+    overflow-x: auto;
+    margin-top: var(--space-sm);
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+  }
+
+  .use-case {
+    padding: var(--space-md);
+    background: var(--color-bg-alt);
+    border-left: 3px solid var(--color-primary);
+    margin-bottom: var(--space-md);
+    border-radius: 4px;
+  }
+
+  .use-case:last-child {
+    margin-bottom: 0;
+  }
+
+  .use-case h4 {
+    margin-bottom: var(--space-xs);
+    font-size: 1rem;
+  }
+
+  .use-case p {
+    margin-bottom: var(--space-sm);
+    font-size: 0.875rem;
+    color: var(--color-text-dim);
+  }
+
+  .use-case code {
+    display: block;
+    background: var(--color-bg);
+    padding: var(--space-sm);
+    border-radius: 4px;
+    font-size: 0.8125rem;
+  }
+
+  .alert {
+    padding: var(--space-md);
+    border-radius: 6px;
+    border-left: 4px solid;
+  }
+
+  .alert-info {
+    background: var(--color-info-bg, rgba(59, 130, 246, 0.1));
+    border-color: var(--color-info, #3b82f6);
+    color: var(--color-text);
+  }
+
+  .alert strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+  }
+
+  @media (max-width: 640px) {
+    .info-item {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .info-item .label {
+      min-width: auto;
+    }
+  }
+</style>
