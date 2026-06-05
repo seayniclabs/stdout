@@ -75,10 +75,24 @@ if (Astro.request.method === 'POST') {
           error = 'Network error. Please check your internet connection or try offline activation.';
         }
       } else {
-        // Offline mode - store the key without validation
-        // Validation will happen on next update check
-        storeLicense(key, email, 'self-host');
-        success = true;
+        // Offline mode - verify cryptographic signature (no network required)
+        const { verifyLicenseSignature } = await import('../../lib/license');
+        const verifyResult = verifyLicenseSignature(key);
+
+        if (!verifyResult.valid) {
+          error = `License validation failed: ${verifyResult.reason || 'Invalid license'}`;
+        } else if (verifyResult.payload) {
+          // Check product matches
+          if (verifyResult.payload.product !== 'stdout-self-host') {
+            error = `This license is for ${verifyResult.payload.product}, not StdOut`;
+          } else {
+            // Valid signed license - store it
+            storeLicense(key, email, 'self-host');
+            success = true;
+          }
+        } else {
+          error = 'License validation failed: Unable to parse license data';
+        }
       }
     }
 
