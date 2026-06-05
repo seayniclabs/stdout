@@ -2,6 +2,8 @@
 
 AI-assisted incident companion for self-hosters and solo developers. Turns your past fixes into future answers — a living runbook that knows your stack.
 
+**License**: Personal use only. Commercial use requires a license. See [LICENSE](LICENSE) for details.
+
 ## Quick Start
 
 ```bash

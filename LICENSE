@@ -1,0 +1,50 @@
+# StdOut License
+
+Copyright (c) 2026 Seaynic Labs LLC. All rights reserved.
+
+## Commercial License
+
+This software is licensed for **personal, non-commercial use only** under the terms below. Commercial use requires a separate license agreement.
+
+### Personal Use (No License Required)
+
+You may use, modify, and deploy StdOut for:
+- Personal homelab and self-hosting projects
+- Individual learning and experimentation
+- Non-profit community projects
+- Educational purposes
+
+### Commercial Use (License Required)
+
+**Commercial use** includes, but is not limited to:
+- Using StdOut in a business environment to manage commercial services
+- Deploying StdOut to monitor revenue-generating infrastructure
+- Providing StdOut as a service to customers
+- Embedding StdOut in a commercial product
+- Using StdOut in an organization with >10 employees
+
+To obtain a commercial license, visit: https://store.seayniclabs.com/products/stdout-self-host
+
+### Restrictions
+
+1. **No Redistribution** - You may not redistribute, sell, or sublicense this software in modified or unmodified form without explicit written permission from Seaynic Labs LLC.
+
+2. **No SaaS** - You may not offer StdOut as a hosted service or SaaS product without a separate agreement.
+
+3. **No Warranty** - This software is provided "AS IS" without warranty of any kind, express or implied. In no event shall the authors be liable for any claim, damages, or other liability.
+
+4. **Attribution** - You must retain all copyright notices and license information in any copy or substantial portion of the software.
+
+### Source Code Availability
+
+The source code is made available for:
+- Transparency and security auditing
+- Personal customization and modification
+- Community contributions (subject to CLA)
+- Educational reference
+
+Source code availability does not grant commercial use rights.
+
+### Questions?
+
+For licensing questions or commercial inquiries, contact: hello@seayniclabs.com
