@@ -14,7 +14,7 @@ services:
       - DB_PATH=/data/stdout.db
       - APP_URL=http://localhost:8112
       - WINDLASS_URL=http://windlass:8116
-      - OBSERVATORY_URL=http://observatory-dashboard:8080
+      - SENTINEL_API_URL=http://observatory-sentinel:8081
       # - SECRET_KEY=<generate-32-char-random>
       # - ANTHROPIC_API_KEY=sk-ant-...
       # - RESEND_API_KEY=re_...
@@ -54,26 +54,9 @@ services:
     networks:
       - stdout-net
 
-  # Observatory Dashboard
-  observatory-dashboard:
-    build: ./observatory/dashboard
-    container_name: observatory-dashboard
-    restart: unless-stopped
-    ports:
-      - "${OBSERVATORY_PORT:-8080}:8080"
-    environment:
-      - SENTINEL_API=http://observatory-sentinel:8081
-      - PROMETHEUS_URL=http://prometheus:9090
-      - LOKI_URL=http://loki:3100
-      - TEMPO_URL=http://tempo:3200
-    profiles:
-      - observatory
-    networks:
-      - stdout-net
-    depends_on:
-      - observatory-sentinel
-
   # Observatory Sentinel AI
+  # Note: The Observatory UI is part of the StdOut web app at /app/observatory
+  # This service provides the backend AI agents and observability stack
   observatory-sentinel:
     build: ./observatory/sentinel
     container_name: observatory-sentinel
