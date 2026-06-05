@@ -1,6 +1,24 @@
 ---
 import '../styles/global.css';
+import { getUserCount } from '../lib/auth';
+import { getStoredLicense } from '../lib/license';
+
 const user = Astro.locals.user;
+
+// Auto-redirect to setup if not configured
+if (getUserCount() === 0) {
+  return Astro.redirect('/setup');
+}
+
+// Auto-redirect to license activation if no license
+if (!getStoredLicense()) {
+  return Astro.redirect('/setup/license');
+}
+
+// If logged in, redirect to app
+if (user) {
+  return Astro.redirect('/app');
+}
 ---
 <!doctype html>
 <html lang="en">
