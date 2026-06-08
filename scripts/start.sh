@@ -9,4 +9,8 @@ for secret in /run/secrets/*; do
   fi
 done
 
+# Run database migrations
+echo "Running database migrations..."
+node scripts/migrate.js
+
 exec node dist/server/entry.mjs

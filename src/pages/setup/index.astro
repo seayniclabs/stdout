@@ -1,0 +1,151 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SetupProgress from '../../components/SetupProgress.astro';
+import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+import { getCentralDb, centralSchema } from '../../lib/db';
+import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
+import { validateCsrf } from '../../middleware';
+import { nanoid } from 'nanoid';
+
+// If user is already logged in and setup is past step 1, redirect to current step
+const session = Astro.locals.user;
+const progress = await getSetupProgress();
+
+if (session && progress.currentStep > SetupStep.Account) {
+  // User has an account, redirect to their current step
+  if (progress.currentStep === SetupStep.Environment) return Astro.redirect('/setup/environment');
+  if (progress.currentStep === SetupStep.License) return Astro.redirect('/setup/license');
+  if (progress.currentStep === SetupStep.Scanner) return Astro.redirect('/setup/scanner');
+  if (progress.currentStep === SetupStep.Review) return Astro.redirect('/setup/review');
+  if (progress.currentStep === SetupStep.Windlass) return Astro.redirect('/setup/windlass');
+  if (progress.currentStep >= SetupStep.Complete) return Astro.redirect('/setup/complete');
+}
+
+let error = '';
+let emailVal = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const csrfToken = form.get('_csrf') as string || '';
+
+  if (!validateCsrf(csrfToken, Astro.cookies)) {
+    error = 'Invalid form submission. Please try again.';
+  } else {
+    const email = (form.get('email') as string || '').trim().toLowerCase();
+    const password = form.get('password') as string || '';
+    const displayName = (form.get('displayName') as string || '').trim();
+    emailVal = email;
+
+    if (!email || !password || !displayName) {
+      error = 'All fields are required.';
+    } else if (password.length < 8) {
+      error = 'Password must be at least 8 characters.';
+    } else {
+      // Check if user already exists
+      const db = getCentralDb();
+      const existingUser = db
+        .select()
+        .from(centralSchema.users)
+        .where((users) => users.email.equals(email))
+        .get();
+
+      if (existingUser) {
+        error = 'An account with this email already exists.';
+      } else {
+        // Create user
+        const userId = 'usr_' + nanoid(32);
+        const passwordHash = await hashPassword(password);
+        const now = Date.now();
+
+        db.insert(centralSchema.users).values({
+          id: userId,
+          email,
+          passwordHash,
+          displayName,
+          role: 'superadmin',
+          createdAt: now,
+          updatedAt: now,
+        }).run();
+
+        // Mark account creation step as complete
+        await completeStep(SetupStep.Account, {
+          userId,
+          email,
+          displayName,
+        });
+
+        // Create session and log in
+        const sessionId = await createSession(userId);
+        Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
+
+        // Redirect to next step
+        return Astro.redirect('/setup/environment');
+      }
+    }
+  }
+}
+---
+
+<Layout title="Create Your Account">
+  <div class="auth-page" style="max-width: 600px;">
+    <SetupProgress currentStep={1} totalSteps={7} />
+
+    <h1>Welcome to StdOut</h1>
+    <p class="auth-subtitle">Create your admin account to get started</p>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+
+      <label>
+        <span>Display Name</span>
+        <input
+          type="text"
+          name="displayName"
+          placeholder="Your name"
+          required
+          autocomplete="name"
+        />
+        <span class="hint">This is how you'll appear in the system</span>
+      </label>
+
+      <label>
+        <span>Email Address</span>
+        <input
+          type="email"
+          name="email"
+          value={emailVal}
+          placeholder="you@example.com"
+          required
+          autocomplete="email"
+        />
+        <span class="hint">You'll use this to sign in</span>
+      </label>
+
+      <label>
+        <span>Password</span>
+        <input
+          type="password"
+          name="password"
+          placeholder="At least 8 characters"
+          required
+          autocomplete="new-password"
+          minlength="8"
+        />
+      </label>
+
+      <button type="submit" class="btn-primary">Create Account & Continue</button>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .hint {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+</style>

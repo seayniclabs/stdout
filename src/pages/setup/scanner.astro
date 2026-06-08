@@ -2,8 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import SetupProgress from '../../components/SetupProgress.astro';
-// import { getSession } from '../../lib/auth';
-import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+import { getSetupProgress, SetupStep } from '../../lib/setup';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
@@ -11,43 +10,8 @@ if (!session) return Astro.redirect('/app/login');
 const progress = await getSetupProgress();
 if (progress.currentStep !== SetupStep.Scanner) {
   if (progress.currentStep < SetupStep.Scanner) return Astro.redirect('/setup');
-  return Astro.redirect('/setup/review');
+  return Astro.redirect('/setup/complete');
 }
-
-// Check if scanner token exists
-const { getCentralDb } = await import('../../lib/db');
-const { apiTokens } = await import('../../lib/db/central-schema');
-const db = getCentralDb();
-const tokens = await db.select().from(apiTokens).limit(1);
-let scannerToken = '';
-
-if (tokens.length === 0) {
-  // Generate scanner token
-  const { nanoid } = await import('nanoid');
-  const { createHash } = await import('node:crypto');
-  const plainToken = `stdout_scan_${nanoid(32)}`;
-  const tokenHash = createHash('sha256').update(plainToken).digest('hex');
-
-  await db.insert(apiTokens).values({
-    id: `tok_${nanoid()}`,
-    userId: session.userId,
-    name: 'Scanner (Auto-generated)',
-    tokenHash,
-    createdAt: new Date(),
-  });
-
-  scannerToken = plainToken;
-} else {
-  scannerToken = '[Token already generated - check Settings → API Tokens]';
-}
-
-const scannerCommand = `docker run --rm \\
-  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
-  ghcr.io/seayniclabs/stdout-scanner:latest \\
-  --token "${scannerToken}" \\
-  --url ${process.env.APP_URL || 'http://localhost:8112'} \\
-  --full \\
-  --scan-sources`;
 ---
 
 <Layout title="Discover Infrastructure">
@@ -55,86 +19,243 @@ const scannerCommand = `docker run --rm \\
     <SetupProgress currentStep={4} totalSteps={7} />
 
     <h1>Discover Your Infrastructure</h1>
-    <p class="auth-subtitle">Run the scanner to automatically discover your Docker containers and services</p>
+    <p class="auth-subtitle">Automatically scan your Docker environment to discover containers and services</p>
 
-    <div class="scanner-instructions">
-      <h3>Scanner Options:</h3>
-      <ul>
-        <li>✓ Docker containers (required)</li>
-        <li>✓ Container metrics (CPU, memory, etc.)</li>
-        <li>✓ Data sources (Prometheus, Grafana, etc.)</li>
-        <li>✓ Full scan (includes DNS, auth detection)</li>
-      </ul>
+    <div class="scanner-card">
+      <div class="scanner-status" id="scannerStatus">
+        <div class="status-icon">📡</div>
+        <p class="status-text">Ready to scan</p>
+      </div>
 
-      <h3>Run this command on your Docker host:</h3>
-      <pre class="command-box"><code>{scannerCommand}</code></pre>
-      <button onclick="navigator.clipboard.writeText(this.previousElementSibling.querySelector('code').textContent)" class="btn-secondary" style="margin-top: 0.5rem;">
-        Copy Command
-      </button>
+      <div class="scanner-info">
+        <h3>What will be discovered:</h3>
+        <ul>
+          <li>Docker containers and their health status</li>
+          <li>Container metrics (CPU, memory, network)</li>
+          <li>Data sources (Prometheus, Grafana, etc.)</li>
+          <li>Network configuration and DNS</li>
+        </ul>
+      </div>
 
-      <div class="scanner-note">
-        <p><strong>Note:</strong> The scanner may take 2-5 minutes to complete. It will automatically import results when finished.</p>
+      <div class="scanner-actions">
+        <button id="scanButton" class="btn-primary">
+          <span id="scanButtonText">Start Automatic Scan</span>
+        </button>
+        <form method="POST" action="/setup/complete-scanner" style="display: inline;">
+          <button type="submit" name="action" value="skip" class="btn-secondary">Skip for Now</button>
+        </form>
+      </div>
+
+      <div id="scanProgress" class="scan-progress" style="display: none;">
+        <div class="progress-bar">
+          <div id="progressFill" class="progress-fill"></div>
+        </div>
+        <div id="scanLogs" class="scan-logs"></div>
       </div>
     </div>
-
-    <form method="POST" action="/setup/complete-scanner" class="setup-actions">
-      <button type="submit" name="action" value="skip" class="btn-secondary">Skip Scanner</button>
-      <button type="submit" name="action" value="continue" class="btn-primary">I've Run the Scanner →</button>
-    </form>
   </div>
 </Layout>
 
 <style>
-  .scanner-instructions {
+  .scanner-card {
     margin: 2rem 0;
-  }
-
-  .scanner-instructions h3 {
-    font-size: 1rem;
-    margin-top: 1.5rem;
-    margin-bottom: 0.75rem;
-  }
-
-  .scanner-instructions ul {
-    margin: 0 0 1rem 1.5rem;
-    padding: 0;
-  }
-
-  .scanner-instructions li {
-    margin: 0.25rem 0;
-  }
-
-  .command-box {
-    background: var(--color-bg-subtle, #f8f9fa);
+    padding: 2rem;
+    background: var(--color-card-bg);
     border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+
+  .scanner-status {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .status-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .status-text {
+    font-size: 1.125rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .scanner-info {
+    margin: 2rem 0;
+    padding: 1.5rem;
+    background: var(--color-bg-subtle);
     border-radius: 8px;
+  }
+
+  .scanner-info h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+  }
+
+  .scanner-info ul {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  .scanner-info li {
+    margin: 0.5rem 0;
+  }
+
+  .scanner-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+  }
+
+  .scanner-actions button {
+    min-width: 200px;
+  }
+
+  .scan-progress {
+    margin-top: 2rem;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--color-bg-subtle);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .scan-logs {
+    max-height: 200px;
+    overflow-y: auto;
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
     padding: 1rem;
-    overflow-x: auto;
     font-family: var(--font-mono);
     font-size: 0.875rem;
     line-height: 1.6;
   }
 
-  .scanner-note {
-    margin-top: 1.5rem;
-    padding: 1rem;
-    background: var(--color-info-bg, #d1ecf1);
-    border: 1px solid var(--color-info, #0c5460);
-    border-radius: 6px;
+  .scan-logs p {
+    margin: 0.25rem 0;
+    color: var(--color-text-muted);
   }
 
-  .scanner-note p {
-    margin: 0;
-    font-size: 0.875rem;
+  .scan-logs p.success {
+    color: var(--color-success);
   }
 
-  .setup-actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 2rem;
-  }
-
-  .setup-actions button {
-    flex: 1;
+  .scan-logs p.error {
+    color: var(--color-danger);
   }
 </style>
+
+<script>
+  // Attach event listener when DOM is ready
+  document.getElementById('scanButton')?.addEventListener('click', startScan);
+
+  async function startScan() {
+    const scanButton = document.getElementById('scanButton');
+    const scanButtonText = document.getElementById('scanButtonText');
+    const scanProgress = document.getElementById('scanProgress');
+    const progressFill = document.getElementById('progressFill');
+    const scanLogs = document.getElementById('scanLogs');
+    const statusIcon = document.querySelector('.status-icon');
+    const statusText = document.querySelector('.status-text');
+
+    // Disable button
+    scanButton.disabled = true;
+    scanButtonText.textContent = 'Scanning...';
+
+    // Show progress immediately for user feedback
+    scanProgress.style.display = 'block';
+    statusIcon.textContent = '⏳';
+    statusText.textContent = 'Scanning infrastructure...';
+
+    // Add initial progress
+    const initialLog = document.createElement('p');
+    initialLog.textContent = 'Starting Docker scan...';
+    scanLogs.appendChild(initialLog);
+
+    try {
+      progressFill.style.width = '10%';
+
+      const response = await fetch('/app/api/scanner/autodiscover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Scanner failed: ${response.status} ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (!line.trim()) continue;
+
+          try {
+            const event = JSON.parse(line);
+
+            if (event.type === 'progress') {
+              progressFill.style.width = `${event.percent}%`;
+            } else if (event.type === 'log') {
+              const logEntry = document.createElement('p');
+              logEntry.textContent = event.message;
+              if (event.level === 'success') logEntry.className = 'success';
+              if (event.level === 'error') logEntry.className = 'error';
+              scanLogs.appendChild(logEntry);
+              scanLogs.scrollTop = scanLogs.scrollHeight;
+            } else if (event.type === 'complete') {
+              statusIcon.textContent = '✓';
+              statusText.textContent = 'Scan complete!';
+              progressFill.style.width = '100%';
+
+              // Auto-advance to review page after 1 second
+              setTimeout(() => {
+                window.location.href = '/setup/review';
+              }, 1000);
+            } else if (event.type === 'error') {
+              statusIcon.textContent = '⚠️';
+              statusText.textContent = 'Scan failed';
+              const errorLog = document.createElement('p');
+              errorLog.className = 'error';
+              errorLog.textContent = `Error: ${event.message}`;
+              scanLogs.appendChild(errorLog);
+              scanButton.disabled = false;
+              scanButtonText.textContent = 'Retry Scan';
+            }
+          } catch (e) {
+            console.error('Failed to parse event:', line, e);
+          }
+        }
+      }
+    } catch (error) {
+      statusIcon.textContent = '⚠️';
+      statusText.textContent = 'Scan failed';
+      const errorLog = document.createElement('p');
+      errorLog.className = 'error';
+      errorLog.textContent = `Error: ${error.message}`;
+      scanLogs.appendChild(errorLog);
+      scanButton.disabled = false;
+      scanButtonText.textContent = 'Retry Scan';
+    }
+  }
+</script>

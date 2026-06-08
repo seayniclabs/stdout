@@ -1,3 +1,4 @@
+// Setup wizard state management - v2
 import { nanoid } from 'nanoid';
 import { getCentralDb } from './db';
 import { setupProgress, setupConfig, users, license } from './db/central-schema';
@@ -43,7 +44,25 @@ export async function getSetupProgress(): Promise<SetupState> {
   const db = getCentralDb();
 
   // Get all completed steps
-  const steps = await db.select().from(setupProgress).orderBy(setupProgress.stepNumber);
+  let steps = await db.select().from(setupProgress).orderBy(setupProgress.stepNumber);
+
+  // Initialize setup_progress if empty
+  if (steps.length === 0) {
+    const now = new Date();
+    for (let step = SetupStep.AdminAccount; step <= SetupStep.Complete; step++) {
+      await db.insert(setupProgress).values({
+        id: nanoid(),
+        stepNumber: step,
+        stepName: STEP_NAMES[step],
+        completed: false,
+        completedAt: null,
+        data: null,
+        createdAt: now,
+      });
+    }
+    // Re-fetch after initialization
+    steps = await db.select().from(setupProgress).orderBy(setupProgress.stepNumber);
+  }
 
   // Find first incomplete step
   let currentStep = SetupStep.AdminAccount;
@@ -84,15 +103,35 @@ export async function completeStep(step: SetupStep, data?: any): Promise<void> {
   const db = getCentralDb();
   const now = new Date();
 
-  await db.insert(setupProgress).values({
-    id: nanoid(),
-    stepNumber: step,
-    stepName: STEP_NAMES[step],
-    completed: true,
-    completedAt: now,
-    data: data ? JSON.stringify(data) : null,
-    createdAt: now,
-  });
+  // Check if step record exists
+  const existing = await db
+    .select()
+    .from(setupProgress)
+    .where(eq(setupProgress.stepNumber, step))
+    .limit(1);
+
+  if (existing.length > 0) {
+    // Update existing record
+    await db
+      .update(setupProgress)
+      .set({
+        completed: true,
+        completedAt: now,
+        data: data ? JSON.stringify(data) : null,
+      })
+      .where(eq(setupProgress.stepNumber, step));
+  } else {
+    // Insert new record if it doesn't exist
+    await db.insert(setupProgress).values({
+      id: nanoid(),
+      stepNumber: step,
+      stepName: STEP_NAMES[step],
+      completed: true,
+      completedAt: now,
+      data: data ? JSON.stringify(data) : null,
+      createdAt: now,
+    });
+  }
 }
 
 /**

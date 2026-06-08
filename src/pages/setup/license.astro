@@ -1,30 +1,35 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getUserCount } from '../../lib/auth';
-import { storeLicense, isValidLicenseKeyFormat, getStoredLicense } from '../../lib/license';
+import SetupProgress from '../../components/SetupProgress.astro';
+import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+import { storeLicense, isValidLicenseKeyFormat } from '../../lib/license';
 import { validateCsrf } from '../../middleware';
 
-// Redirect if no users (must create admin first)
-if (getUserCount() === 0) {
-  return Astro.redirect('/setup');
-}
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
 
-// Redirect if license already exists
-if (getStoredLicense()) {
-  return Astro.redirect('/app');
+const progress = await getSetupProgress();
+if (progress.currentStep !== SetupStep.License) {
+  if (progress.currentStep < SetupStep.License) return Astro.redirect('/setup');
+  return Astro.redirect('/setup/scanner');
 }
 
 let error = '';
-let success = false;
 let licenseKey = '';
+let validating = false;
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const csrfToken = form.get('_csrf') as string || '';
+  const action = form.get('action') as string;
 
   if (!validateCsrf(csrfToken, Astro.cookies)) {
     error = 'Invalid form submission. Please try again.';
+  } else if (action === 'skip') {
+    // User chose to skip license activation
+    await completeStep(SetupStep.License, { skipped: true });
+    return Astro.redirect('/setup/scanner');
   } else {
     const key = (form.get('licenseKey') as string || '').trim();
     const email = (form.get('email') as string || '').trim().toLowerCase();
@@ -33,14 +38,14 @@ if (Astro.request.method === 'POST') {
     if (!key || !email) {
       error = 'License key and email are required.';
     } else if (!isValidLicenseKeyFormat(key)) {
-      error = 'Invalid license key format. License keys are 16-128 characters with dashes.';
+      error = 'Invalid license key format. Expected format: XXXX-XXXX-XXXX-XXXX';
     } else {
       if (mode === 'online') {
-        // Online validation via store API
         try {
-          const storeUrl = process.env.STORE_UPDATE_URL || 'https://store.seayniclabs.com/api/licenses/validate';
+          validating = true;
+          const storeUrl = 'https://store.seayniclabs.com/api/licenses/activate';
           const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 10000);
+          const timeout = setTimeout(() => controller.abort(), 15000);
 
           const res = await fetch(storeUrl, {
             method: 'POST',
@@ -53,7 +58,7 @@ if (Astro.request.method === 'POST') {
               key,
               email,
               product: 'stdout-self-host',
-              version: process.env.STDOUT_VERSION || '1.1.0',
+              version: '1.2.0',
             }),
           });
           clearTimeout(timeout);
@@ -62,57 +67,58 @@ if (Astro.request.method === 'POST') {
             const data = await res.json() as { valid: boolean; edition?: string; message?: string };
             if (data.valid) {
               storeLicense(key, email, data.edition || 'self-host');
-              success = true;
+              await completeStep(SetupStep.License, {
+                activated: true,
+                mode: 'online',
+                edition: data.edition || 'self-host',
+              });
+              return Astro.redirect('/setup/scanner');
             } else {
               error = data.message || 'License validation failed.';
             }
           } else if (res.status === 401 || res.status === 404) {
-            error = 'Invalid license key or email. Please check your purchase receipt.';
+            error = 'Invalid license key or email. Please check your purchase confirmation.';
           } else {
-            error = 'Unable to validate license. Check your internet connection and try again.';
+            error = 'Validation failed. Try offline mode or contact support.';
           }
-        } catch (err) {
-          error = 'Network error. Please check your internet connection or try offline activation.';
+        } catch (err: any) {
+          if (err.name === 'AbortError') {
+            error = 'Validation timed out. Your server may be offline. Try offline activation below.';
+          } else {
+            error = 'Network error. Try offline mode if your server has no internet access.';
+          }
         }
       } else {
-        // Offline mode - verify cryptographic signature (no network required)
+        // Offline mode - cryptographic signature verification
         const { verifyLicenseSignature } = await import('../../lib/license');
         const verifyResult = verifyLicenseSignature(key);
 
         if (!verifyResult.valid) {
-          error = `License validation failed: ${verifyResult.reason || 'Invalid license'}`;
-        } else if (verifyResult.payload) {
-          // Check product matches
-          if (verifyResult.payload.product !== 'stdout-self-host') {
-            error = `This license is for ${verifyResult.payload.product}, not StdOut`;
-          } else {
-            // Valid signed license - store it
-            storeLicense(key, email, 'self-host');
-            success = true;
-          }
+          error = `Offline validation failed: ${verifyResult.reason || 'Invalid signature'}`;
+        } else if (verifyResult.payload?.product === 'stdout-self-host') {
+          storeLicense(key, email, 'self-host');
+          await completeStep(SetupStep.License, {
+            activated: true,
+            mode: 'offline',
+            edition: 'self-host',
+          });
+          return Astro.redirect('/setup/scanner');
         } else {
-          error = 'License validation failed: Unable to parse license data';
+          error = 'This license is not valid for StdOut';
         }
       }
     }
-
-    if (success) {
-      return Astro.redirect('/app');
-    }
+    licenseKey = key;
   }
 }
 ---
-<Layout title="Activate License — StdOut">
-  <div class="auth-page">
-    <div style="text-align: center; margin-bottom: 32px;">
-      <div style="width: 48px; height: 48px; margin: 0 auto 16px; background: var(--accent); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </div>
-      <h1 style="margin: 0 0 8px;">Activate Your License</h1>
-      <p class="auth-subtitle">Enter your license key to unlock StdOut.</p>
-    </div>
+
+<Layout title="Activate License">
+  <div class="auth-page" style="max-width: 600px;">
+    <SetupProgress currentStep={3} totalSteps={7} />
+
+    <h1>Activate Your License</h1>
+    <p class="auth-subtitle">Enter your license key to activate StdOut</p>
 
     {error && <div class="auth-error">{error}</div>}
 
@@ -120,94 +126,222 @@ if (Astro.request.method === 'POST') {
       <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
       <input type="hidden" name="mode" id="modeInput" value="online" />
 
-      <label>
-        <span>License Key</span>
-        <input
-          type="text"
-          name="licenseKey"
-          value={licenseKey}
-          required
-          placeholder="XXXX-XXXX-XXXX-XXXX"
-          style="font-family: var(--font-mono); letter-spacing: 0.5px;"
-          autocomplete="off"
-        />
-        <small style="color: var(--text-muted); font-size: 13px; margin-top: 4px; display: block;">
-          Find your license key in your purchase receipt email.
-        </small>
-      </label>
+      <div class="license-modes">
+        <button type="button" class="mode-btn active" id="onlineBtn">
+          🌐 Online Activation
+        </button>
+        <button type="button" class="mode-btn" id="offlineBtn">
+          📴 Offline Activation
+        </button>
+      </div>
 
-      <label>
-        <span>Email Address</span>
-        <input
-          type="email"
-          name="email"
-          required
-          placeholder="you@example.com"
-          autocomplete="email"
-        />
-        <small style="color: var(--text-muted); font-size: 13px; margin-top: 4px; display: block;">
-          The email address used for your purchase.
-        </small>
-      </label>
+      <div id="onlineMode" class="activation-mode">
+        <label>
+          <span>License Key</span>
+          <input
+            type="text"
+            name="licenseKey"
+            value={licenseKey}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            style="font-family: var(--font-mono);"
+            autocomplete="off"
+          />
+          <span class="hint">Find this in your purchase confirmation email</span>
+        </label>
 
-      <button type="submit" class="btn-primary" id="submitBtn">
-        Activate License
-      </button>
+        <label>
+          <span>Email Address</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
+          <span class="hint">The email you used to purchase</span>
+        </label>
 
-      <button
-        type="button"
-        class="btn-ghost"
-        id="offlineBtn"
-        style="margin-top: 8px;"
-      >
-        Activate Offline
-      </button>
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <span id="submitText">Activate License</span>
+          <span id="submitSpinner" style="display: none;">⏳ Validating...</span>
+        </button>
+      </div>
+
+      <div id="offlineMode" class="activation-mode" style="display: none;">
+        <div class="offline-info">
+          <p><strong>Offline activation verifies your license cryptographically without internet access.</strong></p>
+          <p>Your license key contains a digital signature that proves it was issued by Seaynic Labs.</p>
+        </div>
+
+        <label>
+          <span>License Key</span>
+          <input
+            type="text"
+            name="licenseKey"
+            value={licenseKey}
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            style="font-family: var(--font-mono);"
+            autocomplete="off"
+          />
+        </label>
+
+        <label>
+          <span>Email Address</span>
+          <input
+            type="email"
+            name="email"
+            placeholder="you@example.com"
+            autocomplete="email"
+          />
+        </label>
+
+        <button type="submit" class="btn-primary">
+          Activate Offline
+        </button>
+      </div>
+
+      <div class="skip-section">
+        <button type="submit" name="action" value="skip" class="btn-secondary">
+          Skip for Now
+        </button>
+        <p class="skip-note">You can activate your license later from Settings. StdOut requires a valid license for full functionality.</p>
+      </div>
     </form>
 
-    <div style="margin-top: 32px; padding: 16px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 8px;">
-      <p style="margin: 0 0 12px; font-size: 14px; color: var(--text-secondary);">
-        <strong>Don't have a license yet?</strong>
-      </p>
-      <p style="margin: 0 0 12px; font-size: 14px; color: var(--text-muted);">
-        Purchase StdOut Self-Hosted for $149 (one-time payment, lifetime license).
-      </p>
-      <a
-        href="https://store.seayniclabs.com/products/stdout-self-host"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="btn-secondary"
-        style="display: inline-block; padding: 8px 16px; font-size: 14px;"
-      >
+    <div class="purchase-cta">
+      <p><strong>Don't have a license?</strong></p>
+      <p>Purchase StdOut Self-Hosted for $149 (one-time payment, lifetime updates)</p>
+      <a href="https://store.seayniclabs.com/products/stdout-self-host" target="_blank" class="btn-secondary btn-small">
         Buy License →
       </a>
     </div>
-
-    <div style="margin-top: 24px; text-align: center;">
-      <p style="font-size: 13px; color: var(--text-muted);">
-        Having trouble? <a href="mailto:hello@seayniclabs.com" style="color: var(--accent);">Contact support</a>
-      </p>
-    </div>
   </div>
-
-  <script>
-    const form = document.getElementById('licenseForm') as HTMLFormElement;
-    const modeInput = document.getElementById('modeInput') as HTMLInputElement;
-    const submitBtn = document.getElementById('submitBtn') as HTMLButtonElement;
-    const offlineBtn = document.getElementById('offlineBtn') as HTMLButtonElement;
-
-    offlineBtn?.addEventListener('click', () => {
-      const confirmed = confirm(
-        'Offline activation will store your license key without validation.\n\n' +
-        'StdOut will attempt to validate it on the next update check.\n\n' +
-        'Use this option if your server has no internet access.\n\n' +
-        'Continue with offline activation?'
-      );
-
-      if (confirmed) {
-        modeInput.value = 'offline';
-        submitBtn.textContent = 'Activate Offline';
-        form.submit();
-      }
-    });
-  </script>
 </Layout>
+
+<style>
+  .hint {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+
+  .license-modes {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .mode-btn {
+    flex: 1;
+    padding: 0.75rem;
+    background: var(--color-bg-subtle);
+    border: 2px solid var(--color-border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .mode-btn:hover {
+    border-color: var(--color-primary);
+  }
+
+  .mode-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+  }
+
+  .activation-mode {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .offline-info {
+    padding: 1rem;
+    background: var(--color-info-bg, #d1ecf1);
+    border: 1px solid var(--color-info, #0c5460);
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .offline-info p {
+    margin: 0.5rem 0;
+  }
+
+  .skip-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+
+  .skip-note {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .purchase-cta {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .purchase-cta p {
+    margin: 0.5rem 0;
+    font-size: 0.875rem;
+  }
+
+  .purchase-cta p:first-child {
+    font-weight: 600;
+  }
+
+  .btn-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    margin-top: 0.75rem;
+  }
+</style>
+
+<script>
+  const form = document.getElementById('licenseForm') as HTMLFormElement;
+  const modeInput = document.getElementById('modeInput') as HTMLInputElement;
+  const onlineBtn = document.getElementById('onlineBtn');
+  const offlineBtn = document.getElementById('offlineBtn');
+  const onlineMode = document.getElementById('onlineMode');
+  const offlineMode = document.getElementById('offlineMode');
+  const submitBtn = document.getElementById('submitBtn');
+  const submitText = document.getElementById('submitText');
+  const submitSpinner = document.getElementById('submitSpinner');
+
+  onlineBtn?.addEventListener('click', () => {
+    onlineBtn.classList.add('active');
+    offlineBtn?.classList.remove('active');
+    onlineMode!.style.display = 'flex';
+    offlineMode!.style.display = 'none';
+    modeInput.value = 'online';
+  });
+
+  offlineBtn?.addEventListener('click', () => {
+    offlineBtn.classList.add('active');
+    onlineBtn?.classList.remove('active');
+    offlineMode!.style.display = 'flex';
+    onlineMode!.style.display = 'none';
+    modeInput.value = 'offline';
+  });
+
+  form?.addEventListener('submit', (e) => {
+    const actionInput = (e.submitter as HTMLButtonElement)?.name;
+    if (actionInput !== 'action' && submitBtn) {
+      submitBtn.disabled = true;
+      submitText!.style.display = 'none';
+      submitSpinner!.style.display = 'inline';
+    }
+  });
+</script>

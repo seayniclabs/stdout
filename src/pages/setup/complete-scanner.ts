@@ -13,5 +13,5 @@ export const POST: APIRoute = async ({ request, redirect, locals }) => {
     ranAt: new Date().toISOString(),
   });
 
-  return redirect('/setup/complete');
+  return redirect('/setup/review');
 };

@@ -1,23 +1,24 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-// import { getSession } from '../../lib/auth';
 import { getSetupProgress, completeStep, SetupStep, getSetupConfig } from '../../lib/setup';
-
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const progress = await getSetupProgress();
 
-// Complete final steps if not already done
-if (progress.currentStep === SetupStep.Scanner) {
-  // Skip review and windlass for now, mark them complete
-  await completeStep(SetupStep.Review, { skipped: true });
-  await completeStep(SetupStep.Windlass, { skipped: true });
+// Mark setup as complete if we're on the final step
+if (progress.currentStep >= SetupStep.Complete && !progress.steps[SetupStep.Complete]?.completed) {
   await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString() });
 }
 
 const environmentName = await getSetupConfig('environment_name');
+
+// Gather setup summary data (TODO: implement stacks/containers schema)
+const stacks = [];
+const containers = [];
+const licenseActivated = progress.steps[SetupStep.License]?.completed && !progress.steps[SetupStep.License]?.data?.skipped;
+const windlassEnabled = progress.steps[SetupStep.Windlass]?.data?.enabled || false;
 ---
 
 <Layout title="Setup Complete!">
@@ -29,15 +30,47 @@ const environmentName = await getSetupConfig('environment_name');
 
     <div class="setup-summary">
       <h3>Environment: {environmentName || 'StdOut'}</h3>
-      <p>Your infrastructure monitoring and incident tracking system is now active.</p>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">👤 Admin Account</span>
+          <span class="summary-value">{session.email}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">🔑 License</span>
+          <span class="summary-value">{licenseActivated ? 'Activated' : 'Not Activated'}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">📦 Infrastructure</span>
+          <span class="summary-value">
+            {stacks.length > 0
+              ? `${stacks.length} stack(s), ${containers.length} container(s)`
+              : 'No services discovered'}
+          </span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">⏰ Windlass</span>
+          <span class="summary-value">{windlassEnabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
+      </div>
 
       <div class="next-steps">
         <h4>What's Next:</h4>
         <ul>
-          <li>View your discovered infrastructure at <strong>Infrastructure → Stacks</strong></li>
+          {stacks.length > 0 ? (
+            <li>View your discovered infrastructure at <strong>Infrastructure → Stacks</strong></li>
+          ) : (
+            <li>Add your first stack at <strong>Infrastructure → Add Stack</strong></li>
+          )}
           <li>Create your first incident at <strong>Incidents</strong></li>
           <li>Monitor service health in <strong>HUD</strong></li>
           <li>Build your runbook in <strong>Docs</strong></li>
+          {!licenseActivated && (
+            <li>Activate your license in <strong>Settings → License</strong> to unlock Pro features</li>
+          )}
         </ul>
       </div>
     </div>
@@ -74,8 +107,38 @@ const environmentName = await getSetupConfig('environment_name');
   }
 
   .setup-summary h3 {
-    margin-top: 0;
+    margin: 0 0 1.5rem 0;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
     color: var(--color-primary);
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 1rem;
+    background: var(--color-bg-subtle);
+    border-radius: 8px;
+  }
+
+  .summary-label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    font-weight: 500;
+  }
+
+  .summary-value {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    font-family: var(--font-mono);
   }
 
   .next-steps {

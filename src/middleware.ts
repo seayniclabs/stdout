@@ -61,8 +61,29 @@ const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 function checkOrigin(request: Request): boolean {
   if (!MUTATING_METHODS.has(request.method)) return true;
   const origin = request.headers.get('origin');
-  if (!origin) return false; // Reject mutating requests with no Origin header
-  return ALLOWED_ORIGINS.some(allowed => origin === allowed);
+  const referer = request.headers.get('referer');
+  console.log('[checkOrigin] method:', request.method, 'origin:', origin, 'referer:', referer, 'allowed:', ALLOWED_ORIGINS);
+
+  // Allow requests with no Origin header if Referer matches (same-origin navigation)
+  if (!origin) {
+    if (referer) {
+      try {
+        const refererOrigin = new URL(referer).origin;
+        const isAllowed = ALLOWED_ORIGINS.some(allowed => refererOrigin === allowed);
+        console.log('[checkOrigin] using referer:', refererOrigin, 'allowed:', isAllowed);
+        return isAllowed;
+      } catch {
+        console.log('[checkOrigin] invalid referer URL');
+        return false;
+      }
+    }
+    console.log('[checkOrigin] no origin or referer');
+    return false;
+  }
+
+  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin === allowed);
+  console.log('[checkOrigin] origin check:', isAllowed);
+  return isAllowed;
 }
 
 // --- Rate Limiting ---
@@ -304,7 +325,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.csrfToken = csrfToken;
 
   // Setup completion check - redirect to setup if incomplete
-  if (context.locals.user && !pathname.startsWith('/setup') && !pathname.startsWith('/app/api/')) {
+  // Skip this check for auth pages to avoid redirect loops
+  const setupExcludedPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email'];
+  const shouldCheckSetup = context.locals.user &&
+    !pathname.startsWith('/setup') &&
+    !pathname.startsWith('/app/api/') &&
+    !setupExcludedPaths.some(p => pathname.startsWith(p));
+
+  if (shouldCheckSetup) {
     try {
       const { isSetupComplete } = await import('./lib/setup');
       const setupComplete = await isSetupComplete();
