@@ -48,6 +48,22 @@ export const emailVerifications = sqliteTable('email_verifications', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const setupProgress = sqliteTable('setup_progress', {
+  id: text('id').primaryKey(),
+  stepNumber: integer('step_number').notNull(),
+  stepName: text('step_name').notNull(),
+  completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
+  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  data: text('data'), // JSON string
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const setupConfig = sqliteTable('setup_config', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const apiTokens = sqliteTable('api_tokens', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),

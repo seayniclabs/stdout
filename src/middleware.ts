@@ -15,12 +15,16 @@ const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event'];
 
 function validateBearerToken(request: Request): { userId: string } | null {
   const authHeader = request.headers.get('authorization');
+  console.log('[validateBearerToken] authHeader:', authHeader ? authHeader.slice(0, 30) + '...' : 'null');
   if (!authHeader?.startsWith('Bearer ')) return null;
 
   const rawToken = authHeader.slice(7);
+  console.log('[validateBearerToken] rawToken prefix:', rawToken.slice(0, 15));
+  console.log('[validateBearerToken] prefix check:', rawToken.startsWith('stdout_scan_') ? 'PASS' : 'FAIL');
   if (!rawToken.startsWith('stdout_scan_')) return null;
 
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+  console.log('[validateBearerToken] tokenHash:', tokenHash.slice(0, 20) + '...');
 
   const row = getCentralDb()
     .select({
@@ -31,6 +35,7 @@ function validateBearerToken(request: Request): { userId: string } | null {
     .where(eq(centralSchema.apiTokens.tokenHash, tokenHash))
     .get();
 
+  console.log('[validateBearerToken] row found:', row ? 'YES' : 'NO');
   if (!row) return null;
 
   // Update last_used_at
@@ -297,6 +302,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const csrfOpts = sessionCookieOptions(60 * 60 * 2);
   context.cookies.set(CSRF_COOKIE, csrfToken, { ...csrfOpts, domain: undefined });
   context.locals.csrfToken = csrfToken;
+
+  // Setup completion check - redirect to setup if incomplete
+  if (context.locals.user && !pathname.startsWith('/setup') && !pathname.startsWith('/app/api/')) {
+    try {
+      const { isSetupComplete } = await import('./lib/setup');
+      const setupComplete = await isSetupComplete();
+      if (!setupComplete) {
+        const { getSetupProgress } = await import('./lib/setup');
+        const progress = await getSetupProgress();
+        // Redirect to current setup step
+        if (progress.currentStep === 1) return context.redirect('/setup');
+        if (progress.currentStep === 2) return context.redirect('/setup/environment');
+        if (progress.currentStep === 3) return context.redirect('/setup/license');
+        if (progress.currentStep === 4) return context.redirect('/setup/scanner');
+        if (progress.currentStep >= 5) return context.redirect('/setup/complete');
+      }
+    } catch (err) {
+      // Setup lib not available or error - skip check
+    }
+  }
 
   // Protect /app/* routes (except login, register, forgot-password)
   const publicAppPaths = [

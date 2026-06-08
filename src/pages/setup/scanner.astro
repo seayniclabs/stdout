@@ -1,0 +1,140 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SetupProgress from '../../components/SetupProgress.astro';
+// import { getSession } from '../../lib/auth';
+import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const progress = await getSetupProgress();
+if (progress.currentStep !== SetupStep.Scanner) {
+  if (progress.currentStep < SetupStep.Scanner) return Astro.redirect('/setup');
+  return Astro.redirect('/setup/review');
+}
+
+// Check if scanner token exists
+const { getCentralDb } = await import('../../lib/db');
+const { apiTokens } = await import('../../lib/db/central-schema');
+const db = getCentralDb();
+const tokens = await db.select().from(apiTokens).limit(1);
+let scannerToken = '';
+
+if (tokens.length === 0) {
+  // Generate scanner token
+  const { nanoid } = await import('nanoid');
+  const { createHash } = await import('node:crypto');
+  const plainToken = `stdout_scan_${nanoid(32)}`;
+  const tokenHash = createHash('sha256').update(plainToken).digest('hex');
+
+  await db.insert(apiTokens).values({
+    id: `tok_${nanoid()}`,
+    userId: session.userId,
+    name: 'Scanner (Auto-generated)',
+    tokenHash,
+    createdAt: new Date(),
+  });
+
+  scannerToken = plainToken;
+} else {
+  scannerToken = '[Token already generated - check Settings → API Tokens]';
+}
+
+const scannerCommand = `docker run --rm \\
+  -v /var/run/docker.sock:/var/run/docker.sock:ro \\
+  ghcr.io/seayniclabs/stdout-scanner:latest \\
+  --token "${scannerToken}" \\
+  --url ${process.env.APP_URL || 'http://localhost:8112'} \\
+  --full \\
+  --scan-sources`;
+---
+
+<Layout title="Discover Infrastructure">
+  <div class="auth-page" style="max-width: 800px;">
+    <SetupProgress currentStep={4} totalSteps={7} />
+
+    <h1>Discover Your Infrastructure</h1>
+    <p class="auth-subtitle">Run the scanner to automatically discover your Docker containers and services</p>
+
+    <div class="scanner-instructions">
+      <h3>Scanner Options:</h3>
+      <ul>
+        <li>✓ Docker containers (required)</li>
+        <li>✓ Container metrics (CPU, memory, etc.)</li>
+        <li>✓ Data sources (Prometheus, Grafana, etc.)</li>
+        <li>✓ Full scan (includes DNS, auth detection)</li>
+      </ul>
+
+      <h3>Run this command on your Docker host:</h3>
+      <pre class="command-box"><code>{scannerCommand}</code></pre>
+      <button onclick="navigator.clipboard.writeText(this.previousElementSibling.querySelector('code').textContent)" class="btn-secondary" style="margin-top: 0.5rem;">
+        Copy Command
+      </button>
+
+      <div class="scanner-note">
+        <p><strong>Note:</strong> The scanner may take 2-5 minutes to complete. It will automatically import results when finished.</p>
+      </div>
+    </div>
+
+    <form method="POST" action="/setup/complete-scanner" class="setup-actions">
+      <button type="submit" name="action" value="skip" class="btn-secondary">Skip Scanner</button>
+      <button type="submit" name="action" value="continue" class="btn-primary">I've Run the Scanner →</button>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .scanner-instructions {
+    margin: 2rem 0;
+  }
+
+  .scanner-instructions h3 {
+    font-size: 1rem;
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .scanner-instructions ul {
+    margin: 0 0 1rem 1.5rem;
+    padding: 0;
+  }
+
+  .scanner-instructions li {
+    margin: 0.25rem 0;
+  }
+
+  .command-box {
+    background: var(--color-bg-subtle, #f8f9fa);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  .scanner-note {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: var(--color-info-bg, #d1ecf1);
+    border: 1px solid var(--color-info, #0c5460);
+    border-radius: 6px;
+  }
+
+  .scanner-note p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+
+  .setup-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .setup-actions button {
+    flex: 1;
+  }
+</style>

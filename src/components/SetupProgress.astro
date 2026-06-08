@@ -1,0 +1,84 @@
+---
+interface Props {
+  currentStep: number;
+  totalSteps: number;
+}
+
+const { currentStep, totalSteps } = Astro.props;
+---
+
+<div class="setup-progress">
+  <div class="setup-progress-bar">
+    {Array.from({ length: totalSteps }, (_, i) => i + 1).map(step => (
+      <div class={`setup-progress-step ${step < currentStep ? 'completed' : ''} ${step === currentStep ? 'current' : ''}`}>
+        <div class="setup-progress-circle">
+          {step < currentStep ? '✓' : step}
+        </div>
+        {step < totalSteps && <div class="setup-progress-line"></div>}
+      </div>
+    ))}
+  </div>
+  <p class="setup-progress-text">Step {currentStep} of {totalSteps}</p>
+</div>
+
+<style>
+  .setup-progress {
+    margin-bottom: 2rem;
+  }
+
+  .setup-progress-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  .setup-progress-step {
+    display: flex;
+    align-items: center;
+  }
+
+  .setup-progress-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border);
+    background: var(--color-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+  }
+
+  .setup-progress-step.current .setup-progress-circle {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .setup-progress-step.completed .setup-progress-circle {
+    border-color: var(--color-success);
+    background: var(--color-success);
+    color: white;
+  }
+
+  .setup-progress-line {
+    width: 40px;
+    height: 2px;
+    background: var(--color-border);
+    margin: 0 4px;
+  }
+
+  .setup-progress-step.completed .setup-progress-line {
+    background: var(--color-success);
+  }
+
+  .setup-progress-text {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+</style>

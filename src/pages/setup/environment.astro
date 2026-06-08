@@ -1,0 +1,93 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import SetupProgress from '../../components/SetupProgress.astro';
+// import { getSession } from '../../lib/auth';
+import { getSetupProgress, completeStep, SetupStep, setSetupConfig } from '../../lib/setup';
+import { validateCsrf } from '../../middleware';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const progress = await getSetupProgress();
+if (progress.currentStep !== SetupStep.Environment) {
+  return Astro.redirect(`/setup/step/${progress.currentStep}`);
+}
+
+let error = '';
+let environmentName = '';
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const csrfToken = form.get('_csrf') as string || '';
+
+  if (!validateCsrf(csrfToken, Astro.cookies)) {
+    error = 'Invalid form submission. Please try again.';
+  } else {
+    environmentName = (form.get('environmentName') as string || '').trim();
+
+    if (!environmentName) {
+      error = 'Environment name is required.';
+    } else {
+      // Save environment name
+      await setSetupConfig('environment_name', environmentName);
+
+      // Mark Step 2 complete
+      await completeStep(SetupStep.Environment, { environmentName });
+
+      return Astro.redirect('/setup/license');
+    }
+  }
+}
+---
+
+<Layout title="Name Your Environment">
+  <div class="auth-page">
+    <SetupProgress currentStep={2} totalSteps={7} />
+
+    <h1>Name Your Environment</h1>
+    <p class="auth-subtitle">What should we call this StdOut installation?</p>
+
+    {error && <div class="auth-error">{error}</div>}
+
+    <form method="POST" class="auth-form">
+      <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+
+      <label>
+        <span>Environment Name</span>
+        <input
+          type="text"
+          name="environmentName"
+          value={environmentName}
+          placeholder="Home Lab"
+          required
+          autofocus
+        />
+        <span class="hint">Examples: "Home Lab", "Production", "Development", "Staging"</span>
+      </label>
+
+      <div class="setup-actions">
+        <button type="submit" class="btn-primary">Continue →</button>
+      </div>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .hint {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+  }
+
+  .setup-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .setup-actions button {
+    flex: 1;
+  }
+</style>
