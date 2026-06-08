@@ -344,7 +344,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
         if (progress.currentStep === 2) return context.redirect('/setup/environment');
         if (progress.currentStep === 3) return context.redirect('/setup/license');
         if (progress.currentStep === 4) return context.redirect('/setup/scanner');
-        if (progress.currentStep >= 5) return context.redirect('/setup/complete');
+        if (progress.currentStep === 5) return context.redirect('/setup/review');
+        if (progress.currentStep === 6) return context.redirect('/setup/windlass');
+        if (progress.currentStep === 7) return context.redirect('/setup/complete');
       }
     } catch (err) {
       // Setup lib not available or error - skip check

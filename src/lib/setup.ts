@@ -74,7 +74,9 @@ export async function getSetupProgress(): Promise<SetupState> {
     }
   }
 
-  const isComplete = currentStep === SetupStep.Complete;
+  // Setup is complete if the Complete step (step 7) is marked as completed
+  const completeStepRecord = steps.find(s => s.stepNumber === SetupStep.Complete);
+  const isComplete = completeStepRecord?.completed ?? false;
 
   return {
     currentStep: isComplete ? SetupStep.Complete : currentStep,
