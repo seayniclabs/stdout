@@ -7,6 +7,7 @@ import { getCentralDb, centralSchema } from '../../lib/db';
 import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
 import { validateCsrf } from '../../middleware';
 import { nanoid } from 'nanoid';
+import { eq } from 'drizzle-orm';
 
 // If user is already logged in and setup is past step 1, redirect to current step
 const session = Astro.locals.user;
@@ -47,7 +48,7 @@ if (Astro.request.method === 'POST') {
       const existingUser = db
         .select()
         .from(centralSchema.users)
-        .where((users) => users.email.equals(email))
+        .where(eq(centralSchema.users.email, email))
         .get();
 
       if (existingUser) {
