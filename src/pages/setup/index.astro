@@ -57,7 +57,7 @@ if (Astro.request.method === 'POST') {
         // Create user
         const userId = 'usr_' + nanoid(32);
         const passwordHash = await hashPassword(password);
-        const now = Date.now();
+        const now = new Date();
 
         db.insert(centralSchema.users).values({
           id: userId,
