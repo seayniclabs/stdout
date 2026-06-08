@@ -160,8 +160,22 @@ if (progress.currentStep !== SetupStep.Scanner) {
 </style>
 
 <script>
-  // Attach event listener when DOM is ready
-  document.getElementById('scanButton')?.addEventListener('click', startScan);
+  // Auto-start scan after 1.5 seconds (give user time to see the page)
+  let autoStarted = false;
+  setTimeout(() => {
+    if (!autoStarted) {
+      autoStarted = true;
+      startScan();
+    }
+  }, 1500);
+
+  // Also allow manual start
+  document.getElementById('scanButton')?.addEventListener('click', () => {
+    if (!autoStarted) {
+      autoStarted = true;
+      startScan();
+    }
+  });
 
   async function startScan() {
     const scanButton = document.getElementById('scanButton');
