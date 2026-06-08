@@ -50,6 +50,7 @@ export async function getSetupProgress(): Promise<SetupState> {
   if (steps.length === 0) {
     const now = new Date();
     for (let step = SetupStep.AdminAccount; step <= SetupStep.Complete; step++) {
+      console.log('[setup] Initializing step:', step, 'name:', STEP_NAMES[step]);
       await db.insert(setupProgress).values({
         id: nanoid(),
         stepNumber: step,
