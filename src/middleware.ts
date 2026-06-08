@@ -368,7 +368,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
 
   if (pathname === '/setup') {
-    if (getUserCount() > 0) {
+    const userCount = getUserCount();
+    console.log('[middleware] /setup accessed, userCount:', userCount);
+    if (userCount > 0) {
       return context.redirect('/app/login');
     }
   } else if (pathname === '/setup/license') {
