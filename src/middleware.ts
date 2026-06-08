@@ -382,7 +382,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return context.redirect('/setup');
   } else if (getUserCount() > 0 && !getStoredLicense() && (isAppRoute || pathname === '/app') && !isPublicApp) {
     // License required for all /app/* routes (except public paths)
-    return context.redirect('/setup/license');
+    // BUT: if setup is complete, allow access (offline mode)
+    const { isSetupComplete } = await import('./lib/setup');
+    const setupComplete = await isSetupComplete();
+    if (!setupComplete) {
+      return context.redirect('/setup/license');
+    }
   }
 
   let response: Response;

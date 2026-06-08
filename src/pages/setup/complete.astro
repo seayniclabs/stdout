@@ -1,6 +1,6 @@
 ---
 export const prerender = false;
-import Layout from '../../layouts/Layout.astro';
+import Layout from '../../layouts/SetupLayout.astro';
 import { getSetupProgress, completeStep, SetupStep, getSetupConfig } from '../../lib/setup';
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
