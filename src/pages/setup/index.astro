@@ -13,7 +13,7 @@ import { eq } from 'drizzle-orm';
 const session = Astro.locals.user;
 const progress = await getSetupProgress();
 
-if (session && progress.currentStep > SetupStep.Account) {
+if (session && progress.currentStep > SetupStep.AdminAccount) {
   // User has an account, redirect to their current step
   if (progress.currentStep === SetupStep.Environment) return Astro.redirect('/setup/environment');
   if (progress.currentStep === SetupStep.License) return Astro.redirect('/setup/license');
@@ -70,7 +70,7 @@ if (Astro.request.method === 'POST') {
         }).run();
 
         // Mark account creation step as complete
-        await completeStep(SetupStep.Account, {
+        await completeStep(SetupStep.AdminAccount, {
           userId,
           email,
           displayName,
