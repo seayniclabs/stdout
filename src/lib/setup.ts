@@ -41,10 +41,12 @@ export interface SetupState {
  * Get current setup progress
  */
 export async function getSetupProgress(): Promise<SetupState> {
+  console.log('[setup] getSetupProgress() called');
   const db = getCentralDb();
 
   // Get all completed steps
   let steps = await db.select().from(setupProgress).orderBy(setupProgress.stepNumber);
+  console.log('[setup] Retrieved', steps.length, 'steps from database');
 
   // Initialize setup_progress if empty
   if (steps.length === 0) {
@@ -52,7 +54,7 @@ export async function getSetupProgress(): Promise<SetupState> {
     for (let step = SetupStep.AdminAccount; step <= SetupStep.Complete; step++) {
       const values = {
         id: nanoid(),
-        stepNumber: step,
+        stepNumber: Number(step),  // Ensure it's a number
         stepName: STEP_NAMES[step],
         completed: false,
         completedAt: null,
