@@ -1,8 +1,8 @@
 services:
   # StdOut Incident Companion
   stdout:
-    image: stdout:local
     build: .
+    image: ghcr.io/seayniclabs/stdout:latest  # Pre-built image (pull if available, build if not)
     container_name: stdout
     restart: unless-stopped
     ports:
