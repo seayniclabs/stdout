@@ -17,20 +17,24 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
 ---
 <Layout title="Observatory — StdOut">
   <div class="observatory-page">
-    <div class="hud-header">
-      <div class="hud-header-left">
-        <h1>Observatory <a href="/app/docs/guide/observatory" class="help-link" title="Observatory documentation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></a></h1>
-        <p class="page-subtitle">Proactive monitoring with AI-powered detection and diagnosis. Real-time metrics, logs, and traces.</p>
+    <div class="observatory-header">
+      <div class="header-left">
+        <h1>Observatory</h1>
+        <p class="subtitle">24/7 Infrastructure Monitoring & Observability</p>
       </div>
-      <div class="hud-actions">
-        <button id="pauseWatcherBtn" class="btn btn-ghost btn-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      <div class="header-actions">
+        <button id="pauseWatcherBtn" class="btn-glass">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
           Pause Watcher
         </button>
-        <button id="refreshBtn" class="btn btn-primary btn-sm">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <button id="refreshBtn" class="btn-glass">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
           Refresh
         </button>
+        <div class="status-indicator">
+          <span class="pulse"></span>
+          <span>Live</span>
+        </div>
       </div>
     </div>
 
@@ -170,24 +174,120 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
   </div>
 
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
     .observatory-page {
       padding: 2rem;
       max-width: 1800px;
       margin: 0 auto;
+      min-height: 100vh;
+      background: #020617;
+      font-family: 'Fira Sans', sans-serif;
+    }
+
+    .observatory-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 2rem;
+    }
+
+    .observatory-header h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 0 0.5rem 0;
+      background: linear-gradient(135deg, #F8FAFC 0%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .subtitle {
+      font-size: 1rem;
+      color: #94A3B8;
+      margin: 0;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .btn-glass {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #F8FAFC;
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      font-family: 'Fira Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 200ms ease;
+    }
+
+    .btn-glass:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-glass:focus-visible {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 0.5rem 1rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      color: #22C55E;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      background: #22C55E;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @media (max-width: 768px) {
+      .observatory-header {
+        flex-direction: column;
+        gap: 1rem;
+      }
+
+      .header-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
     }
 
     .observatory-grid {
       display: grid;
       grid-template-columns: repeat(12, 1fr);
+      grid-auto-rows: 280px;
       gap: 1.5rem;
       margin-top: 2rem;
     }
 
-    .obs-agents { grid-column: span 4; }
-    .obs-metrics { grid-column: span 8; }
-    .obs-alerts { grid-column: span 6; }
-    .obs-logs { grid-column: span 6; }
-    .obs-traces { grid-column: span 12; }
+    .obs-agents { grid-column: span 4; grid-row: span 2; }
+    .obs-metrics { grid-column: span 8; grid-row: span 1; }
+    .obs-alerts { grid-column: span 6; grid-row: span 2; }
+    .obs-logs { grid-column: span 6; grid-row: span 2; }
+    .obs-traces { grid-column: span 12; grid-row: span 1; }
 
     @media (max-width: 1400px) {
       .obs-agents { grid-column: span 6; }
@@ -198,22 +298,33 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
 
     @media (max-width: 768px) {
       .observatory-page { padding: 1rem; }
-      .observatory-grid { grid-template-columns: 1fr; gap: 1rem; }
+      .observatory-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        grid-auto-rows: auto;
+      }
       .obs-agents, .obs-metrics, .obs-alerts, .obs-logs, .obs-traces {
         grid-column: span 1;
+        grid-row: span 1;
       }
     }
 
     .obs-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
       padding: 1.5rem;
-      transition: border-color 0.2s;
+      transition: all 200ms ease;
+      display: flex;
+      flex-direction: column;
     }
 
     .obs-card:hover {
-      border-color: var(--border-hover);
+      border-color: rgba(255, 255, 255, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
     }
 
     .obs-card-header {
@@ -224,30 +335,42 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .obs-card-header svg {
-      color: var(--accent-light);
+      color: #22C55E;
     }
 
     .obs-card-header h3 {
-      font-size: 14px;
+      font-size: 1.125rem;
       font-weight: 600;
-      color: var(--text);
+      color: #F8FAFC;
       flex: 1;
     }
 
     .obs-link {
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: 0.875rem;
+      color: #94A3B8;
       text-decoration: none;
       transition: color 0.2s;
+      cursor: pointer;
     }
 
     .obs-link:hover {
-      color: var(--accent-light);
+      color: #22C55E;
+      text-decoration: underline;
     }
 
     /* AI Agents */
     .agent-status {
       margin-bottom: 1.5rem;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      transition: all 200ms ease;
+    }
+
+    .agent-status:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.12);
     }
 
     .agent-status:last-child {
@@ -268,8 +391,8 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--bg-elevated);
-      border-radius: var(--radius-sm);
+      background: rgba(34, 197, 94, 0.1);
+      border-radius: 12px;
     }
 
     .agent-info {
@@ -277,14 +400,15 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .agent-name {
-      font-size: 14px;
+      font-size: 0.875rem;
       font-weight: 600;
-      color: var(--text);
+      color: #F8FAFC;
     }
 
     .agent-model {
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      color: #64748B;
+      font-family: 'Fira Code', monospace;
     }
 
     .agent-state {
@@ -294,34 +418,46 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .agent-label {
-      font-size: 12px;
-      color: var(--text-secondary);
+      font-size: 0.75rem;
+      color: #94A3B8;
     }
 
     .status-dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      animation: statusHeartbeat 2s infinite;
+      animation: pulse 2s ease-in-out infinite;
     }
 
     .status-healthy {
-      background: var(--low);
-      box-shadow: 0 0 4px var(--low);
+      background: #22C55E;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
     }
 
     .status-standby {
-      background: var(--text-muted);
-      box-shadow: 0 0 4px var(--text-muted);
+      background: #64748B;
+      box-shadow: 0 0 4px rgba(100, 116, 139, 0.5);
       animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+      }
+      50% {
+        opacity: 0.5;
+        box-shadow: 0 0 16px rgba(34, 197, 94, 0.3);
+      }
     }
 
     .agent-meta {
       display: flex;
       gap: 1rem;
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      color: #64748B;
       padding-left: 56px;
+      font-family: 'Fira Code', monospace;
     }
 
     /* Metrics */
@@ -329,6 +465,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 1.5rem;
+      flex: 1;
     }
 
     @media (max-width: 1024px) {
@@ -339,58 +476,72 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
 
     .metric {
       text-align: center;
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      transition: all 200ms ease;
+    }
+
+    .metric:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: scale(1.02);
     }
 
     .metric-value {
-      font-size: 32px;
+      font-size: 2rem;
       font-weight: 700;
-      color: var(--accent-light);
+      color: #22C55E;
       margin-bottom: 0.5rem;
+      font-family: 'Fira Code', monospace;
     }
 
     .metric-label {
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      color: #64748B;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
     /* Alerts */
     .alert-count {
-      background: var(--critical);
-      color: #fff;
-      font-size: 11px;
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+      font-size: 0.75rem;
       font-weight: 700;
-      padding: 2px 8px;
+      padding: 0.25rem 0.75rem;
       border-radius: 12px;
       min-width: 20px;
       text-align: center;
     }
 
     .alerts-list {
-      max-height: 300px;
+      max-height: 400px;
       overflow-y: auto;
+      flex: 1;
     }
 
     .empty-alerts {
       text-align: center;
       padding: 3rem 1rem;
-      color: var(--text-muted);
-      font-size: 13px;
+      color: #64748B;
+      font-size: 0.875rem;
     }
 
     .alert-item {
       padding: 1rem;
-      border-left: 3px solid var(--high);
-      background: var(--bg-elevated);
-      border-radius: var(--radius-sm);
+      border-left: 3px solid #F59E0B;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
       margin-bottom: 0.75rem;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 200ms ease;
     }
 
     .alert-item:hover {
-      background: var(--bg-hover);
+      background: rgba(255, 255, 255, 0.05);
+      transform: translateX(2px);
     }
 
     .alert-header {
@@ -401,23 +552,24 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .alert-severity {
-      font-size: 10px;
+      font-size: 0.625rem;
       font-weight: 700;
       text-transform: uppercase;
-      padding: 2px 6px;
+      padding: 0.25rem 0.5rem;
       border-radius: 4px;
-      background: var(--high-dim);
-      color: var(--high);
+      background: rgba(245, 158, 11, 0.2);
+      color: #F59E0B;
     }
 
     .alert-time {
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 0.75rem;
+      color: #64748B;
+      font-family: 'Fira Code', monospace;
     }
 
     .alert-message {
-      font-size: 13px;
-      color: var(--text-secondary);
+      font-size: 0.875rem;
+      color: #94A3B8;
     }
 
     /* Logs */
@@ -428,64 +580,70 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .btn-icon {
-      width: 24px;
-      height: 24px;
+      width: 28px;
+      height: 28px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background: transparent;
-      border: none;
-      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #94A3B8;
       cursor: pointer;
-      border-radius: 4px;
-      transition: all 0.2s;
+      border-radius: 8px;
+      transition: all 200ms ease;
     }
 
     .btn-icon:hover {
-      background: var(--bg-elevated);
-      color: var(--accent-light);
+      background: rgba(255, 255, 255, 0.1);
+      color: #22C55E;
     }
 
     .logs-stream {
       max-height: 400px;
       overflow-y: auto;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
       padding: 1rem;
-      font-size: 11px;
+      font-size: 0.75rem;
+      font-family: 'Fira Code', monospace;
+      flex: 1;
     }
 
     .log-entry {
       display: flex;
-      gap: 1rem;
-      padding: 0.25rem 0;
+      gap: 0.75rem;
+      padding: 0.5rem;
       border-left: 2px solid transparent;
-      padding-left: 0.5rem;
-      transition: all 0.15s;
+      padding-left: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.25rem;
+      transition: all 150ms ease;
     }
 
     .log-entry:hover {
-      background: var(--bg-elevated);
-      border-left-color: var(--accent);
+      background: rgba(255, 255, 255, 0.03);
+      border-left-color: #22C55E;
     }
 
     .log-time {
-      color: var(--text-muted);
+      color: #64748B;
       min-width: 60px;
+      flex-shrink: 0;
     }
 
     .log-level {
       min-width: 50px;
       font-weight: 600;
+      flex-shrink: 0;
     }
 
-    .log-info .log-level { color: var(--low); }
-    .log-warn .log-level { color: var(--high); }
-    .log-error .log-level { color: var(--critical); }
+    .log-info .log-level { color: #22C55E; }
+    .log-warn .log-level { color: #F59E0B; }
+    .log-error .log-level { color: #EF4444; }
 
     .log-msg {
-      color: var(--text-secondary);
+      color: #94A3B8;
       flex: 1;
     }
 
@@ -494,18 +652,21 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       display: flex;
       flex-direction: column;
       gap: 1rem;
+      flex: 1;
     }
 
     .trace {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
       padding: 1rem;
-      transition: border-color 0.2s;
+      transition: all 200ms ease;
     }
 
     .trace:hover {
-      border-color: var(--border-hover);
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+      transform: translateY(-1px);
     }
 
     .trace-header {
@@ -516,38 +677,55 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
 
     .trace-method {
-      font-size: 11px;
+      font-size: 0.75rem;
       font-weight: 700;
-      color: var(--low);
+      color: #22C55E;
+      font-family: 'Fira Code', monospace;
     }
 
     .trace-path {
-      font-size: 12px;
-      color: var(--text);
+      font-size: 0.875rem;
+      color: #F8FAFC;
       flex: 1;
+      font-family: 'Fira Code', monospace;
     }
 
     .trace-duration {
-      font-size: 12px;
+      font-size: 0.875rem;
       font-weight: 600;
-      color: var(--text-secondary);
+      color: #64748B;
+      font-family: 'Fira Code', monospace;
     }
 
     .trace-spans {
       display: flex;
       gap: 2px;
-      height: 24px;
+      height: 8px;
       border-radius: 4px;
       overflow: hidden;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .trace-span {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 10px;
-      color: var(--text);
-      font-weight: 500;
+      height: 100%;
+      transition: all 200ms ease;
+    }
+
+    /* Accessibility */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    /* Focus states */
+    .btn-icon:focus-visible,
+    .alert-item:focus-visible,
+    .trace:focus-visible {
+      outline: 2px solid #22C55E;
+      outline-offset: 2px;
     }
   </style>
 
