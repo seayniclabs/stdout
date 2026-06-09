@@ -11,7 +11,7 @@ import { scheduleShodanScanner } from './lib/scanner-shodan';
 import { getStoredLicense } from './lib/license';
 
 // --- Bearer Token Auth (for scanner API) ---
-const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event'];
+const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];
 
 function validateBearerToken(request: Request): { userId: string } | null {
   const authHeader = request.headers.get('authorization');
