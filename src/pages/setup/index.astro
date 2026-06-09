@@ -83,7 +83,9 @@ if (Astro.request.method === 'POST') {
         }).run();
 
         // Store raw token in setup_config so scanner can use it
+        console.log('[setup] Auto-creating scanner token:', rawToken.substring(0, 30) + '...');
         await setSetupConfig('scanner_token', rawToken);
+        console.log('[setup] Scanner token saved to setup_config');
 
         // Mark account creation step as complete
         await completeStep(SetupStep.AdminAccount, {

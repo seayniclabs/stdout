@@ -15,6 +15,7 @@ if (progress.currentStep !== SetupStep.Scanner) {
 
 // Get scanner token from setup config (auto-created during account creation)
 const scannerToken = await getSetupConfig('scanner_token');
+console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken ? (scannerToken.substring(0, 30) + '...') : 'NULL');
 ---
 
 <Layout title="Discover Infrastructure">
