@@ -357,6 +357,17 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                     const bgLog = document.createElement('p');
                     bgLog.textContent = 'Background service scan started...';
                     scanLogs.appendChild(bgLog);
+
+                    // Wait a moment for user to see success message, then redirect
+                    setTimeout(() => {
+                      window.location.href = '/setup/review';
+                    }, 1000);
+                  } else {
+                    // Import failed - show error and don't redirect
+                    const errorLog = document.createElement('p');
+                    errorLog.className = 'error';
+                    errorLog.textContent = `Import failed: ${importResponse.status}`;
+                    scanLogs.appendChild(errorLog);
                   }
                 } catch (importError) {
                   const errorLog = document.createElement('p');
@@ -364,10 +375,12 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                   errorLog.textContent = `Import failed: ${importError.message}`;
                   scanLogs.appendChild(errorLog);
                 }
+              } else {
+                // No hosts found - redirect anyway
+                setTimeout(() => {
+                  window.location.href = '/setup/review';
+                }, 1000);
               }
-
-              // Auto-advance immediately
-              window.location.href = '/setup/review';
             } else if (event.type === 'error') {
               statusIcon.textContent = '⚠️';
               statusText.textContent = 'Scan failed';
