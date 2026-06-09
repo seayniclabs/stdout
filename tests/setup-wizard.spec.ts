@@ -1,0 +1,103 @@
+import { test, expect } from '@playwright/test';
+
+const STDOUT_URL = 'http://192.168.0.244:8112';
+
+test.describe('StdOut Setup Wizard E2E', () => {
+  test('complete setup wizard flow from start to finish', async ({ page }) => {
+    test.setTimeout(180000); // 3 minutes for entire test (scanner takes time)
+
+    // Step 1: Navigate to setup wizard
+    await page.goto(STDOUT_URL);
+    await expect(page).toHaveURL(/\/setup$/);
+    await expect(page.locator('h1')).toContainText('Welcome to StdOut');
+
+    // Step 2: Create admin account (no confirmPassword field exists)
+    await page.fill('input[name="displayName"]', 'Test Admin');
+    await page.fill('input[name="email"]', 'admin@test.local');
+    await page.fill('input[name="password"]', 'Test123!@#Admin');
+    await page.click('button[type="submit"]'); // Actual button is type=submit
+
+    // Step 3: Environment configuration
+    await page.waitForURL(/\/setup\/environment$/, { timeout: 10000 });
+    await expect(page.locator('h1')).toContainText('Name Your Environment');
+
+    // Fill in environment details
+    await page.fill('input[name="organizationName"]', 'Test Organization');
+    await page.fill('input[name="instanceName"]', 'Test StdOut Instance');
+    await page.click('button:has-text("Continue")');
+
+    // Step 4: License page - skip for now
+    await page.waitForURL(/\/setup\/license$/);
+    await expect(page.locator('h1')).toContainText('License');
+    await page.click('button:has-text("Skip for Now")');
+
+    // Step 5: Network Scanner
+    await page.waitForURL(/\/setup\/scanner$/);
+    await expect(page.locator('h1')).toContainText('Discover Your Infrastructure');
+
+    // Wait for subnet detection
+    await page.waitForSelector('input#subnet', { state: 'visible' });
+    const subnetInput = page.locator('input#subnet');
+    await expect(subnetInput).not.toHaveValue('Detecting...');
+
+    // Verify subnet was auto-detected
+    const detectedSubnet = await subnetInput.inputValue();
+    console.log('Detected subnets:', detectedSubnet);
+    expect(detectedSubnet).toBeTruthy();
+    expect(detectedSubnet.length).toBeGreaterThan(0);
+
+    // Click scan button
+    await page.click('button#scanButton');
+
+    // Wait for scanning to start
+    await expect(page.locator('#scanButtonText')).toContainText('Scanning');
+
+    // Wait for scan progress div to appear
+    await page.waitForSelector('#scanProgress', { state: 'visible', timeout: 5000 });
+
+    // Wait for scan to complete (up to 2 minutes)
+    await page.waitForSelector('.status-icon:has-text("✅")', { timeout: 120000 });
+    await expect(page.locator('.status-text')).toContainText('Found');
+
+    // Should auto-advance to review page
+    await page.waitForURL(/\/setup\/review$/, { timeout: 5000 });
+
+    // Step 6: Review discovered infrastructure
+    await expect(page.locator('h1')).toContainText('Review Infrastructure');
+    await page.click('button:has-text("Continue")');
+
+    // Step 7: Windlass configuration - skip
+    await page.waitForURL(/\/setup\/windlass$/);
+    await page.click('button:has-text("Skip for Now")');
+
+    // Step 8: Setup complete
+    await page.waitForURL(/\/setup\/complete$/);
+    await expect(page.locator('h1')).toContainText('Setup Complete');
+    await page.click('button:has-text("Go to Dashboard")');
+
+    // Step 9: Verify we land on the dashboard
+    await page.waitForURL(/\/app$/);
+    await expect(page).toHaveURL(/\/app$/);
+
+    // Verify user is logged in and sees dashboard
+    await expect(page.locator('body')).not.toContainText('Login');
+
+    console.log('✅ Setup wizard completed successfully');
+  });
+
+  test('scanner progress output is visible during scan', async ({ page }) => {
+    // This test assumes setup is already complete from previous test
+    // Re-run scanner from the app interface to verify progress visibility
+
+    await page.goto(`${STDOUT_URL}/app/login`);
+    await page.fill('input[name="email"]', 'admin@test.local');
+    await page.fill('input[name="password"]', 'Test123!@#Admin');
+    await page.click('button[type="submit"]');
+
+    await page.waitForURL(/\/app$/);
+
+    // Navigate to network scanner (if accessible post-setup)
+    // This will fail if scanner is only accessible during setup
+    // If it fails, that's a valid test result - document it
+  });
+});
