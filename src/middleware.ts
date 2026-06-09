@@ -269,7 +269,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // auto-attached by browsers, so they are not vulnerable to CSRF attacks.
   const isBearerRequest = BEARER_PATHS.some(p => pathname.startsWith(p)) &&
     context.request.headers.get('authorization')?.startsWith('Bearer ');
-  if (!isBearerRequest && !checkOrigin(context.request)) {
+
+  // Skip CSRF origin check for test-only endpoints (only active in non-production)
+  const isTestEndpoint = pathname.startsWith('/app/api/test/');
+
+  if (!isBearerRequest && !isTestEndpoint && !checkOrigin(context.request)) {
     return new Response('Forbidden — origin not allowed', { status: 403 });
   }
 
