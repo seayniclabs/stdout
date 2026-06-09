@@ -283,6 +283,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (tokenAuth) {
       // Minimal user object for API token auth
       context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, role: 'member' };
+      console.log('[middleware] Bearer auth successful, locals.user set for:', pathname);
     } else {
       // Invalid/revoked bearer token — return 401, don't redirect to login
       return new Response(JSON.stringify({ error: 'Invalid or revoked token' }), {
@@ -399,10 +400,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   let response: Response;
 
   if (isAppRoute && !isPublicApp && !context.locals.user) {
+    console.log('[middleware] Redirecting to login:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
     response = context.redirect(`/app/login?redirect=${encodeURIComponent(pathname)}`);
   } else if (pathname.startsWith('/app/admin') && context.locals.user?.role !== 'superadmin') {
     response = context.redirect('/app');
   } else {
+    console.log('[middleware] Calling next() for:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
     response = await next();
   }
 
