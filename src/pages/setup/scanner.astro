@@ -294,10 +294,25 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
       if (!reader) throw new Error('No response stream');
 
       let discoveredHosts = [];
+      let receivedComplete = false;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log('[scanner.astro] Stream ended. Received complete:', receivedComplete);
+          if (!receivedComplete) {
+            console.error('[scanner.astro] Stream ended without receiving complete event!');
+            statusIcon.textContent = '⚠️';
+            statusText.textContent = 'Scan incomplete';
+            const errorLog = document.createElement('p');
+            errorLog.className = 'error';
+            errorLog.textContent = 'Stream ended unexpectedly. Please try again.';
+            scanLogs.appendChild(errorLog);
+            scanButton.disabled = false;
+            scanButtonText.textContent = 'Retry Scan';
+          }
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n').filter(l => l.trim());
@@ -305,7 +320,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
         for (const line of lines) {
           try {
             const event = JSON.parse(line);
-            console.log('[scanner.astro] Received event:', event);
+            console.log('[scanner.astro] Received event:', event.type, event);
 
             if (event.type === 'progress') {
               progressFill.style.width = `${event.percent}%`;
@@ -318,6 +333,8 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
               scanLogs.appendChild(logEntry);
               scanLogs.scrollTop = scanLogs.scrollHeight;
             } else if (event.type === 'complete') {
+              console.log('[scanner.astro] COMPLETE event received with', event.hosts?.length || 0, 'hosts');
+              receivedComplete = true;
               discoveredHosts = event.hosts || [];
               statusIcon.textContent = '✅';
               statusText.textContent = `Found ${discoveredHosts.length} host(s)`;

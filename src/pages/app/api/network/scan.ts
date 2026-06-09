@@ -101,10 +101,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
             const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 45);
             send({ type: 'progress', percent: progress });
 
-            // Send keepalive progress updates every batch to prevent timeout
-            if (start % 20 === 1) {
-              console.log('[scan] Progress:', Math.floor(((start - 1) / 254) * 100) + '% complete for', subnet);
-              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${Math.floor(((start - 1) / 254) * 100)}% complete` });
+            // Send keepalive progress updates every 5 batches (50 IPs) to prevent timeout
+            if (start % 50 === 1 || start === 1) {
+              const pct = Math.floor(((start - 1) / 254) * 100);
+              console.log('[scan] Progress:', pct + '% complete for', subnet);
+              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${pct}% complete` });
             }
           }
 
@@ -135,10 +136,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         send({ type: 'progress', percent: 100 });
         send({ type: 'log', level: 'success', message: 'Network scan complete!' });
-        console.log('[scan] Sending complete event with', hostsWithServices.length, 'hosts');
-        send({ type: 'complete', hosts: hostsWithServices });
 
+        // Ensure complete event is sent - critical for frontend to proceed
+        console.log('[scan] Sending complete event with', hostsWithServices.length, 'hosts');
+        const completeEvent = { type: 'complete', hosts: hostsWithServices };
+        send(completeEvent);
+        console.log('[scan] Complete event sent successfully');
+
+        // Small delay to ensure event is received before closing stream
+        await new Promise(resolve => setTimeout(resolve, 100));
         controller.close();
+        console.log('[scan] Stream closed');
 
       } catch (error: any) {
         console.error('[scan] Error during scan:', error);
