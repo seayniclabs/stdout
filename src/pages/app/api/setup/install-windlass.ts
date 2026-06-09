@@ -90,6 +90,31 @@ schedules: []
       const projectName = inspectOutput || 'stdout';
       console.log(`[install-windlass] Detected compose project: ${projectName}`);
 
+      // Check if windlass container already exists
+      try {
+        const existingContainer = execFileSync('docker', [
+          'ps',
+          '-a',
+          '--filter', 'name=^windlass$',
+          '--format', '{{.ID}}'
+        ], {
+          encoding: 'utf8',
+          timeout: 5000,
+        }).trim();
+
+        if (existingContainer) {
+          console.log(`[install-windlass] Found existing container: ${existingContainer}`);
+          // Remove the existing container (stopped or running)
+          execFileSync('docker', ['rm', '-f', existingContainer], {
+            stdio: 'pipe',
+            timeout: 10000,
+          });
+          console.log('[install-windlass] Removed existing container');
+        }
+      } catch (err) {
+        console.log('[install-windlass] No existing container found (or error checking):', err);
+      }
+
       // Start the windlass service in the same compose project
       execFileSync('docker', [
         'run',
