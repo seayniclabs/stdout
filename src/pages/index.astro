@@ -6,7 +6,10 @@ import { getStoredLicense } from '../lib/license';
 const user = Astro.locals.user;
 
 // Auto-redirect to setup if not configured
-if (getUserCount() === 0) {
+const userCount = getUserCount();
+console.log('[index] getUserCount():', userCount);
+if (userCount === 0) {
+  console.log('[index] Redirecting to /setup (no users)');
   return Astro.redirect('/setup');
 }
 
