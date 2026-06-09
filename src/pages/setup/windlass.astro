@@ -34,6 +34,9 @@ if (Astro.request.method === 'POST') {
     error = 'Invalid form submission. Please try again.';
   } else if (action === 'skip') {
     // User chose to skip Windlass setup
+    // Ensure setup_progress table is initialized before completing step
+    await getSetupProgress();
+
     await completeStep(SetupStep.Windlass, {
       enabled: false,
       skipped: true,
@@ -44,6 +47,9 @@ if (Astro.request.method === 'POST') {
     installLocation = (form.get('location') as any) || 'skip';
 
     if (installLocation === 'skip') {
+      // Ensure setup_progress table is initialized before completing step
+      await getSetupProgress();
+
       await completeStep(SetupStep.Windlass, {
         enabled: false,
         skipped: true,
@@ -68,6 +74,10 @@ if (Astro.request.method === 'POST') {
     // Attempt auto-install (this would be implemented in API endpoint)
     // For now, we'll just mark it as configured
     console.log('[windlass] Install action triggered, location:', installLocation, 'host:', selectedHost || currentHost);
+
+    // Ensure setup_progress table is initialized before completing step
+    await getSetupProgress();
+
     await completeStep(SetupStep.Windlass, {
       enabled: true,
       location: installLocation,
@@ -78,6 +88,9 @@ if (Astro.request.method === 'POST') {
     console.log('[windlass] Step completed, redirecting to /setup/complete');
     return Astro.redirect('/setup/complete');
   } else if (action === 'manual_done') {
+    // Ensure setup_progress table is initialized before completing step
+    await getSetupProgress();
+
     await completeStep(SetupStep.Windlass, {
       enabled: true,
       location: installLocation,
