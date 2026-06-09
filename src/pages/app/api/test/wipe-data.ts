@@ -23,6 +23,7 @@ export const POST: APIRoute = async ({ request }) => {
     // Delete all data from all tables (in correct order to respect foreign keys)
     db.delete(centralSchema.sessions).run();
     db.delete(centralSchema.apiTokens).run();
+    db.delete(centralSchema.setupProgress).run();
     db.delete(centralSchema.users).run();
 
     // Delete setup_config.json if it exists
