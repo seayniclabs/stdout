@@ -326,6 +326,19 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                     successLog.className = 'success';
                     successLog.textContent = `Imported ${importResult.imported.hosts} host(s), ${importResult.imported.services} service(s)`;
                     scanLogs.appendChild(successLog);
+
+                    // Trigger background service scan (async, silent)
+                    fetch('/app/api/network/scan-services', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ hosts: discoveredHosts }),
+                    }).catch(err => {
+                      console.error('Background service scan failed to start:', err);
+                    });
+
+                    const bgLog = document.createElement('p');
+                    bgLog.textContent = 'Background service scan started...';
+                    scanLogs.appendChild(bgLog);
                   }
                 } catch (importError) {
                   const errorLog = document.createElement('p');
