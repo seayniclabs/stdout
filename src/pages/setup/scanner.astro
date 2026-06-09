@@ -39,11 +39,11 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
           <input
             type="text"
             id="subnet"
-            value="192.168.0.0/24"
-            placeholder="192.168.0.0/24"
+            value=""
+            placeholder="Detecting..."
             class="form-input"
           />
-          <p class="help-text">Common subnets: 192.168.0.0/24, 192.168.1.0/24, 10.0.0.0/24</p>
+          <p class="help-text" id="subnetHelp">Detecting your network subnet...</p>
         </div>
       </div>
 
@@ -205,6 +205,34 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
 <script>
   const scanButton = document.getElementById('scanButton');
   const subnetInput = document.getElementById('subnet');
+  const subnetHelp = document.getElementById('subnetHelp');
+
+  // Auto-detect network subnet on page load
+  async function detectSubnet() {
+    try {
+      const response = await fetch('/setup/api/detect-subnet');
+      const data = await response.json();
+
+      if (data.subnet) {
+        subnetInput.value = data.subnet;
+        subnetInput.placeholder = data.subnet;
+        subnetHelp.textContent = `Detected: ${data.subnet} (edit if needed)`;
+      } else {
+        // Fallback to common subnet
+        subnetInput.value = '192.168.0.0/24';
+        subnetInput.placeholder = '192.168.0.0/24';
+        subnetHelp.textContent = 'Could not auto-detect. Common subnets: 192.168.0.0/24, 192.168.1.0/24, 10.0.0.0/24';
+      }
+    } catch (error) {
+      console.error('Subnet detection failed:', error);
+      subnetInput.value = '192.168.0.0/24';
+      subnetInput.placeholder = '192.168.0.0/24';
+      subnetHelp.textContent = 'Auto-detection failed. Common subnets: 192.168.0.0/24, 192.168.1.0/24, 10.0.0.0/24';
+    }
+  }
+
+  // Run detection on page load
+  detectSubnet();
 
   scanButton.addEventListener('click', async () => {
     const subnet = subnetInput.value.trim();
