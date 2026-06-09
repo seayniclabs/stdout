@@ -19,6 +19,9 @@ const stacks = [];
 const containers = [];
 const licenseActivated = progress.steps[SetupStep.License]?.completed && !progress.steps[SetupStep.License]?.data?.skipped;
 const windlassEnabled = progress.steps[SetupStep.Windlass]?.data?.enabled || false;
+
+console.log('[complete] Windlass step data:', JSON.stringify(progress.steps[SetupStep.Windlass]?.data || {}));
+console.log('[complete] windlassEnabled:', windlassEnabled);
 ---
 
 <Layout title="Setup Complete!">

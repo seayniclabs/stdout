@@ -67,6 +67,7 @@ if (Astro.request.method === 'POST') {
   } else if (action === 'install') {
     // Attempt auto-install (this would be implemented in API endpoint)
     // For now, we'll just mark it as configured
+    console.log('[windlass] Install action triggered, location:', installLocation, 'host:', selectedHost || currentHost);
     await completeStep(SetupStep.Windlass, {
       enabled: true,
       location: installLocation,
@@ -74,6 +75,7 @@ if (Astro.request.method === 'POST') {
       installedAt: new Date().toISOString(),
       installMethod: 'auto',
     });
+    console.log('[windlass] Step completed, redirecting to /setup/complete');
     return Astro.redirect('/setup/complete');
   } else if (action === 'manual_done') {
     await completeStep(SetupStep.Windlass, {
