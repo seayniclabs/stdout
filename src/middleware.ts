@@ -367,6 +367,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/community-sync',
     '/app/api/me',
     '/app/api/scanner/autodiscover',
+    '/app/api/network/scan',
+    '/app/api/network/import',
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
