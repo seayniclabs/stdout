@@ -9,8 +9,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 export const POST: APIRoute = async ({ request }) => {
-  // Only allow in non-production
-  if (process.env.NODE_ENV === 'production' || process.env.STDOUT_MODE === 'production') {
+  // Only allow in non-production (saas production specifically)
+  // Self-host deployments (STDOUT_MODE=selfhost) are allowed for E2E testing
+  if (process.env.STDOUT_MODE === 'saas' || process.env.STDOUT_MODE === 'production') {
     return new Response(JSON.stringify({ error: 'Not available in production' }), {
       status: 403,
       headers: { 'Content-Type': 'application/json' },
