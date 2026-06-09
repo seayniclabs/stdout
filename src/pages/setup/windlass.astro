@@ -388,59 +388,77 @@ docker:
 
   .windlass-example {
     margin-top: 1.5rem;
-    padding: 1rem;
-    background: var(--color-bg-subtle);
+    padding: 1.25rem;
+    background: rgba(99, 102, 241, 0.08);
+    border: 1px solid rgba(99, 102, 241, 0.2);
     border-radius: 8px;
   }
 
   .windlass-example h4 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.875rem;
+    margin: 0 0 1rem 0;
+    font-size: 0.75rem;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
+    letter-spacing: 0.1em;
+    color: var(--color-primary);
   }
 
   .schedule-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin: 0.5rem 0;
+    margin: 0.75rem 0;
+    padding: 0.75rem;
+    background: var(--color-card-bg);
+    border-radius: 6px;
     font-family: var(--font-mono);
     font-size: 0.875rem;
   }
 
   .schedule-time {
+    min-width: 80px;
     font-weight: 600;
     color: var(--color-primary);
   }
 
   .schedule-arrow {
     color: var(--color-text-muted);
+    font-size: 1.25rem;
   }
 
   .schedule-action {
     color: var(--color-text);
+    flex: 1;
   }
 
   .suggestion-banner {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 1rem;
-    padding: 1rem;
-    background: var(--color-info-bg, #d1ecf1);
-    border: 1px solid var(--color-info, #0c5460);
-    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-left: 4px solid var(--color-primary);
+    border-radius: 8px;
     margin-bottom: 1.5rem;
   }
 
   .suggestion-icon {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
+    line-height: 1;
+    margin-top: 0.125rem;
   }
 
   .suggestion-content {
     flex: 1;
-    font-size: 0.875rem;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--color-text);
+  }
+
+  .suggestion-content strong {
+    color: var(--color-primary);
+    font-weight: 600;
   }
 
   .location-options {
@@ -450,18 +468,21 @@ docker:
   }
 
   .location-card {
+    position: relative;
     display: block;
     padding: 1.5rem;
-    background: var(--color-bg-subtle);
-    border: 2px solid var(--color-border);
-    border-radius: 8px;
+    background: rgba(15, 23, 42, 0.4);
+    border: 2px solid rgba(148, 163, 184, 0.2);
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .location-card:hover {
-    border-color: var(--color-primary);
-    background: var(--color-card-bg);
+    border-color: rgba(99, 102, 241, 0.5);
+    background: rgba(15, 23, 42, 0.6);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   }
 
   .location-card input[type="radio"] {
@@ -473,12 +494,30 @@ docker:
   }
 
   .location-card input[type="radio"]:not(:checked) ~ .location-content {
-    opacity: 0.6;
+    opacity: 0.7;
   }
 
   .location-card:has(input[type="radio"]:checked) {
     border-color: var(--color-primary);
-    background: var(--color-card-bg);
+    background: rgba(99, 102, 241, 0.12);
+    box-shadow: 0 0 0 1px var(--color-primary);
+  }
+
+  .location-card:has(input[type="radio"]:checked)::before {
+    content: '✓';
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.875rem;
+    font-weight: 600;
   }
 
   .location-content {
@@ -489,29 +528,44 @@ docker:
   }
 
   .location-icon {
-    font-size: 2rem;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(99, 102, 241, 0.15);
+    border-radius: 10px;
+    font-size: 1.5rem;
     grid-row: 1 / 4;
   }
 
   .location-content h4 {
-    margin: 0;
-    font-size: 1rem;
+    margin: 0.25rem 0 0 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
     grid-column: 2;
   }
 
   .location-content p {
-    margin: 0.5rem 0;
+    margin: 0.5rem 0 0 0;
     font-size: 0.875rem;
+    line-height: 1.5;
     color: var(--color-text-muted);
     grid-column: 2;
   }
 
   .location-detail {
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--color-border);
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
     font-size: 0.875rem;
     grid-column: 2;
+  }
+
+  .location-detail strong {
+    color: var(--color-text);
+    font-weight: 600;
   }
 
   .host-select {
