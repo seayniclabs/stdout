@@ -877,9 +877,21 @@ docker:
 
           installBtnText.textContent = 'Installation Complete!';
 
-          // Redirect to next step after a brief delay
+          // Mark step 6 complete before redirecting
+          // Submit the form to trigger server-side step completion
+          const completeForm = document.createElement('form');
+          completeForm.method = 'POST';
+          completeForm.action = '/setup/windlass';
+          completeForm.innerHTML = `
+            <input type="hidden" name="_csrf" value="${document.querySelector('input[name="_csrf"]')?.value || ''}" />
+            <input type="hidden" name="action" value="install" />
+            <input type="hidden" name="location" value="same" />
+          `;
+          document.body.appendChild(completeForm);
+
+          // Submit after a brief delay
           setTimeout(() => {
-            window.location.href = '/setup/ticketing';
+            completeForm.submit();
           }, 2000);
 
         } else {
