@@ -15,15 +15,38 @@ export const GET: APIRoute = async ({ locals }) => {
   // }
 
   try {
-    // Detect network subnet using ip/ifconfig commands
     let subnet: string | null = null;
+    const subnets: string[] = [];
 
     try {
-      // Get all network interfaces and prefer 192.168.x over 10.x (Docker bridge)
+      // Inside Docker container - use default gateway to infer host network
+      const { stdout: routeInfo } = await execAsync('ip route show default');
+      const defaultMatch = routeInfo.match(/default via ([\d.]+)/);
+
+      if (defaultMatch) {
+        const gateway = defaultMatch[1];
+        const gatewayParts = gateway.split('.').map(Number);
+
+        // The gateway is typically on the host network
+        // If gateway is 10.21.0.1 (Docker), also add common home network
+        if (gatewayParts[0] === 10 && gatewayParts[1] === 21) {
+          // Docker network
+          subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
+
+          // Also add common home networks for scanning
+          subnets.push('192.168.0.0/24');
+          subnets.push('192.168.1.0/24');
+        } else if (gatewayParts[0] === 192 && gatewayParts[1] === 168) {
+          // Home network
+          subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
+        } else if (gatewayParts[0] === 10) {
+          subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
+        }
+      }
+
+      // Also scan container's own networks
       const { stdout } = await execAsync('ip addr show');
       const lines = stdout.split('\n');
-
-      const subnets: string[] = [];
 
       for (const line of lines) {
         const ipMatch = line.match(/inet ([\d.]+)\/(\d+)/);
@@ -34,25 +57,24 @@ export const GET: APIRoute = async ({ locals }) => {
           // Skip loopback
           if (parts[0] === 127) continue;
 
-          // Calculate network address
-          let networkSubnet = '';
           const maskBits = parseInt(cidr);
+          let networkSubnet = '';
 
           if (maskBits === 24) {
             networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
           } else if (maskBits === 16) {
             networkSubnet = `${parts[0]}.${parts[1]}.0.0/16`;
           } else {
-            // Default to /24
             networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
           }
 
-          subnets.push(networkSubnet);
+          if (!subnets.includes(networkSubnet)) {
+            subnets.push(networkSubnet);
+          }
         }
       }
 
-      // Return all detected subnets (will be used for multi-subnet scanning)
-      // For now, prioritize 192.168.x as the default, but return all
+      // Prioritize 192.168.x as default
       subnet = subnets.find(s => s.startsWith('192.168.')) ||
                subnets.find(s => s.startsWith('10.')) ||
                subnets[0] || null;
