@@ -358,8 +358,15 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                     bgLog.textContent = 'Background service scan started...';
                     scanLogs.appendChild(bgLog);
 
-                    // Wait a moment for user to see success message, then redirect
-                    setTimeout(() => {
+                    // Wait a moment for user to see success message, then mark complete and redirect
+                    setTimeout(async () => {
+                      // Mark scanner step as complete
+                      const form = new FormData();
+                      form.append('action', 'complete');
+                      await fetch('/setup/complete-scanner', {
+                        method: 'POST',
+                        body: form,
+                      });
                       window.location.href = '/setup/review';
                     }, 1000);
                   } else {
@@ -376,8 +383,15 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                   scanLogs.appendChild(errorLog);
                 }
               } else {
-                // No hosts found - redirect anyway
-                setTimeout(() => {
+                // No hosts found - mark complete and redirect anyway
+                setTimeout(async () => {
+                  // Mark scanner step as complete
+                  const form = new FormData();
+                  form.append('action', 'complete');
+                  await fetch('/setup/complete-scanner', {
+                    method: 'POST',
+                    body: form,
+                  });
                   window.location.href = '/setup/review';
                 }, 1000);
               }
