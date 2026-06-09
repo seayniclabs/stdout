@@ -857,12 +857,30 @@ docker:
           await new Promise(resolve => setTimeout(resolve, 1500));
           updateStepStatus(steps[3], 'complete', '✓ Windlass is healthy and running');
 
+          // Also install Observatory (non-blocking - runs in background)
+          updateStepStatus(steps[3], 'checking', 'Starting Observatory services...');
+          fetch('/app/api/setup/install-observatory', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          }).then(async (obsResponse) => {
+            const obsResult = await obsResponse.json();
+            if (obsResult.success) {
+              console.log('[windlass] Observatory installation started:', obsResult.message);
+              updateStepStatus(steps[3], 'complete', '✓ All services running');
+            } else {
+              console.warn('[windlass] Observatory installation failed (non-critical):', obsResult.error);
+              updateStepStatus(steps[3], 'complete', '✓ Windlass running (Observatory skipped)');
+            }
+          }).catch(err => {
+            console.warn('[windlass] Observatory API call failed (non-critical):', err);
+          });
+
           installBtnText.textContent = 'Installation Complete!';
 
           // Redirect to next step after a brief delay
           setTimeout(() => {
             window.location.href = '/setup/ticketing';
-          }, 1500);
+          }, 2000);
 
         } else {
           // Installation failed
