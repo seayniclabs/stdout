@@ -11,7 +11,8 @@ export enum SetupStep {
   Scanner = 4,
   Review = 5,
   Windlass = 6,
-  Complete = 7,
+  Ticketing = 7,
+  Complete = 8,
 }
 
 export const STEP_NAMES: Record<SetupStep, string> = {
@@ -21,6 +22,7 @@ export const STEP_NAMES: Record<SetupStep, string> = {
   [SetupStep.Scanner]: 'Discover Infrastructure',
   [SetupStep.Review]: 'Review Environment',
   [SetupStep.Windlass]: 'Configure Windlass',
+  [SetupStep.Ticketing]: 'Ticketing Integration',
   [SetupStep.Complete]: 'Complete',
 };
 

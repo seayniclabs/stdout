@@ -11,7 +11,7 @@ if (!session) return Astro.redirect('/app/login');
 const progress = await getSetupProgress();
 if (progress.currentStep !== SetupStep.Windlass) {
   if (progress.currentStep < SetupStep.Windlass) return Astro.redirect('/setup');
-  return Astro.redirect('/setup/complete');
+  return Astro.redirect('/setup/ticketing');
 }
 
 // Check if scanner found any infrastructure we could suggest as Windlass host
@@ -42,7 +42,7 @@ if (Astro.request.method === 'POST') {
       skipped: true,
       skippedAt: new Date().toISOString(),
     });
-    return Astro.redirect('/setup/complete');
+    return Astro.redirect('/setup/ticketing');
   } else if (action === 'choose_location') {
     installLocation = (form.get('location') as any) || 'skip';
 
@@ -55,7 +55,7 @@ if (Astro.request.method === 'POST') {
         skipped: true,
         skippedAt: new Date().toISOString(),
       });
-      return Astro.redirect('/setup/complete');
+      return Astro.redirect('/setup/ticketing');
     }
 
     selectedHost = form.get('host') as string || null;
@@ -85,8 +85,8 @@ if (Astro.request.method === 'POST') {
       installedAt: new Date().toISOString(),
       installMethod: 'auto',
     });
-    console.log('[windlass] Step completed, redirecting to /setup/complete');
-    return Astro.redirect('/setup/complete');
+    console.log('[windlass] Step completed, redirecting to /setup/ticketing');
+    return Astro.redirect('/setup/ticketing');
   } else if (action === 'manual_done') {
     // Ensure setup_progress table is initialized before completing step
     await getSetupProgress();
@@ -98,7 +98,7 @@ if (Astro.request.method === 'POST') {
       configuredAt: new Date().toISOString(),
       installMethod: 'manual',
     });
-    return Astro.redirect('/setup/complete');
+    return Astro.redirect('/setup/ticketing');
   }
 }
 
@@ -109,7 +109,7 @@ const suggestedHost = discoveredHosts[0] || currentHost;
 
 <Layout title="Configure Windlass">
   <div class="auth-page" style="max-width: 900px;">
-    <SetupProgress currentStep={6} totalSteps={7} />
+    <SetupProgress currentStep={6} totalSteps={8} />
 
     <h1>Configure Windlass</h1>
     <p class="auth-subtitle">Schedule-aware Docker service management (optional)</p>

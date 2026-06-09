@@ -1,0 +1,347 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/SetupLayout.astro';
+import SetupProgress from '../../components/SetupProgress.astro';
+import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+import { ConnectorRegistry } from '../../lib/ticketing/base/ConnectorRegistry';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const progress = await getSetupProgress();
+if (progress.currentStep !== SetupStep.Ticketing) {
+  if (progress.currentStep < SetupStep.Ticketing) return Astro.redirect('/setup');
+  return Astro.redirect('/setup/complete');
+}
+
+let detectedSystems: string[] = [];
+let error = '';
+
+// Auto-detect external ticketing systems
+const envVars = import.meta.env;
+if (envVars.LINEAR_API_KEY) detectedSystems.push('linear');
+if (envVars.GITHUB_TOKEN) detectedSystems.push('github');
+if (envVars.JIRA_API_TOKEN && envVars.JIRA_DOMAIN) detectedSystems.push('jira');
+if (envVars.SERVICENOW_INSTANCE && envVars.SERVICENOW_TOKEN) detectedSystems.push('servicenow');
+
+if (Astro.request.method === 'POST') {
+  const formData = await Astro.request.formData();
+  const choice = formData.get('ticketing_choice') as string;
+
+  if (choice === 'skip') {
+    await completeStep(SetupStep.Ticketing, {
+      ticketingSystem: 'built-in',
+      skipped: true,
+      completedAt: new Date().toISOString(),
+    });
+    return Astro.redirect('/setup/complete');
+  }
+
+  if (choice === 'built-in') {
+    await completeStep(SetupStep.Ticketing, {
+      ticketingSystem: 'built-in',
+      completedAt: new Date().toISOString(),
+    });
+    return Astro.redirect('/setup/complete');
+  }
+
+  // External system selected
+  const selectedSystem = formData.get('external_system') as string;
+  if (!selectedSystem) {
+    error = 'Please select a ticketing system';
+  } else if (!ConnectorRegistry.isSupported(selectedSystem)) {
+    error = `Ticketing system "${selectedSystem}" is not yet supported`;
+  } else {
+    await completeStep(SetupStep.Ticketing, {
+      ticketingSystem: selectedSystem,
+      requiresConfiguration: true,
+      completedAt: new Date().toISOString(),
+    });
+    return Astro.redirect('/setup/complete');
+  }
+}
+
+const supportedSystems = ConnectorRegistry.getSupportedSystems().filter(s => s !== 'built-in');
+---
+
+<Layout title="Ticketing Integration">
+  <div class="auth-page" style="max-width: 700px;">
+    <SetupProgress currentStep={7} totalSteps={8} />
+
+    <h1>Ticketing & Issue Tracking</h1>
+    <p class="auth-subtitle">
+      StdOut can track incidents, bugs, and features. Choose your tracking system below.
+    </p>
+
+    {error && (
+      <div class="alert alert-error" role="alert">
+        {error}
+      </div>
+    )}
+
+    {detectedSystems.length > 0 && (
+      <div class="alert alert-info">
+        <strong>Detected:</strong> {detectedSystems.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')} credentials found in environment
+      </div>
+    )}
+
+    <form method="POST" class="ticketing-form">
+      <div class="ticketing-options">
+
+        <label class="option-card">
+          <input type="radio" name="ticketing_choice" value="built-in" checked />
+          <div class="option-content">
+            <div class="option-header">
+              <span class="option-icon">📋</span>
+              <div>
+                <h3>Built-in Tracking</h3>
+                <p class="option-description">
+                  Use StdOut's native SQLite-based incident, bug, and feature tracking.
+                  No external dependencies.
+                </p>
+              </div>
+            </div>
+            <div class="option-badge">Recommended</div>
+          </div>
+        </label>
+
+        <label class="option-card">
+          <input type="radio" name="ticketing_choice" value="external" />
+          <div class="option-content">
+            <div class="option-header">
+              <span class="option-icon">🔗</span>
+              <div>
+                <h3>External System</h3>
+                <p class="option-description">
+                  Connect to Linear, Jira, GitHub Issues, or ServiceNow.
+                  Sync incidents bidirectionally without duplicating records.
+                </p>
+              </div>
+            </div>
+          </div>
+        </label>
+
+        <div class="external-system-picker" id="external-picker" style="display: none;">
+          <label for="external_system">Select your ticketing system:</label>
+          <select name="external_system" id="external_system" class="form-select">
+            <option value="">-- Choose System --</option>
+            {supportedSystems.map(system => (
+              <option
+                value={system}
+                selected={detectedSystems.includes(system)}
+              >
+                {system.charAt(0).toUpperCase() + system.slice(1)}
+                {detectedSystems.includes(system) && ' (detected)'}
+              </option>
+            ))}
+          </select>
+          <p class="help-text">
+            You'll configure connection details in Settings after setup completes.
+          </p>
+        </div>
+
+        <label class="option-card option-card-minimal">
+          <input type="radio" name="ticketing_choice" value="skip" />
+          <div class="option-content">
+            <div class="option-header">
+              <span class="option-icon">⏭️</span>
+              <div>
+                <h3>Skip for Now</h3>
+                <p class="option-description">
+                  Configure ticketing later from Settings.
+                </p>
+              </div>
+            </div>
+          </div>
+        </label>
+
+      </div>
+
+      <div class="form-actions">
+        <a href="/setup/windlass" class="btn-secondary">← Back</a>
+        <button type="submit" class="btn-primary">Continue →</button>
+      </div>
+    </form>
+  </div>
+</Layout>
+
+<style>
+  .auth-subtitle {
+    margin-bottom: 2rem;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+  }
+
+  .alert-error {
+    background: var(--color-danger-bg, #f8d7da);
+    color: var(--color-danger, #dc3545);
+    border: 1px solid var(--color-danger, #dc3545);
+  }
+
+  .alert-info {
+    background: var(--color-info-bg, #d1ecf1);
+    color: var(--color-info, #0c5460);
+    border: 1px solid var(--color-info, #0c5460);
+  }
+
+  .ticketing-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .option-card {
+    display: block;
+    position: relative;
+    background: var(--color-card-bg);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .option-card:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+
+  .option-card input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .option-card input[type="radio"]:checked + .option-content {
+    border-left: 4px solid var(--color-primary);
+    padding-left: 1.25rem;
+  }
+
+  .option-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-left: 1.5rem;
+    transition: padding-left 0.2s ease;
+  }
+
+  .option-header {
+    display: flex;
+    gap: 1rem;
+    flex: 1;
+  }
+
+  .option-icon {
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .option-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.125rem;
+  }
+
+  .option-description {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    line-height: 1.5;
+  }
+
+  .option-badge {
+    background: var(--color-primary);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .option-card-minimal {
+    padding: 1rem;
+  }
+
+  .option-card-minimal .option-icon {
+    font-size: 1.5rem;
+  }
+
+  .option-card-minimal h3 {
+    font-size: 1rem;
+  }
+
+  .external-system-picker {
+    margin-left: 2rem;
+    padding: 1rem;
+    background: var(--color-bg-subtle);
+    border-radius: 8px;
+    border-left: 4px solid var(--color-primary);
+  }
+
+  .external-system-picker label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .form-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-input-bg, white);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .form-select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .help-text {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+
+  .btn-secondary, .btn-primary {
+    flex: 1;
+    max-width: 200px;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.querySelector('.ticketing-form') as HTMLFormElement;
+    const externalRadio = form.querySelector('input[value="external"]') as HTMLInputElement;
+    const externalPicker = document.getElementById('external-picker') as HTMLElement;
+
+    form.querySelectorAll('input[name="ticketing_choice"]').forEach(radio => {
+      radio.addEventListener('change', () => {
+        const value = (radio as HTMLInputElement).value;
+        if (value === 'external') {
+          externalPicker.style.display = 'block';
+        } else {
+          externalPicker.style.display = 'none';
+        }
+      });
+    });
+  });
+</script>
