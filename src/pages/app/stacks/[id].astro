@@ -23,6 +23,20 @@ const stackIncidents = db.select().from(tenantSchema.incidents)
   .orderBy(desc(tenantSchema.incidents.createdAt))
   .all();
 
+// Get discovered hosts linked to this stack
+const discoveredHosts = db.select().from(tenantSchema.discoveredHosts)
+  .where(eq(tenantSchema.discoveredHosts.stackId, id!))
+  .orderBy(desc(tenantSchema.discoveredHosts.lastSeen))
+  .all();
+
+// Get services for these hosts
+const hostIds = discoveredHosts.map(h => h.id);
+const discoveredServices = hostIds.length > 0
+  ? db.select().from(tenantSchema.discoveredServices)
+      .where(eq(tenantSchema.discoveredServices.hostId, hostIds[0])) // TODO: use IN clause
+      .all()
+  : [];
+
 // Try to parse structured container data from the description
 // Scanner-imported stacks have markdown with "### container_name (image)" patterns
 interface ContainerInfo {
@@ -119,6 +133,26 @@ const hasStructuredData = containers.length > 0;
       <pre class="stack-description">{stack.description || 'No description yet.'}</pre>
     )}
 
+    {discoveredHosts.length > 0 && (
+      <div class="discovered-section">
+        <h2>Discovered Hosts ({discoveredHosts.length})</h2>
+        <div class="hosts-grid">
+          {discoveredHosts.slice(0, 12).map(host => (
+            <div class="host-card">
+              <div class="host-ip mono">{host.ipAddress}</div>
+              {host.hostname && <div class="host-name">{host.hostname}</div>}
+              <div class="host-meta">
+                <span class="host-seen">Last seen {new Date(host.lastSeen).toLocaleString()}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+        {discoveredHosts.length > 12 && (
+          <p class="more-hosts">...and {discoveredHosts.length - 12} more hosts</p>
+        )}
+      </div>
+    )}
+
     {stackIncidents.length > 0 && (
       <div class="related-incidents">
         <h2>Incidents ({stackIncidents.length})</h2>
@@ -183,6 +217,16 @@ const hasStructuredData = containers.length > 0;
   .incident-title { font-size: 13px; }
   .status-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); }
   .status-badge.active { color: var(--critical); background: var(--critical-dim); }
+
+  .discovered-section { border-top: 1px solid var(--border); padding-top: 20px; margin-bottom: 24px; }
+  .discovered-section h2 { font-size: 14px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px; }
+  .hosts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin-bottom: 12px; }
+  .host-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; }
+  .host-ip { font-size: 13px; font-weight: 600; margin-bottom: 4px; color: var(--text); }
+  .host-name { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .host-meta { display: flex; flex-direction: column; gap: 2px; }
+  .host-seen { font-size: 11px; color: var(--text-muted); }
+  .more-hosts { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 8px; }
   .status-badge.resolved { color: var(--text-muted); background: rgba(85,85,106,0.12); }
   .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-weight: 600; font-size: 12px; cursor: pointer; text-decoration: none; transition: var(--transition); }
   .btn-sm { padding: 5px 10px; font-size: 11px; }
