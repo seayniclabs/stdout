@@ -20,6 +20,7 @@ export const stacks = sqliteTable('stacks', {
 export const discoveredHosts = sqliteTable('discovered_hosts', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
+  stackId: text('stack_id'), // FK to stacks — hosts can be grouped into logical stacks
   ipAddress: text('ip_address').notNull().unique(),
   hostname: text('hostname'),
   macAddress: text('mac_address'),

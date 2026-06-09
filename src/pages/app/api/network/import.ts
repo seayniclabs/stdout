@@ -30,6 +30,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
     let importedHosts = 0;
     let importedServices = 0;
 
+    // During setup, get or create the default stack to link hosts to
+    let defaultStackId: string | null = null;
+    try {
+      const progress = await getSetupProgress();
+      const isSetup = progress.currentStep <= SetupStep.Review;
+
+      if (isSetup) {
+        // Check if a stack already exists
+        const existingStacks = await db
+          .select()
+          .from(stacks)
+          .where(eq(stacks.userId, session.id))
+          .limit(1);
+
+        if (existingStacks.length > 0) {
+          defaultStackId = existingStacks[0].id;
+          console.log('[network/import] Using existing stack:', defaultStackId);
+        } else {
+          // Create default stack
+          const envName = await getSetupConfig('environment_name');
+          const stackName = envName || 'My Environment';
+          defaultStackId = nanoid();
+
+          console.log('[network/import] Creating default stack during setup:', stackName);
+
+          await db.insert(stacks).values({
+            id: defaultStackId,
+            userId: session.id,
+            name: stackName,
+            description: 'Automatically created from network discovery',
+            createdAt: now,
+            updatedAt: now,
+          });
+
+          console.log('[network/import] Default stack created:', defaultStackId);
+        }
+      }
+    } catch (stackError) {
+      console.error('[network/import] Error with default stack:', stackError);
+      // Continue without linking to stack
+    }
+
     for (const host of hosts) {
       const { ip, hostname, services } = host;
 
@@ -64,6 +106,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         await db.insert(discoveredHosts).values({
           id: hostId,
           userId: session.id,
+          stackId: defaultStackId, // Link to default stack during setup
           ipAddress: ip,
           hostname: hostname || null,
           macAddress: null,
@@ -119,48 +162,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
       }
-    }
-
-    // If this is during setup and we imported hosts, create a default stack
-    try {
-      const progress = await getSetupProgress();
-      const isSetup = progress.currentStep <= SetupStep.Review; // During or before Review step
-
-      if (isSetup && importedHosts > 0) {
-        // Check if a default stack already exists
-        const existingStacks = await db
-          .select()
-          .from(stacks)
-          .where(eq(stacks.userId, session.id))
-          .limit(1);
-
-        if (existingStacks.length === 0) {
-          // Get environment name from setup config
-          const envName = await getSetupConfig('environment_name');
-          const stackName = envName || 'My Environment';
-
-          console.log('[network/import] Creating default stack during setup:', stackName);
-
-          // Create default stack
-          await db.insert(stacks).values({
-            id: nanoid(),
-            userId: session.id,
-            name: stackName,
-            description: 'Automatically created from network discovery',
-            composeFile: null,
-            composeProject: null,
-            status: 'imported',
-            source: 'scanner',
-            createdAt: now,
-            updatedAt: now,
-          });
-
-          console.log('[network/import] Default stack created successfully');
-        }
-      }
-    } catch (stackError) {
-      // Don't fail the import if stack creation fails
-      console.error('[network/import] Error creating default stack:', stackError);
     }
 
     return new Response(
