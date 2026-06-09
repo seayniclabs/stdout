@@ -445,15 +445,27 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const html = await response.text();
   const nonced = html.replace(/<script/g, `<script nonce="${nonce}"`);
 
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com`,
-    "style-src 'self' 'unsafe-inline'",
-    "font-src 'self'",
-    "img-src 'self' data: https:",
-    "connect-src 'self' https://analytics.seaynicroute.com",
-    "frame-ancestors 'none'",
-  ].join('; ');
+  // Relaxed CSP for setup wizard (pre-auth, needs inline scripts)
+  const isSetupPage = pathname.startsWith('/setup');
+  const csp = isSetupPage
+    ? [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' https://analytics.seaynicroute.com",
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://analytics.seaynicroute.com",
+        "frame-ancestors 'none'",
+      ].join('; ')
+    : [
+        "default-src 'self'",
+        `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com`,
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self'",
+        "img-src 'self' data: https:",
+        "connect-src 'self' https://analytics.seaynicroute.com",
+        "frame-ancestors 'none'",
+      ].join('; ');
 
   newHeaders.set('Content-Security-Policy', csp);
   newHeaders.delete('content-length');
