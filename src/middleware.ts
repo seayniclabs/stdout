@@ -333,6 +333,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     !pathname.startsWith('/app/api/') &&
     !setupExcludedPaths.some(p => pathname.startsWith(p));
 
+  console.log('[middleware] shouldCheckSetup:', shouldCheckSetup, 'for:', pathname);
+
   if (shouldCheckSetup) {
     try {
       const { isSetupComplete } = await import('./lib/setup');
