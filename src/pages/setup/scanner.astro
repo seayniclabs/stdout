@@ -58,6 +58,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
 
       <div id="scanProgress" class="scan-progress" style="display: none;">
         <div class="progress-bar">
+          <span id="progressText" class="progress-text">0%</span>
           <div id="progressFill" class="progress-fill"></div>
         </div>
         <div id="scanLogs" class="scan-logs"></div>
@@ -128,19 +129,32 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
   }
 
   .progress-bar {
+    position: relative;
     width: 100%;
-    height: 8px;
+    height: 24px;
     background: var(--color-bg-subtle);
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     margin-bottom: 1rem;
   }
 
   .progress-fill {
     height: 100%;
-    background: var(--color-primary);
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%);
     transition: width 0.3s ease;
     width: 0%;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text);
+    z-index: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
 
   .scan-logs {
@@ -250,6 +264,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
     const scanButtonText = document.getElementById('scanButtonText');
     const scanProgress = document.getElementById('scanProgress');
     const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
     const scanLogs = document.getElementById('scanLogs');
     const statusIcon = document.querySelector('.status-icon');
     const statusText = document.querySelector('.status-text');
@@ -290,9 +305,11 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
         for (const line of lines) {
           try {
             const event = JSON.parse(line);
+            console.log('[scanner.astro] Received event:', event);
 
             if (event.type === 'progress') {
               progressFill.style.width = `${event.percent}%`;
+              progressText.textContent = `${event.percent}%`;
             } else if (event.type === 'log') {
               const logEntry = document.createElement('p');
               logEntry.textContent = event.message;
@@ -305,6 +322,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
               statusIcon.textContent = '✅';
               statusText.textContent = `Found ${discoveredHosts.length} host(s)`;
               progressFill.style.width = '100%';
+              progressText.textContent = '100%';
 
               // Auto-import discovered hosts
               if (discoveredHosts.length > 0) {
