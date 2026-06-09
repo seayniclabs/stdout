@@ -4,7 +4,7 @@ const STDOUT_URL = 'http://192.168.0.244:8112';
 
 test.describe('StdOut Setup Wizard E2E', () => {
   test('complete setup wizard flow from start to finish', async ({ page }) => {
-    test.setTimeout(180000); // 3 minutes for entire test (scanner takes time)
+    test.setTimeout(600000); // 10 minutes for entire test (scanner can take 5+ minutes for full network scan)
 
     // Step 1: Navigate to setup wizard
     await page.goto(STDOUT_URL);
@@ -54,8 +54,21 @@ test.describe('StdOut Setup Wizard E2E', () => {
     // Wait for scan progress div to appear
     await page.waitForSelector('#scanProgress', { state: 'visible', timeout: 5000 });
 
-    // Wait for scan to complete (up to 2 minutes)
-    await page.waitForSelector('.status-icon:has-text("✅")', { timeout: 120000 });
+    // Wait a moment for SSE events to start flowing
+    await page.waitForTimeout(2000);
+
+    // Check if we're getting log output (indicates SSE is working)
+    const logCount = await page.locator('#scanLogs p').count();
+    console.log(`Scan logs visible: ${logCount} entries`);
+
+    if (logCount === 0) {
+      console.warn('WARNING: No scan log entries visible - SSE stream may not be working');
+    }
+
+    // Wait for scan to complete (up to 5 minutes - full network scan can be slow)
+    console.log('Waiting for scan completion...');
+    await page.waitForSelector('.status-icon:has-text("✅")', { timeout: 300000 });
+    console.log('Scan completed!');
     await expect(page.locator('.status-text')).toContainText('Found');
 
     // Should auto-advance to review page
