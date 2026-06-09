@@ -22,8 +22,7 @@ test.describe('StdOut Setup Wizard E2E', () => {
     await expect(page.locator('h1')).toContainText('Name Your Environment');
 
     // Fill in environment details
-    await page.fill('input[name="organizationName"]', 'Test Organization');
-    await page.fill('input[name="instanceName"]', 'Test StdOut Instance');
+    await page.fill('input[name="environmentName"]', 'Test Environment');
     await page.click('button:has-text("Continue")');
 
     // Step 4: License page - skip for now
