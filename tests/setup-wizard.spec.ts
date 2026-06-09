@@ -6,6 +6,14 @@ test.describe('StdOut Setup Wizard E2E', () => {
   test('complete setup wizard flow from start to finish', async ({ page }) => {
     test.setTimeout(600000); // 10 minutes for entire test (scanner can take 5+ minutes for full network scan)
 
+    // Pre-test: Wipe all data to ensure clean state
+    const wipeResponse = await page.request.post(`${STDOUT_URL}/app/api/test/wipe-data`);
+    if (!wipeResponse.ok()) {
+      console.warn('[WARN] Could not wipe data before test:', await wipeResponse.text());
+    } else {
+      console.log('[INFO] Data wiped successfully - starting with clean database');
+    }
+
     // Step 1: Navigate to setup wizard
     await page.goto(STDOUT_URL);
     await expect(page).toHaveURL(/\/setup$/);
