@@ -379,6 +379,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/scanner/autodiscover',
     '/app/api/network/scan',
     '/app/api/network/import',
+    '/app/api/setup/install-windlass',
+    '/app/api/setup/install-observatory',
     '/app/api/test/',
   ];
   const isAppRoute = pathname.startsWith('/app/');
