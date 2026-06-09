@@ -19,14 +19,15 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     console.log('[install-windlass] Starting Windlass installation...');
 
-    // Determine project root (where docker-compose.yml lives)
-    // In production Docker, we're in /app/dist, project root is /app
+    // When running in Docker, we need to use the host's compose project
+    // The Docker socket is mounted, so we can run docker commands
+    // The compose project directory is on the host, not in the container
     const isDocker = process.env.STDOUT_MODE === 'selfhost' || fs.existsSync('/.dockerenv');
-    const projectRoot = isDocker ? '/app' : process.cwd();
-    const windlassConfigDir = path.join(projectRoot, 'windlass-config');
-    const dockerComposePath = path.join(projectRoot, 'docker-compose.yml');
 
-    console.log(`[install-windlass] Project root: ${projectRoot}`);
+    // For config files, use /data mount (mapped to host's ./data directory)
+    const windlassConfigDir = '/data/windlass-config';
+
+    console.log(`[install-windlass] Running in Docker: ${isDocker}`);
     console.log(`[install-windlass] Windlass config dir: ${windlassConfigDir}`);
 
     // Step 1: Create windlass-config directory
@@ -63,31 +64,44 @@ schedules: []
     // Step 3: Start windlass container
     console.log('[install-windlass] Starting Windlass container...');
 
-    if (!fs.existsSync(dockerComposePath)) {
-      console.error('[install-windlass] docker-compose.yml not found at:', dockerComposePath);
-      return new Response(JSON.stringify({
-        success: false,
-        error: 'docker-compose.yml not found',
-        message: 'Could not locate docker-compose.yml. Windlass must be started manually.',
-      }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
     try {
-      // Pull latest windlass image
+      // Pull latest windlass image using project name
+      // When running in Docker, we're part of the same compose project
+      // Use the stdout_default network and project context
       console.log('[install-windlass] Pulling latest Windlass image...');
-      execFileSync('docker', ['compose', 'pull', 'windlass'], {
-        cwd: projectRoot,
+      const composeProject = 'stdout'; // Project name from docker-compose
+      execFileSync('docker', ['pull', 'ghcr.io/seayniclabs/windlass:latest'], {
         stdio: 'pipe',
         timeout: 60000,
       });
 
-      // Start windlass container
+      // Start windlass container directly (it's defined in the same docker-compose.yml)
+      // Get the compose project name from our own container
       console.log('[install-windlass] Starting Windlass service...');
-      execFileSync('docker', ['compose', 'up', '-d', 'windlass'], {
-        cwd: projectRoot,
+      const inspectOutput = execFileSync('docker', [
+        'inspect',
+        '--format={{index .Config.Labels "com.docker.compose.project"}}',
+        'stdout'
+      ], {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
+
+      const projectName = inspectOutput || 'stdout';
+      console.log(`[install-windlass] Detected compose project: ${projectName}`);
+
+      // Start the windlass service in the same compose project
+      execFileSync('docker', [
+        'run',
+        '-d',
+        '--name', 'windlass',
+        '--network', `${projectName}_default`,
+        '--restart', 'unless-stopped',
+        '-p', '8116:8116',
+        '-v', '/var/run/docker.sock:/var/run/docker.sock',
+        '-v', `${windlassConfigDir}:/config`,
+        'ghcr.io/seayniclabs/windlass:latest'
+      ], {
         stdio: 'pipe',
         timeout: 30000,
       });
