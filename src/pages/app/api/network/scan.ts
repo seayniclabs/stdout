@@ -61,9 +61,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
         send({ type: 'progress', percent: 10 });
 
         // Scan all subnets in parallel with fast ping sweep
+        console.log('[scan] Starting subnet scans for:', subnets.length, 'networks');
         const scanPromises = subnets.map(async (subnet, i) => {
           const progressBase = 10 + Math.floor((i / subnets.length) * 50);
 
+          console.log('[scan] Scanning subnet:', subnet);
           send({ type: 'log', level: 'info', message: `Scanning ${subnet}...` });
           send({ type: 'progress', percent: progressBase + 5 });
 
@@ -76,6 +78,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const hosts: Array<{ ip: string; hostname?: string }> = [];
           const batchSize = 20; // Scan 20 IPs at once
 
+          console.log('[scan] Starting ping sweep for', baseIP + '.0/24');
           for (let start = 1; start <= 254; start += batchSize) {
             const end = Math.min(start + batchSize - 1, 254);
             const pingPromises = [];
@@ -97,8 +100,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 15);
             send({ type: 'progress', percent: progress });
+
+            if (start % 60 === 1) {
+              console.log('[scan] Progress:', Math.floor(((start - 1) / 254) * 100) + '% complete for', subnet);
+            }
           }
 
+          console.log('[scan] Completed scan for', subnet, '- found', hosts.length, 'hosts');
           send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s) on ${subnet}` });
 
           for (const host of hosts) {
@@ -115,13 +123,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
         send({ type: 'progress', percent: 60 });
         send({ type: 'log', level: 'info', message: `Total: ${allHosts.length} host(s) found across all networks` });
 
-        // Now scan each host for common services
-        send({ type: 'log', level: 'info', message: 'Scanning for common services...' });
+        // Skip service scan for now - too slow for setup wizard
+        // Service detection can be done later via background job or manual entry
+        console.log('[scan] Skipping service scan - returning hosts without services');
+        send({ type: 'log', level: 'info', message: 'Host discovery complete (service scan skipped for speed)' });
 
-        const hostsWithServices = await scanHostsForServices(allHosts, send);
+        // Return hosts with empty services array
+        const hostsWithServices = allHosts.map(h => ({ ...h, services: [] }));
 
         send({ type: 'progress', percent: 100 });
         send({ type: 'log', level: 'success', message: 'Network scan complete!' });
+        console.log('[scan] Sending complete event with', hostsWithServices.length, 'hosts');
         send({ type: 'complete', hosts: hostsWithServices });
 
         controller.close();
