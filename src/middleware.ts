@@ -366,6 +366,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/webhooks/',
     '/app/api/community-sync',
     '/app/api/me',
+    '/app/api/scanner/autodiscover',
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
