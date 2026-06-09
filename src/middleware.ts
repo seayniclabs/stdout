@@ -370,8 +370,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (pathname === '/setup') {
     const userCount = getUserCount();
     console.log('[middleware] /setup accessed, userCount:', userCount);
+    // Only redirect to login if setup is actually complete
+    // Don't redirect just because a user exists - they might be mid-setup
     if (userCount > 0) {
-      return context.redirect('/app/login');
+      const { isSetupComplete } = await import('./lib/setup');
+      const setupComplete = await isSetupComplete();
+      if (setupComplete) {
+        return context.redirect('/app/login');
+      }
     }
   } else if (pathname === '/setup/license') {
     // Allow access to license page after admin creation
