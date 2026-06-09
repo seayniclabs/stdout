@@ -88,14 +88,24 @@ test.describe('StdOut Setup Wizard E2E', () => {
 
     // Step 7: Windlass configuration - skip
     await page.waitForURL(/\/setup\/windlass$/);
-    await page.click('button:has-text("Skip for Now")');
+    await expect(page.locator('h1')).toContainText('Configure Windlass');
+    // Click the label for the skip radio button (radio is display:none)
+    await page.click('label:has(input[type="radio"][value="skip"])');
+    await page.click('button[type="submit"]:has-text("Continue")');
 
-    // Step 8: Setup complete
+    // Step 8: Ticketing - skip
+    await page.waitForURL(/\/setup\/ticketing$/);
+    await expect(page.locator('h1')).toContainText('Ticketing');
+    // Click the label for the skip radio button (radio is display:none)
+    await page.click('label:has(input[name="ticketing_choice"][value="skip"])');
+    await page.click('button[type="submit"]:has-text("Continue")');
+
+    // Step 9: Setup complete
     await page.waitForURL(/\/setup\/complete$/);
     await expect(page.locator('h1')).toContainText('Setup Complete');
-    await page.click('button:has-text("Go to Dashboard")');
+    await page.click('a:has-text("Go to Dashboard")');
 
-    // Step 9: Verify we land on the dashboard
+    // Step 10: Verify we land on the dashboard
     await page.waitForURL(/\/app$/);
     await expect(page).toHaveURL(/\/app$/);
 

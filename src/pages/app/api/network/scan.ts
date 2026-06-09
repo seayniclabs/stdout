@@ -76,7 +76,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const baseIP = `${parts[0]}.${parts[1]}.${parts[2]}`;
 
           const hosts: Array<{ ip: string; hostname?: string }> = [];
-          const batchSize = 20; // Scan 20 IPs at once
+          const batchSize = 10; // Reduce to 10 concurrent pings to avoid overwhelming container
 
           console.log('[scan] Starting ping sweep for', baseIP + '.0/24');
           for (let start = 1; start <= 254; start += batchSize) {
@@ -98,11 +98,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
               if (result) hosts.push(result);
             }
 
-            const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 15);
+            const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 45);
             send({ type: 'progress', percent: progress });
 
-            if (start % 60 === 1) {
+            // Send keepalive progress updates every batch to prevent timeout
+            if (start % 20 === 1) {
               console.log('[scan] Progress:', Math.floor(((start - 1) / 254) * 100) + '% complete for', subnet);
+              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${Math.floor(((start - 1) / 254) * 100)}% complete` });
             }
           }
 

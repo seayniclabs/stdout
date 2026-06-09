@@ -273,7 +273,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // Skip CSRF origin check for test-only endpoints (only active in non-production)
   const isTestEndpoint = pathname.startsWith('/app/api/test/');
 
-  if (!isBearerRequest && !isTestEndpoint && !checkOrigin(context.request)) {
+  // Skip CSRF origin check for network scan endpoints during setup (no auth, public access)
+  const isNetworkScanEndpoint = pathname.startsWith('/app/api/network/scan') ||
+                                 pathname.startsWith('/app/api/network/import');
+
+  if (!isBearerRequest && !isTestEndpoint && !isNetworkScanEndpoint && !checkOrigin(context.request)) {
     return new Response('Forbidden — origin not allowed', { status: 403 });
   }
 
