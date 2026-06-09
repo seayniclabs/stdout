@@ -19,9 +19,12 @@ const stacks = [];
 const containers = [];
 const licenseActivated = progress.steps[SetupStep.License]?.completed && !progress.steps[SetupStep.License]?.data?.skipped;
 const windlassEnabled = progress.steps[SetupStep.Windlass]?.data?.enabled || false;
+const ticketingSystem = progress.steps[SetupStep.Ticketing]?.data?.ticketingSystem || 'built-in';
+const ticketingSkipped = progress.steps[SetupStep.Ticketing]?.data?.skipped || false;
 
 console.log('[complete] Windlass step data:', JSON.stringify(progress.steps[SetupStep.Windlass]?.data || {}));
 console.log('[complete] windlassEnabled:', windlassEnabled);
+console.log('[complete] Ticketing system:', ticketingSystem);
 ---
 
 <Layout title="Setup Complete!">
@@ -57,6 +60,17 @@ console.log('[complete] windlassEnabled:', windlassEnabled);
         <div class="summary-item">
           <span class="summary-label">⏰ Windlass</span>
           <span class="summary-value">{windlassEnabled ? 'Enabled' : 'Disabled'}</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">📋 Ticketing</span>
+          <span class="summary-value">
+            {ticketingSkipped
+              ? 'Skipped'
+              : ticketingSystem === 'built-in'
+                ? 'Built-in'
+                : ticketingSystem.charAt(0).toUpperCase() + ticketingSystem.slice(1)}
+          </span>
         </div>
       </div>
 
