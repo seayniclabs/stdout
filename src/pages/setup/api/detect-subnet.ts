@@ -5,13 +5,14 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 export const GET: APIRoute = async ({ locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Allow during setup - no auth required
+  // const session = locals.user;
+  // if (!session) {
+  //   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+  //     status: 401,
+  //     headers: { 'Content-Type': 'application/json' },
+  //   });
+  // }
 
   try {
     // Detect network subnet using ip/ifconfig commands
