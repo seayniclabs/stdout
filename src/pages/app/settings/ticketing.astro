@@ -1,0 +1,323 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getTenantDb } from '../../../lib/db';
+import { ticketingConnectors } from '../../../lib/db/tenant-schema';
+import { eq } from 'drizzle-orm';
+import { ConnectorRegistry } from '../../../lib/ticketing/base/ConnectorRegistry';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const db = getTenantDb(session.id);
+
+// Fetch existing connectors
+const connectors = await db
+  .select()
+  .from(ticketingConnectors)
+  .where(eq(ticketingConnectors.userId, session.id));
+
+const supportedSystems = ConnectorRegistry.getSupportedSystems();
+---
+
+<Layout title="Ticketing Settings">
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <h1>Ticketing Integration</h1>
+        <p class="page-subtitle">Connect StdOut to external ticketing systems</p>
+      </div>
+      <a href="/app/settings/ticketing/add" class="btn-primary">
+        Add Connection
+      </a>
+    </div>
+
+    {connectors.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h3>No Ticketing Systems Connected</h3>
+        <p>StdOut is using built-in ticketing. Connect an external system to sync tickets bidirectionally.</p>
+        <div class="supported-systems">
+          <h4>Supported Systems:</h4>
+          <ul>
+            {supportedSystems.filter(s => s !== 'built-in').map(system => (
+              <li>{system.charAt(0).toUpperCase() + system.slice(1)}</li>
+            ))}
+          </ul>
+        </div>
+        <a href="/app/settings/ticketing/add" class="btn-primary" style="margin-top: 1.5rem;">
+          Connect a System
+        </a>
+      </div>
+    ) : (
+      <div class="connectors-list">
+        {connectors.map((connector) => (
+          <div class="connector-card">
+            <div class="connector-header">
+              <div class="connector-info">
+                <h3>{connector.name}</h3>
+                <span class="connector-system">{connector.system.toUpperCase()}</span>
+              </div>
+              <div class="connector-status">
+                {connector.enabled ? (
+                  <span class="status-badge status-active">Active</span>
+                ) : (
+                  <span class="status-badge status-disabled">Disabled</span>
+                )}
+                {connector.isPrimary && (
+                  <span class="status-badge status-primary">Primary</span>
+                )}
+              </div>
+            </div>
+
+            <div class="connector-details">
+              <div class="detail-item">
+                <span class="detail-label">Sync Enabled:</span>
+                <span class="detail-value">{connector.syncEnabled ? 'Yes' : 'No'}</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Sync Interval:</span>
+                <span class="detail-value">{connector.syncInterval}s</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">Last Sync:</span>
+                <span class="detail-value">
+                  {connector.lastSyncAt
+                    ? new Date(connector.lastSyncAt).toLocaleString()
+                    : 'Never'}
+                </span>
+              </div>
+              {connector.lastSyncStatus && connector.lastSyncStatus !== 'ok' && (
+                <div class="detail-item">
+                  <span class="detail-label">Last Error:</span>
+                  <span class="detail-value error">{connector.lastSyncStatus}</span>
+                </div>
+              )}
+            </div>
+
+            <div class="connector-actions">
+              <button class="btn-text" data-action="test" data-id={connector.id}>
+                Test Connection
+              </button>
+              <button class="btn-text" data-action="sync" data-id={connector.id}>
+                Sync Now
+              </button>
+              <a href={`/app/settings/ticketing/edit/${connector.id}`} class="btn-text">
+                Edit
+              </a>
+              <button class="btn-text danger" data-action="delete" data-id={connector.id}>
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .page-container {
+    padding: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .page-subtitle {
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-state p {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .supported-systems {
+    text-align: left;
+    display: inline-block;
+    margin: 1rem 0;
+  }
+
+  .supported-systems h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .supported-systems ul {
+    margin: 0;
+    padding-left: 1.5rem;
+  }
+
+  .supported-systems li {
+    margin: 0.25rem 0;
+  }
+
+  .connectors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .connector-card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+  }
+
+  .connector-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .connector-info h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+  }
+
+  .connector-system {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg-subtle);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .connector-status {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .status-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    text-transform: uppercase;
+  }
+
+  .status-active {
+    background: var(--color-success-bg, #d4edda);
+    color: var(--color-success, #28a745);
+  }
+
+  .status-disabled {
+    background: var(--color-muted-bg, #e9ecef);
+    color: var(--color-text-muted, #6c757d);
+  }
+
+  .status-primary {
+    background: var(--color-primary);
+    color: white;
+  }
+
+  .connector-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .detail-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .detail-value {
+    font-size: 0.875rem;
+    color: var(--color-text);
+  }
+
+  .detail-value.error {
+    color: var(--color-danger, #dc3545);
+  }
+
+  .connector-actions {
+    display: flex;
+    gap: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+    text-decoration: none;
+  }
+
+  .btn-text:hover {
+    text-decoration: underline;
+  }
+
+  .btn-text.danger {
+    color: var(--color-danger, #dc3545);
+  }
+</style>
+
+<script>
+  document.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const action = (btn as HTMLElement).dataset.action;
+      const id = (btn as HTMLElement).dataset.id;
+
+      if (action === 'test') {
+        alert(`Test connection for ${id} (not yet implemented)`);
+      } else if (action === 'sync') {
+        alert(`Manual sync for ${id} (not yet implemented)`);
+      } else if (action === 'delete') {
+        if (confirm('Are you sure you want to delete this connection?')) {
+          alert(`Delete ${id} (not yet implemented)`);
+        }
+      }
+    });
+  });
+</script>
+</Layout>

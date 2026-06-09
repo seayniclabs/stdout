@@ -1,0 +1,272 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+import { getTenantDb } from '../../lib/db';
+import { discoveredHosts, discoveredServices } from '../../lib/db/tenant-schema';
+import { eq } from 'drizzle-orm';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const db = getTenantDb(session.id);
+
+// Fetch all discovered hosts with their services
+const hosts = await db
+  .select()
+  .from(discoveredHosts)
+  .where(eq(discoveredHosts.userId, session.id))
+  .orderBy(discoveredHosts.ipAddress);
+
+const allServices = await db
+  .select()
+  .from(discoveredServices)
+  .where(eq(discoveredServices.userId, session.id));
+
+// Group services by host
+const hostsWithServices = hosts.map(host => ({
+  ...host,
+  services: allServices.filter(s => s.hostId === host.id),
+}));
+---
+
+<Layout title="Infrastructure">
+  <div class="page-container">
+    <div class="page-header">
+      <div>
+        <h1>Infrastructure</h1>
+        <p class="page-subtitle">Discovered hosts and services on your network</p>
+      </div>
+      <div class="header-actions">
+        <a href="/app/network-discovery" class="btn-secondary">
+          Scan Network
+        </a>
+      </div>
+    </div>
+
+    {hostsWithServices.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>No Infrastructure Discovered</h3>
+        <p>Run a network scan to discover hosts and services.</p>
+        <a href="/app/network-discovery" class="btn-primary">
+          Start Network Scan
+        </a>
+      </div>
+    ) : (
+      <div class="hosts-grid">
+        {hostsWithServices.map((host) => (
+          <div class="host-card">
+            <div class="host-header">
+              <div class="host-info">
+                <span class="host-ip">{host.ipAddress}</span>
+                {host.hostname && (
+                  <span class="host-hostname">{host.hostname}</span>
+                )}
+              </div>
+              <span class="host-status">
+                {new Date(host.lastSeen).toLocaleDateString()}
+              </span>
+            </div>
+
+            {host.services.length > 0 && (
+              <div class="services-list">
+                <h4>Services ({host.services.length})</h4>
+                <div class="services-grid">
+                  {host.services.map((service) => (
+                    <div class="service-item">
+                      <span class="service-port">{service.port}/{service.protocol}</span>
+                      <span class="service-name">
+                        {service.serviceName || 'Unknown'}
+                      </span>
+                      {service.serviceVersion && (
+                        <span class="service-version">{service.serviceVersion}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div class="host-actions">
+              <button class="btn-text" data-host-id={host.id}>
+                Create Stack
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</Layout>
+
+<style>
+  .page-container {
+    padding: 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+  }
+
+  .page-header h1 {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .page-subtitle {
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 1rem;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+  }
+
+  .empty-state h3 {
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-state p {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+  }
+
+  .hosts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .host-card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .host-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .host-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .host-ip {
+    font-family: var(--font-mono);
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--color-text);
+  }
+
+  .host-hostname {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .host-status {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg-subtle);
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .services-list h4 {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .services-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .service-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    background: var(--color-bg-subtle);
+    border-radius: 6px;
+    font-size: 0.875rem;
+  }
+
+  .service-port {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--color-primary);
+    min-width: 60px;
+  }
+
+  .service-name {
+    flex: 1;
+    color: var(--color-text);
+  }
+
+  .service-version {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+
+  .host-actions {
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .btn-text {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .btn-text:hover {
+    text-decoration: underline;
+  }
+</style>
+
+<script>
+  document.querySelectorAll('[data-host-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const hostId = (btn as HTMLElement).dataset.hostId;
+      // TODO: Implement create stack from host
+      alert(`Create stack from host ${hostId} (not yet implemented)`);
+    });
+  });
+</script>
+</Layout>

@@ -15,6 +15,33 @@ export const stacks = sqliteTable('stacks', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Network Discovery: discovered hosts and services ---
+
+export const discoveredHosts = sqliteTable('discovered_hosts', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  ipAddress: text('ip_address').notNull().unique(),
+  hostname: text('hostname'),
+  macAddress: text('mac_address'),
+  vendor: text('vendor'),
+  lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const discoveredServices = sqliteTable('discovered_services', {
+  id: text('id').primaryKey(),
+  hostId: text('host_id').notNull(), // FK to discoveredHosts
+  userId: text('user_id').notNull(),
+  port: integer('port').notNull(),
+  protocol: text('protocol').notNull().default('tcp'), // tcp | udp
+  serviceName: text('service_name'), // ssh, http, https, mysql, etc.
+  serviceVersion: text('service_version'),
+  lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const incidents = sqliteTable('incidents', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),

@@ -60,11 +60,13 @@ StdOut is an AI-assisted incident companion for infrastructure monitoring and re
 - **Location**: \`/app/docs?docType=runbook\`
 - **Count**: ${runbookCount}
 - **Purpose**: Operational procedures for common tasks and incidents
+- **Search**: Semantic search available via \`/app/api/docs/embeddings\` (POST with \`action: "search"\`)
 
 ### Documentation
 - **Location**: \`/app/docs?docType=guide\`
 - **Count**: ${guideCount}
 - **Purpose**: Setup guides, troubleshooting, best practices
+- **Search**: Full-text and semantic search available
 
 ### Community Library
 - **Location**: \`/app/docs?source=community\`
@@ -73,6 +75,12 @@ StdOut is an AI-assisted incident companion for infrastructure monitoring and re
 ### Historical Incidents
 - **Location**: \`/app/incidents?status=resolved\`
 - **Purpose**: Past incidents with resolutions for pattern matching
+- **Search**: Search by title, stack, tags, or description
+
+### AI Learning Layer
+- **Embeddings**: Document embeddings stored for semantic search
+- **RAG**: Retrieval-Augmented Generation for incident diagnosis
+- **Workflow**: When diagnosing incidents, AI searches runbooks → past incidents → suggests solutions
 
 ## AI Capabilities
 

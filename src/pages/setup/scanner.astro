@@ -20,10 +20,10 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
 
 <Layout title="Discover Infrastructure">
   <div class="auth-page" style="max-width: 800px;">
-    <SetupProgress currentStep={4} totalSteps={7} />
+    <SetupProgress currentStep={4} totalSteps={8} />
 
     <h1>Discover Your Infrastructure</h1>
-    <p class="auth-subtitle">Automatically scan your Docker environment to discover containers and services</p>
+    <p class="auth-subtitle">Scan your network to discover hosts and services</p>
 
     <div class="scanner-card">
       <div class="scanner-status" id="scannerStatus">
@@ -32,18 +32,24 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
       </div>
 
       <div class="scanner-info">
-        <h3>What will be discovered:</h3>
-        <ul>
-          <li>Docker containers and their health status</li>
-          <li>Container metrics (CPU, memory, network)</li>
-          <li>Data sources (Prometheus, Grafana, etc.)</li>
-          <li>Network configuration and DNS</li>
-        </ul>
+        <h3>Network Scan</h3>
+        <p>Scan your local network to discover hosts and running services.</p>
+        <div class="input-group" style="margin-top: 1rem;">
+          <label for="subnet">Subnet to scan:</label>
+          <input
+            type="text"
+            id="subnet"
+            value="192.168.0.0/24"
+            placeholder="192.168.0.0/24"
+            class="form-input"
+          />
+          <p class="help-text">Common subnets: 192.168.0.0/24, 192.168.1.0/24, 10.0.0.0/24</p>
+        </div>
       </div>
 
       <div class="scanner-actions">
         <button id="scanButton" class="btn-primary">
-          <span id="scanButtonText">Start Automatic Scan</span>
+          <span id="scanButtonText">Start Network Scan</span>
         </button>
         <form method="POST" action="/setup/complete-scanner" style="display: inline;">
           <button type="submit" name="action" value="skip" class="btn-secondary">Skip for Now</button>
@@ -161,28 +167,52 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
   .scan-logs p.error {
     color: var(--color-danger);
   }
+
+  .input-group {
+    margin: 1rem 0;
+  }
+
+  .input-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-input-bg, white);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: var(--font-mono);
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
+
+  .help-text {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
 </style>
 
-<script define:vars={{ scannerToken }}>
-  // Auto-start scan after 1.5 seconds (give user time to see the page)
-  let autoStarted = false;
-  setTimeout(() => {
-    if (!autoStarted) {
-      autoStarted = true;
-      startScan();
-    }
-  }, 1500);
+<script>
+  const scanButton = document.getElementById('scanButton');
+  const subnetInput = document.getElementById('subnet');
 
-  // Also allow manual start
-  document.getElementById('scanButton')?.addEventListener('click', () => {
-    if (!autoStarted) {
-      autoStarted = true;
-      startScan();
+  scanButton.addEventListener('click', async () => {
+    const subnet = subnetInput.value.trim();
+    if (!subnet) {
+      alert('Please enter a subnet');
+      return;
     }
-  });
 
-  async function startScan() {
-    const scanButton = document.getElementById('scanButton');
     const scanButtonText = document.getElementById('scanButtonText');
     const scanProgress = document.getElementById('scanProgress');
     const progressFill = document.getElementById('progressFill');
@@ -194,44 +224,36 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
     scanButton.disabled = true;
     scanButtonText.textContent = 'Scanning...';
 
-    // Show progress immediately for user feedback
+    // Show progress
     scanProgress.style.display = 'block';
     statusIcon.textContent = '⏳';
-    statusText.textContent = 'Scanning infrastructure...';
+    statusText.textContent = 'Scanning network...';
 
-    // Add initial progress
-    const initialLog = document.createElement('p');
-    initialLog.textContent = 'Starting Docker scan...';
-    scanLogs.appendChild(initialLog);
+    // Clear previous logs
+    scanLogs.innerHTML = '';
 
     try {
-      progressFill.style.width = '10%';
-
-      const response = await fetch('/app/api/scanner/autodiscover', {
+      const response = await fetch('/app/api/network/scan', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${scannerToken}`
-        }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subnet }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Scanner failed: ${response.status} ${response.statusText}`);
-      }
-
-      const reader = response.body.getReader();
+      const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+
+      if (!reader) throw new Error('No response stream');
+
+      let discoveredHosts = [];
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split('\n').filter(l => l.trim());
 
         for (const line of lines) {
-          if (!line.trim()) continue;
-
           try {
             const event = JSON.parse(line);
 
@@ -245,14 +267,44 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
               scanLogs.appendChild(logEntry);
               scanLogs.scrollTop = scanLogs.scrollHeight;
             } else if (event.type === 'complete') {
-              statusIcon.textContent = '✓';
-              statusText.textContent = 'Scan complete!';
+              discoveredHosts = event.hosts || [];
+              statusIcon.textContent = '✅';
+              statusText.textContent = `Found ${discoveredHosts.length} host(s)`;
               progressFill.style.width = '100%';
 
-              // Auto-advance to review page after 1 second
+              // Auto-import discovered hosts
+              if (discoveredHosts.length > 0) {
+                const importLog = document.createElement('p');
+                importLog.textContent = 'Importing discovered hosts...';
+                scanLogs.appendChild(importLog);
+
+                try {
+                  const importResponse = await fetch('/app/api/network/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hosts: discoveredHosts }),
+                  });
+
+                  const importResult = await importResponse.json();
+
+                  if (importResponse.ok) {
+                    const successLog = document.createElement('p');
+                    successLog.className = 'success';
+                    successLog.textContent = `Imported ${importResult.imported.hosts} host(s), ${importResult.imported.services} service(s)`;
+                    scanLogs.appendChild(successLog);
+                  }
+                } catch (importError) {
+                  const errorLog = document.createElement('p');
+                  errorLog.className = 'error';
+                  errorLog.textContent = `Import failed: ${importError.message}`;
+                  scanLogs.appendChild(errorLog);
+                }
+              }
+
+              // Auto-advance after 2 seconds
               setTimeout(() => {
                 window.location.href = '/setup/review';
-              }, 1000);
+              }, 2000);
             } else if (event.type === 'error') {
               statusIcon.textContent = '⚠️';
               statusText.textContent = 'Scan failed';
@@ -278,5 +330,5 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
       scanButton.disabled = false;
       scanButtonText.textContent = 'Retry Scan';
     }
-  }
+  });
 </script>

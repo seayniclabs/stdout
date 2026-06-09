@@ -345,8 +345,31 @@ if (!session) return Astro.redirect('/app/login');
       return;
     }
 
-    // TODO: Create API endpoint to import hosts as stacks
-    alert(`Would import ${selectedHosts.length} host(s) as stacks (not yet implemented)`);
+    importBtn.disabled = true;
+    importBtn.textContent = 'Importing...';
+
+    try {
+      const response = await fetch('/app/api/network/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hosts: selectedHosts }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        alert(`Successfully imported ${result.imported.hosts} host(s) and ${result.imported.services} service(s)`);
+        // Redirect to infrastructure page
+        window.location.href = '/app/infrastructure';
+      } else {
+        alert(`Import failed: ${result.error}`);
+      }
+    } catch (error: any) {
+      alert(`Import failed: ${error.message}`);
+    } finally {
+      importBtn.disabled = false;
+      importBtn.textContent = 'Import Selected';
+    }
   });
 </script>
 </Layout>
