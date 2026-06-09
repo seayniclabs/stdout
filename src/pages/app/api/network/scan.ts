@@ -15,7 +15,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // }
 
   const body = await request.json();
-  const subnet = body.subnet || '192.168.0.0/24';
+  const subnetInput = body.subnet || '192.168.0.0/24';
+
+  // Parse multiple subnets (comma or space separated)
+  const subnets = subnetInput
+    .split(/[,\s]+/)
+    .map((s: string) => s.trim())
+    .filter((s: string) => s.length > 0);
 
   // Create SSE stream
   const stream = new ReadableStream({
@@ -25,54 +31,70 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       try {
-        send({ type: 'log', level: 'info', message: `Scanning network ${subnet}...` });
-        send({ type: 'progress', percent: 10 });
+        send({ type: 'log', level: 'info', message: `Scanning ${subnets.length} network(s): ${subnets.join(', ')}` });
+        send({ type: 'progress', percent: 5 });
 
-        // Use nmap for network discovery
-        // -sn: Ping scan (no port scan)
-        // -T4: Faster timing
-        // --max-retries 1: Faster scan
-        const nmapCommand = `nmap -sn -T4 --max-retries 1 ${subnet}`;
+        let allHosts: Array<{ ip: string; hostname?: string }> = [];
 
-        send({ type: 'log', level: 'info', message: 'Running nmap scan...' });
+        // Scan each subnet
+        for (let i = 0; i < subnets.length; i++) {
+          const subnet = subnets[i];
+          const progressBase = Math.floor((i / subnets.length) * 50);
 
-        try {
-          const { stdout, stderr } = await execAsync(nmapCommand, {
-            timeout: 120000, // 2 minute timeout
-          });
+          send({ type: 'log', level: 'info', message: `Scanning ${subnet}...` });
+          send({ type: 'progress', percent: progressBase + 5 });
 
-          send({ type: 'progress', percent: 60 });
+          // Use nmap for network discovery
+          // -sn: Ping scan (no port scan)
+          // -T4: Faster timing
+          // --max-retries 1: Faster scan
+          const nmapCommand = `nmap -sn -T4 --max-retries 1 ${subnet}`;
 
-          // Parse nmap output
-          const hosts = parseNmapOutput(stdout);
+          send({ type: 'log', level: 'info', message: `Running nmap on ${subnet}...` });
 
-          send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s)` });
+          try {
+            const { stdout, stderr } = await execAsync(nmapCommand, {
+              timeout: 120000, // 2 minute timeout
+            });
 
-          for (const host of hosts) {
-            send({ type: 'log', level: 'info', message: `  • ${host.ip}${host.hostname ? ` (${host.hostname})` : ''}` });
+            send({ type: 'progress', percent: progressBase + 20 });
+
+            // Parse nmap output
+            const hosts = parseNmapOutput(stdout);
+
+            send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s) on ${subnet}` });
+
+            for (const host of hosts) {
+              send({ type: 'log', level: 'info', message: `  • ${host.ip}${host.hostname ? ` (${host.hostname})` : ''}` });
+            }
+
+            allHosts.push(...hosts);
+
+          } catch (error: any) {
+            if (error.code === 'ENOENT') {
+              send({ type: 'log', level: 'error', message: 'nmap is not installed on this system' });
+              send({ type: 'log', level: 'info', message: 'Install nmap: brew install nmap (macOS) or apt-get install nmap (Ubuntu)' });
+              send({ type: 'progress', percent: 100 });
+              send({ type: 'complete', hosts: [] });
+              controller.close();
+              return;
+            } else {
+              send({ type: 'log', level: 'error', message: `Scan error on ${subnet}: ${error.message}` });
+            }
           }
-
-          send({ type: 'progress', percent: 90 });
-
-          // Now scan each host for common services
-          send({ type: 'log', level: 'info', message: 'Scanning for common services...' });
-
-          const hostsWithServices = await scanHostsForServices(hosts, send);
-
-          send({ type: 'progress', percent: 100 });
-          send({ type: 'log', level: 'success', message: 'Network scan complete!' });
-          send({ type: 'complete', hosts: hostsWithServices });
-
-        } catch (error: any) {
-          if (error.code === 'ENOENT') {
-            send({ type: 'log', level: 'error', message: 'nmap is not installed on this system' });
-            send({ type: 'log', level: 'info', message: 'Install nmap: brew install nmap (macOS) or apt-get install nmap (Ubuntu)' });
-          } else {
-            send({ type: 'log', level: 'error', message: `Scan error: ${error.message}` });
-          }
-          send({ type: 'progress', percent: 100 });
-          send({ type: 'complete', hosts: [] });
         }
+
+        send({ type: 'progress', percent: 60 });
+        send({ type: 'log', level: 'info', message: `Total: ${allHosts.length} host(s) found across all networks` });
+
+        // Now scan each host for common services
+        send({ type: 'log', level: 'info', message: 'Scanning for common services...' });
+
+        const hostsWithServices = await scanHostsForServices(allHosts, send);
+
+        send({ type: 'progress', percent: 100 });
+        send({ type: 'log', level: 'success', message: 'Network scan complete!' });
+        send({ type: 'complete', hosts: hostsWithServices });
 
         controller.close();
 
