@@ -10,12 +10,13 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache python3 make g++
+RUN apk add --no-cache python3 make g++ nmap
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
 COPY --from=build /app/package-lock.json ./
 RUN npm ci --omit=dev
 RUN apk del python3 make g++
+# Keep nmap for network discovery
 COPY --from=build /app/drizzle.config.ts ./
 COPY --from=build /app/src/lib/db/central-schema.ts ./src/lib/db/central-schema.ts
 COPY --from=build /app/src/lib/db/tenant-schema.ts ./src/lib/db/tenant-schema.ts
