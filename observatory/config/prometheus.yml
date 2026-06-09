@@ -1,32 +1,69 @@
 global:
-  scrape_interval: 30s
-  evaluation_interval: 30s
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'stdout-observatory'
 
 scrape_configs:
-  # Self-monitoring
+  # Prometheus self-monitoring
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
+        labels:
+          environment: 'production'
+          service: 'prometheus'
 
-  # Node exporter (configure for your environment)
-  # - job_name: 'node-exporter'
-  #   static_configs:
-  #     - targets: ['your-host-ip:9100']
+  # Docker container metrics via cAdvisor
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['host.docker.internal:9323']
+        labels:
+          environment: 'production'
 
   # StdOut application metrics
   - job_name: 'stdout'
     static_configs:
       - targets: ['stdout:3000']
+        labels:
+          environment: 'production'
+          service: 'stdout'
+          tier: 'critical'
     metrics_path: '/metrics'
 
-  # Observatory Sentinel AI
-  - job_name: 'observatory-sentinel'
-    static_configs:
-      - targets: ['observatory-sentinel:8081']
-    metrics_path: '/metrics'
-
-  # Windlass scheduler
+  # Windlass scheduler metrics
   - job_name: 'windlass'
     static_configs:
       - targets: ['windlass:8116']
+        labels:
+          environment: 'production'
+          service: 'windlass'
+          tier: 'critical'
+    metrics_path: '/metrics'
+
+  # Observatory Sentinel AI metrics
+  - job_name: 'observatory-sentinel'
+    static_configs:
+      - targets: ['observatory-sentinel:8081']
+        labels:
+          environment: 'production'
+          service: 'observatory-sentinel'
+          tier: 'critical'
+    metrics_path: '/metrics'
+
+  # Loki metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+        labels:
+          environment: 'production'
+          service: 'loki'
+    metrics_path: '/metrics'
+
+  # Tempo metrics
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:3200']
+        labels:
+          environment: 'production'
+          service: 'tempo'
     metrics_path: '/metrics'

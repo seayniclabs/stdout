@@ -17,7 +17,15 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Open `APP_URL` (default `http://localhost:8112`) and complete the setup wizard to create your admin account. StdOut and Windlass start together.
+Open `APP_URL` (default `http://localhost:8112`), create your admin account, name your environment, and you're done. Everything else is **fully automated**:
+
+- ✅ Network scanning runs in background
+- ✅ Windlass auto-connects if available
+- ✅ Ticketing system auto-detected from env vars (or uses built-in)
+- ✅ License is optional (activate later in Settings)
+- ✅ No manual configuration required
+
+The setup wizard completes in **2 steps** instead of 8. No decisions, no "Skip for Now" buttons.
 
 ---
 

@@ -13,15 +13,12 @@ if (userCount === 0) {
   return Astro.redirect('/setup');
 }
 
-// Auto-redirect to license activation if no license
-if (!getStoredLicense()) {
-  return Astro.redirect('/setup/license');
-}
-
 // If logged in, redirect to app
 if (user) {
   return Astro.redirect('/app');
 }
+
+// Otherwise show landing page (license check removed - not needed here)
 ---
 <!doctype html>
 <html lang="en">

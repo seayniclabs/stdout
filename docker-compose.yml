@@ -17,9 +17,10 @@ services:
       - APP_URL=${APP_URL:-http://localhost:8112}
       - WINDLASS_URL=${WINDLASS_URL:-http://windlass:8116}
       - SENTINEL_API_URL=${SENTINEL_API_URL:-http://observatory-sentinel:8081}
-      - SECRET_KEY=${SECRET_KEY}
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - RESEND_API_KEY=${RESEND_API_KEY}
+    secrets:
+      - secret_key
+      - anthropic_api_key
+      - resend_api_key
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
       interval: 30s
@@ -173,3 +174,11 @@ networks:
     ipam:
       config:
         - subnet: 10.21.0.0/24
+
+secrets:
+  secret_key:
+    file: /Volumes/data/secrets/stdout_secret_key
+  anthropic_api_key:
+    file: /Volumes/data/secrets/anthropic_api_key
+  resend_api_key:
+    file: /Volumes/data/secrets/resend_api_key

@@ -1,6 +1,10 @@
 import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { getTenantDb } from '../../../../lib/db';
+import { discoveredHosts, discoveredServices } from '../../../../lib/db/tenant-schema';
+import { nanoid } from 'nanoid';
+import { eq, and } from 'drizzle-orm';
 
 const execAsync = promisify(exec);
 
@@ -27,7 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   console.log('[scan-services] Starting background service scan for', hosts.length, 'hosts');
 
   // Run in background - don't wait for completion
-  scanServicesInBackground(hosts).catch(err => {
+  scanServicesInBackground(hosts, session.userId).catch(err => {
     console.error('[scan-services] Background scan failed:', err);
   });
 
@@ -44,7 +48,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   );
 };
 
-async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: string }>) {
+async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: string }>, userId: string) {
+  const db = getTenantDb();
   const COMMON_PORTS = [
     { port: 22, service: 'SSH' },
     { port: 80, service: 'HTTP' },
@@ -80,8 +85,75 @@ async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: st
         }
       }
 
-      // TODO: Update database with discovered services
-      // For now just log them
+      // Upsert host record
+      let hostRecord = db
+        .select()
+        .from(discoveredHosts)
+        .where(eq(discoveredHosts.ipAddress, host.ip))
+        .get();
+
+      if (!hostRecord) {
+        const now = new Date();
+        const hostId = 'host_' + nanoid();
+        db.insert(discoveredHosts).values({
+          id: hostId,
+          userId,
+          ipAddress: host.ip,
+          hostname: host.hostname || null,
+          macAddress: null,
+          vendor: null,
+          lastSeen: now,
+          createdAt: now,
+          updatedAt: now,
+        }).run();
+        hostRecord = { id: hostId };
+        console.log('[scan-services] Created host record:', hostId);
+      } else {
+        // Update lastSeen
+        db.update(discoveredHosts)
+          .set({ lastSeen: new Date(), updatedAt: new Date() })
+          .where(eq(discoveredHosts.id, hostRecord.id))
+          .run();
+      }
+
+      // Upsert service records
+      for (const serviceInfo of services) {
+        const existing = db
+          .select()
+          .from(discoveredServices)
+          .where(
+            and(
+              eq(discoveredServices.hostId, hostRecord.id),
+              eq(discoveredServices.port, serviceInfo.port)
+            )
+          )
+          .get();
+
+        if (existing) {
+          // Update lastSeen
+          db.update(discoveredServices)
+            .set({ lastSeen: new Date(), updatedAt: new Date() })
+            .where(eq(discoveredServices.id, existing.id))
+            .run();
+        } else {
+          // Insert new service
+          const now = new Date();
+          db.insert(discoveredServices).values({
+            id: 'svc_' + nanoid(),
+            hostId: hostRecord.id,
+            userId,
+            port: serviceInfo.port,
+            protocol: 'tcp',
+            serviceName: serviceInfo.service,
+            serviceVersion: null,
+            lastSeen: now,
+            createdAt: now,
+            updatedAt: now,
+          }).run();
+          console.log('[scan-services] Added service:', serviceInfo.service, 'on port', serviceInfo.port);
+        }
+      }
+
       console.log('[scan-services] Completed scan for', host.ip, '- found', services.length, 'services');
 
     } catch (error) {

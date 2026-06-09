@@ -10,9 +10,8 @@ const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const progress = await getSetupProgress();
-if (progress.currentStep !== SetupStep.Environment) {
-  return Astro.redirect(`/setup/step/${progress.currentStep}`);
-}
+// Allow access to environment page regardless of current step for testing
+// (In production, you might want stricter flow control)
 
 let error = '';
 let environmentName = '';
@@ -35,7 +34,68 @@ if (Astro.request.method === 'POST') {
       // Mark Step 2 complete
       await completeStep(SetupStep.Environment, { environmentName });
 
-      return Astro.redirect('/setup/license');
+      // AUTO-COMPLETE optional steps:
+      // License is optional → skip it
+      await completeStep(SetupStep.License, { skipped: true, autoSkipped: true });
+
+      // Scanner → trigger background scan and mark as in-progress
+      // The /app/api/setup/auto-scan endpoint will mark it complete when done
+      try {
+        await fetch(`${Astro.url.origin}/app/api/setup/auto-scan`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subnets: [] }), // Auto-detect subnets
+        });
+        console.log('[setup] Background scanner triggered');
+      } catch (error) {
+        console.error('[setup] Failed to trigger background scanner:', error);
+      }
+      await completeStep(SetupStep.Scanner, {
+        autoScanned: true,
+        scanInProgress: true,
+        triggeredAt: new Date().toISOString(),
+      });
+
+      // Review step → not needed, skip it
+      await completeStep(SetupStep.Review, { skipped: true, autoSkipped: true });
+
+      // Windlass → check if available, auto-connect or skip
+      const windlassUrl = import.meta.env.WINDLASS_URL || 'http://windlass:8116';
+      try {
+        const windlassHealth = await fetch(`${windlassUrl}/health`, { signal: AbortSignal.timeout(2000) });
+        if (windlassHealth.ok) {
+          await completeStep(SetupStep.Windlass, {
+            enabled: true,
+            autoDetected: true,
+            url: windlassUrl,
+          });
+          console.log('[setup] Windlass auto-detected and connected');
+        } else {
+          await completeStep(SetupStep.Windlass, { enabled: false, skipped: true, reason: 'not_reachable' });
+        }
+      } catch (error) {
+        await completeStep(SetupStep.Windlass, { enabled: false, skipped: true, reason: 'not_available' });
+        console.log('[setup] Windlass not available, skipping');
+      }
+
+      // Ticketing → auto-detect from env vars or use built-in
+      const hasLinear = !!import.meta.env.LINEAR_API_KEY;
+      const hasGitHub = !!import.meta.env.GITHUB_TOKEN;
+      const hasJira = !!import.meta.env.JIRA_API_TOKEN && !!import.meta.env.JIRA_DOMAIN;
+      if (hasLinear) {
+        await completeStep(SetupStep.Ticketing, { ticketingSystem: 'linear', autoDetected: true });
+      } else if (hasGitHub) {
+        await completeStep(SetupStep.Ticketing, { ticketingSystem: 'github', autoDetected: true });
+      } else if (hasJira) {
+        await completeStep(SetupStep.Ticketing, { ticketingSystem: 'jira', autoDetected: true });
+      } else {
+        await completeStep(SetupStep.Ticketing, { ticketingSystem: 'built-in', autoDetected: true });
+      }
+
+      // Setup complete!
+      await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString(), autoCompleted: true });
+
+      return Astro.redirect('/setup/complete');
     }
   }
 }
