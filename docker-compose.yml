@@ -9,6 +9,7 @@ services:
       - "8112:3000"
     volumes:
       - ./data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - TZ=America/Chicago
       - STDOUT_MODE=${STDOUT_MODE:-selfhost}
