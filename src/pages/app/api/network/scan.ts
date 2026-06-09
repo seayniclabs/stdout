@@ -65,7 +65,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
             send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s) on ${subnet}` });
 
             for (const host of hosts) {
-              send({ type: 'log', level: 'info', message: `  • ${host.ip}${host.hostname ? ` (${host.hostname})` : ''}` });
+              const hostname = host.hostname || '';
+              const safeHostname = hostname.replace(/["\\']/g, ''); // Strip quotes/backslashes
+              send({ type: 'log', level: 'info', message: `  • ${host.ip}${safeHostname ? ` (${safeHostname})` : ''}` });
             }
 
             allHosts.push(...hosts);
