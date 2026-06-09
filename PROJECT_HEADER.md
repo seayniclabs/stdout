@@ -23,11 +23,17 @@ Three optional components:
 - **Three-tier deployment:** StdOut only (core), StdOut + Windlass (schedule-aware), StdOut + Observatory (proactive monitoring with LLMs)
 - **Windlass management:** Moved to optional profile; users choose based on schedule needs, Docker socket must be rw
 
+## Current State
+
+StdOut is a production incident companion for self-hosters and solo developers, live at https://stdout.seayniclabs.com. Latest commit (34b65e6) fixes Docker network filtering in container IP scan. Clean repository (no uncommitted changes). Three-component architecture: Core (8112) for incident tracking + AI diagnostics, Windlass (8116) for schedule-aware Docker management, Observatory (8080) for proactive monitoring with Llama 3.2 + Qwen 2.5 analysis. Built with Astro, deployed via Docker; public GitHub repo with personal-use license. Recent work: ticketing framework (Jira/GitHub/Zendesk), glassmorphism Observatory dashboard, optional profile management.
+
 ## Next Steps
 
-- Complete ticketing connector implementations (Jira, GitHub Issues)
-- Observatory automated incident creation from CRITICAL alerts
-- Multi-tenant SaaS mode (STDOUT_MODE=saas)
+1. **[Priority: High]** Complete ticketing integrations — wire Jira, GitHub Issues, Zendesk connectors; auto-create tickets from StdOut incidents.
+
+2. **[Priority: Med]** Observatory auto-escalation — auto-create incidents from CRITICAL Observatory alerts; auto-assign to on-call based on schedule (Windlass).
+
+3. **[Priority: Med]** Multi-tenant SaaS mode — implement STDOUT_MODE=saas with organization isolation, team billing, and white-label options.
 - Incident export/archive workflows
 
 ## Resource Inventory
