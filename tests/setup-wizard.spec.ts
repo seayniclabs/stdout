@@ -75,7 +75,7 @@ test.describe('StdOut Setup Wizard E2E', () => {
     await page.waitForURL(/\/setup\/review$/, { timeout: 10000 });
 
     // Step 6: Review discovered infrastructure
-    await expect(page.locator('h1')).toContainText('Review Infrastructure');
+    await expect(page.locator('h1')).toContainText('Review Your Infrastructure');
     await page.click('button:has-text("Continue")');
 
     // Step 7: Windlass configuration - skip
