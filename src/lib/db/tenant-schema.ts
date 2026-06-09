@@ -53,6 +53,89 @@ export const diagnoses = sqliteTable('diagnoses', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+// --- Ticketing System Integration ---
+
+export const tickets = sqliteTable('tickets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+
+  // Ticket metadata
+  type: text('type', {
+    enum: ['incident', 'bug', 'feature', 'task'],
+  }).notNull().default('incident'),
+
+  title: text('title').notNull(),
+  description: text('description').notNull(),
+
+  // Categorization
+  stackId: text('stack_id'),
+  severity: text('severity', {
+    enum: ['critical', 'high', 'medium', 'low'],
+  }).notNull().default('medium'),
+  status: text('status', {
+    enum: ['open', 'in_progress', 'blocked', 'resolved', 'closed'],
+  }).notNull().default('open'),
+  tags: text('tags'), // Comma-separated
+
+  // External system sync
+  externalSystem: text('external_system'), // 'linear', 'jira', 'servicenow', 'github', null (built-in)
+  externalId: text('external_id'), // External ticket ID
+  externalUrl: text('external_url'), // Link to external ticket
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+  syncDirection: text('sync_direction', {
+    enum: ['inbound', 'outbound', 'bidirectional'],
+  }), // How sync works
+  syncStatus: text('sync_status'), // 'ok' | error message
+
+  // Timestamps
+  resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const ticketingConnectors = sqliteTable('ticketing_connectors', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+
+  system: text('system', {
+    enum: ['linear', 'jira', 'servicenow', 'github', 'built-in'],
+  }).notNull(),
+
+  name: text('name').notNull(), // User-friendly label
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  isPrimary: integer('is_primary', { mode: 'boolean' }).notNull().default(false),
+
+  // Connection config (encrypted JSON)
+  config: text('config').notNull(), // { apiKey, workspace, project, etc. }
+
+  // Sync settings
+  syncEnabled: integer('sync_enabled', { mode: 'boolean' }).notNull().default(true),
+  syncInterval: integer('sync_interval').notNull().default(300), // seconds
+  lastSyncAt: integer('last_sync_at', { mode: 'timestamp' }),
+  lastSyncStatus: text('last_sync_status'), // 'ok' | error message
+
+  // Mapping rules (JSON)
+  fieldMappings: text('field_mappings'), // How to map external fields to StdOut fields
+
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const docEmbeddings = sqliteTable('doc_embeddings', {
+  id: text('id').primaryKey(),
+  docId: text('doc_id').notNull().references(() => docs.id, { onDelete: 'cascade' }),
+  userId: text('user_id').notNull(),
+
+  // Embedding vector (JSON array of floats)
+  embedding: text('embedding').notNull(), // Serialized float[]
+
+  // Chunking info (for long docs)
+  chunkIndex: integer('chunk_index').notNull().default(0),
+  chunkText: text('chunk_text').notNull(),
+
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- Tenant Preferences: branding, display settings ---
 
 export const tenantPreferences = sqliteTable('tenant_preferences', {
