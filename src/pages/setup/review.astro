@@ -14,15 +14,17 @@ if (progress.currentStep !== SetupStep.Review) {
   return Astro.redirect('/setup/windlass');
 }
 
-// Fetch discovered stacks (TODO: implement stacks/containers schema)
-const stacks = [];
-const containers = [];
+// Fetch discovered hosts from scanner
+const db = getCentralDb();
+const discoveredHosts = db
+  .select()
+  .from(centralSchema.discovered_hosts)
+  .all();
 
 if (Astro.request.method === 'POST') {
   await completeStep(SetupStep.Review, {
     reviewedAt: new Date().toISOString(),
-    stacksCount: stacks.length,
-    containersCount: containers.length,
+    hostsCount: discoveredHosts.length,
   });
   return Astro.redirect('/setup/windlass');
 }
@@ -34,47 +36,36 @@ if (Astro.request.method === 'POST') {
 
     <h1>Review Your Infrastructure</h1>
     <p class="auth-subtitle">
-      {stacks.length === 0
+      {discoveredHosts.length === 0
         ? "No infrastructure discovered yet. You can add services manually later."
-        : `Discovered ${stacks.length} stack(s) with ${containers.length} container(s)`}
+        : `Discovered ${discoveredHosts.length} host(s) on your network`}
     </p>
 
-    {stacks.length > 0 ? (
+    {discoveredHosts.length > 0 ? (
       <div class="review-content">
-        <div class="discovered-stacks">
-          {stacks.map((stack: any) => (
-            <div class="stack-card" key={stack.id}>
-              <div class="stack-header">
-                <h3>{stack.name}</h3>
-                <span class="stack-status">{stack.status || 'unknown'}</span>
+        <div class="discovered-hosts">
+          <h3>Network Hosts ({discoveredHosts.length})</h3>
+          <div class="host-list">
+            {discoveredHosts.slice(0, 10).map((host: any) => (
+              <div class="host-item" key={host.id}>
+                <span class="host-ip">{host.ip}</span>
+                {host.hostname && <span class="host-name">{host.hostname}</span>}
               </div>
-              <div class="stack-details">
-                <p><strong>Path:</strong> {stack.composePath || 'N/A'}</p>
-                {stack.description && <p>{stack.description}</p>}
-              </div>
-              <div class="stack-containers">
-                {containers.filter((c: any) => c.stackId === stack.id).map((container: any) => (
-                  <div class="container-item" key={container.id}>
-                    <span class="container-name">{container.name}</span>
-                    <span class={`container-status status-${container.status || 'unknown'}`}>
-                      {container.status || 'unknown'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+            {discoveredHosts.length > 10 && (
+              <p class="host-more">...and {discoveredHosts.length - 10} more hosts</p>
+            )}
+          </div>
         </div>
       </div>
     ) : (
       <div class="empty-state">
         <div class="empty-icon">📦</div>
         <h3>No Infrastructure Discovered</h3>
-        <p>Scanner didn't find any Docker containers. You can:</p>
+        <p>Scanner didn't find any network hosts. You can:</p>
         <ul>
           <li>Go back and run the scanner again</li>
           <li>Continue and add services manually from the dashboard</li>
-          <li>Check that Docker containers are running on this host</li>
         </ul>
       </div>
     )}
@@ -83,7 +74,7 @@ if (Astro.request.method === 'POST') {
       <a href="/setup/scanner" class="btn-secondary">← Back to Scanner</a>
       <form method="POST" style="display: inline;">
         <button type="submit" class="btn-primary">
-          {stacks.length > 0 ? 'Looks Good →' : 'Continue Anyway →'}
+          {discoveredHosts.length > 0 ? 'Looks Good →' : 'Continue Anyway →'}
         </button>
       </form>
     </div>
@@ -95,93 +86,51 @@ if (Astro.request.method === 'POST') {
     margin: 2rem 0;
   }
 
-  .discovered-stacks {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .stack-card {
+  .discovered-hosts {
     background: var(--color-card-bg);
     border: 1px solid var(--color-border);
     border-radius: 12px;
     padding: 1.5rem;
   }
 
-  .stack-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--color-border);
+  .discovered-hosts h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1rem;
+    color: var(--color-primary);
   }
 
-  .stack-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-  }
-
-  .stack-status {
-    padding: 0.25rem 0.75rem;
-    background: var(--color-success-bg, #d4edda);
-    color: var(--color-success, #28a745);
-    border-radius: 4px;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  .stack-details {
-    margin-bottom: 1rem;
-  }
-
-  .stack-details p {
-    margin: 0.5rem 0;
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-  }
-
-  .stack-containers {
+  .host-list {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
   }
 
-  .container-item {
+  .host-item {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 1rem;
     padding: 0.75rem;
     background: var(--color-bg-subtle);
     border-radius: 6px;
   }
 
-  .container-name {
+  .host-ip {
     font-family: var(--font-mono);
     font-size: 0.875rem;
+    color: var(--color-text);
+    min-width: 120px;
   }
 
-  .container-status {
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    text-transform: capitalize;
+  .host-name {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
   }
 
-  .status-running {
-    background: var(--color-success-bg, #d4edda);
-    color: var(--color-success, #28a745);
-  }
-
-  .status-stopped, .status-exited {
-    background: var(--color-danger-bg, #f8d7da);
-    color: var(--color-danger, #dc3545);
-  }
-
-  .status-unknown {
-    background: var(--color-muted-bg, #e9ecef);
-    color: var(--color-text-muted, #6c757d);
+  .host-more {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    text-align: center;
   }
 
   .empty-state {
