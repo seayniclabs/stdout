@@ -177,8 +177,8 @@ networks:
 
 secrets:
   secret_key:
-    file: /Volumes/data/secrets/stdout_secret_key
+    file: ./secrets/stdout_secret_key
   anthropic_api_key:
-    file: /Volumes/data/secrets/anthropic_api_key
+    file: ./secrets/anthropic_api_key
   resend_api_key:
-    file: /Volumes/data/secrets/resend_api_key
+    file: ./secrets/resend_api_key
