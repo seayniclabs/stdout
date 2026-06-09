@@ -36,9 +36,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         let allHosts: Array<{ ip: string; hostname?: string }> = [];
 
-        // Scan each subnet
-        for (let i = 0; i < subnets.length; i++) {
-          const subnet = subnets[i];
+        // Scan all subnets in parallel for faster results
+        const scanPromises = subnets.map(async (subnet, i) => {
           const progressBase = Math.floor((i / subnets.length) * 50);
 
           send({ type: 'log', level: 'info', message: `Scanning ${subnet}...` });
@@ -53,7 +52,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           send({ type: 'log', level: 'info', message: `Running nmap on ${subnet}...` });
 
           try {
-            const { stdout, stderr } = await execAsync(nmapCommand, {
+            const { stdout } = await execAsync(nmapCommand, {
               timeout: 120000, // 2 minute timeout
             });
 
@@ -70,21 +69,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
               send({ type: 'log', level: 'info', message: `  • ${host.ip}${safeHostname ? ` (${safeHostname})` : ''}` });
             }
 
-            allHosts.push(...hosts);
-
+            return hosts;
           } catch (error: any) {
             if (error.code === 'ENOENT') {
               send({ type: 'log', level: 'error', message: 'nmap is not installed on this system' });
               send({ type: 'log', level: 'info', message: 'Install nmap: brew install nmap (macOS) or apt-get install nmap (Ubuntu)' });
-              send({ type: 'progress', percent: 100 });
-              send({ type: 'complete', hosts: [] });
-              controller.close();
-              return;
+              return [];
             } else {
               send({ type: 'log', level: 'error', message: `Scan error on ${subnet}: ${error.message}` });
+              return [];
             }
           }
-        }
+        });
+
+        // Wait for all subnet scans to complete
+        const hostsArrays = await Promise.all(scanPromises);
+        allHosts = hostsArrays.flat();
 
         send({ type: 'progress', percent: 60 });
         send({ type: 'log', level: 'info', message: `Total: ${allHosts.length} host(s) found across all networks` });
