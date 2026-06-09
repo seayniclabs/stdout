@@ -90,6 +90,29 @@ schedules: []
       const projectName = inspectOutput || 'stdout';
       console.log(`[install-windlass] Detected compose project: ${projectName}`);
 
+      // Get the network name from the stdout container
+      const networkOutput = execFileSync('docker', [
+        'inspect',
+        '--format={{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}',
+        'stdout'
+      ], {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
+
+      // Get the full network name from the ID
+      const networkName = execFileSync('docker', [
+        'network',
+        'inspect',
+        '--format={{.Name}}',
+        networkOutput
+      ], {
+        encoding: 'utf8',
+        timeout: 5000,
+      }).trim();
+
+      console.log(`[install-windlass] Detected network: ${networkName}`);
+
       // Check if windlass container already exists
       try {
         const existingContainer = execFileSync('docker', [
@@ -120,7 +143,7 @@ schedules: []
         'run',
         '-d',
         '--name', 'windlass',
-        '--network', `${projectName}_default`,
+        '--network', networkName,
         '--restart', 'unless-stopped',
         '-p', '8116:8116',
         '-v', '/var/run/docker.sock:/var/run/docker.sock',
