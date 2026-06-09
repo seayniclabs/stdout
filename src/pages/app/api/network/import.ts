@@ -1,8 +1,9 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb } from '../../../../lib/db';
-import { discoveredHosts, discoveredServices } from '../../../../lib/db/tenant-schema';
+import { getTenantDb, getCentralDb, centralSchema } from '../../../../lib/db';
+import { discoveredHosts, discoveredServices, stacks } from '../../../../lib/db/tenant-schema';
 import { eq, and } from 'drizzle-orm';
+import { getSetupProgress, getSetupConfig, SetupStep } from '../../../../lib/setup';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const session = locals.user;
@@ -118,6 +119,48 @@ export const POST: APIRoute = async ({ request, locals }) => {
           }
         }
       }
+    }
+
+    // If this is during setup and we imported hosts, create a default stack
+    try {
+      const progress = await getSetupProgress();
+      const isSetup = progress.currentStep <= SetupStep.Review; // During or before Review step
+
+      if (isSetup && importedHosts > 0) {
+        // Check if a default stack already exists
+        const existingStacks = await db
+          .select()
+          .from(stacks)
+          .where(eq(stacks.userId, session.id))
+          .limit(1);
+
+        if (existingStacks.length === 0) {
+          // Get environment name from setup config
+          const envName = await getSetupConfig('environment_name');
+          const stackName = envName || 'My Environment';
+
+          console.log('[network/import] Creating default stack during setup:', stackName);
+
+          // Create default stack
+          await db.insert(stacks).values({
+            id: nanoid(),
+            userId: session.id,
+            name: stackName,
+            description: 'Automatically created from network discovery',
+            composeFile: null,
+            composeProject: null,
+            status: 'imported',
+            source: 'scanner',
+            createdAt: now,
+            updatedAt: now,
+          });
+
+          console.log('[network/import] Default stack created successfully');
+        }
+      }
+    } catch (stackError) {
+      // Don't fail the import if stack creation fails
+      console.error('[network/import] Error creating default stack:', stackError);
     }
 
     return new Response(
