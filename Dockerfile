@@ -10,7 +10,7 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache python3 make g++ nmap sqlite curl
+RUN apk add --no-cache python3 make g++ nmap sqlite curl docker-cli
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
 COPY --from=build /app/package-lock.json ./
