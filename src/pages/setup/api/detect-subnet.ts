@@ -55,6 +55,10 @@ export const GET: APIRoute = async ({ locals }) => {
           // Skip loopback
           if (parts[0] === 127) continue;
 
+          // Skip Docker internal networks (10.21.x, 172.17-32.x)
+          if (parts[0] === 10 && parts[1] === 21) continue;
+          if (parts[0] === 172 && parts[1] >= 17 && parts[1] <= 32) continue;
+
           const maskBits = parseInt(cidr);
           let networkSubnet = '';
 
