@@ -27,17 +27,18 @@ export const GET: APIRoute = async ({ locals }) => {
         const gateway = defaultMatch[1];
         const gatewayParts = gateway.split('.').map(Number);
 
-        // The gateway is typically on the host network
-        // If gateway is 10.21.0.1 (Docker), scan common home networks only (not the Docker network itself)
+        // Fast scan: add the gateway's network for quick initial results
+        // The gateway is reachable, so we can scan its network
         if (gatewayParts[0] === 10 && gatewayParts[1] === 21) {
-          // Docker network detected - scan host networks instead
-          // Don't scan the Docker network itself (usually just the container + gateway)
+          // Docker gateway - probe common home networks
+          // Most home networks are 192.168.0.x or 192.168.1.x
           subnets.push('192.168.0.0/24');
           subnets.push('192.168.1.0/24');
         } else if (gatewayParts[0] === 192 && gatewayParts[1] === 168) {
-          // Home network
+          // Home network gateway - scan its network
           subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
         } else if (gatewayParts[0] === 10) {
+          // Corporate 10.x network
           subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
         }
       }

@@ -6,6 +6,14 @@ test.describe('StdOut Setup Wizard E2E', () => {
   test('complete setup wizard flow from start to finish', async ({ page }) => {
     test.setTimeout(600000); // 10 minutes for entire test (scanner can take 5+ minutes for full network scan)
 
+    // Pre-test: Wipe all data to ensure clean state
+    const wipeResponse = await page.request.post(`${STDOUT_URL}/app/api/test/wipe-data`);
+    if (!wipeResponse.ok()) {
+      console.warn('[WARN] Could not wipe data before test:', await wipeResponse.text());
+    } else {
+      console.log('[INFO] Data wiped successfully - starting with clean database');
+    }
+
     // Step 1: Navigate to setup wizard
     await page.goto(STDOUT_URL);
     await expect(page).toHaveURL(/\/setup$/);
@@ -71,23 +79,33 @@ test.describe('StdOut Setup Wizard E2E', () => {
     console.log('Scan completed!');
     await expect(page.locator('.status-text')).toContainText('Found');
 
-    // Should auto-advance to review page
-    await page.waitForURL(/\/setup\/review$/, { timeout: 5000 });
+    // Should auto-advance to review page (waits 2s before redirecting)
+    await page.waitForURL(/\/setup\/review$/, { timeout: 10000 });
 
     // Step 6: Review discovered infrastructure
-    await expect(page.locator('h1')).toContainText('Review Infrastructure');
+    await expect(page.locator('h1')).toContainText('Review Your Infrastructure');
     await page.click('button:has-text("Continue")');
 
     // Step 7: Windlass configuration - skip
     await page.waitForURL(/\/setup\/windlass$/);
-    await page.click('button:has-text("Skip for Now")');
+    await expect(page.locator('h1')).toContainText('Configure Windlass');
+    // Click the label for the skip radio button (radio is display:none)
+    await page.click('label:has(input[type="radio"][value="skip"])');
+    await page.click('button[type="submit"]:has-text("Continue")');
 
-    // Step 8: Setup complete
+    // Step 8: Ticketing - skip
+    await page.waitForURL(/\/setup\/ticketing$/);
+    await expect(page.locator('h1')).toContainText('Ticketing');
+    // Click the label for the skip radio button (radio is display:none)
+    await page.click('label:has(input[name="ticketing_choice"][value="skip"])');
+    await page.click('button[type="submit"]:has-text("Continue")');
+
+    // Step 9: Setup complete
     await page.waitForURL(/\/setup\/complete$/);
     await expect(page.locator('h1')).toContainText('Setup Complete');
-    await page.click('button:has-text("Go to Dashboard")');
+    await page.click('a:has-text("Go to Dashboard")');
 
-    // Step 9: Verify we land on the dashboard
+    // Step 10: Verify we land on the dashboard
     await page.waitForURL(/\/app$/);
     await expect(page).toHaveURL(/\/app$/);
 

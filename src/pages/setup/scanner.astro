@@ -58,6 +58,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
 
       <div id="scanProgress" class="scan-progress" style="display: none;">
         <div class="progress-bar">
+          <span id="progressText" class="progress-text">0%</span>
           <div id="progressFill" class="progress-fill"></div>
         </div>
         <div id="scanLogs" class="scan-logs"></div>
@@ -128,19 +129,32 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
   }
 
   .progress-bar {
+    position: relative;
     width: 100%;
-    height: 8px;
+    height: 24px;
     background: var(--color-bg-subtle);
-    border-radius: 4px;
+    border-radius: 6px;
     overflow: hidden;
     margin-bottom: 1rem;
   }
 
   .progress-fill {
     height: 100%;
-    background: var(--color-primary);
+    background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-success) 100%);
     transition: width 0.3s ease;
     width: 0%;
+  }
+
+  .progress-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text);
+    z-index: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.2);
   }
 
   .scan-logs {
@@ -250,6 +264,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
     const scanButtonText = document.getElementById('scanButtonText');
     const scanProgress = document.getElementById('scanProgress');
     const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
     const scanLogs = document.getElementById('scanLogs');
     const statusIcon = document.querySelector('.status-icon');
     const statusText = document.querySelector('.status-text');
@@ -279,10 +294,25 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
       if (!reader) throw new Error('No response stream');
 
       let discoveredHosts = [];
+      let receivedComplete = false;
 
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log('[scanner.astro] Stream ended. Received complete:', receivedComplete);
+          if (!receivedComplete) {
+            console.error('[scanner.astro] Stream ended without receiving complete event!');
+            statusIcon.textContent = '⚠️';
+            statusText.textContent = 'Scan incomplete';
+            const errorLog = document.createElement('p');
+            errorLog.className = 'error';
+            errorLog.textContent = 'Stream ended unexpectedly. Please try again.';
+            scanLogs.appendChild(errorLog);
+            scanButton.disabled = false;
+            scanButtonText.textContent = 'Retry Scan';
+          }
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n').filter(l => l.trim());
@@ -290,9 +320,11 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
         for (const line of lines) {
           try {
             const event = JSON.parse(line);
+            console.log('[scanner.astro] Received event:', event.type, event);
 
             if (event.type === 'progress') {
               progressFill.style.width = `${event.percent}%`;
+              progressText.textContent = `${event.percent}%`;
             } else if (event.type === 'log') {
               const logEntry = document.createElement('p');
               logEntry.textContent = event.message;
@@ -301,10 +333,13 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
               scanLogs.appendChild(logEntry);
               scanLogs.scrollTop = scanLogs.scrollHeight;
             } else if (event.type === 'complete') {
+              console.log('[scanner.astro] COMPLETE event received with', event.hosts?.length || 0, 'hosts');
+              receivedComplete = true;
               discoveredHosts = event.hosts || [];
               statusIcon.textContent = '✅';
               statusText.textContent = `Found ${discoveredHosts.length} host(s)`;
               progressFill.style.width = '100%';
+              progressText.textContent = '100%';
 
               // Auto-import discovered hosts
               if (discoveredHosts.length > 0) {
@@ -326,6 +361,37 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                     successLog.className = 'success';
                     successLog.textContent = `Imported ${importResult.imported.hosts} host(s), ${importResult.imported.services} service(s)`;
                     scanLogs.appendChild(successLog);
+
+                    // Trigger background service scan (async, silent)
+                    fetch('/app/api/network/scan-services', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ hosts: discoveredHosts }),
+                    }).catch(err => {
+                      console.error('Background service scan failed to start:', err);
+                    });
+
+                    const bgLog = document.createElement('p');
+                    bgLog.textContent = 'Background service scan started...';
+                    scanLogs.appendChild(bgLog);
+
+                    // Wait a moment for user to see success message, then mark complete and redirect
+                    setTimeout(async () => {
+                      // Mark scanner step as complete
+                      const form = new FormData();
+                      form.append('action', 'complete');
+                      await fetch('/setup/complete-scanner', {
+                        method: 'POST',
+                        body: form,
+                      });
+                      window.location.href = '/setup/review';
+                    }, 1000);
+                  } else {
+                    // Import failed - show error and don't redirect
+                    const errorLog = document.createElement('p');
+                    errorLog.className = 'error';
+                    errorLog.textContent = `Import failed: ${importResponse.status}`;
+                    scanLogs.appendChild(errorLog);
                   }
                 } catch (importError) {
                   const errorLog = document.createElement('p');
@@ -333,12 +399,19 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                   errorLog.textContent = `Import failed: ${importError.message}`;
                   scanLogs.appendChild(errorLog);
                 }
+              } else {
+                // No hosts found - mark complete and redirect anyway
+                setTimeout(async () => {
+                  // Mark scanner step as complete
+                  const form = new FormData();
+                  form.append('action', 'complete');
+                  await fetch('/setup/complete-scanner', {
+                    method: 'POST',
+                    body: form,
+                  });
+                  window.location.href = '/setup/review';
+                }, 1000);
               }
-
-              // Auto-advance after 2 seconds
-              setTimeout(() => {
-                window.location.href = '/setup/review';
-              }, 2000);
             } else if (event.type === 'error') {
               statusIcon.textContent = '⚠️';
               statusText.textContent = 'Scan failed';

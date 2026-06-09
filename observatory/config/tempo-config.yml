@@ -21,7 +21,6 @@ distributor:
       protocols:
         http:
         grpc:
-    opencensus:
 
 storage:
   trace:

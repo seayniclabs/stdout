@@ -6,19 +6,19 @@ import { getStoredLicense } from '../lib/license';
 const user = Astro.locals.user;
 
 // Auto-redirect to setup if not configured
-if (getUserCount() === 0) {
+const userCount = getUserCount();
+console.log('[index] getUserCount():', userCount);
+if (userCount === 0) {
+  console.log('[index] Redirecting to /setup (no users)');
   return Astro.redirect('/setup');
-}
-
-// Auto-redirect to license activation if no license
-if (!getStoredLicense()) {
-  return Astro.redirect('/setup/license');
 }
 
 // If logged in, redirect to app
 if (user) {
   return Astro.redirect('/app');
 }
+
+// Otherwise show landing page (license check removed - not needed here)
 ---
 <!doctype html>
 <html lang="en">

@@ -140,6 +140,31 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
     );
     CREATE INDEX IF NOT EXISTS idx_alert_events_user ON alert_events(user_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_alert_events_service ON alert_events(service_id, created_at);
+    CREATE TABLE IF NOT EXISTS discovered_hosts (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      ip_address TEXT NOT NULL UNIQUE,
+      hostname TEXT,
+      mac_address TEXT,
+      vendor TEXT,
+      last_seen INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS discovered_services (
+      id TEXT PRIMARY KEY,
+      host_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      port INTEGER NOT NULL,
+      protocol TEXT NOT NULL DEFAULT 'tcp',
+      service_name TEXT,
+      service_version TEXT,
+      last_seen INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_discovered_hosts_user ON discovered_hosts(user_id, last_seen);
+    CREATE INDEX IF NOT EXISTS idx_discovered_services_host ON discovered_services(host_id, last_seen);
   `);
 }
 

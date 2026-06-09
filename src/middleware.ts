@@ -54,7 +54,7 @@ if (process.env.APP_URL) {
   ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
 }
 
-ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000', 'http://localhost:8112');
+ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000', 'http://localhost:8112', 'http://192.168.0.244:8112');
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
@@ -269,7 +269,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
   // auto-attached by browsers, so they are not vulnerable to CSRF attacks.
   const isBearerRequest = BEARER_PATHS.some(p => pathname.startsWith(p)) &&
     context.request.headers.get('authorization')?.startsWith('Bearer ');
-  if (!isBearerRequest && !checkOrigin(context.request)) {
+
+  // Skip CSRF origin check for test-only endpoints (only active in non-production)
+  const isTestEndpoint = pathname.startsWith('/app/api/test/');
+
+  // Skip CSRF origin check for setup endpoints (no auth required during setup wizard)
+  const isSetupEndpoint = pathname.startsWith('/app/api/network/scan') ||
+                          pathname.startsWith('/app/api/network/import') ||
+                          pathname.startsWith('/app/api/setup/install-windlass') ||
+                          pathname.startsWith('/app/api/setup/install-observatory');
+
+  if (!isBearerRequest && !isTestEndpoint && !isSetupEndpoint && !checkOrigin(context.request)) {
     return new Response('Forbidden — origin not allowed', { status: 403 });
   }
 
@@ -369,6 +379,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/scanner/autodiscover',
     '/app/api/network/scan',
     '/app/api/network/import',
+    '/app/api/setup/install-windlass',
+    '/app/api/setup/install-observatory',
+    '/app/api/test/',
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));

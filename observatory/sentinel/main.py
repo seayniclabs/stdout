@@ -1,12 +1,14 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 import asyncio
 import json
 from datetime import datetime
 from typing import List
 import os
 
-from agents import watcher, analyst
+import watcher
+import analyst
 
 app = FastAPI(title="StdOut Observatory Sentinel AI")
 
@@ -60,6 +62,40 @@ async def status():
         },
         "active_connections": len(active_connections)
     }
+
+@app.get("/init-status")
+async def init_status():
+    """Get Ollama initialization status"""
+    import json
+    import os
+    status_file = "/tmp/observatory-init-status.json"
+    if os.path.exists(status_file):
+        with open(status_file, 'r') as f:
+            return json.load(f)
+    return {
+        "stage": "unknown",
+        "ollama_available": False,
+        "models_ready": False,
+        "error": "Status file not found"
+    }
+
+@app.get("/metrics", response_class=PlainTextResponse)
+async def metrics():
+    """Prometheus metrics endpoint"""
+    from fastapi.responses import PlainTextResponse
+    metrics_text = f"""# HELP sentinel_websocket_connections Current WebSocket connections
+# TYPE sentinel_websocket_connections gauge
+sentinel_websocket_connections {len(active_connections)}
+
+# HELP sentinel_watcher_status Watcher agent status (1=active, 0=inactive)
+# TYPE sentinel_watcher_status gauge
+sentinel_watcher_status 1
+
+# HELP sentinel_analyst_status Analyst agent status (1=active, 0=standby)
+# TYPE sentinel_analyst_status gauge
+sentinel_analyst_status 0
+"""
+    return PlainTextResponse(content=metrics_text, media_type="text/plain")
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

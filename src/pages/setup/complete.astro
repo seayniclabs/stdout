@@ -7,9 +7,9 @@ if (!session) return Astro.redirect('/app/login');
 
 const progress = await getSetupProgress();
 
-// Mark setup as complete if we're on the final step
-if (progress.currentStep >= SetupStep.Complete && !progress.steps[SetupStep.Complete]?.completed) {
-  await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString() });
+// Redirect back to setup if not actually complete (prevent bypass)
+if (!progress.steps[SetupStep.Complete]?.completed) {
+  return Astro.redirect('/setup');
 }
 
 const environmentName = await getSetupConfig('environment_name');
@@ -32,7 +32,7 @@ console.log('[complete] Ticketing system:', ticketingSystem);
     <div class="success-icon">✓</div>
 
     <h1 style="margin-top: 1rem;">Setup Complete!</h1>
-    <p class="auth-subtitle">Your StdOut incident companion is ready</p>
+    <p class="auth-subtitle">Your StdOut incident companion is ready and fully automated</p>
 
     <div class="setup-summary">
       <h3>Environment: {environmentName || 'StdOut'}</h3>
@@ -45,28 +45,36 @@ console.log('[complete] Ticketing system:', ticketingSystem);
 
         <div class="summary-item">
           <span class="summary-label">🔑 License</span>
-          <span class="summary-value">{licenseActivated ? 'Activated' : 'Not Activated'}</span>
+          <span class="summary-value">{licenseActivated ? 'Activated' : 'Optional (activate in Settings)'}</span>
         </div>
 
         <div class="summary-item">
           <span class="summary-label">📦 Infrastructure</span>
           <span class="summary-value">
-            {stacks.length > 0
+            {progress.steps[SetupStep.Scanner]?.data?.scanInProgress
+              ? 'Scanning in background...'
+              : stacks.length > 0
               ? `${stacks.length} stack(s), ${containers.length} container(s)`
-              : 'No services discovered'}
+              : 'Auto-scan complete (no services found)'}
           </span>
         </div>
 
         <div class="summary-item">
           <span class="summary-label">⏰ Windlass</span>
-          <span class="summary-value">{windlassEnabled ? 'Enabled' : 'Disabled'}</span>
+          <span class="summary-value">
+            {windlassEnabled
+              ? progress.steps[SetupStep.Windlass]?.data?.autoDetected
+                ? 'Auto-detected and connected'
+                : 'Enabled'
+              : 'Not available (optional)'}
+          </span>
         </div>
 
         <div class="summary-item">
           <span class="summary-label">📋 Ticketing</span>
           <span class="summary-value">
-            {ticketingSkipped
-              ? 'Skipped'
+            {progress.steps[SetupStep.Ticketing]?.data?.autoDetected && ticketingSystem !== 'built-in'
+              ? `${ticketingSystem.charAt(0).toUpperCase() + ticketingSystem.slice(1)} (auto-detected)`
               : ticketingSystem === 'built-in'
                 ? 'Built-in'
                 : ticketingSystem.charAt(0).toUpperCase() + ticketingSystem.slice(1)}

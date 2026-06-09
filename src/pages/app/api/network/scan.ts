@@ -31,76 +31,125 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       try {
+        console.log('[scan] Starting scan for:', subnets);
         send({ type: 'log', level: 'info', message: `Scanning ${subnets.length} network(s): ${subnets.join(', ')}` });
         send({ type: 'progress', percent: 5 });
 
         let allHosts: Array<{ ip: string; hostname?: string }> = [];
 
-        // Scan each subnet
-        for (let i = 0; i < subnets.length; i++) {
-          const subnet = subnets[i];
-          const progressBase = Math.floor((i / subnets.length) * 50);
+        // Fast ping sweep - scan gateway IPs first for quick results
+        console.log('[scan] Starting gateway scan...');
+        send({ type: 'log', level: 'info', message: 'Fast gateway scan...' });
+        const gatewayHosts: Array<{ ip: string; hostname?: string }> = [];
 
+        // Extract gateway IPs from subnets and scan them first
+        for (const subnet of subnets) {
+          const [network, cidr] = subnet.split('/');
+          const parts = network.split('.');
+          const gatewayIP = `${parts[0]}.${parts[1]}.${parts[2]}.1`;
+
+          try {
+            // Quick ping test for gateway
+            await execAsync(`ping -c 1 -W 1 ${gatewayIP}`, { timeout: 2000 });
+            gatewayHosts.push({ ip: gatewayIP, hostname: 'Gateway' });
+            send({ type: 'log', level: 'success', message: `Found gateway: ${gatewayIP}` });
+          } catch {
+            // Gateway not reachable, skip
+          }
+        }
+
+        send({ type: 'progress', percent: 10 });
+
+        // Scan all subnets in parallel with fast ping sweep
+        console.log('[scan] Starting subnet scans for:', subnets.length, 'networks');
+        const scanPromises = subnets.map(async (subnet, i) => {
+          const progressBase = 10 + Math.floor((i / subnets.length) * 50);
+
+          console.log('[scan] Scanning subnet:', subnet);
           send({ type: 'log', level: 'info', message: `Scanning ${subnet}...` });
           send({ type: 'progress', percent: progressBase + 5 });
 
-          // Use nmap for network discovery
-          // -sn: Ping scan (no port scan)
-          // -T4: Faster timing
-          // --max-retries 1: Faster scan
-          const nmapCommand = `nmap -sn -T4 --max-retries 1 ${subnet}`;
+          // Use fast ping sweep - much faster than nmap for host discovery
+          // Scan 10 IPs at a time in parallel
+          const [network, cidr] = subnet.split('/');
+          const parts = network.split('.');
+          const baseIP = `${parts[0]}.${parts[1]}.${parts[2]}`;
 
-          send({ type: 'log', level: 'info', message: `Running nmap on ${subnet}...` });
+          const hosts: Array<{ ip: string; hostname?: string }> = [];
+          const batchSize = 10; // Reduce to 10 concurrent pings to avoid overwhelming container
 
-          try {
-            const { stdout, stderr } = await execAsync(nmapCommand, {
-              timeout: 120000, // 2 minute timeout
-            });
+          console.log('[scan] Starting ping sweep for', baseIP + '.0/24');
+          for (let start = 1; start <= 254; start += batchSize) {
+            const end = Math.min(start + batchSize - 1, 254);
+            const pingPromises = [];
 
-            send({ type: 'progress', percent: progressBase + 20 });
-
-            // Parse nmap output
-            const hosts = parseNmapOutput(stdout);
-
-            send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s) on ${subnet}` });
-
-            for (const host of hosts) {
-              const hostname = host.hostname || '';
-              const safeHostname = hostname.replace(/["\\']/g, ''); // Strip quotes/backslashes
-              send({ type: 'log', level: 'info', message: `  • ${host.ip}${safeHostname ? ` (${safeHostname})` : ''}` });
+            for (let octet = start; octet <= end; octet++) {
+              const ip = `${baseIP}.${octet}`;
+              // Quick ping: 1 packet, 1 second timeout
+              pingPromises.push(
+                execAsync(`ping -c 1 -W 1 ${ip}`, { timeout: 2000 })
+                  .then(() => ({ ip }))
+                  .catch(() => null)
+              );
             }
 
-            allHosts.push(...hosts);
+            const results = await Promise.all(pingPromises);
+            for (const result of results) {
+              if (result) hosts.push(result);
+            }
 
-          } catch (error: any) {
-            if (error.code === 'ENOENT') {
-              send({ type: 'log', level: 'error', message: 'nmap is not installed on this system' });
-              send({ type: 'log', level: 'info', message: 'Install nmap: brew install nmap (macOS) or apt-get install nmap (Ubuntu)' });
-              send({ type: 'progress', percent: 100 });
-              send({ type: 'complete', hosts: [] });
-              controller.close();
-              return;
-            } else {
-              send({ type: 'log', level: 'error', message: `Scan error on ${subnet}: ${error.message}` });
+            const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 45);
+            send({ type: 'progress', percent: progress });
+
+            // Send keepalive progress updates every 5 batches (50 IPs) to prevent timeout
+            if (start % 50 === 1 || start === 1) {
+              const pct = Math.floor(((start - 1) / 254) * 100);
+              console.log('[scan] Progress:', pct + '% complete for', subnet);
+              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${pct}% complete` });
             }
           }
-        }
+
+          console.log('[scan] Completed scan for', subnet, '- found', hosts.length, 'hosts');
+          send({ type: 'log', level: 'success', message: `Found ${hosts.length} host(s) on ${subnet}` });
+
+          for (const host of hosts) {
+            send({ type: 'log', level: 'info', message: `  • ${host.ip}` });
+          }
+
+          return hosts;
+        });
+
+        // Wait for all subnet scans to complete
+        const hostsArrays = await Promise.all(scanPromises);
+        allHosts = hostsArrays.flat();
 
         send({ type: 'progress', percent: 60 });
         send({ type: 'log', level: 'info', message: `Total: ${allHosts.length} host(s) found across all networks` });
 
-        // Now scan each host for common services
-        send({ type: 'log', level: 'info', message: 'Scanning for common services...' });
+        // Skip service scan for now - too slow for setup wizard
+        // Service detection can be done later via background job or manual entry
+        console.log('[scan] Skipping service scan - returning hosts without services');
+        send({ type: 'log', level: 'info', message: 'Host discovery complete (service scan skipped for speed)' });
 
-        const hostsWithServices = await scanHostsForServices(allHosts, send);
+        // Return hosts with empty services array
+        const hostsWithServices = allHosts.map(h => ({ ...h, services: [] }));
 
         send({ type: 'progress', percent: 100 });
         send({ type: 'log', level: 'success', message: 'Network scan complete!' });
-        send({ type: 'complete', hosts: hostsWithServices });
 
+        // Ensure complete event is sent - critical for frontend to proceed
+        console.log('[scan] Sending complete event with', hostsWithServices.length, 'hosts');
+        const completeEvent = { type: 'complete', hosts: hostsWithServices };
+        send(completeEvent);
+        console.log('[scan] Complete event sent successfully');
+
+        // Small delay to ensure event is received before closing stream
+        await new Promise(resolve => setTimeout(resolve, 100));
         controller.close();
+        console.log('[scan] Stream closed');
 
       } catch (error: any) {
+        console.error('[scan] Error during scan:', error);
         send({ type: 'error', message: error.message });
         controller.close();
       }
