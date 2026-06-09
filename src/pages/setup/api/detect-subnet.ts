@@ -19,33 +19,44 @@ export const GET: APIRoute = async ({ locals }) => {
     let subnet: string | null = null;
 
     try {
-      // Try Linux/modern systems first (ip command)
-      const { stdout } = await execAsync('ip route | grep default');
-      const match = stdout.match(/default via ([\d.]+) dev (\w+)/);
+      // Get all network interfaces and prefer 192.168.x over 10.x (Docker bridge)
+      const { stdout } = await execAsync('ip addr show');
+      const lines = stdout.split('\n');
 
-      if (match) {
-        const [, gateway, interface_] = match;
-        // Get the IP address for this interface
-        const { stdout: ifaceInfo } = await execAsync(`ip addr show ${interface_}`);
-        const ipMatch = ifaceInfo.match(/inet ([\d.]+)\/(\d+)/);
+      const subnets: string[] = [];
 
+      for (const line of lines) {
+        const ipMatch = line.match(/inet ([\d.]+)\/(\d+)/);
         if (ipMatch) {
           const [, ip, cidr] = ipMatch;
-          // Calculate network address from IP and CIDR
           const parts = ip.split('.').map(Number);
+
+          // Skip loopback
+          if (parts[0] === 127) continue;
+
+          // Calculate network address
+          let networkSubnet = '';
           const maskBits = parseInt(cidr);
 
-          // For /24 networks (most common), just use first 3 octets
           if (maskBits === 24) {
-            subnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+            networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
           } else if (maskBits === 16) {
-            subnet = `${parts[0]}.${parts[1]}.0.0/16`;
+            networkSubnet = `${parts[0]}.${parts[1]}.0.0/16`;
           } else {
             // Default to /24
-            subnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+            networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
           }
+
+          subnets.push(networkSubnet);
         }
       }
+
+      // Return all detected subnets (will be used for multi-subnet scanning)
+      // For now, prioritize 192.168.x as the default, but return all
+      subnet = subnets.find(s => s.startsWith('192.168.')) ||
+               subnets.find(s => s.startsWith('10.')) ||
+               subnets[0] || null;
+
     } catch (ipError) {
       // Fallback to ifconfig for macOS/BSD systems
       try {
@@ -79,9 +90,13 @@ export const GET: APIRoute = async ({ locals }) => {
       }
     }
 
+    // Return all unique subnets found
+    const allSubnets = [...new Set(subnets)];
+
     return new Response(
       JSON.stringify({
-        subnet,
+        subnet, // Primary subnet (for backward compat)
+        subnets: allSubnets, // All detected subnets
         detected: !!subnet,
       }),
       {

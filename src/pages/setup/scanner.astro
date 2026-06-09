@@ -35,7 +35,7 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
         <h3>Network Scan</h3>
         <p>Scan your local network to discover hosts and running services.</p>
         <div class="input-group" style="margin-top: 1rem;">
-          <label for="subnet">Subnet to scan:</label>
+          <label for="subnet">Subnets to scan:</label>
           <input
             type="text"
             id="subnet"
@@ -43,13 +43,13 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
             placeholder="Detecting..."
             class="form-input"
           />
-          <p class="help-text" id="subnetHelp">Detecting your network subnet...</p>
+          <p class="help-text" id="subnetHelp">Detecting your network subnets...</p>
         </div>
       </div>
 
       <div class="scanner-actions">
         <button id="scanButton" class="btn-primary">
-          <span id="scanButtonText">Start Network Scan</span>
+          <span id="scanButtonText">Scan All Networks</span>
         </button>
         <form method="POST" action="/setup/complete-scanner" style="display: inline;">
           <button type="submit" name="action" value="skip" class="btn-secondary">Skip for Now</button>
@@ -207,16 +207,22 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
   const subnetInput = document.getElementById('subnet');
   const subnetHelp = document.getElementById('subnetHelp');
 
-  // Auto-detect network subnet on page load
+  // Auto-detect network subnets on page load
   async function detectSubnet() {
     try {
       const response = await fetch('/setup/api/detect-subnet');
       const data = await response.json();
 
-      if (data.subnet) {
+      if (data.subnets && data.subnets.length > 0) {
+        // Join all detected subnets with commas for multi-subnet scanning
+        const allSubnets = data.subnets.join(', ');
+        subnetInput.value = allSubnets;
+        subnetInput.placeholder = allSubnets;
+        subnetHelp.textContent = `Detected ${data.subnets.length} network(s): ${allSubnets}`;
+      } else if (data.subnet) {
         subnetInput.value = data.subnet;
         subnetInput.placeholder = data.subnet;
-        subnetHelp.textContent = `Detected: ${data.subnet} (edit if needed)`;
+        subnetHelp.textContent = `Detected: ${data.subnet}`;
       } else {
         // Fallback to common subnet
         subnetInput.value = '192.168.0.0/24';
