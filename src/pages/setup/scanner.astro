@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/SetupLayout.astro';
 import SetupProgress from '../../components/SetupProgress.astro';
-import { getSetupProgress, SetupStep } from '../../lib/setup';
+import { getSetupProgress, SetupStep, getSetupConfig } from '../../lib/setup';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
@@ -12,6 +12,9 @@ if (progress.currentStep !== SetupStep.Scanner) {
   if (progress.currentStep < SetupStep.Scanner) return Astro.redirect('/setup');
   return Astro.redirect('/setup/complete');
 }
+
+// Get scanner token from setup config (auto-created during account creation)
+const scannerToken = await getSetupConfig('scanner_token');
 ---
 
 <Layout title="Discover Infrastructure">
@@ -159,7 +162,7 @@ if (progress.currentStep !== SetupStep.Scanner) {
   }
 </style>
 
-<script>
+<script define:vars={{ scannerToken }}>
   // Auto-start scan after 1.5 seconds (give user time to see the page)
   let autoStarted = false;
   setTimeout(() => {
@@ -205,7 +208,10 @@ if (progress.currentStep !== SetupStep.Scanner) {
 
       const response = await fetch('/app/api/scanner/autodiscover', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${scannerToken}`
+        }
       });
 
       if (!response.ok) {

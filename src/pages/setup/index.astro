@@ -2,12 +2,13 @@
 export const prerender = false;
 import Layout from '../../layouts/SetupLayout.astro';
 import SetupProgress from '../../components/SetupProgress.astro';
-import { getSetupProgress, completeStep, SetupStep } from '../../lib/setup';
+import { getSetupProgress, completeStep, SetupStep, setSetupConfig } from '../../lib/setup';
 import { getCentralDb, centralSchema } from '../../lib/db';
 import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
 import { validateCsrf } from '../../middleware';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
+import crypto from 'node:crypto';
 
 // If user is already logged in and setup is past step 1, redirect to current step
 const session = Astro.locals.user;
@@ -68,6 +69,21 @@ if (Astro.request.method === 'POST') {
           createdAt: now,
           updatedAt: now,
         }).run();
+
+        // Auto-create scanner token so scanner works during setup
+        const rawToken = `stdout_scan_${nanoid(32)}`;
+        const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        db.insert(centralSchema.apiTokens).values({
+          id: nanoid(),
+          userId: userId,
+          name: 'Scanner (Auto-created during setup)',
+          tokenHash,
+          createdAt: now,
+        }).run();
+
+        // Store raw token in setup_config so scanner can use it
+        await setSetupConfig('scanner_token', rawToken);
 
         // Mark account creation step as complete
         await completeStep(SetupStep.AdminAccount, {
