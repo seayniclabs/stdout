@@ -31,12 +31,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
       };
 
       try {
+        console.log('[scan] Starting scan for:', subnets);
         send({ type: 'log', level: 'info', message: `Scanning ${subnets.length} network(s): ${subnets.join(', ')}` });
         send({ type: 'progress', percent: 5 });
 
         let allHosts: Array<{ ip: string; hostname?: string }> = [];
 
         // Fast ping sweep - scan gateway IPs first for quick results
+        console.log('[scan] Starting gateway scan...');
         send({ type: 'log', level: 'info', message: 'Fast gateway scan...' });
         const gatewayHosts: Array<{ ip: string; hostname?: string }> = [];
 
@@ -125,6 +127,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         controller.close();
 
       } catch (error: any) {
+        console.error('[scan] Error during scan:', error);
         send({ type: 'error', message: error.message });
         controller.close();
       }
