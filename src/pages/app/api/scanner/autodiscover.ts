@@ -3,18 +3,23 @@ import { completeStep, SetupStep } from '../../../../lib/setup';
 import http from 'node:http';
 
 export const POST: APIRoute = async ({ request, locals }) => {
+  console.log('[autodiscover] API called, locals.user:', locals.user ? 'YES' : 'NO');
   const session = locals.user;
   if (!session) {
+    console.log('[autodiscover] No session, returning 401');
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
+  console.log('[autodiscover] Creating SSE stream');
   // Create SSE stream
   const stream = new ReadableStream({
     async start(controller) {
+      console.log('[autodiscover] Stream started');
       const send = (data: any) => {
+        console.log('[autodiscover] Sending:', data.type, data.message || '');
         controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
       };
 
