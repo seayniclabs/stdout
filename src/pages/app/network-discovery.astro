@@ -1,0 +1,352 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+---
+
+<Layout title="Network Discovery">
+  <div class="page-header">
+    <h1>Network Discovery</h1>
+    <p class="page-subtitle">Scan your local network to discover infrastructure</p>
+  </div>
+
+  <div class="discovery-container">
+    <div class="scan-config">
+      <label for="subnet">Network Subnet</label>
+      <input
+        type="text"
+        id="subnet"
+        value="192.168.0.0/24"
+        placeholder="192.168.0.0/24"
+      />
+      <button id="startScan" class="btn-primary">Start Network Scan</button>
+    </div>
+
+    <div id="scanProgress" class="scan-progress" style="display: none;">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <div id="progressText" class="progress-text">0%</div>
+    </div>
+
+    <div id="scanLogs" class="scan-logs"></div>
+
+    <div id="resultsContainer" style="display: none;">
+      <h2>Discovered Hosts</h2>
+      <div id="hostsList" class="hosts-list"></div>
+      <button id="importHosts" class="btn-primary" style="margin-top: 1rem;">Import as Stacks</button>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .discovery-container {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .scan-config {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  .scan-config label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+  }
+
+  .scan-config input {
+    width: 100%;
+    max-width: 400px;
+    padding: 0.75rem 1rem;
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.95rem;
+    color: var(--color-text);
+    margin-bottom: 1rem;
+  }
+
+  .scan-config input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  .scan-progress {
+    margin-bottom: 2rem;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--color-bg-subtle);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+  }
+
+  .progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-text {
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .scan-logs {
+    background: var(--color-bg-subtle);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    max-height: 400px;
+    overflow-y: auto;
+    margin-bottom: 2rem;
+  }
+
+  .scan-logs:empty {
+    display: none;
+  }
+
+  .log-entry {
+    margin: 0.25rem 0;
+  }
+
+  .log-info {
+    color: var(--color-text);
+  }
+
+  .log-success {
+    color: var(--color-success);
+  }
+
+  .log-error {
+    color: var(--color-danger);
+  }
+
+  .hosts-list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .host-card {
+    background: var(--color-card-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .host-card input[type="checkbox"] {
+    margin-right: 0.5rem;
+  }
+
+  .host-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .host-ip {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--color-primary);
+  }
+
+  .host-hostname {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+
+  .host-services {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .service-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.75rem;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--color-text);
+  }
+
+  .service-port {
+    color: var(--color-primary);
+    font-weight: 600;
+  }
+</style>
+
+<script>
+  const startScanBtn = document.getElementById('startScan') as HTMLButtonElement;
+  const subnetInput = document.getElementById('subnet') as HTMLInputElement;
+  const scanProgress = document.getElementById('scanProgress') as HTMLDivElement;
+  const progressFill = document.getElementById('progressFill') as HTMLDivElement;
+  const progressText = document.getElementById('progressText') as HTMLDivElement;
+  const scanLogs = document.getElementById('scanLogs') as HTMLDivElement;
+  const resultsContainer = document.getElementById('resultsContainer') as HTMLDivElement;
+  const hostsList = document.getElementById('hostsList') as HTMLDivElement;
+  const importBtn = document.getElementById('importHosts') as HTMLButtonElement;
+
+  let discoveredHosts: any[] = [];
+
+  startScanBtn.addEventListener('click', async () => {
+    const subnet = subnetInput.value.trim();
+    if (!subnet) {
+      alert('Please enter a subnet');
+      return;
+    }
+
+    // Reset UI
+    scanLogs.innerHTML = '';
+    hostsList.innerHTML = '';
+    resultsContainer.style.display = 'none';
+    scanProgress.style.display = 'block';
+    progressFill.style.width = '0%';
+    progressText.textContent = '0%';
+    startScanBtn.disabled = true;
+    discoveredHosts = [];
+
+    try {
+      const response = await fetch('/app/api/network/scan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subnet }),
+      });
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) throw new Error('No response stream');
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n').filter(l => l.trim());
+
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+
+            if (data.type === 'progress') {
+              progressFill.style.width = `${data.percent}%`;
+              progressText.textContent = `${data.percent}%`;
+            } else if (data.type === 'log') {
+              const logEntry = document.createElement('div');
+              logEntry.className = `log-entry log-${data.level}`;
+              logEntry.textContent = data.message;
+              scanLogs.appendChild(logEntry);
+              scanLogs.scrollTop = scanLogs.scrollHeight;
+            } else if (data.type === 'complete') {
+              discoveredHosts = data.hosts || [];
+              renderHosts();
+              resultsContainer.style.display = 'block';
+            }
+          } catch (e) {
+            // Skip invalid JSON
+          }
+        }
+      }
+    } catch (error: any) {
+      const logEntry = document.createElement('div');
+      logEntry.className = 'log-entry log-error';
+      logEntry.textContent = `Error: ${error.message}`;
+      scanLogs.appendChild(logEntry);
+    } finally {
+      startScanBtn.disabled = false;
+    }
+  });
+
+  function renderHosts() {
+    hostsList.innerHTML = '';
+
+    if (discoveredHosts.length === 0) {
+      hostsList.innerHTML = '<p style="color: var(--color-text-muted);">No hosts discovered</p>';
+      return;
+    }
+
+    for (const host of discoveredHosts) {
+      const card = document.createElement('div');
+      card.className = 'host-card';
+
+      const header = document.createElement('div');
+      header.className = 'host-header';
+
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.checked = true;
+      checkbox.dataset.ip = host.ip;
+
+      const ip = document.createElement('span');
+      ip.className = 'host-ip';
+      ip.textContent = host.ip;
+
+      header.appendChild(checkbox);
+      header.appendChild(ip);
+
+      if (host.hostname) {
+        const hostname = document.createElement('span');
+        hostname.className = 'host-hostname';
+        hostname.textContent = host.hostname;
+        header.appendChild(hostname);
+      }
+
+      card.appendChild(header);
+
+      if (host.services && host.services.length > 0) {
+        const servicesContainer = document.createElement('div');
+        servicesContainer.className = 'host-services';
+
+        for (const service of host.services) {
+          const badge = document.createElement('span');
+          badge.className = 'service-badge';
+          badge.innerHTML = `<span class="service-port">${service.port}</span> ${service.service}`;
+          servicesContainer.appendChild(badge);
+        }
+
+        card.appendChild(servicesContainer);
+      }
+
+      hostsList.appendChild(card);
+    }
+  }
+
+  importBtn.addEventListener('click', async () => {
+    const checkboxes = hostsList.querySelectorAll('input[type="checkbox"]:checked');
+    const selectedIPs = Array.from(checkboxes).map((cb: any) => cb.dataset.ip);
+    const selectedHosts = discoveredHosts.filter(h => selectedIPs.includes(h.ip));
+
+    if (selectedHosts.length === 0) {
+      alert('No hosts selected');
+      return;
+    }
+
+    // TODO: Create API endpoint to import hosts as stacks
+    alert(`Would import ${selectedHosts.length} host(s) as stacks (not yet implemented)`);
+  });
+</script>
+</Layout>
