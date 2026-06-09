@@ -335,10 +335,8 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                 }
               }
 
-              // Auto-advance after 2 seconds
-              setTimeout(() => {
-                window.location.href = '/setup/review';
-              }, 2000);
+              // Auto-advance immediately
+              window.location.href = '/setup/review';
             } else if (event.type === 'error') {
               statusIcon.textContent = '⚠️';
               statusText.textContent = 'Scan failed';

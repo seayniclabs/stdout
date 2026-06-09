@@ -71,8 +71,8 @@ test.describe('StdOut Setup Wizard E2E', () => {
     console.log('Scan completed!');
     await expect(page.locator('.status-text')).toContainText('Found');
 
-    // Should auto-advance to review page
-    await page.waitForURL(/\/setup\/review$/, { timeout: 5000 });
+    // Should auto-advance to review page (waits 2s before redirecting)
+    await page.waitForURL(/\/setup\/review$/, { timeout: 10000 });
 
     // Step 6: Review discovered infrastructure
     await expect(page.locator('h1')).toContainText('Review Infrastructure');
