@@ -260,6 +260,38 @@ scheduleCveScanner();
 scheduleDockerHubScanner();
 scheduleShodanScanner();
 
+// Observatory initialization — runs on every service start/restart/recovery
+// Ensures AI agents always come online with full knowledge base and mission
+let observatoryInitialized = false;
+(async () => {
+  try {
+    const { startupObservatory, formatStartupResult } = await import('./lib/observatory/startup');
+    const result = await startupObservatory();
+
+    if (result.success) {
+      console.log('[Observatory] Initialized successfully in', result.duration_ms + 'ms');
+      console.log('[Observatory] Mode:', result.mode, '| Ready:', result.ready);
+
+      if (!result.ready) {
+        console.warn('[Observatory] Not fully ready. Issues:', result.issues.join(', '));
+      }
+    } else {
+      console.error('[Observatory] Initialization FAILED');
+      console.error('[Observatory] Issues:', result.issues.join(', '));
+    }
+
+    // Log full startup brief in debug mode
+    if (process.env.DEBUG_OBSERVATORY === 'true') {
+      console.log('\n' + formatStartupResult(result));
+    }
+
+    observatoryInitialized = true;
+  } catch (error) {
+    console.error('[Observatory] Failed to start:', error);
+    observatoryInitialized = false;
+  }
+})();
+
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.isPrerendered) return next();
 
