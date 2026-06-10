@@ -296,6 +296,16 @@ let observatoryInitialized = false;
 let installationComplete = false;
 (async () => {
   try {
+    // Check if database file exists first
+    const fs = await import('fs');
+    const dbPath = process.env.DB_PATH || '/data/stdout-central.db';
+
+    if (!fs.existsSync(dbPath)) {
+      console.log('[Setup] First run detected - database does not exist');
+      installationComplete = false;
+      return;
+    }
+
     const db = getCentralDb();
 
     // Check if installation has been completed
@@ -309,7 +319,7 @@ let installationComplete = false;
       console.log('[Setup] First run detected - installation incomplete');
     }
   } catch (error) {
-    console.error('[Setup] Failed to check installation status:', error);
+    // Silently handle errors - assume installation is incomplete
     installationComplete = false;
   }
 })();
