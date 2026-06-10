@@ -122,3 +122,9 @@ export const communitySubmissions = sqliteTable('community_submissions', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   publishedAt: integer('published_at', { mode: 'timestamp' }),
 });
+
+export const systemState = sqliteTable('system_state', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
