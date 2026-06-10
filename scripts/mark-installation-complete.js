@@ -1,18 +1,14 @@
 #!/usr/bin/env node
-import { db } from '../src/lib/db/central.js';
-import { systemState } from '../src/lib/db/central-schema.js';
+import Database from 'better-sqlite3';
 
 try {
-  await db.insert(systemState)
-    .values({
-      key: 'installation_complete',
-      value: 'true',
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: systemState.key,
-      set: { value: 'true', updatedAt: new Date() },
-    });
+  const db = new Database('/data/central.db');
+
+  db.prepare(`
+    INSERT INTO system_state (key, value, updatedAt)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updatedAt = excluded.updatedAt
+  `).run('installation_complete', 'true', Date.now());
 
   console.log('✓ Installation marked complete');
   process.exit(0);
