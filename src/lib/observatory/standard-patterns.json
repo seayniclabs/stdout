@@ -1,0 +1,1055 @@
+[
+  {
+    "id": "stdlib_disk_space_exhaustion",
+    "pattern_name": "Disk Space Exhaustion",
+    "category": "resource_exhaustion",
+    "symptoms": [
+      "Write failures with 'no space left on device'",
+      "Application crashes silently",
+      "Log files stop being written",
+      "Docker operations fail (pull, build, run)"
+    ],
+    "common_causes": [
+      "Unrotated logs growing unbounded",
+      "Temp files (/tmp, /var/tmp) not cleaned",
+      "Database transaction logs (WAL) not purged",
+      "Unused Docker images accumulating",
+      "Application writing to container storage instead of volume"
+    ],
+    "resolution_steps": [
+      "Check disk usage: df -h and identify critical partitions at 90%+",
+      "Find large directories: du -sh /* | sort -rh",
+      "Check Docker: docker system df to find oversized containers/images",
+      "Clean old logs: find /var/log -type f -mtime +30 -delete",
+      "Remove Docker artifacts: docker system prune -a --volumes",
+      "Verify log rotation: logrotate -f /etc/logrotate.d/*",
+      "Extend partition or add volume if permanent fix needed"
+    ],
+    "confidence_threshold": 0.95,
+    "prevention_steps": [
+      "Configure logrotate to rotate logs daily and compress old ones",
+      "Set up cron job to clean /tmp weekly",
+      "Enable Docker log rotation in daemon.json with maxsize and maxfile",
+      "Monitor disk usage regularly with prometheus or similar"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_oom_killer",
+    "pattern_name": "Memory Exhaustion / OOM Killer Invocation",
+    "category": "resource_exhaustion",
+    "symptoms": [
+      "Service restarts unexpectedly with no error in application logs",
+      "System becomes unresponsive intermittently",
+      "Docker container exits with code 137 (SIGKILL)",
+      "dmesg shows OOM killer invoked"
+    ],
+    "common_causes": [
+      "Application memory leak (reference not released)",
+      "Container memory limit too low for workload",
+      "Multiple services competing for limited RAM",
+      "Kernel OOM killer evicting processes as last resort"
+    ],
+    "resolution_steps": [
+      "Check OOM history: dmesg | grep -i oom | tail -20",
+      "Identify memory usage: ps aux --sort=-%mem | head -10",
+      "Monitor memory over time: watch -n 1 free -h",
+      "Check container limits: docker inspect <container> | grep -i memory",
+      "Increase container memory limit in docker-compose.yml",
+      "Profile the application for memory leaks (language-specific tools)",
+      "Restart service to clear memory (temporary fix while investigating leak)"
+    ],
+    "confidence_threshold": 0.92,
+    "prevention_steps": [
+      "Set memory reservations in docker-compose to leave headroom",
+      "Enable memory metrics and alerts at 75%, 85%, 95% thresholds",
+      "Regular profiling for memory leaks in code reviews",
+      "Right-size container memory limits based on actual usage"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_cpu_saturation",
+    "pattern_name": "CPU Saturation and High Load",
+    "category": "resource_exhaustion",
+    "symptoms": [
+      "Application becomes slow, requests timeout",
+      "High load average (>number of CPU cores)",
+      "Response times spike even with same request volume",
+      "CPU usage climbs gradually or suddenly to 90-100%"
+    ],
+    "common_causes": [
+      "CPU-bound workload (database query, image processing, compilation)",
+      "Too many concurrent connections competing for CPU",
+      "No request queue limits causing runaway concurrency",
+      "Inefficient algorithm or busy-wait loop"
+    ],
+    "resolution_steps": [
+      "Identify hot process: top -n 1 -b | head -20",
+      "Check load: uptime and compare to nproc (number of cores)",
+      "Check what process is consuming: ps aux | grep <top_process_pid>",
+      "Reduce concurrency: tune worker count, connection pool size",
+      "Enable profiling to find hot code paths",
+      "For database: run EXPLAIN ANALYZE on slow queries, add indexes",
+      "Scale horizontally: add more instances behind load balancer"
+    ],
+    "confidence_threshold": 0.90,
+    "prevention_steps": [
+      "Set reasonable concurrency limits in application config",
+      "Monitor CPU and latency metrics continuously",
+      "Add circuit breaker to shed load when CPU > threshold",
+      "Profile applications regularly for efficiency"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_connection_pool_exhaustion",
+    "pattern_name": "Connection Pool Exhaustion",
+    "category": "resource_exhaustion",
+    "symptoms": [
+      "Application error: 'too many connections' or 'connection pool exhausted'",
+      "New requests hang or timeout waiting for connection",
+      "Service degrades under load but not resource-limited",
+      "Connection count reaches configured limit"
+    ],
+    "common_causes": [
+      "Configured connection pool too small for concurrent load",
+      "Connections not being properly closed or returned",
+      "Slow backend holding connections longer than expected",
+      "Sudden spike in concurrent users without scaling"
+    ],
+    "resolution_steps": [
+      "Check current connections: mysql -e 'SHOW PROCESSLIST;'",
+      "Count established connections: netstat -an | grep ESTABLISHED | wc -l",
+      "Identify idle connections: look for sleep status in PROCESSLIST",
+      "Kill stale connections: KILL <pid> for idle processes",
+      "Increase pool size: max_connections parameter (requires restart)",
+      "Enable connection pooling middleware: PgBouncer, ProxySQL",
+      "Reduce backend latency to free up connections faster"
+    ],
+    "confidence_threshold": 0.88,
+    "prevention_steps": [
+      "Right-size connection pool based on concurrent load forecast",
+      "Implement connection timeout to close idle connections",
+      "Monitor connection pool utilization continuously",
+      "Use context managers or finally blocks to ensure connection return"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_unhandled_exception",
+    "pattern_name": "Unhandled Exception / Application Crash",
+    "category": "service_crash",
+    "symptoms": [
+      "Service exits abruptly",
+      "Error visible in application logs (stderr/exceptions)",
+      "Process state is 'exited' but should be running",
+      "Requests fail immediately with no response"
+    ],
+    "common_causes": [
+      "Null pointer exception or index out of bounds",
+      "Uncaught signal or missing signal handler",
+      "Missing or incompatible dependency at runtime",
+      "Invalid configuration data causing startup failure"
+    ],
+    "resolution_steps": [
+      "Inspect logs: docker logs --tail 50 <container>",
+      "Check exit code: echo $? (non-zero = error)",
+      "Review recent changes: git log -5 --oneline",
+      "Validate configuration syntax: python -m json.tool config.json",
+      "Run locally to reproduce the issue",
+      "Add better error handling and validation in code",
+      "Deploy fixed version"
+    ],
+    "confidence_threshold": 0.93,
+    "prevention_steps": [
+      "Add comprehensive error handling at service boundaries",
+      "Validate configuration on startup before using",
+      "Use type checking and linters to catch errors before runtime",
+      "Add structured logging with context for debugging"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_service_hangs",
+    "pattern_name": "Service Hangs / Deadlock / Infinite Wait",
+    "category": "service_crash",
+    "symptoms": [
+      "Service running but not responding to requests",
+      "curl to service times out after connection",
+      "Process exists but shows 0% CPU in top",
+      "No new log entries for extended period"
+    ],
+    "common_causes": [
+      "Deadlock between threads/processes accessing shared resources",
+      "Blocked waiting for external resource (database, network)",
+      "Infinite loop or busy-wait consuming resources",
+      "Mutex/lock not released properly"
+    ],
+    "resolution_steps": [
+      "Check responsiveness: curl -v --max-time 5 http://<service>",
+      "Verify process exists: ps aux | grep <service>",
+      "Check system calls: strace -p <pid> to see what's blocking",
+      "Look at thread state: jstack (Java) or similar for your language",
+      "Restart service: docker restart <container>",
+      "Review recent code changes for lock/synchronization issues",
+      "Increase timeout on client side as temporary fix"
+    ],
+    "confidence_threshold": 0.85,
+    "prevention_steps": [
+      "Use timeouts on all blocking operations",
+      "Add watchdog timers to detect hangs",
+      "Implement health check endpoints",
+      "Use tools like ThreadDump or strace for production debugging"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_crash_loop",
+    "pattern_name": "Rapid Restart Loop / Crash Loop",
+    "category": "service_crash",
+    "symptoms": [
+      "Container/service restarts every 2-10 seconds",
+      "Never stabilizes or reaches healthy state",
+      "Restart count climbs rapidly",
+      "Service port unreachable despite process appearing to run"
+    ],
+    "common_causes": [
+      "Startup configuration missing or incorrect",
+      "Database not ready when application starts",
+      "Required secrets/environment variables not present",
+      "Race condition on startup (ordering issue)"
+    ],
+    "resolution_steps": [
+      "Check restart count: docker inspect <container> | grep RestartCount",
+      "Review logs for pattern: docker logs <container> | tail -50",
+      "Verify secrets: docker inspect <container> | grep -i env | grep -i secret",
+      "Check startup order in docker-compose: depends_on, restart_policy",
+      "Add startup delay: sleep 10 before app starts",
+      "Implement health check: wait for dependencies before continuing",
+      "Increase restart grace period: stop_grace_period: 30s"
+    ],
+    "confidence_threshold": 0.89,
+    "prevention_steps": [
+      "Use docker-compose depends_on with condition: service_healthy",
+      "Implement proper health checks for all services",
+      "Use explicit startup scripts that wait for dependencies",
+      "Add exponential backoff to restart policy"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_database_connection_refused",
+    "pattern_name": "Database Connection Refused",
+    "category": "service_crash",
+    "symptoms": [
+      "Application error: 'connection refused' or 'could not connect to database'",
+      "Telnet to database port fails",
+      "Database query returns immediately with error, no data"
+    ],
+    "common_causes": [
+      "Database service not running or crashed",
+      "Database listening on wrong IP/port or localhost only",
+      "Network isolation (containers on different Docker networks)",
+      "Firewall blocking traffic between application and database",
+      "Database hung or out of resources"
+    ],
+    "resolution_steps": [
+      "Verify database running: docker ps | grep database",
+      "Check if listening: netstat -tlnp | grep <port> or lsof -i :<port>",
+      "Test connectivity: telnet <host> <port>",
+      "Check docker network: docker network inspect bridge",
+      "Verify connection string in app config",
+      "Restart database: docker restart <database>",
+      "Check database logs: docker logs <database> | tail -20"
+    ],
+    "confidence_threshold": 0.94,
+    "prevention_steps": [
+      "Use docker-compose to manage network dependencies automatically",
+      "Add startup health checks for database connectivity",
+      "Log connection details for debugging",
+      "Use connection retry logic with exponential backoff"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_env_var_missing",
+    "pattern_name": "Environment Variable Missing or Wrong",
+    "category": "configuration_error",
+    "symptoms": [
+      "Application crashes or behaves incorrectly",
+      "Service connects to wrong database/API endpoint",
+      "Logs show undefined variable or null value",
+      "Feature silently doesn't work (authentication, payment, etc.)"
+    ],
+    "common_causes": [
+      ".env file not loaded or not sourced in startup script",
+      "Variable name typo in application or config",
+      "Environment variable not passed through docker-compose",
+      "Secrets not mounted or not available",
+      "Configuration changed but containers not redeployed"
+    ],
+    "resolution_steps": [
+      "List environment: docker inspect <container> | grep -A 100 Env",
+      "Check expected vars: compare against docker-compose.yml",
+      "Verify secrets mounted: docker exec <container> ls -la /run/secrets/",
+      "Test variable: docker exec <container> echo $VAR_NAME",
+      "Rebuild and redeploy: docker-compose up -d --force-recreate",
+      "Check docker-compose for typos in variable names"
+    ],
+    "confidence_threshold": 0.91,
+    "prevention_steps": [
+      "Use env-file in docker-compose to load from .env",
+      "Validate environment on startup and fail early if missing",
+      "Use schema/type checking for configuration",
+      "Print non-sensitive config on startup for debugging"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_config_syntax_error",
+    "pattern_name": "Configuration File Syntax Error",
+    "category": "configuration_error",
+    "symptoms": [
+      "Service fails to start with parse or validation error",
+      "Error message includes line number of config file",
+      "Service won't start even though binary exists and is executable"
+    ],
+    "common_causes": [
+      "YAML/JSON/TOML indentation or spacing wrong",
+      "Missing or mismatched quotes",
+      "Unknown configuration key",
+      "Type mismatch (string instead of number)"
+    ],
+    "resolution_steps": [
+      "Validate syntax: python -m json.tool config.json",
+      "Or use yq: yq eval config.yaml",
+      "Check error line number and review that section",
+      "Compare against template or working configuration",
+      "Check git diff for recent changes: git diff config.yaml",
+      "Roll back to known-good configuration"
+    ],
+    "confidence_threshold": 0.96,
+    "prevention_steps": [
+      "Use editor with syntax checking and auto-format",
+      "Validate configuration on startup before using",
+      "Include example/template config in repository",
+      "Use schema validation (JSON Schema, etc.)"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_tls_certificate_expired",
+    "pattern_name": "TLS/SSL Certificate Expired or Invalid",
+    "category": "configuration_error",
+    "symptoms": [
+      "HTTPS connections fail with certificate error",
+      "Browser shows 'not secure' or certificate warning",
+      "curl shows 'certificate verify failed'",
+      "Application error: 'SSL: CERTIFICATE_VERIFY_FAILED'"
+    ],
+    "common_causes": [
+      "Certificate past expiration date",
+      "Certificate domain doesn't match requested domain",
+      "Self-signed certificate not in client trust store",
+      "Certificate not installed or mounted in container"
+    ],
+    "resolution_steps": [
+      "Check expiry: openssl s_client -connect host:443 | grep notAfter",
+      "Or: echo | openssl s_client -servername example.com -connect example.com:443 2>/dev/null | openssl x509 -noout -dates",
+      "Renew certificate: certbot renew (for Let's Encrypt)",
+      "For self-signed: add to trust store or disable verification (dev only)",
+      "Restart web server: docker restart nginx",
+      "Verify mounted: docker inspect <container> | grep -i volume | grep cert"
+    ],
+    "confidence_threshold": 0.93,
+    "prevention_steps": [
+      "Set up certificate renewal automation (certbot auto-renew)",
+      "Monitor certificate expiry dates with alerts 30 days before",
+      "Use Let's Encrypt with auto-renewal for free certificates",
+      "Include certificate info in deployment verification"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_image_pull_failure",
+    "pattern_name": "Docker Image Pull Failure / Registry Authentication",
+    "category": "configuration_error",
+    "symptoms": [
+      "Cannot start container, error during image pull",
+      "Error: 'image not found' or 'no such image'",
+      "Error: 'unauthorized: authentication required'",
+      "docker pull fails with same error"
+    ],
+    "common_causes": [
+      "Private registry credentials not configured",
+      "Image tag doesn't exist in registry",
+      "Registry unreachable or network issue",
+      "Disk full (no space to download image)"
+    ],
+    "resolution_steps": [
+      "Verify image exists: docker search <image>",
+      "For private registry: docker login <registry>",
+      "Check credentials: cat ~/.docker/config.json",
+      "Manually pull to test: docker pull <image>:<tag>",
+      "Check disk space: df -h /var/lib/docker",
+      "Update docker-compose with correct image name and tag",
+      "Verify network connectivity to registry"
+    ],
+    "confidence_threshold": 0.89,
+    "prevention_steps": [
+      "Use image digests instead of tags for production",
+      "Implement image pull in CI/CD before deployment",
+      "Monitor registry availability and quotas",
+      "Use private registries for internal images with auth"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_dns_resolution_failure",
+    "pattern_name": "DNS Resolution Failure",
+    "category": "network",
+    "symptoms": [
+      "Cannot reach service by hostname: 'name or service not known'",
+      "nslookup or dig shows SERVFAIL or NXDOMAIN",
+      "Works with IP but not with hostname",
+      "Specific queries fail while others succeed"
+    ],
+    "common_causes": [
+      "DNS server not responding or unreachable",
+      "Hostname not registered in DNS",
+      "Container cannot reach DNS server",
+      "DNS cache poisoned or stale"
+    ],
+    "resolution_steps": [
+      "Test DNS: nslookup 8.8.8.8 (works?) then test hostname",
+      "Check resolver: cat /etc/resolv.conf",
+      "For docker: docker exec <container> nslookup <hostname>",
+      "Query specific server: dig @8.8.8.8 <hostname>",
+      "Flush local cache: systemctl restart systemd-resolved",
+      "Verify DNS record exists: dig <hostname> +short",
+      "Use IP address as temporary workaround"
+    ],
+    "confidence_threshold": 0.90,
+    "prevention_steps": [
+      "Configure stable DNS servers (8.8.8.8, 1.1.1.1)",
+      "Monitor DNS resolution times",
+      "Use internal DNS (like systemd-resolved) with fallback",
+      "Validate DNS records in CI/CD before deployment"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_port_already_in_use",
+    "pattern_name": "Port Already in Use / Binding Conflict",
+    "category": "network",
+    "symptoms": [
+      "Service fails to start: 'address already in use'",
+      "Error: 'bind: permission denied' (port < 1024 without root)",
+      "netstat shows port in use by another process",
+      "Port shows in TIME_WAIT state"
+    ],
+    "common_causes": [
+      "Another service already using the port",
+      "Previous instance not cleanly shut down (TIME_WAIT)",
+      "Trying to bind privileged port (< 1024) without root",
+      "Duplicate port mapping in docker-compose"
+    ],
+    "resolution_steps": [
+      "Find process using port: lsof -i :<port>",
+      "Kill it: kill <pid>",
+      "Check for TIME_WAIT: netstat -tan | grep :<port>",
+      "Wait 60-120 seconds for TIME_WAIT to expire",
+      "Or use SO_REUSEADDR in application code",
+      "Change service port if available",
+      "Check docker-compose for duplicate port entries"
+    ],
+    "confidence_threshold": 0.95,
+    "prevention_steps": [
+      "Use unique port numbers for each service",
+      "Implement graceful shutdown with SO_REUSEADDR",
+      "Use dynamic port assignment in tests",
+      "Document port assignments in docker-compose"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_network_timeout",
+    "pattern_name": "Network Timeout / Unreachable Host",
+    "category": "network",
+    "symptoms": [
+      "Requests to remote service timeout or 'no route to host'",
+      "ping to host fails or very slow",
+      "curl connection times out"
+    ],
+    "common_causes": [
+      "Remote host down or network unreachable",
+      "Firewall blocking traffic",
+      "Network route misconfigured",
+      "MTU mismatch (packets silently dropped)",
+      "High latency or packet loss"
+    ],
+    "resolution_steps": [
+      "Test connectivity: ping <host>",
+      "Check routing: ip route and traceroute <host>",
+      "Inspect firewall: iptables -L -n or cloud firewall rules",
+      "Check network interface: ip link show",
+      "Test application port: curl -v <url> --max-time 5",
+      "For docker: check if containers on same network",
+      "Increase timeout on client (temporary)"
+    ],
+    "confidence_threshold": 0.87,
+    "prevention_steps": [
+      "Monitor reachability to critical services",
+      "Configure reasonable timeouts (5-30s depending on service)",
+      "Use circuit breaker to fail fast",
+      "Document network topology and dependencies"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_reverse_proxy_error",
+    "pattern_name": "Reverse Proxy / Load Balancer Not Routing",
+    "category": "network",
+    "symptoms": [
+      "Frontend can't reach backend service",
+      "Nginx/Apache shows 'upstream timed out'",
+      "External requests fail but local requests work",
+      "nginx -t shows error in config"
+    ],
+    "common_causes": [
+      "Upstream backend down or misconfigured",
+      "Proxy config has wrong backend address",
+      "Proxy crashed or restarted",
+      "Firewall between proxy and backend"
+    ],
+    "resolution_steps": [
+      "Validate nginx config: nginx -t",
+      "Check backend health: curl http://<backend>:<port>",
+      "Verify proxy running: ps aux | grep nginx",
+      "Restart proxy: systemctl restart nginx",
+      "Check firewall: iptables -L -n (between proxy and backend)",
+      "Review config for IP/port typos",
+      "Check logs: tail -f /var/log/nginx/error.log"
+    ],
+    "confidence_threshold": 0.91,
+    "prevention_steps": [
+      "Test backend connectivity in health checks",
+      "Monitor upstream availability",
+      "Log proxy errors with timestamps",
+      "Use monitoring for backend response times"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_database_corruption",
+    "pattern_name": "Database Corruption / Won't Start",
+    "category": "database",
+    "symptoms": [
+      "Database fails to start with 'invalid page header' or 'checksum failed'",
+      "Database process exits immediately",
+      "Cannot query database even though it's running"
+    ],
+    "common_causes": [
+      "Unclean shutdown (power loss, kill -9)",
+      "Filesystem corruption or disk error",
+      "Incompatible version upgrade",
+      "Hardware failure"
+    ],
+    "resolution_steps": [
+      "Check logs: docker logs <database>",
+      "For PostgreSQL: pg_resetwal to reset WAL",
+      "For MySQL: innodb_recovery startup flag",
+      "For SQLite: .recover command",
+      "Check filesystem: fsck -n <device> (read-only)",
+      "Restore from backup if recovery fails",
+      "Verify hardware with SMART tests"
+    ],
+    "confidence_threshold": 0.80,
+    "prevention_steps": [
+      "Regular backups before system changes",
+      "Use filesystems with journaling",
+      "Implement clean shutdown procedures",
+      "Monitor filesystem health with SMART"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_slow_query",
+    "pattern_name": "Slow Database Query / Performance Degradation",
+    "category": "database",
+    "symptoms": [
+      "Queries taking seconds to complete",
+      "Application hangs during database operations",
+      "High disk I/O and CPU during queries",
+      "Response times spike without change in load"
+    ],
+    "common_causes": [
+      "Missing index on frequently queried column",
+      "Full table scan instead of indexed lookup",
+      "Suboptimal query join order",
+      "Stale statistics (optimizer makes wrong choice)",
+      "Table locked by long-running transaction"
+    ],
+    "resolution_steps": [
+      "Enable slow query log",
+      "Analyze query plan: EXPLAIN ANALYZE SELECT ...",
+      "Look for sequential scans without index",
+      "Add index: CREATE INDEX idx_col ON table(col);",
+      "Update statistics: ANALYZE table;",
+      "Check for locks: SHOW PROCESSLIST;",
+      "Kill blocking transaction if needed"
+    ],
+    "confidence_threshold": 0.88,
+    "prevention_steps": [
+      "Monitor slow query log continuously",
+      "Profile queries in development",
+      "Add indexes for common queries",
+      "Regular statistics updates (ANALYZE)"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_disk_inode_exhaustion",
+    "pattern_name": "Inode Exhaustion",
+    "category": "filesystem",
+    "symptoms": [
+      "Cannot create files even though df shows free space",
+      "Error: 'No space left on device' from touch/create",
+      "df -i shows 100% usage"
+    ],
+    "common_causes": [
+      "Too many small files (millions of log entries, temp files)",
+      "Filesystem inode limit reached",
+      "Corrupted inode table"
+    ],
+    "resolution_steps": [
+      "Check inode usage: df -i",
+      "Find high inode dirs: du --inodes -s /* | sort -rn",
+      "Remove old small files: find /var/log -type f -mtime +30 -delete",
+      "Clean temp: rm -rf /tmp/* (if safe)",
+      "Configure log rotation to prevent recurrence",
+      "Migrate to filesystem with more inodes"
+    ],
+    "confidence_threshold": 0.92,
+    "prevention_steps": [
+      "Monitor inode usage regularly",
+      "Configure log rotation and cleanup",
+      "Set up alerts when inode usage > 80%"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_filesystem_mount_error",
+    "pattern_name": "Filesystem Mount Error / Missing Mount",
+    "category": "filesystem",
+    "symptoms": [
+      "Mount point missing or data unavailable",
+      "Application fails because expected directory doesn't exist",
+      "ls on mount point shows empty when should have data"
+    ],
+    "common_causes": [
+      "/etc/fstab entry wrong or missing",
+      "Device not connected (USB, NFS, etc.)",
+      "Credentials wrong (NFS, SMB)",
+      "Filesystem corruption preventing mount"
+    ],
+    "resolution_steps": [
+      "Check fstab: cat /etc/fstab",
+      "Try manual mount: mount <device> <mountpoint>",
+      "Check device exists: lsblk or ls -la /dev/",
+      "For NFS: check server reachable, credentials correct",
+      "Repair filesystem: fsck <device> (unmounted)",
+      "Restore from backup if data corrupted"
+    ],
+    "confidence_threshold": 0.86,
+    "prevention_steps": [
+      "Document all mounts and verify regularly",
+      "Test mount on startup with health checks",
+      "Keep backups of critical mounted data"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_docker_volume_permissions",
+    "pattern_name": "Docker Volume Permissions Denied",
+    "category": "filesystem",
+    "symptoms": [
+      "Application gets 'permission denied' when accessing volume",
+      "ls -la shows volume owned by root with restrictive perms",
+      "Application runs as non-root user but can't write"
+    ],
+    "common_causes": [
+      "Volume owner is root, app runs as non-root user",
+      "File permissions too restrictive (600, 700)",
+      "Container user UID doesn't match host UID"
+    ],
+    "resolution_steps": [
+      "Check ownership: ls -la /volume",
+      "Fix owner: chown -R 1000:1000 /volume",
+      "Fix permissions: chmod 755 /volume",
+      "Or: run app as root at startup, fix perms, switch user",
+      "Verify in container: docker exec <container> ls -la /volume"
+    ],
+    "confidence_threshold": 0.94,
+    "prevention_steps": [
+      "Use consistent UIDs across host and containers",
+      "Set volume ownership explicitly in docker-compose",
+      "Document volume mount requirements"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_unauthorized_access",
+    "pattern_name": "Unauthorized Access / Compromised Credentials",
+    "category": "security",
+    "symptoms": [
+      "Suspicious activity in logs, unexpected resource usage",
+      "Unusual processes running, malicious behavior",
+      "Failed login attempts spike",
+      "Unrecognized connections or data access"
+    ],
+    "common_causes": [
+      "Credentials leaked (committed to git, exposed in logs)",
+      "Default credentials not changed",
+      "Weak passwords",
+      "Unpatched vulnerability exploited"
+    ],
+    "resolution_steps": [
+      "Rotate all credentials immediately",
+      "Check git history: git log -p | grep -i password",
+      "Kill suspicious processes: pkill -f <process>",
+      "Review logs: tail -f /var/log/auth.log",
+      "Run updates: apt update && apt upgrade",
+      "Restrict access: firewall rules or ssh config",
+      "Consider full system reinstall if severe"
+    ],
+    "confidence_threshold": 0.75,
+    "prevention_steps": [
+      "Never commit credentials to git",
+      "Use secrets management (Docker secrets, Vault)",
+      "Rotate credentials regularly",
+      "Monitor for unusual activity with IDS/logs"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_secrets_in_logs",
+    "pattern_name": "Unencrypted Secrets in Logs / Config",
+    "category": "security",
+    "symptoms": [
+      "Credentials visible in application logs",
+      "Secrets readable in docker inspect output",
+      "Passwords in git history or docker-compose"
+    ],
+    "common_causes": [
+      "Debug logging left on",
+      "Secrets passed as command-line args",
+      "Not using secrets management",
+      "Logging framework logs all input"
+    ],
+    "resolution_steps": [
+      "Search for exposed secrets: grep -r 'password\\|token\\|key' /var/log/",
+      "Disable debug logging: LOG_LEVEL=INFO",
+      "Use secrets management: Docker secrets, HashiCorp Vault",
+      "Mask secrets in logs: custom formatter",
+      "Rotate any exposed secrets",
+      "Redact log files",
+      "Check git history: git log -p | grep -i password"
+    ],
+    "confidence_threshold": 0.96,
+    "prevention_steps": [
+      "Use secrets management from day 1",
+      "Configure logging to mask sensitive fields",
+      "Code review for secret exposure",
+      "Pre-commit hooks to block credential commits"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_memory_leak",
+    "pattern_name": "Memory Leak / Gradual Resource Consumption",
+    "category": "performance",
+    "symptoms": [
+      "Process memory grows over hours/days",
+      "Eventually crashes with OOM",
+      "Memory usage sawtooth pattern (GC can't keep up)"
+    ],
+    "common_causes": [
+      "Objects not released after use",
+      "Event listeners not unregistered",
+      "Cache growing without eviction",
+      "Circular references preventing GC"
+    ],
+    "resolution_steps": [
+      "Monitor memory over time: watch -n 5 'ps aux | head -20'",
+      "Profile memory: language-specific tools (jmap, memory_profiler)",
+      "Review recent code changes",
+      "Increase memory temporarily while fixing",
+      "Implement periodic restart as short-term fix",
+      "Deploy fix with memory profiling"
+    ],
+    "confidence_threshold": 0.85,
+    "prevention_steps": [
+      "Regular memory profiling in development",
+      "Use memory leak detection tools in CI",
+      "Code review for resource lifetime issues",
+      "Monitor production memory metrics"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_high_latency",
+    "pattern_name": "High Latency / Slow Response Times",
+    "category": "performance",
+    "symptoms": [
+      "Requests taking much longer than baseline",
+      "p95/p99 latency spiked",
+      "Users report slowness"
+    ],
+    "common_causes": [
+      "Slow database query",
+      "High network latency",
+      "CPU saturation",
+      "Memory pressure (swapping)",
+      "Disk I/O bottleneck"
+    ],
+    "resolution_steps": [
+      "Profile request timing: curl -w '@curl-format.txt' <url>",
+      "Identify where time is spent (database, network, processing)",
+      "Enable query slow log",
+      "Check resources: top, iostat -x 1 5",
+      "Optimize hot path: cache, index, parallel",
+      "Scale horizontally if resource-limited"
+    ],
+    "confidence_threshold": 0.83,
+    "prevention_steps": [
+      "Monitor latency p95/p99 continuously",
+      "Profile critical paths in development",
+      "Set latency budgets and alert on violations"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_docker_out_of_disk",
+    "pattern_name": "Docker Container Out of Disk Space",
+    "category": "docker_specific",
+    "symptoms": [
+      "Docker operations fail",
+      "Application writes fail",
+      "Logs show 'no space left on device'",
+      "docker run fails to create container"
+    ],
+    "common_causes": [
+      "Container logs growing unbounded",
+      "Application writing to container filesystem",
+      "Build creating large temporary images",
+      "No disk space on host /var/lib/docker"
+    ],
+    "resolution_steps": [
+      "Check host disk: df -h /var/lib/docker",
+      "Check container size: docker system df",
+      "Clean container logs: docker exec <container> rm /var/log/*",
+      "Configure log rotation: daemon.json",
+      "Prune unused images: docker system prune -a",
+      "Increase host disk if needed"
+    ],
+    "confidence_threshold": 0.93,
+    "prevention_steps": [
+      "Configure Docker log rotation",
+      "Monitor /var/lib/docker disk usage",
+      "Set up alerts when disk > 80%",
+      "Use volumes for application logs"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_docker_network_isolation",
+    "pattern_name": "Docker Network Isolation / Container Can't Reach Service",
+    "category": "docker_specific",
+    "symptoms": [
+      "Container can't reach another container by hostname",
+      "ping between containers fails",
+      "Network unreachable error"
+    ],
+    "common_causes": [
+      "Containers on different Docker networks",
+      "Custom network not created",
+      "DNS service not working in container",
+      "Firewall between containers"
+    ],
+    "resolution_steps": [
+      "Check networks: docker network ls",
+      "Inspect network: docker network inspect <network>",
+      "List containers on network: docker network inspect bridge",
+      "Test connectivity: docker exec <container> ping <other>",
+      "Create network: docker network create <name>",
+      "Reconnect: docker network connect <network> <container>"
+    ],
+    "confidence_threshold": 0.90,
+    "prevention_steps": [
+      "Use docker-compose: networks automatically created",
+      "Define explicit networks for service groups",
+      "Test network connectivity in CI"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_docker_graceful_shutdown",
+    "pattern_name": "Container Fails to Stop Gracefully",
+    "category": "docker_specific",
+    "symptoms": [
+      "docker stop hangs for 10 seconds then force kills",
+      "No graceful shutdown message in logs",
+      "Service doesn't get SIGTERM signal"
+    ],
+    "common_causes": [
+      "Application ignores SIGTERM",
+      "Process signal handling not implemented",
+      "PID 1 not properly set (shell script wrapper)",
+      "Service blocked on I/O"
+    ],
+    "resolution_steps": [
+      "Implement signal handling in application",
+      "Ensure PID 1 is app: use exec in entrypoint",
+      "Test locally: kill -TERM <pid>",
+      "Increase grace period: stop_grace_period: 30s",
+      "Kill explicitly if needed: docker kill <container>"
+    ],
+    "confidence_threshold": 0.88,
+    "prevention_steps": [
+      "Implement proper signal handling in all apps",
+      "Use exec in Dockerfile ENTRYPOINT",
+      "Test graceful shutdown in CI",
+      "Document shutdown sequence"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_docker_daemon_crash",
+    "pattern_name": "Docker Daemon Issues / Cannot Connect",
+    "category": "docker_specific",
+    "symptoms": [
+      "docker ps fails with 'Cannot connect to daemon'",
+      "systemctl status docker shows failed",
+      "Docker commands hang or timeout"
+    ],
+    "common_causes": [
+      "Docker daemon crashed or hung",
+      "Corrupted container metadata",
+      "Disk full (daemon can't write state)",
+      "File descriptor limit reached"
+    ],
+    "resolution_steps": [
+      "Restart daemon: systemctl restart docker",
+      "Check disk: df -h /var/lib/docker",
+      "Clean corrupted state: docker system prune -a (caution)",
+      "Check file descriptors: ulimit -n (increase if < 8192)",
+      "Review logs: journalctl -u docker -f"
+    ],
+    "confidence_threshold": 0.85,
+    "prevention_steps": [
+      "Monitor Docker daemon health",
+      "Set up disk usage alerts",
+      "Monitor file descriptor usage",
+      "Regular cleanup: docker system prune"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_upstream_api_timeout",
+    "pattern_name": "Upstream API Timeout / Rate Limit",
+    "category": "external_service",
+    "symptoms": [
+      "Calls to external API timeout",
+      "HTTP 429 responses (rate limited)",
+      "Service degrades when calling external APIs"
+    ],
+    "common_causes": [
+      "External service slow or down",
+      "Rate limit reached",
+      "Network latency to external service",
+      "Retry storms amplifying issue"
+    ],
+    "resolution_steps": [
+      "Check external service status page",
+      "Implement exponential backoff for retries",
+      "Cache responses: don't repeat same query",
+      "Add timeout: curl --max-time 5",
+      "Contact API provider for rate limit increase",
+      "Implement circuit breaker pattern"
+    ],
+    "confidence_threshold": 0.82,
+    "prevention_steps": [
+      "Monitor external API response times",
+      "Implement timeouts on all external calls",
+      "Use caching to reduce API calls",
+      "Have fallback/degraded mode"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_webhook_delivery_failure",
+    "pattern_name": "Webhook / Push Notification Delivery Failure",
+    "category": "external_service",
+    "symptoms": [
+      "Webhooks not being received",
+      "Notifications not sent",
+      "Events lost when endpoint unavailable"
+    ],
+    "common_causes": [
+      "Webhook endpoint unreachable",
+      "Response timeout before server finishes",
+      "Payload too large",
+      "Authentication failed"
+    ],
+    "resolution_steps": [
+      "Verify endpoint reachable: curl -X POST <url>",
+      "Increase timeout if needed",
+      "Reduce payload size",
+      "Verify authentication headers",
+      "Implement idempotency: handle duplicates",
+      "Add retry logic with exponential backoff"
+    ],
+    "confidence_threshold": 0.80,
+    "prevention_steps": [
+      "Implement idempotency keys",
+      "Persistent webhook queue (don't lose)",
+      "Health checks for webhook endpoints",
+      "Monitoring for delivery failures"
+    ],
+    "source": "stdlib"
+  },
+  {
+    "id": "stdlib_systemd_service_dependency",
+    "pattern_name": "Systemd Service Dependency / Startup Failure",
+    "category": "system",
+    "symptoms": [
+      "Service won't start, 'dependency failed' error",
+      "systemctl status shows failed",
+      "Manual execution works but systemd launch fails"
+    ],
+    "common_causes": [
+      "Dependency service not running",
+      "ExecStart path wrong or executable missing",
+      "Permission denied (service user can't access file)",
+      "Dependency unit file missing"
+    ],
+    "resolution_steps": [
+      "Check status: systemctl status <service>",
+      "Review logs: journalctl -u <service> -n 20",
+      "Verify path: which <executable>",
+      "Check dependencies: systemctl status <dependency>",
+      "Fix and reload: systemctl daemon-reload",
+      "Check permissions: service user can access files"
+    ],
+    "confidence_threshold": 0.89,
+    "prevention_steps": [
+      "Document service dependencies",
+      "Test systemd startup in CI",
+      "Use dependency management in unit files",
+      "Monitor service startup times"
+    ],
+    "source": "stdlib"
+  }
+]
