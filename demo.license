@@ -1,0 +1,7 @@
+{
+  "key": "DEMO-17FA2F6FC4B273A9",
+  "email": "test@stdout.io",
+  "issuedAt": 1781062227816,
+  "expiresAt": null,
+  "signature": "demo-signature-not-validated-in-dev-mode"
+}
