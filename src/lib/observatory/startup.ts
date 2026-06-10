@@ -12,6 +12,7 @@
 
 import { initializeObservatory, isObservatoryReady } from './initialization';
 import { getCentralDb } from '../db';
+import { sql } from 'drizzle-orm';
 
 export interface StartupResult {
   success: boolean;
@@ -121,9 +122,9 @@ export async function startupObservatory(): Promise<StartupResult> {
 async function getLastStartupTime(): Promise<number | null> {
   try {
     const db = getCentralDb();
-    const row = db
-      .prepare(`SELECT value FROM system_state WHERE key = 'observatory_last_startup'`)
-      .get() as { value: string } | undefined;
+    const row = await db.get(
+      sql`SELECT value FROM system_state WHERE key = 'observatory_last_startup'`
+    ) as { value: string } | undefined;
 
     return row ? parseInt(row.value, 10) : null;
   } catch {
@@ -137,43 +138,46 @@ async function getLastStartupTime(): Promise<number | null> {
 async function recordStartupTime(success: boolean): Promise<void> {
   try {
     const db = getCentralDb();
+    const now = Date.now();
+    const nowStr = now.toString();
 
     // Ensure system_state table exists
-    db.prepare(`
+    await db.run(sql`
       CREATE TABLE IF NOT EXISTS system_state (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,
         updated_at INTEGER NOT NULL
       )
-    `).run();
+    `);
 
     // Upsert last startup time
-    db.prepare(`
+    await db.run(sql`
       INSERT INTO system_state (key, value, updated_at)
-      VALUES ('observatory_last_startup', ?, ?)
+      VALUES ('observatory_last_startup', ${nowStr}, ${now})
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-    `).run(Date.now().toString(), Date.now());
+    `);
 
     // Record total startup count
-    const countRow = db
-      .prepare(`SELECT value FROM system_state WHERE key = 'observatory_startup_count'`)
-      .get() as { value: string } | undefined;
+    const countRow = await db.get(
+      sql`SELECT value FROM system_state WHERE key = 'observatory_startup_count'`
+    ) as { value: string } | undefined;
 
     const count = countRow ? parseInt(countRow.value, 10) + 1 : 1;
+    const countStr = count.toString();
 
-    db.prepare(`
+    await db.run(sql`
       INSERT INTO system_state (key, value, updated_at)
-      VALUES ('observatory_startup_count', ?, ?)
+      VALUES ('observatory_startup_count', ${countStr}, ${now})
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-    `).run(count.toString(), Date.now());
+    `);
 
     // Record last successful startup
     if (success) {
-      db.prepare(`
+      await db.run(sql`
         INSERT INTO system_state (key, value, updated_at)
-        VALUES ('observatory_last_successful_startup', ?, ?)
+        VALUES ('observatory_last_successful_startup', ${nowStr}, ${now})
         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-      `).run(Date.now().toString(), Date.now());
+      `);
     }
   } catch (error) {
     console.error('[Observatory Startup] Failed to record startup time:', error);
@@ -192,17 +196,17 @@ export async function getStartupStats(): Promise<{
   try {
     const db = getCentralDb();
 
-    const countRow = db
-      .prepare(`SELECT value FROM system_state WHERE key = 'observatory_startup_count'`)
-      .get() as { value: string } | undefined;
+    const countRow = await db.get(
+      sql`SELECT value FROM system_state WHERE key = 'observatory_startup_count'`
+    ) as { value: string } | undefined;
 
-    const lastRow = db
-      .prepare(`SELECT value FROM system_state WHERE key = 'observatory_last_startup'`)
-      .get() as { value: string } | undefined;
+    const lastRow = await db.get(
+      sql`SELECT value FROM system_state WHERE key = 'observatory_last_startup'`
+    ) as { value: string } | undefined;
 
-    const lastSuccessRow = db
-      .prepare(`SELECT value FROM system_state WHERE key = 'observatory_last_successful_startup'`)
-      .get() as { value: string } | undefined;
+    const lastSuccessRow = await db.get(
+      sql`SELECT value FROM system_state WHERE key = 'observatory_last_successful_startup'`
+    ) as { value: string } | undefined;
 
     const lastStartup = lastRow ? new Date(parseInt(lastRow.value, 10)) : null;
 
