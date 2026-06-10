@@ -400,11 +400,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.csrfToken = csrfToken;
 
   // First-run installation check — redirect to /app/setup if incomplete
-  // Skip this check for auth pages, API endpoints, and the setup page itself
-  const setupExcludedPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/setup', '/app/api/setup/'];
+  // Skip this check for auth pages, API endpoints, initial setup wizard, and the app setup page
+  const setupExcludedPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/setup', '/app/api/setup/', '/setup'];
   const shouldCheckInstallation = context.locals.user &&
     !pathname.startsWith('/app/api/') &&
     !pathname.startsWith('/app/setup') &&
+    !pathname.startsWith('/setup') &&
     !setupExcludedPaths.some(p => pathname.startsWith(p));
 
   if (shouldCheckInstallation && !installationComplete) {
