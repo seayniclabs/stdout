@@ -12,6 +12,7 @@
 
 import { AGENT_PERSONAS } from './agents';
 import { METRIC_INTERPRETATIONS } from './metrics-guide';
+import { setupObservatory } from './setup';
 
 export interface ObservatoryInitResult {
   success: boolean;
@@ -21,6 +22,8 @@ export interface ObservatoryInitResult {
   baselinesEstablished: number;
   errors: string[];
   startupLog: string[];
+  setupComplete?: boolean;
+  setupWarnings?: string[];
 }
 
 /**
@@ -43,6 +46,21 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
   log.push('🚀 Observatory Initialization Started');
   log.push(`Time: ${new Date().toISOString()}`);
   log.push('');
+
+  // ══════════════════════════════════════════════════════════════
+  // PHASE 0: AUTOMATED SETUP - Install required components
+  // ══════════════════════════════════════════════════════════════
+  log.push('═══ PHASE 0: AUTOMATED SETUP ═══');
+
+  const setupResult = await setupObservatory();
+  log.push(...setupResult.setupLog);
+  log.push('');
+
+  const setupWarnings = setupResult.warnings;
+
+  if (!setupResult.success) {
+    errors.push(...setupResult.errors);
+  }
 
   // ══════════════════════════════════════════════════════════════
   // PHASE 1: IDENTITY - Who am I?
@@ -274,7 +292,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     monitorsConfigured,
     baselinesEstablished,
     errors,
-    startupLog: log
+    startupLog: log,
+    setupComplete: setupResult.success,
+    setupWarnings
   };
 }
 
