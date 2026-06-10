@@ -2,7 +2,7 @@ import { defineMiddleware } from 'astro:middleware';
 import { validateSession, getSessionFromCookies, SESSION_COOKIE, getUserCount, sessionCookieOptions } from './lib/auth';
 import { getCentralDb, centralSchema } from './lib/db';
 import { getWorkspaceContext } from './lib/rbac';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import { startHeartbeat } from './lib/scanner-heartbeat';
 import { scheduleCveScanner } from './lib/scanner-cve';
@@ -292,6 +292,28 @@ let observatoryInitialized = false;
   }
 })();
 
+// First-run detection — redirect to setup page if installation incomplete
+let installationComplete = false;
+(async () => {
+  try {
+    const db = getCentralDb();
+
+    // Check if installation has been completed
+    const result = await db.get(sql`
+      SELECT value FROM system_state WHERE key = 'installation_complete'
+    `) as { value: string } | undefined;
+
+    installationComplete = result?.value === 'true';
+
+    if (!installationComplete) {
+      console.log('[Setup] First run detected - installation incomplete');
+    }
+  } catch (error) {
+    console.error('[Setup] Failed to check installation status:', error);
+    installationComplete = false;
+  }
+})();
+
 export const onRequest = defineMiddleware(async (context, next) => {
   if (context.isPrerendered) return next();
 
@@ -367,35 +389,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.cookies.set(CSRF_COOKIE, csrfToken, { ...csrfOpts, domain: undefined });
   context.locals.csrfToken = csrfToken;
 
-  // Setup completion check - redirect to setup if incomplete
-  // Skip this check for auth pages to avoid redirect loops
-  const setupExcludedPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email'];
-  const shouldCheckSetup = context.locals.user &&
-    !pathname.startsWith('/setup') &&
+  // First-run installation check — redirect to /app/setup if incomplete
+  // Skip this check for auth pages, API endpoints, and the setup page itself
+  const setupExcludedPaths = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password', '/app/verify-email', '/app/setup'];
+  const shouldCheckInstallation = context.locals.user &&
     !pathname.startsWith('/app/api/') &&
     !setupExcludedPaths.some(p => pathname.startsWith(p));
 
-  console.log('[middleware] shouldCheckSetup:', shouldCheckSetup, 'for:', pathname);
-
-  if (shouldCheckSetup) {
-    try {
-      const { isSetupComplete } = await import('./lib/setup');
-      const setupComplete = await isSetupComplete();
-      if (!setupComplete) {
-        const { getSetupProgress } = await import('./lib/setup');
-        const progress = await getSetupProgress();
-        // Redirect to current setup step
-        if (progress.currentStep === 1) return context.redirect('/setup');
-        if (progress.currentStep === 2) return context.redirect('/setup/environment');
-        if (progress.currentStep === 3) return context.redirect('/setup/license');
-        if (progress.currentStep === 4) return context.redirect('/setup/scanner');
-        if (progress.currentStep === 5) return context.redirect('/setup/review');
-        if (progress.currentStep === 6) return context.redirect('/setup/windlass');
-        if (progress.currentStep === 7) return context.redirect('/setup/complete');
-      }
-    } catch (err) {
-      // Setup lib not available or error - skip check
-    }
+  if (shouldCheckInstallation && !installationComplete) {
+    console.log('[Setup] Redirecting to /app/setup - installation incomplete');
+    return context.redirect('/app/setup');
   }
 
   // Protect /app/* routes (except login, register, forgot-password)
