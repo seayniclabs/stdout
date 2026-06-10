@@ -139,13 +139,13 @@ async function recordStartupTime(success: boolean): Promise<void> {
     const db = getCentralDb();
 
     // Ensure system_state table exists
-    db.exec(`
+    db.prepare(`
       CREATE TABLE IF NOT EXISTS system_state (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,
         updated_at INTEGER NOT NULL
-      );
-    `);
+      )
+    `).run();
 
     // Upsert last startup time
     db.prepare(`
