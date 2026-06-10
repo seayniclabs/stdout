@@ -16,6 +16,42 @@ Three optional components:
 - **Tech Spec:** Projects/StdOut/Tech Spec.md
 - **License:** Personal use only; commercial requires license
 
+## Assessment — 2026-06-10
+
+### Errors & Risks
+[HIGH] Windlass Docker socket mounted as rw — privilege escalation if untrusted containers run; no isolation between StdOut + container orchestration
+[HIGH] Observatory Ollama dependency (16GB+ RAM) — steep system requirement; no fallback if Ollama unavailable; memory OOM silent failure
+[MED] Rate limiting implementation unclear — tests toggle STDOUT_DISABLE_RATE_LIMIT=1, but production fallback (when limit breached) not documented; possible silent accepts
+[MED] Ticketing framework wired but implementations TBD — Jira/GitHub/Zendesk connectors stubbed; auto-ticket creation broken until wired
+[LOW] Test encryption key hardcoded (STDOUT_ENCRYPTION_KEY=test_key_for_playwright) — Playwright tests use fake key; production key different; no integration test with real key
+
+### Security
+[PASS] CSRF tokens, HTTPOnly cookies, rate limiting on incident creation (framework in middleware)
+[WARN] Docker socket isolation — mounting as rw breaks container boundary; needs documentation + warning
+[PASS] Incident data isolation (no user-agent leakage per PROJECT_HEADER)
+[FAIL] TLS for Windlass ↔ StdOut communication missing — internal HTTP, no encryption between components if deployed on public network
+
+### Improvements
+Add Ollama availability check on startup; fall back to text-only mode if unavailable (degrade gracefully)
+Document + enforce rate limit behavior — clarify silent accept vs circuit breaker vs error response
+Wire Jira/GitHub/Zendesk connectors; auto-create tickets from incidents (Phase 2)
+Add TLS between Windlass ↔ StdOut (mTLS with self-signed certs); document Docker socket security requirements
+Implement incident export to PDF/JSON with customer audit trail
+
+### Cost
+Ollama 16GB requirement expensive — consider tiered model sizes (7B fallback if 14B OOM)
+Self-hosted Observatory (Prometheus+Loki+Tempo) efficient for on-prem deployments
+
+### Performance
+Astro SSR + better-sqlite3 fast; Drizzle ORM queries lean
+Windlass cron evaluation UTC-only (not local time) — users report confusion; consider tz-aware cron
+Docker API calls via Windlass scale linear with container count
+
+### Verdict
+**Grade: B-** — Self-hosted incident companion solid but incomplete. Observatory/Windlass wired but risky (Docker socket, Ollama memory). Rate limiting untested. Ticketing framework stubbed. Fix: Ollama fallback, enforce TLS, wire ticketing integrations, document rate-limit behavior.
+
+**Last Updated:** 2026-06-10
+
 ## Last Decisions
 
 - **Ticketing integration:** Framework added for external ticket connectors (Jira, GitHub, Zendesk) — wired via scheduler pattern, shipped 2026-06-08
