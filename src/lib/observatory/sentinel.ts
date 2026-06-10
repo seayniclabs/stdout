@@ -7,9 +7,10 @@
 
 import { getCentralDb, getTenantDb } from '../db';
 import { sql } from 'drizzle-orm';
-import { buildWatcherPromptWithKnowledge } from './prompts';
+import { buildWatcherPromptWithKnowledge, formatAgentOutput } from './prompts';
 import { retrieveKnowledge } from './retrieval';
 import { AGENT_PERSONAS } from './agents';
+import { isOllamaAvailable, callWatcherModel } from './ollama';
 import type { WatcherContext } from './prompts';
 
 export interface MetricSnapshot {
@@ -154,21 +155,50 @@ async function getRecentIncidents(
 /**
  * Call Watcher agent with local ML model
  *
- * In production, this calls Ollama with Llama 3.2 3B
- * For now, returns rule-based detection as fallback
+ * Calls Ollama with Llama 3.2 3B, falls back to rule-based if unavailable
  */
 async function callWatcherAgent(
   userId: string,
   context: WatcherContext
 ): Promise<AnomalyDetection | null> {
+  const startTime = Date.now();
+
   try {
     // Build prompt with retrieved knowledge
     const systemPrompt = await buildWatcherPromptWithKnowledge(userId, context);
 
-    // TODO: Call Ollama API here
-    // For now, use rule-based detection as fallback
+    // Check if Ollama is available
+    const ollamaReady = await isOllamaAvailable();
 
-    // Simple rule-based anomaly detection
+    if (ollamaReady) {
+      // Call Ollama Watcher model (Llama 3.2 3B)
+      try {
+        const rawOutput = await callWatcherModel(systemPrompt);
+        const { parsed } = formatAgentOutput('watcher', rawOutput);
+
+        if (parsed && parsed.anomaly_detected) {
+          return {
+            detected: true,
+            metricName: parsed.metric_name,
+            currentValue: parsed.current_value,
+            baseline: parsed.baseline,
+            deviationSigma: parsed.deviation_sigma,
+            severity: parsed.suggested_severity || 'medium',
+            confidence: parsed.confidence,
+            reasoning: parsed.reasoning,
+            recommendedAction: parsed.recommended_action,
+            suggestedTitle: parsed.suggested_title
+          };
+        }
+
+        return null; // No anomalies detected by ML model
+      } catch (ollamaError) {
+        console.error('[Sentinel] Ollama call failed, falling back to rule-based:', ollamaError);
+        // Fall through to rule-based detection
+      }
+    }
+
+    // Fallback: Simple rule-based anomaly detection
     for (const [metricName, value] of Object.entries(context.currentMetrics)) {
       const baseline = context.baselines[metricName];
       if (!baseline) continue;
@@ -185,7 +215,7 @@ async function callWatcherAgent(
           deviationSigma: Math.abs(deviation),
           severity: Math.abs(deviation) > 3 ? 'high' : 'medium',
           confidence: Math.min(Math.abs(deviation) / 3, 1.0),
-          reasoning: `${metricName} is ${deviation.toFixed(2)}σ from baseline (${value.toFixed(2)} vs ${baseline.mean.toFixed(2)} ± ${baseline.stdDev.toFixed(2)})`,
+          reasoning: `Rule-based: ${metricName} is ${deviation.toFixed(2)}σ from baseline (${value.toFixed(2)} vs ${baseline.mean.toFixed(2)} ± ${baseline.stdDev.toFixed(2)})`,
           recommendedAction: Math.abs(deviation) > 3 ? 'create_incident' : 'monitor',
           suggestedTitle: `${metricName} anomaly detected: ${value.toFixed(2)}`
         };
