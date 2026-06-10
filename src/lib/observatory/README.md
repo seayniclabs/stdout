@@ -75,7 +75,7 @@ npx tsx migrations/0011_seed_observatory_patterns.ts
 |------|---------|
 | `agents.ts` | Agent personas (Watcher, Analyst) - who they are, what their mission is |
 | `metrics-guide.ts` | Metric interpretation (8 common metrics) - normal ranges, thresholds, causes |
-| `prompts.ts` | System prompt builders - inject identity + knowledge into LLM calls |
+| `prompts.ts` | System prompt builders - inject identity + knowledge into local ML model calls |
 | `standard-patterns.json` | 32 incident patterns - shipped knowledge base |
 | `initialization.ts` | 5-phase startup sequence - brings Observatory online |
 | `startup.ts` | Startup hook - runs on every service start/restart |
@@ -182,10 +182,65 @@ console.log('Issues:', readiness.missingComponents);
 - System learns from feedback and adjusts weights
 - Takes ~100 feedback samples to see 10%+ accuracy improvement
 
+## Retrieval System (RAG Layer)
+
+Observatory uses a multi-strategy retrieval system to find relevant knowledge:
+
+### Retrieval Strategies
+
+1. **Pattern Matching** - Searches standard + custom patterns by:
+   - Symptom keywords (JSON array LIKE search)
+   - Inferred category from metric names
+   - Confidence threshold (returns top patterns)
+
+2. **Baseline Comparison** - Retrieves 7-day rolling baselines for metrics:
+   - Mean, stddev, p95 values
+   - Sample count (data quality indicator)
+   - Time window validation (only recent baselines)
+
+3. **Similar Incidents** - FTS search across past resolved incidents:
+   - Searches title + description for symptom keywords
+   - Only returns resolved incidents (we learned from these)
+   - Includes resolution text for reference
+
+4. **Custom Patterns** - User-specific learned patterns:
+   - Patterns created by user
+   - Patterns Observatory learned from repeated incidents
+   - Sorted by occurrence count + confidence
+
+### Usage
+
+```typescript
+import { retrieveKnowledge, formatKnowledgeForPrompt } from './retrieval';
+
+// Retrieve relevant knowledge
+const knowledge = await retrieveKnowledge(userId, {
+  stackId: 'stack_001',
+  stackName: 'production',
+  metricName: 'cpu_percent',
+  metricValue: 95.5,
+  symptoms: ['high cpu usage', 'cpu spike'],
+  timeWindowHours: 24
+});
+
+// Format for agent prompt
+const prompt = `${basePrompt}\n\n${formatKnowledgeForPrompt(knowledge)}`;
+```
+
+### Integration with Agents
+
+Agents call `buildWatcherPromptWithKnowledge()` or `buildAnalystPromptWithKnowledge()` which:
+1. Detect symptoms from metrics/incident text
+2. Retrieve relevant knowledge from all sources
+3. Format knowledge into structured prompt sections
+4. Inject into agent system prompt
+
+Result: Agents see both standard library patterns AND installation-specific learned knowledge.
+
 ## Next Steps
 
-1. **Implement retrieval logic** - RAG layer to query patterns + baselines
-2. **Wire up Sentinel integration** - actually call the agents
+1. ✅ **Implement retrieval logic** - RAG layer complete
+2. **Wire up Sentinel integration** - actually call the agents when anomalies detected
 3. **Build feedback UI** - let users mark suggestions helpful/unhelpful
 4. **Deploy to ThinkPad** - test with real infrastructure
 5. **Monitor learning** - track accuracy over time

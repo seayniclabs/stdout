@@ -23,6 +23,10 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
         <p class="subtitle">24/7 Infrastructure Monitoring & Observability</p>
       </div>
       <div class="header-actions">
+        <button id="runCheckBtn" class="btn-glass btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+          Run Check Now
+        </button>
         <button id="pauseWatcherBtn" class="btn-glass">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
           Pause Watcher
@@ -154,6 +158,20 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
             <span class="log-time">12:34:56</span>
             <span class="log-level">INFO</span>
             <span class="log-msg">Observatory initialized</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Agent Runs -->
+      <div class="obs-card obs-runs">
+        <div class="obs-card-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+          <h3>Agent Runs</h3>
+          <span class="run-count mono" id="runCount">0</span>
+        </div>
+        <div class="runs-list" id="runsList">
+          <div class="empty-runs">
+            <span>No agent runs yet</span>
           </div>
         </div>
       </div>
@@ -303,8 +321,19 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     .obs-metrics { grid-column: span 8; grid-row: span 2; }
     .obs-key-metrics { grid-column: span 4; grid-row: span 1; }
     .obs-alerts { grid-column: span 4; grid-row: span 2; }
-    .obs-logs { grid-column: span 8; grid-row: span 2; }
+    .obs-logs { grid-column: span 4; grid-row: span 2; }
+    .obs-runs { grid-column: span 4; grid-row: span 2; }
     .obs-traces { grid-column: span 12; grid-row: span 1; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
+      border-color: #22C55E;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, #16A34A 0%, #15803D 100%);
+      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
 
     .metric-tabs {
       display: flex;
@@ -771,6 +800,103 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       transition: all 200ms ease;
     }
 
+    /* Agent Runs */
+    .run-count {
+      background: rgba(34, 197, 94, 0.2);
+      color: #22C55E;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      min-width: 20px;
+      text-align: center;
+    }
+
+    .runs-list {
+      max-height: 400px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .empty-runs {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #64748B;
+      font-size: 0.875rem;
+    }
+
+    .run-item {
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      transition: all 200ms ease;
+    }
+
+    .run-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .run-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .run-agent {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #22C55E;
+      text-transform: capitalize;
+    }
+
+    .run-time {
+      font-size: 0.75rem;
+      color: #64748B;
+    }
+
+    .run-decision {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .decision-badge {
+      font-size: 0.625rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    .decision-create_incident {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+    }
+
+    .decision-monitor {
+      background: rgba(245, 158, 11, 0.2);
+      color: #F59E0B;
+    }
+
+    .decision-ignore {
+      background: rgba(100, 116, 139, 0.2);
+      color: #94A3B8;
+    }
+
+    .decision-alert {
+      background: rgba(239, 68, 68, 0.2);
+      color: #EF4444;
+    }
+
+    .run-confidence {
+      font-size: 0.75rem;
+      color: #64748B;
+    }
+
     /* Accessibility */
     @media (prefers-reduced-motion: reduce) {
       * {
@@ -1153,6 +1279,48 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
         location.reload();
       });
 
+      // Run check button
+      document.getElementById('runCheckBtn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('runCheckBtn') as HTMLButtonElement;
+        if (!btn) return;
+
+        btn.disabled = true;
+        btn.textContent = 'Checking...';
+
+        try {
+          const response = await fetch('/app/api/observatory/check', { method: 'POST' });
+          const result = await response.json();
+
+          if (result.success) {
+            addLog({
+              level: 'INFO',
+              message: `Check complete: ${result.stacksChecked} stacks checked, ${result.anomaliesDetected} anomalies detected, ${result.incidentsCreated} incidents created`
+            });
+
+            if (result.incidentsCreated > 0) {
+              addAlert({
+                severity: 'HIGH',
+                analysis: `Observatory created ${result.incidentsCreated} incident(s) from detected anomalies`
+              });
+            }
+
+            // Refresh agent runs
+            await fetchAgentRuns();
+          } else {
+            addLog({ level: 'ERROR', message: `Check failed: ${result.error || 'Unknown error'}` });
+          }
+        } catch (error) {
+          console.error('Check failed:', error);
+          addLog({ level: 'ERROR', message: 'Failed to trigger Observatory check' });
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = `
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            Run Check Now
+          `;
+        }
+      });
+
       // Pause watcher button
       document.getElementById('pauseWatcherBtn')?.addEventListener('click', async () => {
         alert('Pause/resume functionality coming soon');
@@ -1167,6 +1335,51 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
           : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
       });
 
+      // Fetch agent runs
+      async function fetchAgentRuns() {
+        try {
+          const response = await fetch('/app/api/observatory/runs?limit=10');
+          const data = await response.json();
+
+          const runsList = document.getElementById('runsList');
+          const runCount = document.getElementById('runCount');
+
+          if (!runsList || !runCount) return;
+
+          runCount.textContent = data.count.toString();
+
+          if (data.runs && data.runs.length > 0) {
+            const empty = runsList.querySelector('.empty-runs');
+            if (empty) empty.remove();
+
+            runsList.innerHTML = '';
+
+            data.runs.forEach((run: any) => {
+              const runEl = document.createElement('div');
+              runEl.className = 'run-item';
+
+              const time = new Date(run.createdAt).toLocaleTimeString('en-US', { hour12: false });
+              const confidence = (run.confidenceScore * 100).toFixed(0);
+
+              runEl.innerHTML = `
+                <div class="run-header">
+                  <span class="run-agent mono">${run.agentName}</span>
+                  <span class="run-time mono">${time}</span>
+                </div>
+                <div class="run-decision">
+                  <span class="decision-badge decision-${run.decisionMade}">${run.decisionMade.replace('_', ' ')}</span>
+                  <span class="run-confidence mono">${confidence}%</span>
+                </div>
+              `;
+
+              runsList.appendChild(runEl);
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch agent runs:', error);
+        }
+      }
+
       // Generate mock data every 3 seconds for demonstration
       setInterval(generateMockData, 3000);
 
@@ -1174,6 +1387,12 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       for (let i = 0; i < 10; i++) {
         generateMockData();
       }
+
+      // Fetch agent runs on load
+      fetchAgentRuns();
+
+      // Refresh agent runs every 30 seconds
+      setInterval(fetchAgentRuns, 30000);
     });
   </script>
 </Layout>

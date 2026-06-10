@@ -2,11 +2,12 @@
  * Observatory Agent System Prompts
  *
  * These prompts inject agent identity, mission, and decision frameworks
- * into every LLM call. They reference standard patterns and learned knowledge.
+ * into every local ML model call. They reference standard patterns and learned knowledge.
  */
 
 import { AGENT_PERSONAS, type AgentPersona } from './agents';
 import { METRIC_INTERPRETATIONS, interpretMetric } from './metrics-guide';
+import { retrieveKnowledge, formatKnowledgeForPrompt } from './retrieval';
 
 export interface WatcherContext {
   stackName: string;
@@ -64,7 +65,36 @@ export interface AnalystContext {
 }
 
 /**
- * Build system prompt for Watcher agent
+ * Build system prompt for Watcher agent with retrieved knowledge
+ */
+export async function buildWatcherPromptWithKnowledge(
+  userId: string,
+  context: WatcherContext
+): Promise<string> {
+  // Retrieve relevant knowledge from the learning layer
+  const symptoms = detectSymptoms(context);
+  const knowledge = await retrieveKnowledge(userId, {
+    stackId: context.stackId,
+    stackName: context.stackName,
+    symptoms,
+    timeWindowHours: 24
+  });
+
+  const basePrompt = buildWatcherPrompt(context);
+  const knowledgeSection = formatKnowledgeForPrompt(knowledge);
+
+  return `${basePrompt}
+
+# RETRIEVED KNOWLEDGE
+${knowledgeSection}
+
+Remember: This knowledge comes from both standard patterns (library) and your past observations (custom patterns). Use it to inform your decision.
+`;
+}
+
+/**
+ * Build system prompt for Watcher agent (without knowledge retrieval)
+ * Use buildWatcherPromptWithKnowledge for production
  */
 export function buildWatcherPrompt(context: WatcherContext): string {
   const persona = AGENT_PERSONAS.watcher;
@@ -166,7 +196,41 @@ Be conservative - false positives erode user trust. Only alert on sustained anom
 }
 
 /**
- * Build system prompt for Analyst agent
+ * Build system prompt for Analyst agent with retrieved knowledge
+ */
+export async function buildAnalystPromptWithKnowledge(
+  userId: string,
+  context: AnalystContext
+): Promise<string> {
+  // Extract symptoms from incident description
+  const symptoms = [
+    ...context.incident.title.toLowerCase().split(/\s+/),
+    ...context.incident.description.toLowerCase().split(/\s+/)
+  ].filter(word => word.length > 4); // Filter out short words
+
+  // Retrieve relevant knowledge
+  const knowledge = await retrieveKnowledge(userId, {
+    stackId: context.stackConfig.id,
+    stackName: context.stackConfig.name,
+    symptoms: symptoms.slice(0, 10), // Top 10 keywords
+    timeWindowHours: 168 // 7 days
+  });
+
+  const basePrompt = buildAnalystPrompt(context);
+  const knowledgeSection = formatKnowledgeForPrompt(knowledge);
+
+  return `${basePrompt}
+
+# RETRIEVED KNOWLEDGE
+${knowledgeSection}
+
+Use this knowledge to inform your diagnosis. Similar past incidents show what worked before. Baselines help you understand if metrics are truly abnormal.
+`;
+}
+
+/**
+ * Build system prompt for Analyst agent (without knowledge retrieval)
+ * Use buildAnalystPromptWithKnowledge for production
  */
 export function buildAnalystPrompt(context: AnalystContext): string {
   const persona = AGENT_PERSONAS.analyst;
@@ -284,6 +348,44 @@ Investigate this incident and provide a diagnosis with recommended resolution.
 
 Provide actionable, specific steps. Reference past successful resolutions when available. Be honest about uncertainty - escalate to human if confidence is low.
 `;
+}
+
+/**
+ * Detect symptoms from current metrics vs baselines
+ *
+ * Translates metric deviations into searchable symptom keywords
+ */
+function detectSymptoms(context: WatcherContext): string[] {
+  const symptoms: string[] = [];
+
+  for (const [metricName, value] of Object.entries(context.currentMetrics)) {
+    const baseline = context.baselines[metricName];
+    if (!baseline) continue;
+
+    const deviation = (value - baseline.mean) / baseline.stdDev;
+
+    // High deviation symptoms
+    if (Math.abs(deviation) > 2) {
+      if (metricName.includes('cpu')) {
+        symptoms.push('high cpu usage', 'cpu spike');
+      } else if (metricName.includes('memory')) {
+        symptoms.push('memory leak', 'high memory usage');
+      } else if (metricName.includes('disk')) {
+        symptoms.push('disk space exhaustion', 'high disk usage');
+      } else if (metricName.includes('network')) {
+        symptoms.push('network errors', 'connectivity issues');
+      } else if (metricName.includes('response_time')) {
+        symptoms.push('slow response', 'high latency');
+      }
+    }
+
+    // Direction-specific symptoms
+    if (deviation > 3) {
+      symptoms.push('resource exhaustion', 'performance degradation');
+    }
+  }
+
+  return [...new Set(symptoms)]; // Deduplicate
 }
 
 /**
