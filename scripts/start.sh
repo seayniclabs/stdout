@@ -20,5 +20,11 @@ fi
 echo "Running database migrations..."
 node scripts/migrate.js
 
+# Validate license (production only)
+if [ "$NODE_ENV" = "production" ]; then
+  echo "[start] Validating license..."
+  node scripts/validate-license.js
+fi
+
 echo "[start] Starting web server on port ${PORT:-3000}..."
 exec node dist/server/entry.mjs

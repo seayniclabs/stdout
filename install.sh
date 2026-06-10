@@ -10,6 +10,34 @@ PURPLE='\033[0;35m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Installation mode
+OFFLINE_MODE=false
+BUNDLE_PATH="stdout-bundle.tar.gz"
+LICENSE_FILE="stdout.license"
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --offline)
+      OFFLINE_MODE=true
+      shift
+      ;;
+    --bundle)
+      BUNDLE_PATH="$2"
+      shift 2
+      ;;
+    --license)
+      LICENSE_FILE="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [--offline] [--bundle <path>] [--license <path>]"
+      exit 1
+      ;;
+  esac
+done
+
 # Banner
 echo -e "${PURPLE}"
 cat <<'EOF'
@@ -58,6 +86,33 @@ if ! docker info &> /dev/null; then
 fi
 echo -e "${GREEN}✓ Docker daemon running${NC}"
 
+# Check/install Avahi on Linux for mDNS
+if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  if ! command -v avahi-daemon &> /dev/null; then
+    echo -e "${YELLOW}⚠ Avahi not found (needed for stdout.local)${NC}"
+    echo -e "${BLUE}⏳ Installing Avahi...${NC}"
+    if command -v apt-get &> /dev/null; then
+      sudo apt-get update -qq && sudo apt-get install -y avahi-daemon avahi-utils
+    elif command -v yum &> /dev/null; then
+      sudo yum install -y avahi avahi-tools
+    elif command -v pacman &> /dev/null; then
+      sudo pacman -S --noconfirm avahi nss-mdns
+    else
+      echo -e "${YELLOW}⚠ Unknown package manager - please install avahi-daemon manually${NC}"
+    fi
+    # Start Avahi
+    if command -v systemctl &> /dev/null; then
+      sudo systemctl enable avahi-daemon
+      sudo systemctl start avahi-daemon
+    fi
+  fi
+  if systemctl is-active --quiet avahi-daemon; then
+    echo -e "${GREEN}✓ Avahi running (mDNS enabled)${NC}"
+  else
+    echo -e "${YELLOW}⚠ Avahi not running - stdout.local may not work (use IP instead)${NC}"
+  fi
+fi
+
 # Check network connectivity
 if ! curl -s --max-time 5 https://ghcr.io &> /dev/null; then
   echo -e "${YELLOW}⚠ Warning: Unable to reach ghcr.io${NC}"
@@ -77,18 +132,58 @@ fi
 
 echo ""
 
-# Pull setup server image
-echo -e "${BLUE}⏳ Pulling setup server image...${NC}"
-# Note: Update this to ghcr.io/seayniclabs/stdout-setup:latest once package permissions are configured
-if ! docker pull ghcr.io/charlieseay/stdout-setup:latest 2>/dev/null; then
-  echo -e "${YELLOW}⚠ Using local image (GHCR pull failed)${NC}"
-  # For local testing, build from repo
-  if [ -d "stdout-setup" ]; then
-    cd stdout-setup && docker build -t ghcr.io/charlieseay/stdout-setup:latest . && cd ..
+# Offline mode: load images from bundle
+if [ "$OFFLINE_MODE" = true ]; then
+  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo -e "${CYAN}  Offline Installation Mode${NC}"
+  echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+  echo ""
+
+  # Validate bundle exists
+  if [ ! -f "$BUNDLE_PATH" ]; then
+    echo -e "${RED}✗ Error: Bundle not found at $BUNDLE_PATH${NC}"
+    echo ""
+    echo "Download bundle from: https://stdout.io/download"
+    echo "(Requires valid StdOut license)"
+    exit 1
   fi
+
+  # Validate license file exists
+  if [ ! -f "$LICENSE_FILE" ]; then
+    echo -e "${RED}✗ Error: License file not found at $LICENSE_FILE${NC}"
+    echo ""
+    echo "Download your license file from your purchase email"
+    echo "or from: https://stdout.io/licenses"
+    exit 1
+  fi
+
+  echo -e "${GREEN}✓ Found bundle: $BUNDLE_PATH ($(du -h "$BUNDLE_PATH" | cut -f1))${NC}"
+  echo -e "${GREEN}✓ Found license: $LICENSE_FILE${NC}"
+  echo ""
+  echo -e "${BLUE}⏳ Loading Docker images from bundle...${NC}"
+
+  # Load images from bundle
+  if gunzip -c "$BUNDLE_PATH" | docker load; then
+    echo -e "${GREEN}✓ Images loaded successfully${NC}"
+  else
+    echo -e "${RED}✗ Failed to load images from bundle${NC}"
+    exit 1
+  fi
+  echo ""
+else
+  # Online mode: pull from GHCR
+  echo -e "${BLUE}⏳ Pulling setup server image...${NC}"
+  # Note: Update this to ghcr.io/seayniclabs/stdout-setup:latest once package permissions are configured
+  if ! docker pull ghcr.io/charlieseay/stdout-setup:latest 2>/dev/null; then
+    echo -e "${YELLOW}⚠ Using local image (GHCR pull failed)${NC}"
+    # For local testing, build from repo
+    if [ -d "stdout-setup" ]; then
+      cd stdout-setup && docker build -t ghcr.io/charlieseay/stdout-setup:latest . && cd ..
+    fi
+  fi
+  echo -e "${GREEN}✓ Setup server image ready${NC}"
+  echo ""
 fi
-echo -e "${GREEN}✓ Setup server image ready${NC}"
-echo ""
 
 # Prepare workspace
 WORKSPACE_DIR="$(pwd)/stdout-data"
@@ -96,13 +191,25 @@ mkdir -p "$WORKSPACE_DIR"
 
 # Start setup server
 echo -e "${BLUE}🌐 Starting setup server...${NC}"
-docker run -d \
-  --name stdout-setup \
-  --hostname stdout \
-  -p 8888:8888 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "$WORKSPACE_DIR:/workspace" \
-  ghcr.io/charlieseay/stdout-setup:latest
+if [ "$OFFLINE_MODE" = true ]; then
+  docker run -d \
+    --name stdout-setup \
+    --hostname stdout \
+    -p 8888:8888 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$WORKSPACE_DIR:/workspace" \
+    -v "$(pwd)/$LICENSE_FILE:/app/stdout.license:ro" \
+    -e OFFLINE_MODE=true \
+    ghcr.io/charlieseay/stdout-setup:latest
+else
+  docker run -d \
+    --name stdout-setup \
+    --hostname stdout \
+    -p 8888:8888 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "$WORKSPACE_DIR:/workspace" \
+    ghcr.io/charlieseay/stdout-setup:latest
+fi
 
 # Wait for health check
 echo -e "${BLUE}⏳ Waiting for setup server to be ready...${NC}"

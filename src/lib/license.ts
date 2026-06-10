@@ -142,3 +142,56 @@ export function isSignedLicense(key: string): boolean {
   const parts = key.slice(3).split('.');
   return parts.length === 2; // New format has payload.signature
 }
+
+/**
+ * Validates StdOut license on app startup.
+ * Checks database-stored license and validates signature.
+ * Production-only - dev mode bypasses check.
+ */
+export async function validateLicenseAtStartup(): Promise<{ valid: boolean; error?: string }> {
+  // Skip in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('[License] Development mode - skipping validation');
+    return { valid: true };
+  }
+
+  // Check for stored license in database
+  const stored = getStoredLicense();
+  if (!stored) {
+    return {
+      valid: false,
+      error: 'No license activated. Please activate your license in Settings.',
+    };
+  }
+
+  // Validate signature
+  const verification = verifyLicenseSignature(stored.key);
+  if (!verification.valid) {
+    return {
+      valid: false,
+      error: verification.reason || 'License validation failed',
+    };
+  }
+
+  console.log(`[License] Valid license for ${verification.payload?.email}`);
+  return { valid: true };
+}
+
+/**
+ * Prints license validation error and exits process.
+ * Called at app startup if no valid license found.
+ */
+export function exitWithLicenseError(error: string): never {
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.error('  StdOut License Required');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.error('');
+  console.error(`  Error: ${error}`);
+  console.error('');
+  console.error('  Purchase a license at: https://stdout.io/pricing');
+  console.error('  Activate in Settings after installation');
+  console.error('  Support: support@stdout.io');
+  console.error('');
+  console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  process.exit(1);
+}

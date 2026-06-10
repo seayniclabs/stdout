@@ -7,6 +7,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "start": "node dist/server/entry.mjs",
+    "db:migrate": "node scripts/migrate.js",
     "migrate:windlass-service-type": "node scripts/migrate-windlass-service-type.js",
     "astro": "astro",
     "test": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
