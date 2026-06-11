@@ -464,6 +464,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/setup/install-windlass',
     '/app/api/setup/install-observatory',
     '/app/api/test/',
+    '/app/api/satellite/ping', // unauthenticated discovery endpoint — satellites probe this before setup
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
