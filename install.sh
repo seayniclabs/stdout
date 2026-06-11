@@ -114,8 +114,8 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
 fi
 
 # Check network connectivity
-if ! curl -s --max-time 5 https://ghcr.io &> /dev/null; then
-  echo -e "${YELLOW}⚠ Warning: Unable to reach ghcr.io${NC}"
+if ! curl -s --max-time 5 https://hub.docker.com &> /dev/null; then
+  echo -e "${YELLOW}⚠ Warning: Unable to reach Docker Hub${NC}"
   echo "Installation may fail if network connectivity is required."
 fi
 echo -e "${GREEN}✓ Network connectivity OK${NC}"
@@ -173,12 +173,12 @@ if [ "$OFFLINE_MODE" = true ]; then
 else
   # Online mode: pull from GHCR
   echo -e "${BLUE}⏳ Pulling setup server image...${NC}"
-  # Note: Update this to ghcr.io/seayniclabs/stdout-setup:latest once package permissions are configured
-  if ! docker pull ghcr.io/charlieseay/stdout-setup:latest 2>/dev/null; then
+  # Public Docker Hub image — no auth required for customers
+  if ! docker pull charlieseay/stdout-setup:latest 2>/dev/null; then
     echo -e "${YELLOW}⚠ Using local image (GHCR pull failed)${NC}"
     # For local testing, build from repo
     if [ -d "stdout-setup" ]; then
-      cd stdout-setup && docker build -t ghcr.io/charlieseay/stdout-setup:latest . && cd ..
+      cd stdout-setup && docker build -t charlieseay/stdout-setup:latest . && cd ..
     fi
   fi
   echo -e "${GREEN}✓ Setup server image ready${NC}"
@@ -200,7 +200,7 @@ if [ "$OFFLINE_MODE" = true ]; then
     -v "$WORKSPACE_DIR:/workspace" \
     -v "$(pwd)/$LICENSE_FILE:/app/stdout.license:ro" \
     -e OFFLINE_MODE=true \
-    ghcr.io/charlieseay/stdout-setup:latest
+    charlieseay/stdout-setup:latest
 else
   docker run -d \
     --name stdout-setup \
@@ -208,7 +208,7 @@ else
     -p 8888:8888 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$WORKSPACE_DIR:/workspace" \
-    ghcr.io/charlieseay/stdout-setup:latest
+    charlieseay/stdout-setup:latest
 fi
 
 # Wait for health check
