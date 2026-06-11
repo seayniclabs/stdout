@@ -97,6 +97,11 @@ const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMITED_PATHS = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password'];
+// Write-tier endpoints (ticketing sync etc.) — closes the "no rate limit at all" gap.
+// Uses a more permissive window than the auth tier so legitimate sync isn't throttled.
+const WRITE_RATE_LIMITED_PATHS = ['/app/api/ticketing/sync'];
+const WRITE_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const WRITE_RATE_LIMIT_MAX = 20; // 20/min per IP, per API Security Checklist write tier
 
 function getClientIp(request: Request): string {
   return (
@@ -109,7 +114,11 @@ function getClientIp(request: Request): string {
 function checkRateLimit(request: Request, pathname: string): Response | null {
   if (process.env.STDOUT_DISABLE_RATE_LIMIT === '1') return null;
   if (request.method !== 'POST') return null;
-  if (!RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/')) return null;
+  const isAuthPath = RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/');
+  const isWritePath = WRITE_RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/');
+  if (!isAuthPath && !isWritePath) return null;
+  const windowMs = isWritePath ? WRITE_RATE_LIMIT_WINDOW_MS : RATE_LIMIT_WINDOW_MS;
+  const maxReqs = isWritePath ? WRITE_RATE_LIMIT_MAX : RATE_LIMIT_MAX;
 
   const ip = getClientIp(request);
   const key = `${ip}:${pathname}`;
@@ -117,12 +126,12 @@ function checkRateLimit(request: Request, pathname: string): Response | null {
 
   const entry = rateLimitMap.get(key);
   if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    rateLimitMap.set(key, { count: 1, resetAt: now + windowMs });
     return null;
   }
 
   entry.count++;
-  if (entry.count > RATE_LIMIT_MAX) {
+  if (entry.count > maxReqs) {
     const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
     return new Response('Too many attempts. Please try again later.', {
       status: 429,
