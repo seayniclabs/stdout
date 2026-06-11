@@ -424,8 +424,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
     !setupExcludedPaths.some(p => pathname.startsWith(p));
 
   if (shouldCheckInstallation && !installationComplete) {
-    console.log('[Setup] Redirecting to /app/setup - installation incomplete');
-    return context.redirect('/app/setup');
+    // Re-check DB in case installation completed after startup (installer runs after app starts)
+    try {
+      const db = getCentralDb();
+      const result = await db.get(sql`
+        SELECT value FROM system_state WHERE key = 'installation_complete'
+      `) as { value: string } | undefined;
+      installationComplete = result?.value === 'true';
+    } catch {
+      installationComplete = false;
+    }
+    if (!installationComplete) {
+      console.log('[Setup] Redirecting to /app/setup - installation incomplete');
+      return context.redirect('/app/setup');
+    }
   }
 
   // Protect /app/* routes (except login, register, forgot-password)
