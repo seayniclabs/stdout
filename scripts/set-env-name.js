@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-import { db } from '../src/lib/db/central.js';
-import { systemState } from '../src/lib/db/central-schema.js';
+import Database from 'better-sqlite3';
 
 const [envName] = process.argv.slice(2);
 
@@ -10,18 +9,18 @@ if (!envName) {
 }
 
 try {
-  await db.insert(systemState)
-    .values({
-      key: 'environment_name',
-      value: envName,
-      updatedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: systemState.key,
-      set: { value: envName, updatedAt: new Date() },
-    });
+  const db = new Database('/data/central.db');
+
+  db.prepare(`
+    INSERT INTO system_state (key, value, updatedAt)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updatedAt = excluded.updatedAt
+  `).run('environment_name', envName, Date.now());
 
   console.log(`✓ Environment name set: ${envName}`);
+  db.close();
   process.exit(0);
 } catch (error) {
   console.error('Error setting environment name:', error.message);

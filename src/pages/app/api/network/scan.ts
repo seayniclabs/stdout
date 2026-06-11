@@ -4,6 +4,18 @@ import { promisify } from 'node:util';
 
 const execAsync = promisify(exec);
 
+/**
+ * Promise timeout helper - rejects if promise doesn't complete within timeout
+ */
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} timed out after ${timeoutMs}ms`)), timeoutMs)
+    ),
+  ]);
+}
+
 export const POST: APIRoute = async ({ request, locals }) => {
   // Allow during setup - no auth required
   // const session = locals.user;
@@ -30,6 +42,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
         controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
       };
 
+      let streamClosed = false;
+      const MAX_SCAN_TIMEOUT = 120000; // 2 minute absolute timeout for entire scan
+
+      // Ensure complete event fires even if scan hangs
+      const scanTimeoutHandle = setTimeout(() => {
+        if (!streamClosed) {
+          console.error('[scan] Scan exceeded max timeout, forcing completion');
+          try {
+            send({ type: 'log', level: 'error', message: 'Scan timeout: Some targets did not respond in time' });
+            send({ type: 'progress', percent: 100 });
+            send({ type: 'complete', hosts: [], timedOut: true });
+            controller.close();
+            streamClosed = true;
+          } catch (e) {
+            console.error('[scan] Failed to send timeout complete:', e);
+          }
+        }
+      }, MAX_SCAN_TIMEOUT);
+
       try {
         console.log('[scan] Starting scan for:', subnets);
         send({ type: 'log', level: 'info', message: `Scanning ${subnets.length} network(s): ${subnets.join(', ')}` });
@@ -49,12 +80,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const gatewayIP = `${parts[0]}.${parts[1]}.${parts[2]}.1`;
 
           try {
-            // Quick ping test for gateway
-            await execAsync(`ping -c 1 -W 1 ${gatewayIP}`, { timeout: 2000 });
+            // Quick ping test for gateway - per-target 3s timeout
+            await withTimeout(
+              execAsync(`ping -c 1 -W 1 ${gatewayIP}`, { timeout: 2000 }),
+              3000,
+              `Gateway ping ${gatewayIP}`
+            );
             gatewayHosts.push({ ip: gatewayIP, hostname: 'Gateway' });
             send({ type: 'log', level: 'success', message: `Found gateway: ${gatewayIP}` });
-          } catch {
+          } catch (e) {
             // Gateway not reachable, skip
+            console.log('[scan] Gateway', gatewayIP, 'not reachable:', (e as Error).message);
           }
         }
 
@@ -76,7 +112,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           const baseIP = `${parts[0]}.${parts[1]}.${parts[2]}`;
 
           const hosts: Array<{ ip: string; hostname?: string }> = [];
-          const batchSize = 10; // Reduce to 10 concurrent pings to avoid overwhelming container
+          const batchSize = 10; // Scan 10 concurrent pings to avoid overwhelming container
 
           console.log('[scan] Starting ping sweep for', baseIP + '.0/24');
           for (let start = 1; start <= 254; start += batchSize) {
@@ -85,17 +121,38 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
             for (let octet = start; octet <= end; octet++) {
               const ip = `${baseIP}.${octet}`;
-              // Quick ping: 1 packet, 1 second timeout
+              // Quick ping: 1 packet, 1 second timeout, with promise timeout safety net
               pingPromises.push(
-                execAsync(`ping -c 1 -W 1 ${ip}`, { timeout: 2000 })
+                withTimeout(
+                  execAsync(`ping -c 1 -W 1 ${ip}`, { timeout: 2000 }),
+                  3000,
+                  `Ping ${ip}`
+                )
                   .then(() => ({ ip }))
-                  .catch(() => null)
+                  .catch((err) => {
+                    // Log timeout errors for debugging but don't crash
+                    if (err instanceof Error && err.message.includes('timed out')) {
+                      // Expected timeout, skip this host
+                    }
+                    return null;
+                  })
               );
             }
 
-            const results = await Promise.all(pingPromises);
-            for (const result of results) {
-              if (result) hosts.push(result);
+            // Wait for this batch with overall timeout protection
+            try {
+              const results = await withTimeout(
+                Promise.all(pingPromises),
+                batchSize * 3500, // Allow up to 3.5s per IP in batch
+                `Batch ${Math.floor(start / batchSize)} for ${subnet}`
+              );
+              for (const result of results) {
+                if (result) hosts.push(result);
+              }
+            } catch (batchErr) {
+              console.error('[scan] Batch timeout for', subnet, ':', batchErr);
+              send({ type: 'log', level: 'info', message: `Batch timeout at ${baseIP}.${start}, skipping...` });
+              // Continue to next batch instead of failing
             }
 
             const progress = progressBase + 5 + Math.floor(((start - 1) / 254) * 45);
@@ -105,7 +162,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
             if (start % 50 === 1 || start === 1) {
               const pct = Math.floor(((start - 1) / 254) * 100);
               console.log('[scan] Progress:', pct + '% complete for', subnet);
-              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${pct}% complete` });
+              send({ type: 'log', level: 'info', message: `Scanning ${subnet}: ${pct}% complete (${hosts.length} found so far)` });
             }
           }
 
@@ -119,9 +176,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
           return hosts;
         });
 
-        // Wait for all subnet scans to complete
-        const hostsArrays = await Promise.all(scanPromises);
-        allHosts = hostsArrays.flat();
+        // Wait for all subnet scans to complete with timeout
+        try {
+          const hostsArrays = await withTimeout(
+            Promise.all(scanPromises),
+            110000, // 110 second timeout for all scans (leaves 10s for cleanup)
+            'All subnet scans'
+          );
+          allHosts = hostsArrays.flat();
+        } catch (scanErr) {
+          console.error('[scan] Subnet scan timeout, using partial results:', scanErr);
+          send({ type: 'log', level: 'error', message: 'Scan timeout: returning partial results' });
+          // Continue with whatever hosts we've found so far
+        }
 
         send({ type: 'progress', percent: 60 });
         send({ type: 'log', level: 'info', message: `Total: ${allHosts.length} host(s) found across all networks` });
@@ -146,12 +213,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // Small delay to ensure event is received before closing stream
         await new Promise(resolve => setTimeout(resolve, 100));
         controller.close();
-        console.log('[scan] Stream closed');
+        streamClosed = true;
+        console.log('[scan] Stream closed normally');
 
       } catch (error: any) {
         console.error('[scan] Error during scan:', error);
-        send({ type: 'error', message: error.message });
-        controller.close();
+        if (!streamClosed) {
+          send({ type: 'log', level: 'error', message: `Scan error: ${error.message}` });
+          send({ type: 'progress', percent: 100 });
+          send({ type: 'complete', hosts: [], error: error.message });
+          controller.close();
+          streamClosed = true;
+        }
+      } finally {
+        clearTimeout(scanTimeoutHandle);
+        if (!streamClosed) {
+          try {
+            controller.close();
+          } catch (e) {
+            // Already closed
+          }
+        }
       }
     }
   });
@@ -161,6 +243,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache',
       'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
     }
   });
 };

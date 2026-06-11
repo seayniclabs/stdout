@@ -1,0 +1,62 @@
+---
+/**
+ * ErrorPanel Component
+ *
+ * Displays user-friendly error messages with actionable recovery steps.
+ */
+
+interface Props {
+  error: {
+    code: string;
+    severity: 'critical' | 'error' | 'warning' | 'info';
+    message: string;
+    actions: string[];
+    support: string;
+  };
+}
+
+const { error } = Astro.props;
+
+const severityStyles = {
+  critical: 'bg-red-900 border-red-500 text-red-100',
+  error: 'bg-red-50 border-red-400 text-red-900 dark:bg-red-950 dark:text-red-100',
+  warning: 'bg-yellow-50 border-yellow-400 text-yellow-900 dark:bg-yellow-950 dark:text-yellow-100',
+  info: 'bg-blue-50 border-blue-400 text-blue-900 dark:bg-blue-950 dark:text-blue-100',
+};
+
+const severityIcons = {
+  critical: '🚨',
+  error: '❌',
+  warning: '⚠️',
+  info: 'ℹ️',
+};
+---
+
+<div class={`error-panel border-l-4 p-6 rounded-r-lg shadow-md ${severityStyles[error.severity]}`}>
+  <div class="flex items-start gap-4">
+    <span class="text-3xl flex-shrink-0">{severityIcons[error.severity]}</span>
+    <div class="flex-1 min-w-0">
+      <h3 class="font-bold text-lg mb-2">Error {error.code}</h3>
+      <p class="mb-4 leading-relaxed">{error.message}</p>
+
+      {error.actions.length > 0 && (
+        <div class="mb-4">
+          <h4 class="font-semibold mb-2 text-sm uppercase tracking-wide opacity-80">What to try:</h4>
+          <ol class="list-decimal list-inside space-y-2 pl-1">
+            {error.actions.map(action => (
+              <li class="leading-relaxed">{action}</li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      <p class="text-sm opacity-80 border-t pt-3 mt-3">{error.support}</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .error-panel {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+</style>

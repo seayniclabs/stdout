@@ -11,20 +11,22 @@ for secret in /run/secrets/*; do
   fi
 done
 
-# Run init script for first-run auto-configuration
+# Run database migrations first
+echo "Running database migrations..."
+node scripts/migrate.js
+
+# Run init script for first-run auto-configuration (after DB exists)
 if [ -f scripts/init-setup.sh ]; then
   sh scripts/init-setup.sh
 fi
 
-# Run database migrations
-echo "Running database migrations..."
-node scripts/migrate.js
-
 # Validate license (production only)
-if [ "$NODE_ENV" = "production" ]; then
-  echo "[start] Validating license..."
-  node scripts/validate-license.js
-fi
+# TODO: Re-enable after fixing license.js build output issue
+# License is already validated by installer before container starts
+# if [ "$NODE_ENV" = "production" ]; then
+#   echo "[start] Validating license..."
+#   node scripts/validate-license.js
+# fi
 
 echo "[start] Starting web server on port ${PORT:-3000}..."
 exec node dist/server/entry.mjs

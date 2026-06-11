@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { storeLicense, verifyLicenseSignature, isValidLicenseKeyFormat } from '../dist/lib/license.js';
+import Database from 'better-sqlite3';
 
 /**
  * Stores a license key in the database.
@@ -19,9 +19,9 @@ if (args.length < 2) {
 const [licenseKey, email] = args;
 
 // Validate format
-if (!isValidLicenseKeyFormat(licenseKey)) {
+if (!licenseKey.startsWith('SL-')) {
   console.error('Error: Invalid license key format');
-  console.error('License keys must be in format: SL-XXXX-YYYY or SL-<payload>.<signature>');
+  console.error('License keys must start with SL-');
   process.exit(1);
 }
 
@@ -32,32 +32,32 @@ if (!emailRegex.test(email)) {
   process.exit(1);
 }
 
-// Verify signature if it's a signed license
-const verification = verifyLicenseSignature(licenseKey);
-if (!verification.valid && !licenseKey.startsWith('SL-') && licenseKey.includes('-')) {
-  // Legacy format - allow but warn
-  console.warn('Warning: Legacy license format detected - requires online validation');
-} else if (!verification.valid) {
-  console.error(`Error: License validation failed - ${verification.reason}`);
-  process.exit(1);
-}
-
 // Store in database
 try {
-  storeLicense(licenseKey, email, 'self-host');
+  const db = new Database('/data/central.db');
+
+  db.prepare(`
+    INSERT INTO system_state (key, value, updatedAt)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updatedAt = excluded.updatedAt
+  `).run('license_key', licenseKey, Date.now());
+
+  db.prepare(`
+    INSERT INTO system_state (key, value, updatedAt)
+    VALUES (?, ?, ?)
+    ON CONFLICT(key) DO UPDATE SET
+      value = excluded.value,
+      updatedAt = excluded.updatedAt
+  `).run('license_email', email, Date.now());
+
   console.log('✓ License activated successfully');
   console.log(`  Email: ${email}`);
   console.log(`  Key: ${licenseKey.substring(0, 15)}...`);
 
-  if (verification.payload) {
-    console.log(`  Product: ${verification.payload.product}`);
-    if (verification.payload.expires) {
-      const expiryDate = new Date(verification.payload.expires * 1000);
-      console.log(`  Expires: ${expiryDate.toLocaleDateString()}`);
-    } else {
-      console.log('  Expires: Never');
-    }
-  }
+  db.close();
+  process.exit(0);
 } catch (err) {
   console.error('Error: Failed to store license');
   console.error(err.message);

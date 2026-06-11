@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { db } from '../src/lib/db/central.js';
-import { users } from '../src/lib/db/central-schema.js';
-import bcrypt from 'bcrypt';
-import { nanoid } from 'nanoid';
+
+// Standalone admin creation script - no TypeScript dependencies
+// Uses only built-in Node modules and installed packages
+
+import Database from 'better-sqlite3';
 
 const [email, password] = process.argv.slice(2);
 
@@ -16,22 +17,48 @@ if (password.length < 8) {
   process.exit(1);
 }
 
-try {
-  const hashedPassword = await bcrypt.hash(password, 10);
-
-  await db.insert(users).values({
-    id: nanoid(),
-    email,
-    password: hashedPassword,
-    name: 'Admin',
-    role: 'admin',
-    emailVerified: true,
-    createdAt: new Date(),
-  });
-
-  console.log(`✓ Admin user created: ${email}`);
-  process.exit(0);
-} catch (error) {
-  console.error('Error creating admin user:', error.message);
-  process.exit(1);
+async function hashPassword(password) {
+  // Use dynamic import for bcrypt to avoid module resolution issues
+  const bcrypt = await import('bcrypt');
+  return bcrypt.default.hash(password, 10);
 }
+
+async function generateId() {
+  // Use dynamic import for nanoid
+  const { nanoid } = await import('nanoid');
+  return nanoid();
+}
+
+async function createAdmin() {
+  try {
+    const hashedPassword = await hashPassword(password);
+    const userId = await generateId();
+
+    // Open database directly
+    const db = new Database('/data/central.db');
+
+    // Insert admin user
+    db.prepare(`
+      INSERT INTO users (id, email, password, displayName, role, isActive, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      email,
+      hashedPassword,
+      email.split('@')[0], // Use email prefix as display name
+      'admin',
+      1,
+      Date.now(),
+      Date.now()
+    );
+
+    console.log(`✓ Admin user created: ${email}`);
+    db.close();
+    process.exit(0);
+  } catch (error) {
+    console.error('Error creating admin user:', error.message);
+    process.exit(1);
+  }
+}
+
+createAdmin();

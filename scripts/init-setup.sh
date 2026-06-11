@@ -12,13 +12,21 @@ mkdir -p /data/backups
 echo "[init] Data directories ensured"
 
 # Check if this is first run (no setup_progress table or no admin user)
-DB_PATH="${DB_PATH:-/data/stdout.db}"
+DB_PATH="${DATABASE_PATH:-${DB_PATH:-/data/central.db}}"
 
 if [ ! -f "$DB_PATH" ]; then
   echo "[init] First run detected - database does not exist yet"
   echo "[init] Setup wizard will initialize on first web access"
 else
   echo "[init] Database exists at $DB_PATH"
+
+  # Check if we need to create an admin user from env vars
+  USER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users" 2>/dev/null || echo "0")
+
+  if [ "$USER_COUNT" = "0" ] && [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
+    echo "[init] No users found - creating admin user from environment variables..."
+    node /app/scripts/create-admin-from-env.js
+  fi
 
   # Check if setup is complete
   SETUP_COMPLETE=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM setup_progress WHERE step_number = 8 AND completed = 1" 2>/dev/null || echo "0")
