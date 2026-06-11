@@ -498,13 +498,19 @@ db.exec(`
 
   -- FTS5 search indexes
   CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
-    title, description, content=incidents, content_rowid=rowid
+    title, description, tags,
+    content='incidents',
+    content_rowid='rowid'
   );
   CREATE VIRTUAL TABLE IF NOT EXISTS resolutions_fts USING fts5(
-    content, content=resolutions, content_rowid=rowid
+    content,
+    content='resolutions',
+    content_rowid='rowid'
   );
   CREATE VIRTUAL TABLE IF NOT EXISTS docs_fts USING fts5(
-    title, content, content=docs, content_rowid=rowid
+    title, content, tags,
+    content='docs',
+    content_rowid='rowid'
   );
 `);
 
