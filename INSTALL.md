@@ -13,42 +13,59 @@ StdOut requires a valid license key for installation. Purchase at [https://stdou
 **Best for:** Systems with internet access
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/seayniclabs/stdout/main/install.sh | bash
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
+Then open `http://<your-server-ip>:8888` in your browser.
+
 This automatically:
-- Checks prerequisites (Docker, ports, network)
-- Pulls the setup server image
-- Starts the visual installer at `http://stdout.local:8888`
-- Prompts for your license key during setup
+- Pulls the `charlieseay/stdout:latest` and `charlieseay/stdout-setup:latest` images from Docker Hub
+- Starts the visual installer at `http://<your-server-ip>:8888`
+- Prompts for your license key during setup — **installation will not proceed without a valid key**
 - Validates license and installs StdOut
 
-**You will need:** Your license key from your purchase email (format: `SL-XXXX-XXXX-...`)
+**You will need:** Your license key from your purchase email (format: `SL-XXXX-...`)
 
 ### 2. Offline Install
 
 **Best for:** Air-gapped systems, slow connections, large deployments
 
+Pre-pull the images on a machine with internet access, transfer them, then run:
+
 ```bash
-# Download bundle and license from your account dashboard
-# Then run:
-./install.sh --offline --bundle stdout-bundle.tar.gz --license stdout.license
+# On a machine with internet access
+docker pull charlieseay/stdout:latest
+docker pull charlieseay/stdout-setup:latest
+docker save charlieseay/stdout:latest -o stdout.tar
+docker save charlieseay/stdout-setup:latest -o stdout-setup.tar
+
+# Transfer stdout.tar and stdout-setup.tar to the air-gapped server, then:
+docker load -i stdout-setup.tar
+docker load -i stdout.tar
+
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 **You will need:**
-- `stdout-bundle.tar.gz` — Download from [https://stdout.io/download](https://stdout.io/download)
-- `stdout.license` — Download from your purchase email or account dashboard
+- A valid license key — **the installer validates your key before proceeding**
 
 This method:
-- Loads Docker images from local bundle (no internet required)
-- Uses pre-signed offline license file
-- Completes installation entirely offline
+- Uses locally loaded images (no internet required after transfer)
+- License validation is performed locally using the embedded key signature
 
 ### 3. Manual Install (Advanced)
 
 **Best for:** Custom environments, CI/CD pipelines, automation
 
 See [Manual Installation](#manual-installation-advanced) section below.
+
+> **License required for all paths.** The installer validates your license key before creating any containers. Without a valid key, installation will not proceed.
 
 ## What Happens Next
 
@@ -145,8 +162,8 @@ The installer uses mDNS (Bonjour) to broadcast `stdout.local` on your local netw
 - **Docker Compose** — version 2.0+ (plugin or standalone)
   - Plugin: `docker compose` (recommended, built into modern Docker)
   - Standalone: `docker-compose` command (legacy, still supported)
-- **Network access** — to pull images from `ghcr.io/seayniclabs/*`
-  - If offline: pre-load images via `docker load` (see [Air-Gapped Install](#air-gapped-installation))
+- **Network access** — to pull images from Docker Hub (`charlieseay/stdout`, `charlieseay/stdout-setup`)
+  - If offline: pre-load images via `docker load` (see [Offline Install](#2-offline-install))
 - **Available ports:**
   - `8888` — Setup server (temporary, removed after installation)
   - `8112` — StdOut web interface
@@ -169,7 +186,7 @@ The StdOut Docker image must include these scripts for the installer to complete
 - `scripts/set-env-name.js` — Set environment name (args: name)
 - `scripts/mark-installation-complete.js` — Mark installation as complete
 
-**Developer Note:** If building from source, ensure these scripts exist before pushing the image to GHCR.
+**Developer Note:** If building from source, ensure these scripts exist before pushing the image to Docker Hub.
 
 ## License Requirements
 
@@ -283,24 +300,20 @@ docker logs stdout-setup
 Clean up and retry:
 ```bash
 docker stop stdout-setup && docker rm stdout-setup
-./install.sh
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 ### "Images failed to pull"
 
 Check network connectivity:
 ```bash
-curl -I https://ghcr.io
+curl -I https://registry-1.docker.io
 ```
 
-If offline or behind firewall, manually load images:
-```bash
-# Download tarball from GitHub releases
-docker load < stdout-v1.0.0.tar.gz
-docker load < windlass-v1.0.0.tar.gz
-docker load < stdout-setup-v1.0.0.tar.gz
-./install.sh
-```
+If offline or behind firewall, pre-load images from Docker Hub on a connected machine and transfer them (see [Offline Install](#2-offline-install)).
 
 ### "Installation stuck at step X"
 
@@ -312,19 +325,17 @@ The setup server streams logs to your terminal. If it hangs:
 
 ## Manual Installation (Advanced)
 
-If you prefer manual control:
+If you prefer manual control (no installer UI):
+
+> **License required.** Run `scripts/mark-installation-complete.js` only after your license key has been validated. Without this step, StdOut will redirect every request to `/app/setup`.
 
 ```bash
-# 1. Clone repo
-git clone https://github.com/seayniclabs/stdout
-cd stdout
-
-# 2. Create docker-compose.yml
+# 1. Create docker-compose.yml
 cat > docker-compose.yml <<EOF
 version: '3.8'
 services:
   stdout:
-    image: ghcr.io/charlieseay/stdout:latest
+    image: charlieseay/stdout:latest
     container_name: stdout
     hostname: stdout
     ports:
@@ -344,7 +355,7 @@ services:
     restart: unless-stopped
 
   windlass:
-    image: ghcr.io/charlieseay/windlass:latest
+    image: charlieseay/windlass:latest
     container_name: windlass
     ports:
       - "8116:8116"
@@ -413,7 +424,10 @@ docker compose version
 sudo hostnamectl set-hostname stdout
 
 # Now run StdOut installer
-curl -fsSL https://raw.githubusercontent.com/seayniclabs/stdout/main/install.sh | bash
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 ### RHEL/CentOS/Rocky Linux (8+, 9+)
@@ -444,7 +458,10 @@ docker compose version
 sudo hostnamectl set-hostname stdout
 
 # Now run StdOut installer
-curl -fsSL https://raw.githubusercontent.com/seayniclabs/stdout/main/install.sh | bash
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 ### macOS (Ventura+, Sonoma+, Sequoia+)
@@ -468,7 +485,10 @@ docker compose version
 # Note: macOS has built-in Bonjour, so stdout.local works automatically
 
 # Now run StdOut installer
-curl -fsSL https://raw.githubusercontent.com/seayniclabs/stdout/main/install.sh | bash
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 ### Raspberry Pi 4/5 (64-bit OS Required)
@@ -516,7 +536,10 @@ docker --version
 # sudo systemctl start docker
 
 # Now run StdOut installer
-curl -fsSL https://raw.githubusercontent.com/seayniclabs/stdout/main/install.sh | bash
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 **Raspberry Pi Performance Tips:**
@@ -554,27 +577,28 @@ If all checks pass, you're ready to install StdOut!
 
 ## Air-Gapped Installation
 
-If your server has no internet access, you can pre-load the Docker images:
+If your server has no internet access, pre-load the Docker images on a connected machine:
 
 ```bash
-# On a machine with internet, pull and save images
-docker pull ghcr.io/seayniclabs/stdout:latest
-docker pull ghcr.io/seayniclabs/windlass:latest
-docker pull ghcr.io/charlieseay/stdout-setup:latest
+# On a machine with internet access
+docker pull charlieseay/stdout:latest
+docker pull charlieseay/windlass:latest
+docker pull charlieseay/stdout-setup:latest
 
-docker save ghcr.io/seayniclabs/stdout:latest -o stdout.tar
-docker save ghcr.io/seayniclabs/windlass:latest -o windlass.tar
-docker save ghcr.io/charlieseay/stdout-setup:latest -o stdout-setup.tar
+docker save charlieseay/stdout:latest -o stdout.tar
+docker save charlieseay/windlass:latest -o windlass.tar
+docker save charlieseay/stdout-setup:latest -o stdout-setup.tar
 
-# Transfer .tar files to air-gapped server
-
-# On air-gapped server, load images
+# Transfer the .tar files to the air-gapped server, then:
+docker load -i stdout-setup.tar
 docker load -i stdout.tar
 docker load -i windlass.tar
-docker load -i stdout-setup.tar
 
-# Now run the installer (it will use local images)
-./install.sh
+# Start the installer — it will use the locally loaded images
+docker run -d --name stdout-setup \
+  -p 8888:8888 \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  charlieseay/stdout-setup:latest
 ```
 
 ---
@@ -591,9 +615,9 @@ docker compose down
 docker volume rm stdout-data
 
 # Remove images
-docker rmi ghcr.io/charlieseay/stdout:latest
-docker rmi ghcr.io/charlieseay/windlass:latest
-docker rmi ghcr.io/charlieseay/stdout-setup:latest
+docker rmi charlieseay/stdout:latest
+docker rmi charlieseay/windlass:latest
+docker rmi charlieseay/stdout-setup:latest
 ```
 
 ## Upgrade
