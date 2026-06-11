@@ -1,8 +1,9 @@
 import type { ConnectorConfig, TicketingConnector } from './TicketingConnector';
 import { BuiltInConnector } from '../connectors/BuiltInConnector';
+import { GitHubConnector } from '../connectors/GitHubConnector';
+import { WebhookConnector } from '../connectors/WebhookConnector';
 // Import other connectors as they are implemented
 // import { LinearConnector } from '../connectors/LinearConnector';
-// import { GitHubConnector } from '../connectors/GitHubConnector';
 // import { JiraConnector } from '../connectors/JiraConnector';
 // import { ServiceNowConnector } from '../connectors/ServiceNowConnector';
 
@@ -16,8 +17,9 @@ export class ConnectorRegistry {
    */
   static initialize() {
     this.register('built-in', BuiltInConnector);
+    this.register('github', GitHubConnector);
+    this.register('webhook', WebhookConnector);
     // this.register('linear', LinearConnector);
-    // this.register('github', GitHubConnector);
     // this.register('jira', JiraConnector);
     // this.register('servicenow', ServiceNowConnector);
   }

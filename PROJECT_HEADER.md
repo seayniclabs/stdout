@@ -20,9 +20,9 @@ Three optional components:
 
 ### Errors & Risks
 [HIGH] Windlass Docker socket mounted as rw — privilege escalation if untrusted containers run; no isolation between StdOut + container orchestration
-[HIGH] Observatory Ollama dependency (16GB+ RAM) — steep system requirement; no fallback if Ollama unavailable; memory OOM silent failure
+[RESOLVED] Observatory Ollama dependency (16GB+ RAM) — added graceful degradation mode, fallback to text-only heuristic anomaly detection
 [MED] Rate limiting implementation unclear — tests toggle STDOUT_DISABLE_RATE_LIMIT=1, but production fallback (when limit breached) not documented; possible silent accepts
-[MED] Ticketing framework wired but implementations TBD — Jira/GitHub/Zendesk connectors stubbed; auto-ticket creation broken until wired
+[RESOLVED] Ticketing framework wired but implementations TBD — GitHub Issues and Webhook connectors implemented; Jira deferred (low-effort only if connector adds complexity)
 [LOW] Test encryption key hardcoded (STDOUT_ENCRYPTION_KEY=test_key_for_playwright) — Playwright tests use fake key; production key different; no integration test with real key
 
 ### Security
@@ -32,9 +32,11 @@ Three optional components:
 [FAIL] TLS for Windlass ↔ StdOut communication missing — internal HTTP, no encryption between components if deployed on public network
 
 ### Improvements
-Add Ollama availability check on startup; fall back to text-only mode if unavailable (degrade gracefully)
+[✓ DONE] Add Ollama availability check on startup; fall back to text-only mode if unavailable (degrade gracefully)
+[✓ DONE] Implement GitHub Issues connector — create/update/sync incidents as GH issues, PAT + installation token support
+[✓ DONE] Implement Webhook connector — generic POST endpoint for any external system (Zendesk/Jira/Slack/custom)
+[DEFERRED] Wire Jira connector — Cloud REST v3, basic-auth email+token (marked as follow-up if interface doesn't balloon complexity)
 Document + enforce rate limit behavior — clarify silent accept vs circuit breaker vs error response
-Wire Jira/GitHub/Zendesk connectors; auto-create tickets from incidents (Phase 2)
 Add TLS between Windlass ↔ StdOut (mTLS with self-signed certs); document Docker socket security requirements
 Implement incident export to PDF/JSON with customer audit trail
 
@@ -48,9 +50,9 @@ Windlass cron evaluation UTC-only (not local time) — users report confusion; c
 Docker API calls via Windlass scale linear with container count
 
 ### Verdict
-**Grade: B-** — Self-hosted incident companion solid but incomplete. Observatory/Windlass wired but risky (Docker socket, Ollama memory). Rate limiting untested. Ticketing framework stubbed. Fix: Ollama fallback, enforce TLS, wire ticketing integrations, document rate-limit behavior.
+**Grade: B+** — Self-hosted incident companion solid with ticketing integrations and Observatory degradation mode. Ollama now optional with fallback to heuristic anomaly detection. GitHub Issues + Webhook connectors implemented and tested. Rate limiting + TLS still need work, but core blocking issues resolved.
 
-**Last Updated:** 2026-06-10
+**Last Updated:** 2026-06-10 (Assessment Complete & Implementation Done)
 
 ## Last Decisions
 

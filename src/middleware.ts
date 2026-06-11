@@ -9,6 +9,12 @@ import { scheduleCveScanner } from './lib/scanner-cve';
 import { scheduleDockerHubScanner } from './lib/scanner-docker-hub';
 import { scheduleShodanScanner } from './lib/scanner-shodan';
 import { getStoredLicense } from './lib/license';
+import { initializeDegradationMode } from './lib/observatory/degradation-mode';
+
+// Initialize Observatory degradation mode check on startup
+initializeDegradationMode().catch(err =>
+  console.error('[middleware] Failed to initialize degradation mode:', err)
+);
 
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];
