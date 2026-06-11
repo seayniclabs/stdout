@@ -36,21 +36,14 @@ if (!emailRegex.test(email)) {
 try {
   const db = new Database('/data/central.db');
 
+  const now = Date.now();
   db.prepare(`
-    INSERT INTO system_state (key, value, updatedAt)
-    VALUES (?, ?, ?)
+    INSERT INTO license (key, email, edition, activated_at)
+    VALUES (?, ?, 'self-host', ?)
     ON CONFLICT(key) DO UPDATE SET
-      value = excluded.value,
-      updatedAt = excluded.updatedAt
-  `).run('license_key', licenseKey, Date.now());
-
-  db.prepare(`
-    INSERT INTO system_state (key, value, updatedAt)
-    VALUES (?, ?, ?)
-    ON CONFLICT(key) DO UPDATE SET
-      value = excluded.value,
-      updatedAt = excluded.updatedAt
-  `).run('license_email', email, Date.now());
+      email = excluded.email,
+      activated_at = excluded.activated_at
+  `).run(licenseKey, email, now);
 
   console.log('✓ License activated successfully');
   console.log(`  Email: ${email}`);

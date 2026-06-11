@@ -3,7 +3,7 @@
  * Offline-first: network failure never locks the app.
  */
 
-import { getLicenseKeyForUpdateCheck, touchLicenseCheckedAt } from './license';
+import { getLicenseKeyForUpdateCheck, touchLicenseCheckedAt, verifyLicenseSignature, isSignedLicense } from './license';
 
 const CURRENT_VERSION = import.meta.env.STDOUT_VERSION || process.env.STDOUT_VERSION || '1.1.0';
 const STORE_UPDATE_URL =
@@ -75,6 +75,30 @@ export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
     clearTimeout(timeout);
 
     if (res.status === 401) {
+      // Before showing an error, check if the local signature is valid.
+      // This supports offline installs and air-gapped environments where the
+      // store can't be reached or the key isn't registered there yet.
+      if (isSignedLicense(licenseKey)) {
+        const localCheck = verifyLicenseSignature(licenseKey);
+        if (localCheck.valid) {
+          licenseNotice = null;
+          const localValid: UpdateCheckResult = {
+            hasUpdate: false,
+            currentVersion: CURRENT_VERSION,
+            latestVersion: CURRENT_VERSION,
+            releaseUrl: STORE_PRODUCT_URL,
+            licenseValid: true,
+            subscriptionActive: false,
+            entitledVersion: null,
+            lifetime: false,
+            fileHash: null,
+          };
+          cachedResult = localValid;
+          cachedAt = Date.now();
+          return localValid;
+        }
+      }
+
       let errMsg = 'Invalid or expired license key.';
       try {
         const err = await res.json() as { error?: string; reason?: string };

@@ -42,7 +42,7 @@ async function createAdmin() {
     const db = new Database('/data/central.db');
 
     db.prepare(`
-      INSERT INTO users (id, email, password, displayName, role, isActive, createdAt, updatedAt)
+      INSERT INTO users (id, email, password_hash, display_name, role, email_verified, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
