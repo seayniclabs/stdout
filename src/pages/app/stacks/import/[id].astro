@@ -5,6 +5,7 @@ import { getTenantDb, tenantSchema } from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../../middleware';
+import { emit } from '../../../../lib/events';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -103,6 +104,7 @@ if (Astro.request.method === 'POST') {
           id: targetStackId, userId: user.id, name: stackName,
           description: markdown, createdAt: now, updatedAt: now,
         }).run();
+        emit({ type: 'stack.created', userId: user.id, stackId: targetStackId, name: stackName, source: 'import' });
       }
 
       // Mark import as confirmed

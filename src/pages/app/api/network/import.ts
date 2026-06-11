@@ -4,6 +4,7 @@ import { getTenantDb, getCentralDb, centralSchema } from '../../../../lib/db';
 import { discoveredHosts, discoveredServices, stacks } from '../../../../lib/db/tenant-schema';
 import { eq, and } from 'drizzle-orm';
 import { getSetupProgress, getSetupConfig, SetupStep } from '../../../../lib/setup';
+import { emit } from '../../../../lib/events';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const session = locals.user;
@@ -65,6 +66,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
 
           console.log('[network/import] Default stack created:', defaultStackId);
+
+          emit({ type: 'stack.created', userId: session.id, stackId: defaultStackId, name: stackName, source: 'auto' });
         }
       }
     } catch (stackError) {
@@ -116,6 +119,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           updatedAt: now,
         });
         importedHosts++;
+
+        emit({ type: 'host.discovered', userId: session.id, hostId, ip, hostname: hostname || null, stackId: defaultStackId });
       }
 
       // Import services

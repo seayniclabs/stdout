@@ -7,6 +7,7 @@
 
 import { fireAlert } from './alert-router';
 import { getCentralDb, centralSchema } from './db';
+import { emit } from './events';
 
 interface HeartbeatTarget {
   name: string;
@@ -157,6 +158,14 @@ async function checkStaleSatellites(): Promise<void> {
       title: `Satellite node ${agent.name} stopped reporting`,
       detail: `No report received in ${Math.round((now - agent.last_seen) / 60)} minutes.`,
     }).catch(err => console.error(`[heartbeat] stale satellite alert failed for ${agent.id}:`, err));
+
+    emit({
+      type: 'satellite.stale',
+      userId: agent.user_id,
+      agentId: agent.id,
+      name: agent.name,
+      silentMinutes: Math.round((now - agent.last_seen) / 60),
+    });
   }
 }
 

@@ -10,6 +10,7 @@ set -euo pipefail
 STDOUT_URL="${STDOUT_URL:-}"
 STDOUT_TOKEN="${STDOUT_TOKEN:-}"
 STDOUT_NODE_ID="${STDOUT_NODE_ID:-}"
+STDOUT_AUTO_DISCOVER="${STDOUT_AUTO_DISCOVER:-true}"
 INSTALL_DIR="/usr/local/bin"
 CONFIG_DIR="/etc/stdout-satellite"
 SERVICE_USER="stdout-satellite"
@@ -18,10 +19,13 @@ GITHUB_REPO="charlieseay/stdout-satellite"
 VERSION="${STDOUT_SATELLITE_VERSION:-latest}"
 
 # ── Validation ─────────────────────────────────────────────────────────────────
-if [[ -z "$STDOUT_URL" || -z "$STDOUT_TOKEN" || -z "$STDOUT_NODE_ID" ]]; then
-  echo "ERROR: STDOUT_URL, STDOUT_TOKEN, and STDOUT_NODE_ID must be set"
+if [[ -z "$STDOUT_TOKEN" || -z "$STDOUT_NODE_ID" ]]; then
+  echo "ERROR: STDOUT_TOKEN and STDOUT_NODE_ID must be set"
   echo ""
   echo "Get these from StdOut → Satellites → Add Node"
+  echo ""
+  echo "STDOUT_URL is optional — if omitted, the satellite will auto-discover"
+  echo "StdOut on your local network."
   exit 1
 fi
 
@@ -82,12 +86,22 @@ chown root:"$SERVICE_USER" "$CONFIG_DIR"
 
 NODE_NAME="${STDOUT_NODE_NAME:-$(hostname -s)}"
 
+# Build TOML — auto_discover = true when no URL given, false when URL is explicit
+if [[ -z "$STDOUT_URL" ]]; then
+  COLLECTOR_LINE=""
+  AUTO_DISCOVER_LINE="auto_discover = true"
+else
+  COLLECTOR_LINE="collector_url   = \"${STDOUT_URL}\""
+  AUTO_DISCOVER_LINE="auto_discover = false"
+fi
+
 cat > "${CONFIG_DIR}/config.toml" <<TOML
-collector_url   = "${STDOUT_URL}"
+${COLLECTOR_LINE}
 api_token       = "${STDOUT_TOKEN}"
 node_name       = "${NODE_NAME}"
 node_tags       = []
 report_interval = 60
+${AUTO_DISCOVER_LINE}
 
 [checks]
 system    = true

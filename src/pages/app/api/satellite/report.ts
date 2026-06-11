@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid';
 import { getCentralDb } from '../../../../lib/db';
 import { fireAlert } from '../../../../lib/alert-router';
 import { sql } from 'drizzle-orm';
+import { emit } from '../../../../lib/events';
 
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
@@ -185,6 +186,13 @@ export const POST: APIRoute = async ({ request }) => {
     agent.alert_state,
     newAlertState,
   );
+
+  emit({
+    type: 'satellite.report',
+    userId: agent.user_id,
+    agentId: agent.id,
+    alertState: newAlertState as 'ok' | 'warning' | 'critical' | 'stale',
+  });
 
   // Prune reports older than 7 days (async, don't block response)
   const sevenDaysAgo = now - 7 * 24 * 60 * 60;

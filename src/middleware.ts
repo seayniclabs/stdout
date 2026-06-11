@@ -10,11 +10,19 @@ import { scheduleDockerHubScanner } from './lib/scanner-docker-hub';
 import { scheduleShodanScanner } from './lib/scanner-shodan';
 import { getStoredLicense } from './lib/license';
 import { initializeDegradationMode } from './lib/observatory/degradation-mode';
+import { initAutoWiring } from './lib/auto-wire';
+import { startWatcher } from './lib/observatory/watcher';
 
 // Initialize Observatory degradation mode check on startup
 initializeDegradationMode().catch(err =>
   console.error('[middleware] Failed to initialize degradation mode:', err)
 );
+
+// Initialize event bus auto-wiring (cross-links entities when events fire)
+initAutoWiring();
+
+// Start the Observatory Watcher loop (polls stacks, detects anomalies)
+startWatcher();
 
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];

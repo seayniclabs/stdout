@@ -591,6 +591,15 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
     );
     CREATE INDEX IF NOT EXISTS idx_sat_reports_agent ON satellite_reports(agent_id, reported_at DESC);
     CREATE INDEX IF NOT EXISTS idx_sat_agents_user ON satellite_agents(user_id);
+    CREATE TABLE IF NOT EXISTS event_log (
+      id         TEXT PRIMARY KEY,
+      type       TEXT NOT NULL,
+      user_id    TEXT,
+      payload    TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(type, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_event_log_user ON event_log(user_id, created_at DESC);
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

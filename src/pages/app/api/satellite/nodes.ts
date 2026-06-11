@@ -5,6 +5,7 @@ import { getCentralDb } from '../../../../lib/db';
 import { logAudit, getClientIp } from '../../../../lib/audit';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
+import { emit } from '../../../../lib/events';
 
 // sat_<nanoid(32)> — distinct prefix from scanner tokens
 function generateToken(): string {
@@ -76,6 +77,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     ip: getClientIp(request),
     details: { nodeId: id, name },
   });
+
+  emit({ type: 'satellite.registered', userId: locals.user.id, agentId: id, name, tags });
 
   return new Response(JSON.stringify({ node_id: id, api_token: rawToken, name }), {
     headers: { 'Content-Type': 'application/json' },

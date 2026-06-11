@@ -1,0 +1,341 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { requireLicense } from '../../../lib/license';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const licenseCheck = requireLicense();
+if (!licenseCheck.valid) {
+  return Astro.redirect('/app/settings?error=' + encodeURIComponent(licenseCheck.message));
+}
+---
+<Layout title="Observatory Status — StdOut">
+<style>
+  .status-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; font-weight: 600; color: var(--text); margin: 0 0 4px; }
+  .subtitle { color: var(--text-secondary); font-size: 0.875rem; margin: 0 0 24px; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 900px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .card-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .card-title .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  /* Watcher stat strip */
+  .stat-row { display: flex; gap: 24px; flex-wrap: wrap; }
+  .stat { }
+  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* Entity list */
+  .entity-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+  .entity-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--bg-elevated);
+    border-radius: 6px;
+    font-size: 0.8125rem;
+  }
+  .entity-name { color: var(--text); font-weight: 500; }
+  .entity-meta { color: var(--text-muted); font-size: 0.75rem; }
+  .badge {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .badge-ok      { background: rgba(var(--low-rgb, 52,211,153), 0.15); color: var(--low, #34d399); }
+  .badge-warning { background: rgba(var(--high-rgb, 251,191,36), 0.15); color: var(--high, #fbbf24); }
+  .badge-critical { background: rgba(var(--critical-rgb, 239,68,68), 0.2); color: var(--critical, #ef4444); }
+  .badge-stale   { background: rgba(128,128,128,0.15); color: var(--text-muted); }
+  .badge-auto    { background: rgba(var(--accent-rgb, 99,102,241), 0.15); color: var(--accent, #6366f1); }
+
+  /* Event log */
+  .event-log { font-size: 0.75rem; display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; }
+  .event-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: var(--bg-elevated);
+  }
+  .event-type {
+    font-family: var(--font-mono, monospace);
+    color: var(--accent);
+    white-space: nowrap;
+    font-weight: 600;
+    min-width: 180px;
+  }
+  .event-detail { color: var(--text-secondary); flex: 1; }
+  .event-time { color: var(--text-muted); white-space: nowrap; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 0.875rem; }
+
+  /* Loading */
+  #loading { text-align: center; padding: 48px; color: var(--text-muted); }
+  .spinner {
+    width: 24px; height: 24px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; display: inline-block; margin-bottom: 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .refresh-info { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 16px; }
+  a.back-link { color: var(--accent); font-size: 0.875rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 16px; }
+  a.back-link:hover { text-decoration: underline; }
+</style>
+
+<div class="status-page">
+  <a class="back-link" href="/app/observatory">← Observatory</a>
+  <h1>Observatory Status</h1>
+  <p class="subtitle">Live view of Watcher state, entity graph, and event stream</p>
+  <div class="refresh-info" id="refreshInfo">Auto-refreshes every 15s</div>
+
+  <div id="loading">
+    <div class="spinner"></div><br>Loading…
+  </div>
+
+  <div id="content" style="display:none">
+    <!-- Watcher overview -->
+    <div class="grid-3">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span>Watcher</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-value" id="stackCount">—</div>
+            <div class="stat-label">stacks watched</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="hostCount">—</div>
+            <div class="stat-label">hosts discovered</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="satelliteCount">—</div>
+            <div class="stat-label">satellites</div>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:0.75rem; color:var(--text-muted)" id="watcherUptime"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Auto-incidents (Observatory)</div>
+        <div class="stat-row">
+          <div class="stat">
+            <div class="stat-value" id="incidentCount">—</div>
+            <div class="stat-label">auto-created</div>
+          </div>
+          <div class="stat">
+            <div class="stat-value" id="activeIncidentCount">—</div>
+            <div class="stat-label">still active</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Watch Queue</div>
+        <div id="watchQueueList" class="entity-list"></div>
+      </div>
+    </div>
+
+    <!-- Stacks + Satellites -->
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">Stacks</div>
+        <div id="stackList" class="entity-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Satellite Nodes</div>
+        <div id="satelliteList" class="entity-list"></div>
+      </div>
+    </div>
+
+    <!-- Hosts -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-title">Discovered Hosts</div>
+      <div id="hostList" class="entity-list"></div>
+    </div>
+
+    <!-- Event log -->
+    <div class="card">
+      <div class="card-title">Event Stream (last 100)</div>
+      <div id="eventLog" class="event-log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let _lastRefresh = null;
+
+async function load() {
+  try {
+    const res = await fetch('/app/api/observatory/status');
+    if (!res.ok) throw new Error('API error ' + res.status);
+    const data = await res.json();
+    render(data);
+    _lastRefresh = new Date();
+    document.getElementById('refreshInfo').textContent =
+      `Last updated: ${_lastRefresh.toLocaleTimeString()} · Auto-refreshes every 15s`;
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch (err) {
+    console.error('[observatory/status]', err);
+  }
+}
+
+function ago(secs) {
+  if (secs == null || secs < 0) return 'never';
+  if (secs < 60) return `${secs}s ago`;
+  if (secs < 3600) return `${Math.round(secs/60)}m ago`;
+  return `${Math.round(secs/3600)}h ago`;
+}
+
+function badge(state) {
+  const map = { ok: 'badge-ok', warning: 'badge-warning', critical: 'badge-critical', stale: 'badge-stale' };
+  return `<span class="badge ${map[state] || 'badge-stale'}">${state}</span>`;
+}
+
+function render(data) {
+  // Stats
+  document.getElementById('stackCount').textContent = data.stacks.length;
+  document.getElementById('hostCount').textContent = data.hosts.length;
+  document.getElementById('satelliteCount').textContent = data.satellites.length;
+  document.getElementById('incidentCount').textContent = data.incidents.length;
+  document.getElementById('activeIncidentCount').textContent = data.incidents.filter(i => i.status === 'active').length;
+
+  if (data.watcher.uptimeSeconds != null) {
+    document.getElementById('watcherUptime').textContent =
+      `Running for ${ago(data.watcher.uptimeSeconds)} (since last startup)`;
+  }
+
+  // Stacks
+  const stackEl = document.getElementById('stackList');
+  if (!data.stacks.length) {
+    stackEl.innerHTML = '<div class="empty">No stacks yet — run a scan</div>';
+  } else {
+    stackEl.innerHTML = data.stacks.map(s => `
+      <div class="entity-row">
+        <div>
+          <div class="entity-name"><a href="/app/stacks/${s.id}" style="color:var(--accent);text-decoration:none">${s.name}</a></div>
+          <div class="entity-meta">${s.host_count} hosts · ${s.monitor_count} monitors</div>
+        </div>
+        <span class="badge badge-auto">watched</span>
+      </div>`).join('');
+  }
+
+  // Satellites
+  const satEl = document.getElementById('satelliteList');
+  if (!data.satellites.length) {
+    satEl.innerHTML = '<div class="empty">No satellites registered</div>';
+  } else {
+    satEl.innerHTML = data.satellites.map(s => `
+      <div class="entity-row">
+        <div>
+          <div class="entity-name">${s.name}</div>
+          <div class="entity-meta">Last seen: ${ago(s.lastSeenAgo)}</div>
+        </div>
+        ${badge(s.alertState)}
+      </div>`).join('');
+  }
+
+  // Hosts
+  const hostEl = document.getElementById('hostList');
+  if (!data.hosts.length) {
+    hostEl.innerHTML = '<div class="empty">No hosts discovered yet</div>';
+  } else {
+    hostEl.innerHTML = data.hosts.slice(0, 30).map(h => `
+      <div class="entity-row">
+        <div>
+          <div class="entity-name">${h.hostname || h.ip}</div>
+          <div class="entity-meta">${h.ip} · ${ago(h.lastSeenAgo)}</div>
+        </div>
+        ${h.stackId ? '<span class="badge badge-auto">in stack</span>' : '<span class="badge badge-stale">unlinked</span>'}
+      </div>`).join('');
+    if (data.hosts.length > 30) {
+      hostEl.innerHTML += `<div class="entity-meta" style="text-align:center;padding:8px">…and ${data.hosts.length - 30} more</div>`;
+    }
+  }
+
+  // Watch queue
+  const queueEl = document.getElementById('watchQueueList');
+  if (!data.watchQueue.length) {
+    queueEl.innerHTML = '<div class="empty">Queue empty</div>';
+  } else {
+    queueEl.innerHTML = data.watchQueue.map(q => `
+      <div class="entity-row">
+        <div class="entity-name">${q.name}</div>
+        <span class="badge ${q.status === 'done' ? 'badge-ok' : q.status === 'error' ? 'badge-critical' : 'badge-warning'}">${q.status}</span>
+      </div>`).join('');
+  }
+
+  // Event log
+  const evEl = document.getElementById('eventLog');
+  if (!data.events.length) {
+    evEl.innerHTML = '<div class="empty">No events yet</div>';
+  } else {
+    evEl.innerHTML = data.events.map(e => {
+      const p = e.payload || {};
+      const detail = formatEventDetail(e.type, p);
+      const ts = new Date(e.createdAt * 1000).toLocaleTimeString();
+      return `<div class="event-entry">
+        <span class="event-type">${e.type}</span>
+        <span class="event-detail">${detail}</span>
+        <span class="event-time">${ts}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function formatEventDetail(type, p) {
+  switch (type) {
+    case 'host.discovered':    return `${p.ip || ''}${p.hostname ? ' (' + p.hostname + ')' : ''}`;
+    case 'stack.created':      return `${p.name || ''} (${p.source || ''})`;
+    case 'satellite.registered': return `${p.name || ''}`;
+    case 'satellite.report':   return `${p.agentId || ''} — ${p.alertState || ''}`;
+    case 'satellite.stale':    return `${p.name || ''} — ${p.silentMinutes || '?'}m silent`;
+    case 'monitor.created':    return `${p.name || ''} (${p.targetType || ''})`;
+    case 'observatory.started': return `mode: ${p.mode || ''}`;
+    case 'observatory.anomaly': return `${p.metric || ''} — ${p.severity || ''}`;
+    case 'watcher.tick':       return `${p.stacksChecked || 0} stacks, ${p.anomaliesFound || 0} anomalies`;
+    default:                   return JSON.stringify(p).slice(0, 80);
+  }
+}
+
+load();
+setInterval(load, 15_000);
+</script>
+</Layout>
