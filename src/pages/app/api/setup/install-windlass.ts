@@ -161,18 +161,28 @@ schedules: []
 
       for (let i = 0; i < maxAttempts; i++) {
         try {
-          const healthOutput = execFileSync('docker', [
-            'inspect',
-            '--format={{.State.Health.Status}}',
-            'windlass'
-          ], {
-            encoding: 'utf8',
-            timeout: 5000,
-          }).trim();
+          // Try healthcheck status first; fall back to running state for images without HEALTHCHECK
+          let ready = false;
+          try {
+            const healthOutput = execFileSync('docker', [
+              'inspect',
+              '--format={{.State.Health.Status}}',
+              'windlass'
+            ], { encoding: 'utf8', timeout: 5000 }).trim();
+            ready = healthOutput === 'healthy';
+          } catch {
+            // No healthcheck defined — check if container is simply running
+            const stateOutput = execFileSync('docker', [
+              'inspect',
+              '--format={{.State.Status}}',
+              'windlass'
+            ], { encoding: 'utf8', timeout: 5000 }).trim();
+            ready = stateOutput === 'running';
+          }
 
-          console.log(`[install-windlass] Health check attempt ${i + 1}/${maxAttempts}: ${healthOutput}`);
+          console.log(`[install-windlass] Health check attempt ${i + 1}/${maxAttempts}: ready=${ready}`);
 
-          if (healthOutput === 'healthy') {
+          if (ready) {
             healthy = true;
             break;
           }
