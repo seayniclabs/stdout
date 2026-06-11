@@ -1,11 +1,14 @@
 import { eq } from 'drizzle-orm';
 import { getCentralDb, centralSchema } from './db';
 
-const LICENSE_KEY_RE = /^[A-Z0-9]{2,8}(-[A-Z0-9]{4,32}){1,}$/i;
+// SL-<base64url>.<base64url> — signed format (current)
+const SIGNED_KEY_RE = /^SL-[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+// XXXX-XXXX-XXXX-XXXX — legacy segment format
+const LEGACY_KEY_RE = /^[A-Z0-9]{2,8}(-[A-Z0-9]{4,32}){1,}$/i;
 
 export function isValidLicenseKeyFormat(key: string): boolean {
   const trimmed = key.trim();
-  return trimmed.length >= 16 && trimmed.length <= 128 && LICENSE_KEY_RE.test(trimmed);
+  return SIGNED_KEY_RE.test(trimmed) || (trimmed.length >= 16 && trimmed.length <= 128 && LEGACY_KEY_RE.test(trimmed));
 }
 
 export function getStoredLicense() {
@@ -77,6 +80,30 @@ export interface LicensePayload {
   maxActivations: number;
 }
 
+// Compact wire format (new keys use short field names)
+interface CompactPayload {
+  e?: string;  // email
+  i?: number;  // issued
+  x?: number;  // expires
+  m?: number;  // maxActivations
+  // Legacy long-form fields
+  product?: string;
+  email?: string;
+  issued?: number;
+  expires?: number | null;
+  maxActivations?: number;
+}
+
+function normalizePayload(raw: CompactPayload): LicensePayload {
+  return {
+    product: raw.product ?? 'stdout-self-host',
+    email: raw.e ?? raw.email ?? '',
+    issued: raw.i ?? raw.issued ?? 0,
+    expires: raw.x ?? raw.expires ?? null,
+    maxActivations: raw.m ?? raw.maxActivations ?? 1,
+  };
+}
+
 /**
  * Verify a cryptographically signed license offline.
  * No network call required - uses embedded public key.
@@ -112,12 +139,13 @@ export function verifyLicenseSignature(
       return { valid: false, reason: 'Invalid signature - license may be tampered or fake' };
     }
 
-    // Decode and parse payload
+    // Decode and parse payload — supports both compact (e/i/x/m) and legacy (email/issued/expires/maxActivations) field names
     const payloadJson = Buffer.from(payloadB64, 'base64url').toString('utf8');
-    const payload: LicensePayload = JSON.parse(payloadJson);
+    const raw: CompactPayload = JSON.parse(payloadJson);
+    const payload = normalizePayload(raw);
 
     // Validate payload structure
-    if (!payload.product || !payload.email || !payload.issued || payload.maxActivations === undefined) {
+    if (!payload.email || !payload.issued) {
       return { valid: false, reason: 'Invalid license payload structure' };
     }
 

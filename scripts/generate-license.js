@@ -74,13 +74,15 @@ if (!emailRegex.test(email)) {
   process.exit(1);
 }
 
-// Create payload
+// Create payload — compact field names to minimize key length
+// e=email, i=issued, x=expires, m=maxActivations
+// product is always stdout-self-host and is verified implicitly
+const now = Math.floor(Date.now() / 1000);
 const payload = {
-  product,
-  email,
-  issued: Math.floor(Date.now() / 1000),
-  expires: expiresInDays ? Math.floor(Date.now() / 1000) + (expiresInDays * 86400) : null,
-  maxActivations,
+  e: email,
+  i: now,
+  ...(expiresInDays ? { x: now + expiresInDays * 86400 } : {}),
+  ...(maxActivations !== 1 ? { m: maxActivations } : {}),
 };
 
 // Encode payload as base64url
@@ -99,10 +101,10 @@ const licenseKey = `SL-${payloadB64}.${signature}`;
 // Create license file (for offline use)
 const licenseFile = {
   key: licenseKey,
-  email: payload.email,
-  product: payload.product,
-  issuedAt: payload.issued * 1000, // Convert to milliseconds
-  expiresAt: payload.expires ? payload.expires * 1000 : null,
+  email: payload.e,
+  product: 'stdout-self-host',
+  issuedAt: payload.i * 1000,
+  expiresAt: payload.x ? payload.x * 1000 : null,
 };
 
 // Write to file
@@ -112,14 +114,14 @@ writeFileSync(outputFile, JSON.stringify(licenseFile, null, 2));
 console.log('✓ License generated successfully');
 console.log('');
 console.log(`Email: ${email}`);
-console.log(`Product: ${product}`);
-console.log(`Issued: ${new Date(payload.issued * 1000).toISOString()}`);
-if (payload.expires) {
-  console.log(`Expires: ${new Date(payload.expires * 1000).toISOString()} (${expiresInDays} days)`);
+console.log(`Product: stdout-self-host`);
+console.log(`Issued: ${new Date(payload.i * 1000).toISOString()}`);
+if (payload.x) {
+  console.log(`Expires: ${new Date(payload.x * 1000).toISOString()} (${expiresInDays} days)`);
 } else {
   console.log('Expires: Never');
 }
-console.log(`Max Activations: ${maxActivations}`);
+console.log(`Max Activations: ${payload.m ?? 1}`);
 console.log('');
 console.log('License Key:');
 console.log(licenseKey);

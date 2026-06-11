@@ -38,7 +38,7 @@ if (Astro.request.method === 'POST') {
     if (!key || !email) {
       error = 'License key and email are required.';
     } else if (!isValidLicenseKeyFormat(key)) {
-      error = 'Invalid license key format. Expected format: XXXX-XXXX-XXXX-XXXX';
+      error = 'Invalid license key format. Keys start with SL- or use XXXX-XXXX-XXXX-XXXX format.';
     } else {
       if (mode === 'online') {
         try {
@@ -142,7 +142,7 @@ if (Astro.request.method === 'POST') {
             type="text"
             name="licenseKey"
             value={licenseKey}
-            placeholder="XXXX-XXXX-XXXX-XXXX"
+            placeholder="SL-..."
             style="font-family: var(--font-mono);"
             autocomplete="off"
           />
@@ -178,7 +178,7 @@ if (Astro.request.method === 'POST') {
             type="text"
             name="licenseKey"
             value={licenseKey}
-            placeholder="XXXX-XXXX-XXXX-XXXX"
+            placeholder="SL-..."
             style="font-family: var(--font-mono);"
             autocomplete="off"
           />
