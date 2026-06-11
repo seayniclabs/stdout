@@ -40,72 +40,21 @@ if (Astro.request.method === 'POST') {
     } else if (!isValidLicenseKeyFormat(key)) {
       error = 'Invalid license key format. Keys start with SL- or use XXXX-XXXX-XXXX-XXXX format.';
     } else {
-      if (mode === 'online') {
-        try {
-          validating = true;
-          const storeUrl = 'https://store.seayniclabs.com/api/licenses/activate';
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), 15000);
+      // Both online and offline modes verify the cryptographic signature locally.
+      // SL- keys are self-contained — no store call needed.
+      const { verifyLicenseSignature } = await import('../../lib/license');
+      const verifyResult = verifyLicenseSignature(key);
 
-          const res = await fetch(storeUrl, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-            body: JSON.stringify({
-              key,
-              email,
-              product: 'stdout-self-host',
-              version: '1.2.0',
-            }),
-          });
-          clearTimeout(timeout);
-
-          if (res.status === 200) {
-            const data = await res.json() as { valid: boolean; edition?: string; message?: string };
-            if (data.valid) {
-              storeLicense(key, email, data.edition || 'self-host');
-              await completeStep(SetupStep.License, {
-                activated: true,
-                mode: 'online',
-                edition: data.edition || 'self-host',
-              });
-              return Astro.redirect('/setup/scanner');
-            } else {
-              error = data.message || 'License validation failed.';
-            }
-          } else if (res.status === 401 || res.status === 404) {
-            error = 'Invalid license key or email. Please check your purchase confirmation.';
-          } else {
-            error = 'Validation failed. Try offline mode or contact support.';
-          }
-        } catch (err: any) {
-          if (err.name === 'AbortError') {
-            error = 'Validation timed out. Your server may be offline. Try offline activation below.';
-          } else {
-            error = 'Network error. Try offline mode if your server has no internet access.';
-          }
-        }
+      if (!verifyResult.valid) {
+        error = verifyResult.reason || 'Invalid license key';
       } else {
-        // Offline mode - cryptographic signature verification
-        const { verifyLicenseSignature } = await import('../../lib/license');
-        const verifyResult = verifyLicenseSignature(key);
-
-        if (!verifyResult.valid) {
-          error = `Offline validation failed: ${verifyResult.reason || 'Invalid signature'}`;
-        } else if (verifyResult.payload?.product === 'stdout-self-host') {
-          storeLicense(key, email, 'self-host');
-          await completeStep(SetupStep.License, {
-            activated: true,
-            mode: 'offline',
-            edition: 'self-host',
-          });
-          return Astro.redirect('/setup/scanner');
-        } else {
-          error = 'This license is not valid for StdOut';
-        }
+        storeLicense(key, email, 'self-host');
+        await completeStep(SetupStep.License, {
+          activated: true,
+          mode,
+          edition: 'self-host',
+        });
+        return Astro.redirect('/setup/scanner');
       }
     }
     licenseKey = key;
