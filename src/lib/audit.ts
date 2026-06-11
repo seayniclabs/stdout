@@ -14,7 +14,9 @@ export type AuditAction =
   | 'data_export'
   | 'account_delete'
   | 'token_create'
-  | 'token_revoke';
+  | 'token_revoke'
+  | 'satellite_node_register'
+  | 'satellite_node_deregister';
 
 /**
  * Log an auditable event to the central database.

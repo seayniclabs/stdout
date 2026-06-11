@@ -127,6 +127,39 @@ async function runHeartbeat(): Promise<void> {
   }
 }
 
+async function checkStaleSatellites(): Promise<void> {
+  const db = getCentralDb();
+  const now = Math.floor(Date.now() / 1000);
+  const warningThreshold = now - 5 * 60;    // 5 min
+  const criticalThreshold = now - 15 * 60;  // 15 min
+
+  const agents = db.all(
+    // @ts-ignore — raw sql on satellite_agents
+    `SELECT id, user_id, name, last_seen, alert_state FROM satellite_agents WHERE last_seen IS NOT NULL`
+  ) as Array<{ id: string; user_id: string; name: string; last_seen: number; alert_state: string }>;
+
+  for (const agent of agents) {
+    const isStale = agent.last_seen < warningThreshold;
+    const isCritical = agent.last_seen < criticalThreshold;
+    if (!isStale) continue;
+
+    const newState = isCritical ? 'critical' : 'stale';
+    if (agent.alert_state === newState) continue; // already alerted
+
+    // @ts-ignore
+    db.run(`UPDATE satellite_agents SET alert_state = ? WHERE id = ?`, [newState, agent.id]);
+
+    await fireAlert({
+      userId: agent.user_id,
+      serviceId: null,
+      eventType: 'satellite_stale',
+      severity: isCritical ? 'critical' : 'warning',
+      title: `Satellite node ${agent.name} stopped reporting`,
+      detail: `No report received in ${Math.round((now - agent.last_seen) / 60)} minutes.`,
+    }).catch(err => console.error(`[heartbeat] stale satellite alert failed for ${agent.id}:`, err));
+  }
+}
+
 let _heartbeatStarted = false;
 
 export function startHeartbeat(): void {
@@ -136,8 +169,10 @@ export function startHeartbeat(): void {
   // Initial check after 2 min (let container settle at startup)
   setTimeout(() => {
     runHeartbeat().catch(err => console.error('[heartbeat] run failed:', err));
+    checkStaleSatellites().catch(err => console.error('[heartbeat] stale satellite check failed:', err));
     setInterval(() => {
       runHeartbeat().catch(err => console.error('[heartbeat] run failed:', err));
+      checkStaleSatellites().catch(err => console.error('[heartbeat] stale satellite check failed:', err));
     }, 15 * 60 * 1000);
   }, 2 * 60 * 1000);
 

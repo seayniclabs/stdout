@@ -577,6 +577,28 @@ db.exec(`
     value TEXT NOT NULL,
     updated_at INTEGER NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS satellite_agents (
+    id           TEXT PRIMARY KEY,
+    user_id      TEXT NOT NULL,
+    name         TEXT NOT NULL,
+    description  TEXT,
+    tags         TEXT NOT NULL DEFAULT '[]',
+    token_hash   TEXT NOT NULL,
+    last_seen    INTEGER,
+    last_report  TEXT,
+    alert_state  TEXT NOT NULL DEFAULT 'ok',
+    created_at   INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS satellite_reports (
+    id          TEXT PRIMARY KEY,
+    agent_id    TEXT NOT NULL REFERENCES satellite_agents(id) ON DELETE CASCADE,
+    user_id     TEXT NOT NULL,
+    reported_at INTEGER NOT NULL,
+    payload     TEXT NOT NULL,
+    alert_fired INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_sat_reports_agent ON satellite_reports(agent_id, reported_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_sat_agents_user ON satellite_agents(user_id);
 `);
 
 console.log('[apply-schema] Schema applied successfully');
