@@ -487,6 +487,11 @@ safeAddColumn('windlass_services', 'override_until', 'INTEGER');
 safeAddColumn('windlass_services', 'override_reason', 'TEXT');
 safeAddColumn('windlass_services', 'decommissioned_at', 'INTEGER');
 safeAddColumn('windlass_services', 'last_memory_shed_reason', 'TEXT');
+safeAddColumn('windlass_services', 'service_type', "TEXT NOT NULL DEFAULT 'manual'");
+safeAddColumn('windlass_services', 'usage_analytics', 'TEXT');
+safeAddColumn('windlass_services', 'utilization_pct', 'INTEGER');
+safeAddColumn('windlass_services', 'idle_hours_per_day', 'INTEGER');
+safeAddColumn('windlass_services', 'scheduling_suggestion', 'TEXT');
 safeAddColumn('docs', 'source', "TEXT DEFAULT 'user'");
 safeAddColumn('docs', 'community_doc_id', 'TEXT');
 safeAddColumn('docs', 'community_version', 'INTEGER');
@@ -496,6 +501,83 @@ safeAddColumn('tenant_preferences', 'addons_dismissed', 'INTEGER');
 safeAddColumn('tenant_preferences', 'addons_hidden', 'INTEGER');
 safeAddColumn('tenant_preferences', 'addons_cache', 'TEXT');
 safeAddColumn('tenant_preferences', 'addons_cache_at', 'INTEGER');
+safeAddColumn('discovered_hosts', 'stack_id', 'TEXT');
+safeAddColumn('stacks', 'previous_description', 'TEXT');
+safeAddColumn('data_sources', 'username', 'TEXT');
+safeAddColumn('data_sources', 'password', 'TEXT');
+safeAddColumn('windlass_config', 'last_weekly_digest_at', 'INTEGER');
+safeAddColumn('windlass_config', 'n8n_workflow_windows_json', 'TEXT');
+
+// ── Tables added after initial schema (not in original DDL) ──────────────────
+db.exec(`
+  CREATE TABLE IF NOT EXISTS tickets (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'incident',
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    stack_id TEXT,
+    severity TEXT NOT NULL DEFAULT 'medium',
+    status TEXT NOT NULL DEFAULT 'open',
+    tags TEXT,
+    external_system TEXT,
+    external_id TEXT,
+    external_url TEXT,
+    last_synced_at INTEGER,
+    sync_direction TEXT,
+    sync_status TEXT,
+    resolved_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_tickets_user ON tickets(user_id);
+  CREATE TABLE IF NOT EXISTS ticketing_connectors (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    system TEXT NOT NULL,
+    name TEXT NOT NULL,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    is_primary INTEGER NOT NULL DEFAULT 0,
+    config TEXT NOT NULL,
+    sync_enabled INTEGER NOT NULL DEFAULT 1,
+    sync_interval INTEGER NOT NULL DEFAULT 300,
+    last_sync_at INTEGER,
+    last_sync_status TEXT,
+    field_mappings TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ticketing_connectors_user ON ticketing_connectors(user_id);
+  CREATE TABLE IF NOT EXISTS doc_embeddings (
+    id TEXT PRIMARY KEY,
+    doc_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    embedding TEXT NOT NULL,
+    chunk_index INTEGER NOT NULL DEFAULT 0,
+    chunk_text TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_doc_embeddings_doc ON doc_embeddings(doc_id);
+  CREATE TABLE IF NOT EXISTS setup_progress (
+    id TEXT PRIMARY KEY,
+    step_number INTEGER NOT NULL,
+    step_name TEXT NOT NULL,
+    completed INTEGER NOT NULL DEFAULT 0,
+    completed_at INTEGER,
+    data TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS setup_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS system_state (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+`);
 
 console.log('[apply-schema] Schema applied successfully');
 db.close();
