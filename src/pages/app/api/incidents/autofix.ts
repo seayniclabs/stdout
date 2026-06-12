@@ -164,6 +164,58 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
   }
 
+  // --- Action: apply (gated auto-remediation, P4) ---
+  if (action === 'apply') {
+    const { command, confirmed } = body;
+    if (!command || typeof command !== 'string') {
+      return new Response(JSON.stringify({ error: 'command is required for apply' }), {
+        status: 400, headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Applying a fix on a running service is operator-level — require manage_settings.
+    const { checkRBAC } = await import('../../../../lib/rbac');
+    const manageBlock = checkRBAC(locals, 'manage_settings');
+    if (manageBlock) return manageBlock;
+
+    const { applyRemediation, classifyAutoApply } = await import('../../../../lib/autofix-apply');
+
+    // Resolve the Windlass /exec endpoint from the user's windlass config.
+    const wConfig = db.select().from(tenantSchema.windlassConfig)
+      .where(eq(tenantSchema.windlassConfig.userId, userId)).get();
+
+    const execViaWindlass = async (cmd: string) => {
+      if (!wConfig?.endpointUrl) throw new Error('Windlass not configured — cannot apply remediation');
+      const url = wConfig.endpointUrl.replace(/\/$/, '') + '/exec';
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command: cmd }),
+        signal: AbortSignal.timeout(120000),
+      });
+      if (!res.ok) throw new Error(`Windlass /exec HTTP ${res.status}`);
+      const data: any = await res.json();
+      return { exitCode: data.exitCode ?? 1, stdout: data.stdout ?? '', stderr: data.stderr ?? '' };
+    };
+
+    const result = await applyRemediation(command, execViaWindlass, Boolean(confirmed));
+
+    // Audit: record the apply decision + outcome on the incident timeline.
+    try {
+      logProviderAudit(userId, incidentId, 'autofix_apply', credential.provider,
+        credential.model, 'user_key', result.applied ? 'success' : 'failed',
+        `${result.decision}: ${result.reason}`.slice(0, 200));
+    } catch { /* audit best-effort */ }
+
+    return new Response(JSON.stringify({
+      ...result,
+      classification: classifyAutoApply(command),
+    }), {
+      status: result.applied || result.decision === 'escalate' ? 200 : 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   return new Response(JSON.stringify({ error: `Unknown action: ${action}` }), {
     status: 400, headers: { 'Content-Type': 'application/json' },
   });
