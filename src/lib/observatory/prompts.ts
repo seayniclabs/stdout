@@ -424,7 +424,7 @@ export function formatAgentOutput(
   } catch (error) {
     return {
       parsed: null,
-      displaySummary: `Error parsing agent output: ${error.message}`
+      displaySummary: `Error parsing agent output: ${error instanceof Error ? error.message : String(error)}`
     };
   }
 }

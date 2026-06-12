@@ -9,16 +9,16 @@ import type { APIRoute } from 'astro';
 import { runScheduledCheck } from '../../../../lib/observatory/sentinel';
 
 export const POST: APIRoute = async ({ locals }) => {
-  const session = locals.session;
-  if (!session) {
+  if (!locals.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+  const userId = locals.workspace?.ownerId || locals.user.id;
 
   try {
-    const result = await runScheduledCheck(session.userId);
+    const result = await runScheduledCheck(userId);
 
     return new Response(JSON.stringify({
       success: true,

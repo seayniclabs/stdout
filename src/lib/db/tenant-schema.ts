@@ -532,7 +532,7 @@ export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
   provider: text('provider').notNull(),
   model: text('model').notNull(),
   credentialSource: text('credential_source', {
-    enum: ['user_key', 'platform_fallback'],
+    enum: ['user_key', 'ollama'],
   }).notNull(),
   outcome: text('outcome', {
     enum: ['success', 'failed', 'blocked'],

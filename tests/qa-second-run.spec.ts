@@ -1,4 +1,4 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const TEST_EMAIL = 'qa-test-2@seayniclabs.com';
 const TEST_PASSWORD = 'TestPass123!';

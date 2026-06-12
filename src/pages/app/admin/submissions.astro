@@ -1,0 +1,111 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+if (user.role !== 'superadmin') return Astro.redirect('/app');
+---
+<Layout title="Community Moderation — StdOut">
+  <div class="mod-page">
+    <div class="mod-header">
+      <div>
+        <h1>Community Moderation</h1>
+        <p class="subtitle">Review community submissions before they go to the public library. Each is already
+          PII-scrubbed and accuracy/appropriateness-screened — this is the final human gate.</p>
+      </div>
+      <div class="mod-tabs">
+        <button class="tab active" data-status="pending">Pending</button>
+        <button class="tab" data-status="published">Published</button>
+        <button class="tab" data-status="rejected">Rejected</button>
+      </div>
+    </div>
+    <div id="subList" class="sub-list"><div class="sub-empty">Loading…</div></div>
+  </div>
+
+  <style>
+    .mod-page { max-width: 920px; margin: 0 auto; padding: 24px; }
+    .mod-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+    .mod-header h1 { font-size: 26px; color: #F8FAFC; margin: 0; }
+    .mod-header .subtitle { color: #94A3B8; font-size: 13px; margin: 4px 0 0; max-width: 540px; }
+    .mod-tabs { display: flex; gap: 6px; }
+    .mod-tabs .tab {
+      padding: 7px 14px; border-radius: 9px; font-size: 13px; cursor: pointer; color: #94A3B8;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .mod-tabs .tab.active { background: rgba(108,92,231,0.22); border-color: #6c5ce7; color: #F8FAFC; }
+    .sub-list { display: flex; flex-direction: column; gap: 14px; }
+    .sub-empty { color: #64748B; font-size: 14px; padding: 16px 0; }
+    .sub-item { padding: 18px; border-radius: 14px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); }
+    .sub-top { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .sub-title { font-size: 16px; font-weight: 700; color: #F8FAFC; }
+    .sub-tag { font-size: 11px; color: #94A3B8; background: rgba(255,255,255,0.08); padding: 2px 8px; border-radius: 6px; }
+    .sub-score { font-size: 11px; color: #86efac; }
+    .sub-content { font-size: 13px; color: #cbd5e1; line-height: 1.5; max-height: 220px; overflow: auto;
+      background: rgba(0,0,0,0.25); padding: 12px; border-radius: 10px; white-space: pre-wrap; font-family: ui-monospace, monospace; }
+    .sub-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .btn-glass { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #F8FAFC; border-radius: 9px; padding: 8px 16px; font-size: 13px; cursor: pointer; }
+    .btn-glass:hover { background: rgba(255,255,255,0.16); }
+    .pub { background: rgba(34,197,94,0.18) !important; border-color: rgba(34,197,94,0.4) !important; color: #86efac !important; }
+    .rej { background: rgba(239,68,68,0.14) !important; border-color: rgba(239,68,68,0.35) !important; color: #fca5a5 !important; }
+    .sub-notes { margin-top: 10px; font-size: 12px; color: #64748B; }
+  </style>
+
+  <script>
+    const api = '/app/api/admin/submissions';
+    let currentStatus = 'pending';
+
+    function esc(s: string) {
+      return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c] as string));
+    }
+
+    async function load() {
+      const list = document.getElementById('subList')!;
+      list.innerHTML = '<div class="sub-empty">Loading…</div>';
+      try {
+        const res = await fetch(`${api}?status=${currentStatus}`);
+        const { submissions } = await res.json();
+        if (!submissions || submissions.length === 0) {
+          list.innerHTML = `<div class="sub-empty">No ${currentStatus} submissions.</div>`;
+          return;
+        }
+        list.innerHTML = submissions.map((s: any) => `
+          <div class="sub-item" data-id="${s.id}">
+            <div class="sub-top">
+              <span class="sub-title">${esc(s.sanitizedTitle)}</span>
+              <span class="sub-tag">${esc(s.docType)}</span>
+              ${s.valueScore != null ? `<span class="sub-score">score ${s.valueScore}</span>` : ''}
+            </div>
+            <div class="sub-content">${esc(s.sanitizedContent)}</div>
+            ${s.reviewNotes ? `<div class="sub-notes">Notes: ${esc(s.reviewNotes)}</div>` : ''}
+            ${currentStatus === 'pending' ? `
+            <div class="sub-actions">
+              <button class="btn-glass pub" data-id="${s.id}">Publish</button>
+              <button class="btn-glass rej" data-id="${s.id}">Reject</button>
+            </div>` : ''}
+          </div>`).join('');
+        list.querySelectorAll('.pub').forEach((b) => b.addEventListener('click', () => decide((b as HTMLElement).dataset.id!, 'publish')));
+        list.querySelectorAll('.rej').forEach((b) => b.addEventListener('click', () => decide((b as HTMLElement).dataset.id!, 'reject')));
+      } catch (e) { list.innerHTML = '<div class="sub-empty">Failed to load submissions.</div>'; }
+    }
+
+    async function decide(id: string, decision: 'publish' | 'reject') {
+      let notes = '';
+      if (decision === 'reject') { notes = prompt('Rejection reason (shown to submitter):') || ''; }
+      const res = await fetch(api, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, decision, notes }),
+      });
+      if (!res.ok) { const e = await res.json().catch(() => ({})); alert(e.error || 'Action failed'); return; }
+      load();
+    }
+
+    document.querySelectorAll('.mod-tabs .tab').forEach((t) => t.addEventListener('click', () => {
+      document.querySelectorAll('.mod-tabs .tab').forEach((x) => x.classList.remove('active'));
+      t.classList.add('active');
+      currentStatus = (t as HTMLElement).dataset.status!;
+      load();
+    }));
+    load();
+  </script>
+</Layout>

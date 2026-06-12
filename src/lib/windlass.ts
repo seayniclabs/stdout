@@ -8,7 +8,7 @@
 
 import { nanoid } from 'nanoid';
 import { getTenantDb, tenantSchema } from './db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, isNull } from 'drizzle-orm';
 import { fireAlert } from './alert-router';
 import { sendWindlassWeeklyDigest } from './alert-router';
 import { sumRecoveredGbHoursFromServices } from './windlass-weekly-digest-math';
@@ -105,13 +105,12 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
   // Upsert services
   for (const svc of status.services) {
     const id = svc.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
-    const classification = TYPE_MAP[svc.type] || 'manual';
-    const serviceType = ['always', 'schedule', 'on-demand', 'manual'].includes(svc.type)
-      ? svc.type
-      : 'manual';
+    const classification = (TYPE_MAP[svc.type] || 'manual') as 'always_on' | 'scheduled' | 'on_demand' | 'manual';
+    const serviceType: 'always' | 'schedule' | 'on-demand' | 'manual' =
+      (['always', 'schedule', 'on-demand', 'manual'].includes(svc.type) ? svc.type : 'manual') as any;
 
     // Determine expected state based on classification and schedule
-    let expectedState = 'running';
+    let expectedState: 'running' | 'stopped' = 'running';
     if (classification === 'manual') {
       expectedState = svc.state === 'running' ? 'running' : 'stopped';
     } else if (classification === 'on_demand') {
@@ -271,7 +270,9 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     const existingEvent = db.select().from(tenantSchema.windlassEvents)
       .where(and(
         eq(tenantSchema.windlassEvents.userId, userId),
-        eq(tenantSchema.windlassEvents.serviceId, serviceId),
+        serviceId === null
+          ? isNull(tenantSchema.windlassEvents.serviceId)
+          : eq(tenantSchema.windlassEvents.serviceId, serviceId),
         eq(tenantSchema.windlassEvents.eventType, eventType as any),
         eq(tenantSchema.windlassEvents.createdAt, eventAt),
       ))

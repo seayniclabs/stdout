@@ -31,7 +31,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
   console.log('[scan-services] Starting background service scan for', hosts.length, 'hosts');
 
   // Run in background - don't wait for completion
-  scanServicesInBackground(hosts, session.userId).catch(err => {
+  const userId = locals.workspace?.ownerId || session.id;
+  scanServicesInBackground(hosts, userId).catch(err => {
     console.error('[scan-services] Background scan failed:', err);
   });
 
@@ -49,7 +50,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: string }>, userId: string) {
-  const db = getTenantDb();
+  const db = getTenantDb(userId);
   const COMMON_PORTS = [
     { port: 22, service: 'SSH' },
     { port: 80, service: 'HTTP' },
@@ -86,15 +87,16 @@ async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: st
       }
 
       // Upsert host record
-      let hostRecord = db
+      const hostRecord = db
         .select()
         .from(discoveredHosts)
         .where(eq(discoveredHosts.ipAddress, host.ip))
         .get();
 
+      let hostId: string;
       if (!hostRecord) {
         const now = new Date();
-        const hostId = 'host_' + nanoid();
+        hostId = 'host_' + nanoid();
         db.insert(discoveredHosts).values({
           id: hostId,
           userId,
@@ -106,13 +108,13 @@ async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: st
           createdAt: now,
           updatedAt: now,
         }).run();
-        hostRecord = { id: hostId };
         console.log('[scan-services] Created host record:', hostId);
       } else {
+        hostId = hostRecord.id;
         // Update lastSeen
         db.update(discoveredHosts)
           .set({ lastSeen: new Date(), updatedAt: new Date() })
-          .where(eq(discoveredHosts.id, hostRecord.id))
+          .where(eq(discoveredHosts.id, hostId))
           .run();
       }
 
@@ -123,7 +125,7 @@ async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: st
           .from(discoveredServices)
           .where(
             and(
-              eq(discoveredServices.hostId, hostRecord.id),
+              eq(discoveredServices.hostId, hostId),
               eq(discoveredServices.port, serviceInfo.port)
             )
           )
@@ -140,7 +142,7 @@ async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: st
           const now = new Date();
           db.insert(discoveredServices).values({
             id: 'svc_' + nanoid(),
-            hostId: hostRecord.id,
+            hostId: hostId,
             userId,
             port: serviceInfo.port,
             protocol: 'tcp',

@@ -8,10 +8,10 @@
 import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ locals }) => {
-  const session = locals.session;
-  if (!session) {
+  if (!locals.user) {
     return new Response('Unauthorized', { status: 401 });
   }
+  const userId = locals.workspace?.ownerId || locals.user.id;
 
   // Create SSE response
   const stream = new ReadableStream({
@@ -48,8 +48,6 @@ export const GET: APIRoute = async ({ locals }) => {
 
       // Start installation
       watcher.start();
-
-      const userId = session.user.id;
 
       try {
         // ==================== STEP 1: Database Initialization ====================

@@ -66,25 +66,21 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
     .where(eq(tenantSchema.incidents.userId, userId))
     .all();
 
-  const alerts_open = allIncidents.filter(i => !i.resolved).length;
+  const alerts_open = allIncidents.filter(i => !i.resolvedAt).length;
 
-  // Get last incident
+  // Get last incident (createdAt is a Date — compare by epoch ms)
   const lastIncident = allIncidents.length > 0
-    ? allIncidents.sort((a, b) => b.createdAt - a.createdAt)[0]
+    ? allIncidents.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0]
     : null;
 
   const last_incident = lastIncident
     ? new Date(lastIncident.createdAt).toISOString().split('T')[0]
     : null;
 
-  // Calculate uptime percentage (last 24 hours)
-  // Note: uptime_daily table doesn't exist yet - return 100% for now
-  const uptimeStats = null;
-
-  const uptime_pct =
-    uptimeStats && uptimeStats.total
-      ? Math.round((Number(uptimeStats.successful) / Number(uptimeStats.total)) * 100)
-      : 100;
+  // Calculate uptime percentage (last 24 hours).
+  // Note: the uptime_daily table doesn't exist yet — return 100% until it's implemented.
+  // (When it lands, compute Math.round(successful / total * 100) from the real rollup.)
+  const uptime_pct = 100;
 
   return {
     services_total,
@@ -112,7 +108,7 @@ export async function getRecentIncidents(userId: string, limit = 5): Promise<Rec
     .all();
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const incidents = allIncidents.filter(inc => inc.createdAt >= sevenDaysAgo).slice(0, limit);
+  const incidents = allIncidents.filter(inc => inc.createdAt.getTime() >= sevenDaysAgo).slice(0, limit);
 
   // Get stack names
   const result: RecentIncident[] = [];
@@ -132,8 +128,8 @@ export async function getRecentIncidents(userId: string, limit = 5): Promise<Rec
       title: inc.title,
       severity: inc.severity,
       stack_name,
-      created_at: inc.createdAt,
-      resolved: inc.resolved,
+      created_at: inc.createdAt.getTime(),
+      resolved: !!inc.resolvedAt,
     });
   }
 

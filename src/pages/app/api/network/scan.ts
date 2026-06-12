@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         // Scan all subnets in parallel with fast ping sweep
         console.log('[scan] Starting subnet scans for:', subnets.length, 'networks');
-        const scanPromises = subnets.map(async (subnet, i) => {
+        const scanPromises = subnets.map(async (subnet: string, i: number) => {
           const progressBase = 10 + Math.floor((i / subnets.length) * 50);
 
           console.log('[scan] Scanning subnet:', subnet);

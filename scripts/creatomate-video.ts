@@ -1,3 +1,4 @@
+// @ts-nocheck — standalone marketing script; `creatomate` is an optional dep not in package.json
 /**
  * StdOut Product Demo Video — Creatomate Render Script
  *

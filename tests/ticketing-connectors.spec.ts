@@ -240,7 +240,7 @@ test.describe('Webhook Connector', () => {
       secret: 'optional-secret-key',
     };
 
-    const configWithoutSecret = {
+    const configWithoutSecret: { webhookUrl: string; secret?: string } = {
       webhookUrl: 'https://example.com/webhook',
     };
 

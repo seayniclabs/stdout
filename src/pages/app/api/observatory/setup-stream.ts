@@ -8,8 +8,7 @@
 import type { APIRoute } from 'astro';
 
 export const GET: APIRoute = async ({ locals }) => {
-  const session = locals.session;
-  if (!session) {
+  if (!locals.user) {
     return new Response('Unauthorized', { status: 401 });
   }
 
@@ -88,7 +87,7 @@ export const GET: APIRoute = async ({ locals }) => {
           watcher.startStep('pull_watcher');
           watcher.addOutput('pull_watcher', 'Downloading Llama 3.2 3B (~2GB)...');
 
-          const { pullModel, AGENT_PERSONAS } = await import('../../../../lib/observatory/ollama');
+          const { pullModel } = await import('../../../../lib/observatory/ollama');
           const watcherModel = 'llama3.2:3b';
 
           try {

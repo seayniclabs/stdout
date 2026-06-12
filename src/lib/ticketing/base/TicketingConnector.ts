@@ -49,6 +49,7 @@ export interface ConnectionTestResult {
     workspace?: string;
     project?: string;
     user?: string;
+    url?: string;
   };
 }
 

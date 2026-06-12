@@ -16,7 +16,10 @@ export type AuditAction =
   | 'token_create'
   | 'token_revoke'
   | 'satellite_node_register'
-  | 'satellite_node_deregister';
+  | 'satellite_node_deregister'
+  | 'team_invite'
+  | 'team_role_update'
+  | 'team_remove';
 
 /**
  * Log an auditable event to the central database.

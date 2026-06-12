@@ -47,6 +47,87 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     </div>
 
     <div class="observatory-grid">
+      <!-- Autonomic Control — operating mode, auto-pilot, god mode, killswitch, RAG, approvals -->
+      <div class="obs-card obs-autonomic" style="grid-column: 1 / -1;">
+        <div class="obs-card-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>
+          <h3>Autonomic Control</h3>
+          <span id="modeKillswitchBadge" class="ks-badge" style="display:none">KILLSWITCH</span>
+        </div>
+
+        <div class="autonomic-body">
+          <!-- Operating mode ladder -->
+          <div class="auto-section">
+            <div class="auto-label">Operating mode
+              <span class="auto-hint">How much the brain is allowed to do</span>
+            </div>
+            <div class="mode-ladder" id="modeLadder">
+              <button class="mode-btn" data-mode="discover">
+                <span class="mode-name">Discover</span>
+                <span class="mode-desc">Eyes only — scan &amp; log</span>
+              </button>
+              <button class="mode-btn" data-mode="diagnose">
+                <span class="mode-name">Diagnose</span>
+                <span class="mode-desc">Brain explains incidents</span>
+              </button>
+              <button class="mode-btn" data-mode="autofix">
+                <span class="mode-name">Auto-fix</span>
+                <span class="mode-desc">Apply non-destructive fixes</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <div class="auto-toggles">
+            <label class="auto-toggle">
+              <input type="checkbox" id="autopilotToggle" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-text">
+                <strong>Auto-pilot</strong>
+                <small id="autopilotState">Self-escalates discover → diagnose → auto-fix as it earns trust. Ceiling: non-destructive.</small>
+              </span>
+            </label>
+
+            <label class="auto-toggle">
+              <input type="checkbox" id="godModeToggle" />
+              <span class="toggle-track toggle-danger"><span class="toggle-thumb"></span></span>
+              <span class="toggle-text">
+                <strong>God mode <span class="danger-tag">destructive</span></strong>
+                <small>Lifts the non-destructive ceiling. Human-only — auto-pilot can never set this.</small>
+              </span>
+            </label>
+
+            <label class="auto-toggle">
+              <input type="checkbox" id="ragPublicToggle" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-text">
+                <strong>Include public resources in learning</strong>
+                <small>Internal + community docs are always used. Public web sources are off by default.</small>
+              </span>
+            </label>
+          </div>
+
+          <!-- Killswitch banner (shown only when tripped) -->
+          <div id="killswitchBanner" class="killswitch-banner" style="display:none">
+            <div class="ks-text">
+              <strong>Killswitch tripped — auto-pilot demoted to diagnose-only.</strong>
+              <small id="killswitchReason">A loop or catastrophe was detected.</small>
+            </div>
+            <button id="resetKillswitchBtn" class="btn-glass">Reset killswitch</button>
+          </div>
+
+          <!-- Pending approvals queue -->
+          <div class="auto-section pending-section">
+            <div class="auto-label">Awaiting approval
+              <span class="auto-hint">Above-ceiling fixes the brain wants to run</span>
+            </div>
+            <div id="pendingFixes" class="pending-list">
+              <div class="pending-empty">No fixes awaiting approval.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- AI Agent Status -->
       <div class="obs-card obs-agents">
         <div class="obs-card-header">
@@ -213,6 +294,69 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+    /* ── Autonomic Control card ───────────────────────────────────────────── */
+    .obs-autonomic .autonomic-body { display: flex; flex-direction: column; gap: 20px; padding-top: 4px; }
+    .ks-badge {
+      margin-left: auto; font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+      color: #fff; background: #ef4444; padding: 3px 8px; border-radius: 6px;
+    }
+    .auto-section { display: flex; flex-direction: column; gap: 10px; }
+    .auto-label { font-size: 13px; font-weight: 600; color: #F8FAFC; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .auto-hint { font-size: 12px; font-weight: 400; color: #64748B; }
+    .mode-ladder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .mode-btn {
+      display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+      text-align: left; padding: 12px 14px; border-radius: 12px; cursor: pointer;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      color: #94A3B8; transition: all 0.15s ease;
+    }
+    .mode-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
+    .mode-btn .mode-name { font-size: 14px; font-weight: 700; color: #F8FAFC; }
+    .mode-btn .mode-desc { font-size: 12px; color: #64748B; }
+    .mode-btn.active { background: rgba(108,92,231,0.18); border-color: #6c5ce7; box-shadow: 0 0 0 1px #6c5ce7 inset; }
+    .mode-btn.active .mode-desc { color: #c4b5fd; }
+    .mode-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .auto-toggles { display: flex; flex-direction: column; gap: 14px; }
+    .auto-toggle { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+    .auto-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      flex-shrink: 0; width: 42px; height: 24px; border-radius: 999px; margin-top: 2px;
+      background: rgba(255,255,255,0.15); position: relative; transition: background 0.15s ease;
+    }
+    .toggle-thumb {
+      position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%;
+      background: #fff; transition: transform 0.15s ease;
+    }
+    .auto-toggle input:checked + .toggle-track { background: #6c5ce7; }
+    .auto-toggle input:checked + .toggle-track.toggle-danger { background: #ef4444; }
+    .auto-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
+    .toggle-text { display: flex; flex-direction: column; gap: 2px; }
+    .toggle-text strong { font-size: 13px; color: #F8FAFC; font-weight: 600; }
+    .toggle-text small { font-size: 12px; color: #64748B; line-height: 1.4; }
+    .danger-tag { font-size: 10px; font-weight: 700; color: #fca5a5; background: rgba(239,68,68,0.15); padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+
+    .killswitch-banner {
+      display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.35);
+    }
+    .killswitch-banner .ks-text { display: flex; flex-direction: column; gap: 2px; }
+    .killswitch-banner strong { font-size: 13px; color: #fecaca; }
+    .killswitch-banner small { font-size: 12px; color: #f87171; }
+    .killswitch-banner button { margin-left: auto; flex-shrink: 0; }
+
+    .pending-list { display: flex; flex-direction: column; gap: 10px; }
+    .pending-empty { font-size: 13px; color: #64748B; padding: 8px 0; }
+    .pending-item {
+      display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    }
+    .pending-item .pf-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .pending-item .pf-cmd { font-family: ui-monospace, monospace; font-size: 12px; color: #F8FAFC; word-break: break-all; }
+    .pending-item .pf-reason { font-size: 12px; color: #64748B; }
+    .pending-item .pf-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .pf-approve { background: rgba(34,197,94,0.18) !important; border-color: rgba(34,197,94,0.4) !important; color: #86efac !important; }
+    .pf-deny { background: rgba(239,68,68,0.14) !important; border-color: rgba(239,68,68,0.35) !important; color: #fca5a5 !important; }
 
     .observatory-page {
       padding: 2rem;
@@ -933,6 +1077,129 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     let currentMetric = 'cpu';
     let logsPaused = false;
 
+    // ── Autonomic Control: operating mode, auto-pilot, god mode, killswitch, RAG, approvals ──
+    async function loadModeState() {
+      try {
+        const res = await fetch('/app/api/observatory/mode');
+        if (!res.ok) return;
+        const { state } = await res.json();
+        renderModeState(state);
+      } catch (e) { console.error('mode load failed', e); }
+    }
+
+    function renderModeState(s: any) {
+      // Mode ladder — highlight the manual mode; show effective if higher (auto-pilot).
+      document.querySelectorAll('.mode-btn').forEach((b) => {
+        const m = (b as HTMLElement).dataset.mode;
+        b.classList.toggle('active', m === s.manualMode);
+      });
+      const ap = document.getElementById('autopilotToggle') as HTMLInputElement | null;
+      if (ap) ap.checked = !!s.autopilotEnabled;
+      const apState = document.getElementById('autopilotState');
+      if (apState) {
+        apState.textContent = s.autopilotEnabled
+          ? `On — currently at "${s.autopilotLevel}" (effective: ${s.effectiveMode}). Ceiling: non-destructive.`
+          : 'Self-escalates discover → diagnose → auto-fix as it earns trust. Ceiling: non-destructive.';
+      }
+      const gm = document.getElementById('godModeToggle') as HTMLInputElement | null;
+      if (gm) gm.checked = !!s.godModeGranted;
+      const rag = document.getElementById('ragPublicToggle') as HTMLInputElement | null;
+      if (rag) rag.checked = !!s.ragIncludePublic;
+
+      // Killswitch banner + badge.
+      const banner = document.getElementById('killswitchBanner');
+      const badge = document.getElementById('modeKillswitchBadge');
+      if (banner) banner.style.display = s.killswitchTripped ? 'flex' : 'none';
+      if (badge) badge.style.display = s.killswitchTripped ? 'inline-block' : 'none';
+      const reason = document.getElementById('killswitchReason');
+      if (reason && s.killswitchReason) reason.textContent = s.killswitchReason;
+    }
+
+    async function postMode(body: any) {
+      const res = await fetch('/app/api/observatory/mode', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        alert(e.error || 'Action failed (need manage_settings permission?)');
+        await loadModeState();
+        return null;
+      }
+      const data = await res.json();
+      if (data.state) renderModeState(data.state);
+      return data;
+    }
+
+    async function loadPendingFixes() {
+      const list = document.getElementById('pendingFixes');
+      if (!list) return;
+      try {
+        const res = await fetch('/app/api/observatory/pending-fix');
+        if (!res.ok) return;
+        const { fixes } = await res.json();
+        if (!fixes || fixes.length === 0) {
+          list.innerHTML = '<div class="pending-empty">No fixes awaiting approval.</div>';
+          return;
+        }
+        list.innerHTML = fixes.map((f: any) => `
+          <div class="pending-item" data-id="${f.id}">
+            <div class="pf-body">
+              <div class="pf-cmd">${escapeHtml(f.command)}</div>
+              <div class="pf-reason">${escapeHtml(f.reason || '')} · proposed by ${escapeHtml(f.proposedBy || 'autopilot')}</div>
+            </div>
+            <div class="pf-actions">
+              <button class="btn-glass pf-approve" data-id="${f.id}">Approve</button>
+              <button class="btn-glass pf-deny" data-id="${f.id}">Deny</button>
+            </div>
+          </div>`).join('');
+        list.querySelectorAll('.pf-approve').forEach((b) =>
+          b.addEventListener('click', () => decidePending((b as HTMLElement).dataset.id!, 'approve')));
+        list.querySelectorAll('.pf-deny').forEach((b) =>
+          b.addEventListener('click', () => decidePending((b as HTMLElement).dataset.id!, 'deny')));
+      } catch (e) { console.error('pending load failed', e); }
+    }
+
+    async function decidePending(id: string, decision: 'approve' | 'deny') {
+      if (decision === 'approve' && !confirm('Approve and run this command on the host?')) return;
+      const res = await fetch('/app/api/observatory/pending-fix', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, decision }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        alert(e.error || 'Decision failed');
+      }
+      await loadPendingFixes();
+    }
+
+    function escapeHtml(s: string) {
+      return String(s).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] as string));
+    }
+
+    function wireAutonomicControls() {
+      document.querySelectorAll('.mode-btn').forEach((b) =>
+        b.addEventListener('click', () => postMode({ op: 'setMode', mode: (b as HTMLElement).dataset.mode })));
+      document.getElementById('autopilotToggle')?.addEventListener('change', (e) =>
+        postMode({ op: 'setAutopilot', enabled: (e.target as HTMLInputElement).checked }));
+      document.getElementById('godModeToggle')?.addEventListener('change', (e) => {
+        const on = (e.target as HTMLInputElement).checked;
+        if (on && !confirm('Grant god mode? This lets the brain auto-apply DESTRUCTIVE fixes. Human-only.')) {
+          (e.target as HTMLInputElement).checked = false; return;
+        }
+        postMode({ op: 'setGodMode', granted: on });
+      });
+      document.getElementById('ragPublicToggle')?.addEventListener('change', (e) =>
+        postMode({ op: 'setRagIncludePublic', enabled: (e.target as HTMLInputElement).checked }));
+      document.getElementById('resetKillswitchBtn')?.addEventListener('click', () =>
+        postMode({ op: 'resetKillswitch' }));
+      loadModeState();
+      loadPendingFixes();
+      // Refresh approvals periodically (the reflex may park new ones).
+      setInterval(loadPendingFixes, 30000);
+      setInterval(loadModeState, 30000);
+    }
+
     function connectWebSocket() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname;
@@ -1269,6 +1536,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     document.addEventListener('DOMContentLoaded', () => {
       initChart();
       connectWebSocket();
+      wireAutonomicControls();
 
       // Add metric tab switching
       document.querySelectorAll('.metric-tab').forEach(tab => {

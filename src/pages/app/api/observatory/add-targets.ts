@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { serviceIds } = body; // Array of service IDs to add to monitoring
 
-    const db = getTenantDb();
+    const db = getTenantDb(locals.workspace?.ownerId || session.id);
 
     // Fetch services with their host info
     const services = [];

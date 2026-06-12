@@ -167,7 +167,7 @@ export class InstallWatcher {
       stepId,
       timestamp: Date.now(),
       progress,
-      eta: step.eta,
+      eta: step.eta ?? undefined,
       message
     });
 

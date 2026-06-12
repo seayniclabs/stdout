@@ -29,15 +29,16 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   // List all monitors with sparkline data
+  const uid = locals.user.id;
   const allMonitors = db.select().from(tenantSchema.monitors)
-    .where(eq(tenantSchema.monitors.userId, locals.user.id))
+    .where(eq(tenantSchema.monitors.userId, uid))
     .orderBy(desc(tenantSchema.monitors.createdAt))
     .all();
 
   const monitorsWithData = allMonitors.map(m => {
-    const sparkline = getRecentChecks(locals.user.id, m.id, 30)
+    const sparkline = getRecentChecks(uid, m.id, 30)
       .map(c => ({ ms: c.responseTimeMs, status: c.status }));
-    const uptime = getUptimeStats(locals.user.id, m.id, 30);
+    const uptime = getUptimeStats(uid, m.id, 30);
     return { ...m, sparkline, uptimePercent: uptime.uptimePercent, avgResponse: uptime.avgResponse };
   });
 

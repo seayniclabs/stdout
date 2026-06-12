@@ -10,13 +10,13 @@ import { getCentralDb } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ locals, url }) => {
-  const session = locals.session;
-  if (!session) {
+  if (!locals.user) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' }
     });
   }
+  const userId = locals.workspace?.ownerId || locals.user.id;
 
   try {
     const db = getCentralDb();
@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const agentName = url.searchParams.get('agent'); // Filter by agent
 
     const conditions = ['user_id = ?'];
-    const params: any[] = [session.userId];
+    const params: any[] = [userId];
 
     if (agentName) {
       conditions.push('agent_name = ?');
@@ -51,7 +51,8 @@ export const GET: APIRoute = async ({ locals, url }) => {
       LIMIT ?
     `;
 
-    const rows = await db.all(sql.raw(query, [...params, limit])) as any[];
+    const rawDb = (db as any).$client;
+    const rows = (rawDb?.prepare ? rawDb.prepare(query).all(...params, limit) : []) as any[];
 
     const runs = rows.map(row => ({
       id: row.id,

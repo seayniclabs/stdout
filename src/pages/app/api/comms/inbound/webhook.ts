@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         direction: 'inbound',
         content: text,
         metadata: JSON.stringify({ channel }),
-        timestamp: now,
+        timestamp: new Date(),
       }).run();
     }
 
@@ -96,7 +96,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
         direction: 'outbound',
         content: response,
         metadata: JSON.stringify(metadata),
-        timestamp: Date.now(),
+        timestamp: new Date(),
       }).run();
     }
 

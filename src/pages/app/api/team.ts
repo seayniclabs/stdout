@@ -53,6 +53,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // Check seat limit
+    const { limits } = getUserLimits(locals.user);
+    const tier = limits.aiModel === 'sonnet' ? 'paid' : 'free';
     const existing = getTeamMembers(workspaceOwnerId);
     const activeCount = existing.filter(m => m.status !== 'revoked').length;
     if (activeCount >= limits.maxSeats - 1) { // -1 because owner counts as a seat

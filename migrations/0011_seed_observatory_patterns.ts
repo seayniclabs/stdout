@@ -77,7 +77,7 @@ for (const pattern of standardPatterns) {
 console.log(`✅ Seeded ${inserted} standard patterns`);
 
 // Verify
-const count = db.prepare('SELECT COUNT(*) as count FROM observatory_standard_patterns WHERE source = ?').get('stdlib');
+const count = db.prepare('SELECT COUNT(*) as count FROM observatory_standard_patterns WHERE source = ?').get('stdlib') as { count: number };
 console.log(`📊 Total stdlib patterns in database: ${count.count}`);
 
 // Show category breakdown
@@ -87,7 +87,7 @@ const categories = db.prepare(`
   WHERE source = 'stdlib'
   GROUP BY category
   ORDER BY count DESC
-`).all();
+`).all() as Array<{ category: string; count: number }>;
 
 console.log('\n📁 Pattern Categories:');
 categories.forEach((cat) => {

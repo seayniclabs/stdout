@@ -223,7 +223,7 @@ setInterval(async () => {
         const cfg = getConfig(u.id);
         if (!cfg || !cfg.enabled) continue;
         const intervalMs = (cfg.syncIntervalSeconds || 60) * 1000;
-        const lastSync = cfg.lastSyncedAt ? new Date(cfg.lastSyncedAt).getTime() : 0;
+        const lastSync = cfg.lastSyncAt ? new Date(cfg.lastSyncAt).getTime() : 0;
         if (now - lastSync >= intervalMs) {
           syncFromEndpoint(u.id).catch(() => {});
         }
