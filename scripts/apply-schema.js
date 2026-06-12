@@ -602,5 +602,65 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_sat_agents_user ON satellite_agents(user_id);
 `);
 
+// --- Observatory learning layer (was migration 0010; never ran on fresh self-host boot,
+//     so baselines/patterns could never be stored. Created here so every fresh DB has them). ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS observatory_standard_patterns (
+    id TEXT PRIMARY KEY,
+    pattern_name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    symptoms TEXT NOT NULL,
+    common_causes TEXT NOT NULL,
+    resolution_steps TEXT NOT NULL,
+    confidence_threshold REAL NOT NULL,
+    source TEXT NOT NULL DEFAULT 'stdlib',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_observatory_patterns_category ON observatory_standard_patterns(category);
+  CREATE INDEX IF NOT EXISTS idx_observatory_patterns_source ON observatory_standard_patterns(source);
+
+  CREATE TABLE IF NOT EXISTS observatory_baselines (
+    id TEXT PRIMARY KEY,
+    stack_id TEXT NOT NULL,
+    metric_name TEXT NOT NULL,
+    mean REAL NOT NULL,
+    std_dev REAL NOT NULL,
+    sample_count INTEGER NOT NULL,
+    window_start INTEGER NOT NULL,
+    window_end INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    UNIQUE(stack_id, metric_name)
+  );
+  CREATE INDEX IF NOT EXISTS idx_observatory_baselines_stack_metric ON observatory_baselines(stack_id, metric_name);
+
+  CREATE TABLE IF NOT EXISTS observatory_feedback (
+    id TEXT PRIMARY KEY,
+    incident_id TEXT NOT NULL,
+    agent_type TEXT NOT NULL,
+    suggestion TEXT NOT NULL,
+    user_action TEXT NOT NULL,
+    actual_resolution TEXT,
+    notes TEXT,
+    created_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS observatory_agent_runs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    agent_name TEXT NOT NULL,
+    stack_id TEXT,
+    trigger TEXT NOT NULL,
+    input_context TEXT,
+    output_decision TEXT,
+    decision_made TEXT,
+    confidence_score REAL,
+    execution_time_ms INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_observatory_agent_runs_user ON observatory_agent_runs(user_id, created_at DESC);
+`);
+
 console.log('[apply-schema] Schema applied successfully');
 db.close();

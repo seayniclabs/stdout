@@ -29,6 +29,9 @@ services:
       - LOKI_URL=http://localhost:3100
       - TEMPO_URL=http://localhost:3200
       - CADVISOR_URL=http://localhost:8181
+      - TRIVY_URL=http://localhost:4954
+      # Surface the full Observatory init brief (incl. Phase 4.5 data-source/baseline config) in logs.
+      - DEBUG_OBSERVATORY=${DEBUG_OBSERVATORY:-true}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-test@stdout.local}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-test-password-123}
     volumes:

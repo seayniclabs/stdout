@@ -202,6 +202,39 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     log.push(`Error checking monitors: ${err.message}`);
   }
 
+  // ── Phase 4.5: Data Sources + Provisional Baseline (P3 auto-config) ────────
+  // Auto-configure the Observatory data sources (Prometheus/Loki/Trivy reachable at known
+  // loopback ports) and seed provisional baselines so the brain starts detecting on day one
+  // instead of waiting 7 days. Both are idempotent and non-fatal.
+  log.push('=== PHASE 4.5: DATA SOURCES & BASELINE ===');
+  try {
+    const centralDb = getCentralDb();
+    const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
+
+    if (firstUser) {
+      const { autoConfigureDataSources } = await import('./data-source-config');
+      const dsResult = await autoConfigureDataSources(firstUser.id);
+      log.push(...dsResult.log);
+
+      const { establishProvisionalBaselines } = await import('./baseline-bootstrap');
+      const blResult = await establishProvisionalBaselines(firstUser.id);
+      log.push(...blResult.log);
+
+      // Reflect the just-seeded baselines in the count the activation phase reads.
+      try {
+        const bRow = centralDb.get(sql`SELECT COUNT(*) as n FROM observatory_baselines`) as { n: number } | undefined;
+        baselinesEstablished = bRow?.n ?? baselinesEstablished;
+      } catch { /* table may not exist on very old DBs */ }
+    } else {
+      log.push('No users yet — data sources + baselines will configure on first user');
+    }
+    log.push('');
+  } catch (err: any) {
+    // Non-fatal: discovery/detection still works without auto-config; log and continue.
+    log.push(`Data-source/baseline auto-config issue (non-fatal): ${err.message}`);
+    log.push('');
+  }
+
   // ── Phase 5: Activation ───────────────────────────────────────────────────
   log.push('=== PHASE 5: AGENT ACTIVATION ===');
   try {
