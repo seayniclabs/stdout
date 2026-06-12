@@ -443,9 +443,39 @@ echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 
-# Tail logs (will continue until user Ctrl+C or setup completes)
+# Tail logs until setup signals completion, then clean-eject the setup container.
 echo -e "${BLUE}📋 Installation Log:${NC}"
 echo ""
-docker logs -f stdout-setup
 
-# Cleanup is handled by the setup container self-destructing
+# Stream logs and watch for the completion/self-destruct marker. The setup server schedules
+# its own clean eject, but install.sh guarantees teardown here too (belt and suspenders).
+( docker logs -f stdout-setup 2>&1 & echo $! > /tmp/stdout-setup-logpid ) | while IFS= read -r line; do
+  echo "$line"
+  case "$line" in
+    *"Scheduling clean eject"*|*"Installation marked complete"*|*'"type":"complete"'*|*"Self-destructing"*)
+      # Give the browser a few seconds to receive 'complete' and redirect, then tear down.
+      sleep 8
+      kill "$(cat /tmp/stdout-setup-logpid 2>/dev/null)" 2>/dev/null || true
+      break
+      ;;
+  esac
+done
+
+echo ""
+echo -e "${BLUE}⏳ Ejecting setup container (clean teardown)...${NC}"
+docker rm -f stdout-setup >/dev/null 2>&1 || true
+# Prune any dangling network/volume the setup container created (never touches the app stack).
+docker network ls --filter name=stdout-setup -q 2>/dev/null | xargs -r docker network rm >/dev/null 2>&1 || true
+rm -f /tmp/stdout-setup-logpid 2>/dev/null || true
+
+if docker ps --format '{{.Names}}' | grep -qx stdout-setup; then
+  echo -e "${YELLOW}⚠ Setup container still present — remove manually: docker rm -f stdout-setup${NC}"
+else
+  echo -e "${GREEN}✓ Setup container ejected cleanly.${NC}"
+fi
+
+echo ""
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${GREEN}  ✓ StdOut is live${NC}"
+echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${CYAN}Open StdOut at:${NC} ${YELLOW}http://stdout.local:8112${NC}"
