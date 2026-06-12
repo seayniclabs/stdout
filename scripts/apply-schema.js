@@ -638,6 +638,7 @@ db.exec(`
     symptoms TEXT NOT NULL,
     common_causes TEXT NOT NULL,
     resolution_steps TEXT NOT NULL,
+    prevention_steps TEXT,
     confidence_threshold REAL NOT NULL,
     source TEXT NOT NULL DEFAULT 'stdlib',
     created_at INTEGER NOT NULL,
@@ -732,6 +733,59 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_observatory_custom_patterns_user ON observatory_custom_patterns(user_id);
   CREATE INDEX IF NOT EXISTS idx_observatory_custom_patterns_stack ON observatory_custom_patterns(stack_id);
 `);
+
+// Existing DBs created before prevention_steps was added need the column (CREATE IF NOT EXISTS
+// won't alter an existing table). Idempotent.
+try {
+  const cols = db.prepare("PRAGMA table_info(observatory_standard_patterns)").all();
+  if (!cols.some((c) => c.name === 'prevention_steps')) {
+    db.exec('ALTER TABLE observatory_standard_patterns ADD COLUMN prevention_steps TEXT');
+  }
+} catch { /* table may not exist yet — the CREATE above handles fresh DBs */ }
+
+// ── Seed the stdlib standard-pattern library on a fresh DB (Charlie 2026-06-12) ──────────────
+// The 32 curated patterns ship as JSON in the image. They give the Observatory RAG layer baseline
+// knowledge from day one. Seed only stdlib rows when none exist; never touch 'auto'/user patterns.
+try {
+  const existing = db.prepare(
+    "SELECT COUNT(*) AS n FROM observatory_standard_patterns WHERE source = 'stdlib'"
+  ).get();
+  if (!existing || existing.n === 0) {
+    // JSON lives alongside this script in the image (copied via Dockerfile), with a dev fallback.
+    const here = dirname(new URL(import.meta.url).pathname);
+    const candidates = [
+      resolve(here, 'standard-patterns.json'),
+      resolve(here, '../src/lib/observatory/standard-patterns.json'),
+    ];
+    let patternsPath = null;
+    for (const p of candidates) { if (existsSync(p)) { patternsPath = p; break; } }
+    if (patternsPath) {
+      const { readFileSync } = await import('node:fs');
+      const patterns = JSON.parse(readFileSync(patternsPath, 'utf-8'));
+      const now = Date.now();
+      const insert = db.prepare(`
+        INSERT OR IGNORE INTO observatory_standard_patterns
+          (id, pattern_name, category, symptoms, common_causes, resolution_steps,
+           prevention_steps, confidence_threshold, source, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      let n = 0;
+      for (const p of patterns) {
+        insert.run(
+          p.id, p.pattern_name, p.category,
+          JSON.stringify(p.symptoms), JSON.stringify(p.common_causes), JSON.stringify(p.resolution_steps),
+          JSON.stringify(p.prevention_steps || []), p.confidence_threshold, p.source || 'stdlib', now, now,
+        );
+        n++;
+      }
+      console.log(`[apply-schema] Seeded ${n} stdlib standard patterns`);
+    } else {
+      console.warn('[apply-schema] standard-patterns.json not found — stdlib patterns not seeded');
+    }
+  }
+} catch (e) {
+  console.warn('[apply-schema] stdlib pattern seed skipped:', e?.message || e);
+}
 
 console.log('[apply-schema] Schema applied successfully');
 db.close();

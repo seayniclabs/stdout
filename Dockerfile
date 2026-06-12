@@ -22,6 +22,8 @@ COPY --from=build /app/src/lib/db/central-schema.ts ./src/lib/db/central-schema.
 COPY --from=build /app/src/lib/db/tenant-schema.ts ./src/lib/db/tenant-schema.ts
 COPY --from=build /app/src/lib/db/index.ts ./src/lib/db/index.ts
 COPY --from=build /app/scripts ./scripts
+# Stdlib standard-pattern library — seeded into the DB on fresh boot by apply-schema.js.
+COPY --from=build /app/src/lib/observatory/standard-patterns.json ./scripts/standard-patterns.json
 RUN chmod +x scripts/start.sh
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
 EXPOSE 3000

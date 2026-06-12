@@ -37,7 +37,10 @@ async function checkWindlassSidecar(): Promise<'ok' | 'degraded'> {
   // Best-effort: 1-second timeout, never fails the overall healthz.
   // Windlass is a sidecar and can be down without StdOut being down.
   try {
-    const url = process.env.WINDLASS_URL || 'http://windlass:8116/health';
+    // WINDLASS_URL may be set as a BASE url (e.g. http://localhost:8116) without the /health path.
+    // Normalize: if it doesn't already end in /health, append it. Falls back to the compose hostname.
+    const base = (process.env.WINDLASS_URL || 'http://windlass:8116').replace(/\/+$/, '');
+    const url = /\/health$/.test(base) ? base : `${base}/health`;
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 1000);
     const resp = await fetch(url, { signal: controller.signal });
