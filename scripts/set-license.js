@@ -34,7 +34,8 @@ if (!emailRegex.test(email)) {
 
 // Store in database
 try {
-  const db = new Database('/data/central.db');
+  const DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH || '/data/stdout.db';
+  const db = new Database(DB_PATH);
 
   const now = Date.now();
   db.prepare(`
