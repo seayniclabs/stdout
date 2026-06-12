@@ -314,10 +314,15 @@ async function triggerInitialNetworkScan(userId: string): Promise<void> {
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `);
 
-    // Note: actual scan will be triggered by user visiting Observatory page or Infrastructure page
-    // This just sets the flag so UI knows to prompt for initial scan
+    // Actually RUN the discovery — the autonomic vision requires scanners to start collecting
+    // on their own, not wait for a human to click. runInitialDiscovery persists hosts and emits
+    // host.discovered (→ auto-wire creates monitors). Fire-and-forget so startup isn't blocked.
+    const { runInitialDiscovery } = await import('./initial-discovery');
+    runInitialDiscovery(userId).catch((err) => {
+      console.error('[Observatory Init] initial discovery failed:', err);
+    });
 
   } catch (error) {
-    console.error('[Observatory Init] Failed to set initial scan flag:', error);
+    console.error('[Observatory Init] Failed to trigger initial scan:', error);
   }
 }
