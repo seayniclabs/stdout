@@ -502,6 +502,28 @@ safeAddColumn('tenant_preferences', 'addons_dismissed', 'INTEGER');
 safeAddColumn('tenant_preferences', 'addons_hidden', 'INTEGER');
 safeAddColumn('tenant_preferences', 'addons_cache', 'TEXT');
 safeAddColumn('tenant_preferences', 'addons_cache_at', 'INTEGER');
+// ── Observatory operating modes + auto-pilot (Charlie 2026-06-12) ──────────────
+// operating_mode: the manual mode ladder — 'discover' (default, eyes only) |
+//   'diagnose' (eyes + brain) | 'autofix' (apply, capped at non-destructive).
+safeAddColumn('tenant_preferences', 'operating_mode', "TEXT NOT NULL DEFAULT 'discover'");
+// autopilot_enabled: when 1, the system self-escalates discover→diagnose→autofix,
+//   gated on demonstrated success. Ceiling is non-destructive auto-fix (never god mode).
+safeAddColumn('tenant_preferences', 'autopilot_enabled', 'INTEGER NOT NULL DEFAULT 0');
+// autopilot_level: the level auto-pilot has CURRENTLY earned ('discover'|'diagnose'|'autofix').
+safeAddColumn('tenant_preferences', 'autopilot_level', "TEXT NOT NULL DEFAULT 'discover'");
+// Rolling success/fail counters at the current auto-pilot level (drive promotion gate).
+safeAddColumn('tenant_preferences', 'autopilot_success_count', 'INTEGER NOT NULL DEFAULT 0');
+safeAddColumn('tenant_preferences', 'autopilot_fail_count', 'INTEGER NOT NULL DEFAULT 0');
+safeAddColumn('tenant_preferences', 'autopilot_level_since', 'INTEGER'); // ms epoch level was entered
+// killswitch: when tripped, auto-pilot is force-demoted to diagnose-only until cleared.
+safeAddColumn('tenant_preferences', 'killswitch_tripped', 'INTEGER NOT NULL DEFAULT 0');
+safeAddColumn('tenant_preferences', 'killswitch_reason', 'TEXT');
+safeAddColumn('tenant_preferences', 'killswitch_at', 'INTEGER'); // ms epoch
+// god_mode_granted: a HUMAN explicitly lifted the non-destructive ceiling (destructive auto-fix).
+//   Auto-pilot can NEVER set this; only a manage_settings user can.
+safeAddColumn('tenant_preferences', 'god_mode_granted', 'INTEGER NOT NULL DEFAULT 0');
+safeAddColumn('tenant_preferences', 'god_mode_granted_by', 'TEXT');
+safeAddColumn('tenant_preferences', 'god_mode_granted_at', 'INTEGER');
 safeAddColumn('discovered_hosts', 'stack_id', 'TEXT');
 safeAddColumn('stacks', 'previous_description', 'TEXT');
 safeAddColumn('data_sources', 'username', 'TEXT');
@@ -660,6 +682,27 @@ db.exec(`
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_observatory_agent_runs_user ON observatory_agent_runs(user_id, created_at DESC);
+
+  -- Above-ceiling remediations awaiting HUMAN approval (Charlie 2026-06-12).
+  -- When an autonomous fix exceeds the non-destructive ceiling (and god mode is not granted),
+  -- the proposal is parked here against its existing incident: one row = one pending fix.
+  -- status: 'pending' (awaiting human) | 'approved' (applied) | 'denied' | 'expired'.
+  CREATE TABLE IF NOT EXISTS observatory_pending_fixes (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    incident_id TEXT NOT NULL,
+    command TEXT NOT NULL,
+    classification TEXT,            -- JSON: {decision,reason,reversible,destructive,precedented}
+    reason TEXT,                    -- why this needs approval (e.g. 'exceeds non-destructive ceiling')
+    proposed_by TEXT NOT NULL,      -- 'autopilot' | 'watcher' | 'analyst' | 'sentinel'
+    status TEXT NOT NULL DEFAULT 'pending',
+    decided_by TEXT,                -- user id of approver/denier
+    decided_at INTEGER,
+    apply_result TEXT,              -- JSON of ApplyResult once approved+run
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_user ON observatory_pending_fixes(user_id, status, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_incident ON observatory_pending_fixes(incident_id);
 `);
 
 console.log('[apply-schema] Schema applied successfully');

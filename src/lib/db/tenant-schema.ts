@@ -178,7 +178,42 @@ export const tenantPreferences = sqliteTable('tenant_preferences', {
   addonsHidden: integer('addons_hidden', { mode: 'boolean' }).notNull().default(false),
   addonsCache: text('addons_cache'),
   addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp' }),
+  // Observatory operating modes + auto-pilot (2026-06-12) — see lib/observatory/operating-mode.ts
+  operatingMode: text('operating_mode', {
+    enum: ['discover', 'diagnose', 'autofix'],
+  }).notNull().default('discover'),
+  autopilotEnabled: integer('autopilot_enabled', { mode: 'boolean' }).notNull().default(false),
+  autopilotLevel: text('autopilot_level', {
+    enum: ['discover', 'diagnose', 'autofix'],
+  }).notNull().default('discover'),
+  autopilotSuccessCount: integer('autopilot_success_count').notNull().default(0),
+  autopilotFailCount: integer('autopilot_fail_count').notNull().default(0),
+  autopilotLevelSince: integer('autopilot_level_since'), // ms epoch
+  killswitchTripped: integer('killswitch_tripped', { mode: 'boolean' }).notNull().default(false),
+  killswitchReason: text('killswitch_reason'),
+  killswitchAt: integer('killswitch_at'), // ms epoch
+  godModeGranted: integer('god_mode_granted', { mode: 'boolean' }).notNull().default(false),
+  godModeGrantedBy: text('god_mode_granted_by'),
+  godModeGrantedAt: integer('god_mode_granted_at'), // ms epoch
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Above-ceiling remediations awaiting human approval (2026-06-12).
+export const observatoryPendingFixes = sqliteTable('observatory_pending_fixes', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  incidentId: text('incident_id').notNull(),
+  command: text('command').notNull(),
+  classification: text('classification'), // JSON ApplyClassification
+  reason: text('reason'),
+  proposedBy: text('proposed_by').notNull(), // 'autopilot' | 'watcher' | 'analyst' | 'sentinel'
+  status: text('status', {
+    enum: ['pending', 'approved', 'denied', 'expired'],
+  }).notNull().default('pending'),
+  decidedBy: text('decided_by'),
+  decidedAt: integer('decided_at'),
+  applyResult: text('apply_result'), // JSON ApplyResult
+  createdAt: integer('created_at').notNull(),
 });
 
 // --- Notification Preferences ---

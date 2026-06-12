@@ -57,6 +57,37 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_hidden', 'INTEGER DEFAULT 0');
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache', 'TEXT');
   safeAddColumn(sqlite, 'tenant_preferences', 'addons_cache_at', 'INTEGER');
+  // Observatory operating modes + auto-pilot (2026-06-12) — see operating-mode.ts
+  safeAddColumn(sqlite, 'tenant_preferences', 'operating_mode', "TEXT NOT NULL DEFAULT 'discover'");
+  safeAddColumn(sqlite, 'tenant_preferences', 'autopilot_enabled', 'INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'autopilot_level', "TEXT NOT NULL DEFAULT 'discover'");
+  safeAddColumn(sqlite, 'tenant_preferences', 'autopilot_success_count', 'INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'autopilot_fail_count', 'INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'autopilot_level_since', 'INTEGER');
+  safeAddColumn(sqlite, 'tenant_preferences', 'killswitch_tripped', 'INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'killswitch_reason', 'TEXT');
+  safeAddColumn(sqlite, 'tenant_preferences', 'killswitch_at', 'INTEGER');
+  safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted', 'INTEGER NOT NULL DEFAULT 0');
+  safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted_by', 'TEXT');
+  safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted_at', 'INTEGER');
+  sqlite.exec(`
+    CREATE TABLE IF NOT EXISTS observatory_pending_fixes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      incident_id TEXT NOT NULL,
+      command TEXT NOT NULL,
+      classification TEXT,
+      reason TEXT,
+      proposed_by TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      decided_by TEXT,
+      decided_at INTEGER,
+      apply_result TEXT,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_user ON observatory_pending_fixes(user_id, status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_incident ON observatory_pending_fixes(incident_id);
+  `);
   // Data sources: username/password columns (2026-03-28)
   safeAddColumn(sqlite, 'data_sources', 'username', 'TEXT');
   safeAddColumn(sqlite, 'data_sources', 'password', 'TEXT');

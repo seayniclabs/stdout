@@ -167,7 +167,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   // --- Action: apply (gated auto-remediation, P4) ---
   if (action === 'apply') {
-    const { command, confirmed } = body;
+    const { command, confirmed, autonomous } = body;
     if (!command || typeof command !== 'string') {
       return new Response(JSON.stringify({ error: 'command is required for apply' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
@@ -180,6 +180,47 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (manageBlock) return manageBlock;
 
     const { applyRemediation, classifyAutoApply } = await import('../../../../lib/autofix-apply');
+
+    // ── Operating-mode gate (autonomous path only) ──────────────────────────────
+    // A HUMAN with manage_settings clicking "apply" is a manual operator action and runs as
+    // before. An AUTONOMOUS proposer (autonomous:true) must pass the mode gate: it may only act
+    // in 'autofix' mode, only within the non-destructive ceiling (unless god mode), and anything
+    // above the ceiling is PARKED against this incident for human approval instead of applied.
+    if (autonomous) {
+      const {
+        decideAutonomous, parkPendingFix,
+      } = await import('../../../../lib/observatory/operating-mode');
+      const cls = classifyAutoApply(command);
+      const verdict = decideAutonomous(userId, cls);
+
+      if (verdict.decision === 'denied') {
+        return new Response(JSON.stringify({
+          applied: false, decision: 'denied', autonomous: true,
+          reason: verdict.reason, mode: verdict.mode, classification: cls,
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+
+      if (verdict.decision === 'park') {
+        const parked = parkPendingFix(userId, incidentId, command, cls,
+          verdict.reason, body.proposedBy || 'autopilot');
+        // Notify a human that an above-ceiling fix awaits approval (best-effort).
+        try {
+          const { notify } = await import('../../../../lib/notify');
+          await notify(userId, {
+            event: 'autofix_pending_approval',
+            title: `Approval needed: auto-fix for "${incident.title}"`,
+            body: `An autonomous remediation exceeds the non-destructive ceiling and needs your approval:\n\n${command}\n\n${verdict.reason}`,
+            url: `/app/incidents/${incidentId}`,
+            metadata: { incidentId, command, pendingFixId: parked.id, reason: verdict.reason },
+          });
+        } catch { /* notifications best-effort */ }
+        return new Response(JSON.stringify({
+          applied: false, decision: 'park', autonomous: true, pendingFixId: parked.id,
+          deduped: parked.deduped, reason: verdict.reason, mode: verdict.mode, classification: cls,
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      // verdict.decision === 'apply' → fall through to execute, recording the outcome below.
+    }
 
     // Resolve the Windlass /exec endpoint from the user's windlass config.
     const wConfig = db.select().from(tenantSchema.windlassConfig)
@@ -199,7 +240,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return { exitCode: data.exitCode ?? 1, stdout: data.stdout ?? '', stderr: data.stderr ?? '' };
     };
 
-    const result = await applyRemediation(command, execViaWindlass, Boolean(confirmed));
+    // An autonomous apply that reached here was cleared by the mode gate (non-destructive within
+    // ceiling, or god mode granted) — force it through P4's confirm gate. A human apply uses the
+    // explicit `confirmed` flag as before.
+    const force = autonomous ? true : Boolean(confirmed);
+    const result = await applyRemediation(command, execViaWindlass, force);
 
     // Audit: record the apply decision + outcome on the incident timeline.
     try {
@@ -208,8 +253,23 @@ export const POST: APIRoute = async ({ locals, request }) => {
         `${result.decision}: ${result.reason}`.slice(0, 200));
     } catch { /* audit best-effort */ }
 
+    // Auto-pilot accounting: an autonomous apply's exit code drives promotion/killswitch.
+    // exitCode 0 = success; non-zero or thrown = failure. The caller may pass loopSignal/
+    // catastrophe (e.g. the proposer already noticed it's repeating itself).
+    if (autonomous) {
+      try {
+        const { recordAutonomousOutcome } = await import('../../../../lib/observatory/operating-mode');
+        const ok = result.applied && (result.exitCode === 0 || result.exitCode === undefined);
+        recordAutonomousOutcome(userId, ok, {
+          loopSignal: Boolean(body.loopSignal),
+          catastrophe: body.catastrophe,
+        });
+      } catch { /* accounting best-effort */ }
+    }
+
     return new Response(JSON.stringify({
       ...result,
+      autonomous: Boolean(autonomous),
       classification: classifyAutoApply(command),
     }), {
       status: result.applied || result.decision === 'escalate' ? 200 : 400,

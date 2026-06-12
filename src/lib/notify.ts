@@ -9,7 +9,9 @@ export type NotifyEvent =
   | 'severity_critical'
   | 'backup_complete'
   | 'service_down'
-  | 'service_recovered';
+  | 'service_recovered'
+  | 'autofix_pending_approval' // above-ceiling autonomous fix awaiting human approval
+  | 'autopilot_killswitch';    // auto-pilot auto-demoted to diagnose-only
 
 interface NotifyPayload {
   event: NotifyEvent;
