@@ -13,12 +13,21 @@ scrape_configs:
           environment: 'production'
           service: 'prometheus'
 
-  # Docker container metrics via cAdvisor
+  # Docker daemon metrics (optional — only if dockerd exposes :9323; down by default).
   - job_name: 'docker'
     static_configs:
       - targets: ['host.docker.internal:9323']
         labels:
           environment: 'production'
+
+  # Per-container CPU/memory/disk via the cAdvisor container (same bridge network).
+  # This is what the Sentinel queries for real resource metrics.
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          environment: 'production'
+          service: 'cadvisor'
 
   # StdOut application metrics
   - job_name: 'stdout'

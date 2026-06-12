@@ -363,18 +363,21 @@ export async function runScheduledCheck(userId: string): Promise<{
   let anomaliesDetected = 0;
   let incidentsCreated = 0;
 
+  // Live metric ingestion: pull real resource metrics from Prometheus (cAdvisor) so anomaly
+  // detection runs on actual data. Host-aggregate metrics apply to every discovered stack.
+  const { fetchLiveMetrics } = await import('./metrics-fetcher');
+  const liveMetrics = await fetchLiveMetrics(userId);
+
   for (const stack of stacks) {
-    // TODO: Fetch current metrics from monitors/data sources
-    // For now, skip if no metrics available
     const metrics: MetricSnapshot = {
       stackId: stack.id,
       stackName: stack.name,
       timestamp: Date.now(),
-      metrics: {} // Would be populated from actual metrics
+      metrics: liveMetrics,
     };
 
     if (Object.keys(metrics.metrics).length === 0) {
-      continue; // No metrics to check
+      continue; // No metrics available from Prometheus this tick — nothing to check.
     }
 
     const detection = await checkStackForAnomalies(userId, stack.id, metrics);
