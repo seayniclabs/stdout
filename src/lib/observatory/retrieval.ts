@@ -243,7 +243,6 @@ async function retrieveStandardPatterns(
       symptoms,
       common_causes,
       resolution_steps,
-      prevention_steps,
       confidence_threshold,
       source,
       created_at,
@@ -254,7 +253,14 @@ async function retrieveStandardPatterns(
     LIMIT 10
   `;
 
-  const rows = await db.all(sql.raw(query, params)) as any[];
+  // Parameterized via the raw better-sqlite3 client (`sql.raw` can't bind params).
+  let rows: any[] = [];
+  try {
+    const raw = (db as any).$client;
+    rows = raw?.prepare ? raw.prepare(query).all(...params) : [];
+  } catch {
+    rows = [];
+  }
 
   return rows.map(row => ({
     id: row.id,
@@ -374,7 +380,15 @@ async function retrieveCustomPatterns(
     LIMIT 5
   `;
 
-  const rows = await db.all(sql.raw(query, params)) as any[];
+  // Parameterized via the underlying better-sqlite3 client (the `?` placeholders above bind to
+  // `params`). `sql.raw` does not accept bind params, so use the raw prepared statement.
+  let rows: any[] = [];
+  try {
+    const raw = (db as any).$client;
+    rows = raw?.prepare ? raw.prepare(query).all(...params) : [];
+  } catch {
+    rows = [];
+  }
 
   return rows.map(row => ({
     id: row.id,

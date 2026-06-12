@@ -89,6 +89,26 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
     );
     CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_user ON observatory_pending_fixes(user_id, status, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_observatory_pending_fixes_incident ON observatory_pending_fixes(incident_id);
+    CREATE TABLE IF NOT EXISTS observatory_custom_patterns (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      stack_id TEXT,
+      based_on_standard TEXT,
+      pattern_name TEXT NOT NULL,
+      category TEXT NOT NULL,
+      symptoms TEXT NOT NULL,
+      common_causes TEXT NOT NULL,
+      resolution_steps TEXT NOT NULL,
+      prevention_steps TEXT,
+      confidence_score REAL NOT NULL DEFAULT 0.5,
+      occurrences INTEGER NOT NULL DEFAULT 0,
+      successes INTEGER NOT NULL DEFAULT 0,
+      last_seen INTEGER,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_observatory_custom_patterns_user ON observatory_custom_patterns(user_id);
+    CREATE INDEX IF NOT EXISTS idx_observatory_custom_patterns_stack ON observatory_custom_patterns(stack_id);
   `);
   // Data sources: username/password columns (2026-03-28)
   safeAddColumn(sqlite, 'data_sources', 'username', 'TEXT');

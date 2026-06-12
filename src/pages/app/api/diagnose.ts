@@ -73,13 +73,28 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const userId = locals.workspace?.ownerId || locals.user!.id;
+  const db = getTenantDb(userId);
   const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Incident not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json' },
     });
   }
+
+  // Operating-mode gate: diagnosis (the brain explaining incidents) requires effective mode
+  // ≥ diagnose. In 'discover' (eyes only) the brain does not run. A human manually triggering
+  // diagnose still goes through here — discover means the instance is configured eyes-only.
+  try {
+    const { canDiagnose } = await import('../../../lib/observatory/operating-mode');
+    if (!canDiagnose(userId)) {
+      return new Response(JSON.stringify({
+        error: "Diagnosis is disabled in 'discover' mode. Switch to 'diagnose' or 'autofix' in Observatory settings to let the brain analyze incidents.",
+        mode: 'discover',
+        retryable: false,
+      }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+    }
+  } catch { /* if the gate can't be read, fail open to preserve existing behavior */ }
 
   // Get stack context
   let stackContext = 'No stack description provided.';
@@ -148,10 +163,32 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
+  // Tool-augmented diagnosis (P7b): let the brain run ONE read-only diagnostic tool and feed the
+  // real output into the diagnosis. Best-effort — never blocks diagnosis if it fails.
+  let toolContextBlock = '';
+  let toolUsed: { tool?: string; args?: Record<string, unknown> } | null = null;
+  try {
+    const { augmentWithTool } = await import('../../../lib/observatory/tool-augmented-diagnose');
+    const aug = await augmentWithTool({
+      userId,
+      incidentTitle: incident.title,
+      incidentDescription: incident.description,
+      credential: {
+        provider: credential.provider,
+        model: credential.model,
+        apiKey: credential.source === 'user_key' ? credential.apiKey : '',
+      },
+    });
+    if (aug.ran) toolUsed = { tool: aug.tool, args: aug.args };
+    toolContextBlock = aug.contextBlock;
+  } catch { /* augmentation is best-effort */ }
+
+  const enrichedDescription = description + toolContextBlock;
+
   try {
     const result = await diagnoseIncident({
       stackContext,
-      incidentDescription: description,
+      incidentDescription: enrichedDescription,
       pastResolutions,
       tier,
       dataSources,
@@ -200,7 +237,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens, credentialSource: credential?.source || 'ollama' },
     });
 
-    return new Response(JSON.stringify(result), {
+    return new Response(JSON.stringify({ ...result, toolUsed: toolUsed || undefined }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (err: any) {

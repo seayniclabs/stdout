@@ -30,7 +30,7 @@ interface ToolDef {
   safety: SafetyClass;
   description: string;
   /** Which container the tool runs in (docker exec target). */
-  container: 'observatory-tools' | 'trivy';
+  container: 'observatory-tools' | 'trivy' | 'zeek';
   /** Build the argv (after `docker exec <container>`). Throws if args are invalid. */
   build(args: Record<string, unknown>): string[];
   timeoutMs: number;

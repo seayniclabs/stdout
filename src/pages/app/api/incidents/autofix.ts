@@ -257,14 +257,24 @@ export const POST: APIRoute = async ({ locals, request }) => {
     // exitCode 0 = success; non-zero or thrown = failure. The caller may pass loopSignal/
     // catastrophe (e.g. the proposer already noticed it's repeating itself).
     if (autonomous) {
+      const ok = result.applied && (result.exitCode === 0 || result.exitCode === undefined);
       try {
         const { recordAutonomousOutcome } = await import('../../../../lib/observatory/operating-mode');
-        const ok = result.applied && (result.exitCode === 0 || result.exitCode === undefined);
         recordAutonomousOutcome(userId, ok, {
           loopSignal: Boolean(body.loopSignal),
           catastrophe: body.catastrophe,
         });
       } catch { /* accounting best-effort */ }
+      // Closed-loop (P6): if this remediation came from a learned/auto pattern, feed the outcome
+      // back into that pattern's confidence so good patterns rise and bad ones decay.
+      if (body.patternId && typeof body.patternId === 'string') {
+        try {
+          const { recordPatternOutcome } = await import('../../../../lib/observatory/pattern-feedback');
+          recordPatternOutcome({
+            patternId: body.patternId, success: ok, incidentId, agentType: body.proposedBy || 'autopilot',
+          });
+        } catch { /* feedback best-effort */ }
+      }
     }
 
     return new Response(JSON.stringify({
