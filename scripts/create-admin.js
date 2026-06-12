@@ -35,7 +35,8 @@ async function createAdmin() {
     const userId = await generateId();
 
     // Open database directly
-    const db = new Database('/data/central.db');
+    const DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH || '/data/stdout.db';
+    const db = new Database(DB_PATH);
 
     // Insert admin user
     db.prepare(`

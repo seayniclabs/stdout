@@ -2,7 +2,8 @@
 import Database from 'better-sqlite3';
 
 try {
-  const db = new Database('/data/central.db');
+  const DB_PATH = process.env.DB_PATH || process.env.DATABASE_PATH || '/data/stdout.db';
+  const db = new Database(DB_PATH);
 
   db.prepare(`
     INSERT INTO system_state (key, value, updated_at)
