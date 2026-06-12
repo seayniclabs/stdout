@@ -1,0 +1,187 @@
+# StdOut — two-network production compose.
+#
+# Security design (vault: Projects/StdOut/Decision — Host Networking and Satellites.md):
+#   - HOST network: stdout + windlass (must see/scan the LAN; windlass watches stdout).
+#   - INTERNAL bridge (no LAN exposure): the Observatory stack + AI toolbox.
+#   - Docker forbids a host-net container from also joining a bridge, so the few endpoints
+#     stdout needs are published LOOPBACK-ONLY (127.0.0.1) — reachable by stdout (host net) at
+#     localhost:<port>, never from the LAN. Internal-only tools publish nothing.
+#
+# Deploy: docker compose -f docker-compose.observatory.yml up -d
+services:
+  # ── LAN-facing (host network) ─────────────────────────────────────────────
+  stdout:
+    image: charlieseay/stdout:latest
+    container_name: stdout
+    network_mode: host
+    environment:
+      - TZ=America/Chicago
+      - PORT=8112
+      - DB_PATH=/data/stdout.db
+      - NODE_ENV=production
+      - STDOUT_MODE=selfhost
+      - APP_URL=http://stdout.local:8112
+      # host-net peers via localhost; internal services via loopback-published ports
+      - WINDLASS_URL=http://localhost:8116
+      - OLLAMA_URL=http://localhost:11434
+      - SENTINEL_API_URL=http://localhost:8081
+      - PROMETHEUS_URL=http://localhost:9090
+      - LOKI_URL=http://localhost:3100
+      - TEMPO_URL=http://localhost:3200
+      - CADVISOR_URL=http://localhost:8181
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-test@stdout.local}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-test-password-123}
+    volumes:
+      - stdout-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Override the image's baked-in :3000 healthcheck — the app listens on PORT=8112 here.
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8112/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    restart: unless-stopped
+
+  windlass:
+    image: charlieseay/windlass:latest
+    container_name: windlass
+    network_mode: host
+    environment:
+      - TZ=America/Chicago
+      - STDOUT_URL=http://localhost:8112   # windlass watches stdout
+    volumes:
+      - windlass-data:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+
+  # ── Internal-only Observatory stack (no LAN exposure) ─────────────────────
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:9090:9090"   # loopback-only: stdout reaches it, LAN cannot
+    volumes:
+      - ./observatory/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - stdout-egress
+
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./observatory/config/loki-config.yml:/etc/loki/config.yaml:ro
+      - loki-data:/loki
+    command: -config.file=/etc/loki/config.yaml
+    networks:
+      - stdout-egress
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3200:3200"
+    volumes:
+      - ./observatory/config/tempo-config.yml:/etc/tempo.yaml:ro
+      - tempo-data:/var/tempo
+    command:
+      - '-config.file=/etc/tempo.yaml'
+    networks:
+      - stdout-egress
+
+  # ── AI toolbox (P7, tier-1) — internal-only, invokable by the brain ────────
+  # Container & system intelligence
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8181:8080"   # per-container metrics; loopback-only
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    privileged: true
+    devices:
+      - /dev/kmsg
+    networks:
+      - stdout-egress
+
+  # Container vulnerability scanning — Trivy server mode (brain queries it).
+  # NOTE: Trivy must reach the internet to update its CVE database, so it is on a normal
+  # (non-internal) bridge. It is still LOOPBACK-published (127.0.0.1) — not exposed to the LAN.
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: trivy
+    restart: unless-stopped
+    command: ["server", "--listen", "0.0.0.0:4954"]
+    ports:
+      - "127.0.0.1:4954:4954"
+    volumes:
+      - trivy-cache:/root/.cache
+    networks:
+      - stdout-egress
+
+  # Network/diagnostic CLI toolbox — tshark/tcpdump/dig/etc. available for the AI to exec into.
+  # Stays running; the brain runs tools via `docker exec observatory-tools <cmd>`.
+  observatory-tools:
+    image: nicolaka/netshoot:latest
+    container_name: observatory-tools
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    command: ["sleep", "infinity"]
+    # Reaches the other Observatory services by name and can run external diagnostics
+    # (dig/curl). Not published anywhere — only the brain execs into it.
+    networks:
+      - stdout-egress
+
+  # Packet capture stays on HOST net — it must see real LAN traffic for tshark/zeek analysis.
+  observatory-pcap:
+    image: nicolaka/netshoot:latest
+    container_name: observatory-pcap
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    volumes:
+      - pcap-captures:/captures
+    command: >
+      sh -c "mkdir -p /captures &&
+        while true; do
+          tcpdump -i any -w /captures/capture.pcap -G 3600 -W 24 -Z root 'not port 22' || sleep 10;
+        done"
+
+volumes:
+  stdout-data:
+  windlass-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  trivy-cache:
+  pcap-captures:
+
+networks:
+  # Internal Observatory bridge. NOT a Docker `internal:true` network — that would block BOTH
+  # outbound (Trivy CVE DB) AND host port-publishing (StdOut on host net reaches these via
+  # 127.0.0.1). Instead this is a normal bridge whose services publish LOOPBACK-ONLY
+  # (127.0.0.1:<port>), so they are reachable by StdOut on the host but NEVER bound to the LAN.
+  # Verified: curl from the LAN IP to these ports is refused; the brain reaches them at localhost.
+  stdout-egress:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.23.0.0/24
