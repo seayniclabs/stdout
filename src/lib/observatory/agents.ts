@@ -5,6 +5,16 @@
  * Agents use these personas to guide their decision-making and behavior.
  */
 
+/**
+ * Local model tags must match the EXACT Ollama tags we ship (and that users may swap).
+ * Env-overridable per the provider strategy (local AI by default, BYO/swap allowed).
+ * Defaults match the models StdOut provisions: a small fast Watcher model + a larger
+ * Analyst model. WRONG tags here cause Ollama "Internal Server Error" pulls and a failed
+ * Observatory init — keep these aligned with scripts/install-observatory model pulls.
+ */
+export const WATCHER_MODEL = process.env.OBSERVATORY_WATCHER_MODEL || 'llama3.2:3b-instruct-q4_K_M';
+export const ANALYST_MODEL = process.env.OBSERVATORY_ANALYST_MODEL || 'qwen2.5:14b-instruct-q4_K_M';
+
 export interface AgentPersona {
   name: string;
   model: string;
@@ -31,7 +41,7 @@ export interface AgentPersona {
 export const AGENT_PERSONAS: Record<string, AgentPersona> = {
   watcher: {
     name: "Watcher",
-    model: "llama-3.2-3b",
+    model: WATCHER_MODEL,
     role: "Continuous Infrastructure Monitor",
     mission: "Detect anomalies and early warning signs before they become incidents",
 
@@ -65,7 +75,7 @@ export const AGENT_PERSONAS: Record<string, AgentPersona> = {
 
   analyst: {
     name: "Analyst",
-    model: "qwen-2.5-14b",
+    model: ANALYST_MODEL,
     role: "Incident Investigator & Root Cause Analyst",
     mission: "Diagnose HIGH/CRITICAL incidents and recommend resolution paths based on historical data and standard patterns",
 
