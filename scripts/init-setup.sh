@@ -24,9 +24,22 @@ else
   # Check if we need to create an admin user from env vars
   USER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users" 2>/dev/null || echo "0")
 
-  if [ "$USER_COUNT" = "0" ] && [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
+  # Zero-touch (unattended) install path: ADMIN_EMAIL + ADMIN_PASSWORD provided.
+  # Create the admin and complete setup automatically — no browser wizard, no manual SQL.
+  UNATTENDED=0
+  if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
+    UNATTENDED=1
+  fi
+
+  if [ "$USER_COUNT" = "0" ] && [ "$UNATTENDED" = "1" ]; then
     echo "[init] No users found - creating admin user from environment variables..."
     node /app/scripts/create-admin-from-env.js
+  fi
+
+  # In unattended mode, mark setup complete automatically (idempotent).
+  if [ "$UNATTENDED" = "1" ]; then
+    echo "[init] Unattended mode - completing setup automatically..."
+    node /app/scripts/bootstrap-unattended.js
   fi
 
   # Check if setup is complete
@@ -40,12 +53,21 @@ else
     # Auto-connect to Windlass if available and not already connected
     if [ -n "$WINDLASS_URL" ]; then
       echo "[init] Checking Windlass availability at $WINDLASS_URL..."
-      if curl -sf "$WINDLASS_URL/health" > /dev/null 2>&1; then
+      # Give Windlass a moment to come up (compose starts both together)
+      WINDLASS_UP=0
+      for i in 1 2 3 4 5 6; do
+        if curl -sf "$WINDLASS_URL/health" > /dev/null 2>&1; then
+          WINDLASS_UP=1
+          break
+        fi
+        sleep 2
+      done
+      if [ "$WINDLASS_UP" = "1" ]; then
         echo "[init] ✓ Windlass is available"
         echo "[init] Auto-configuring Windlass integration..."
         node /app/scripts/create-windlass-config-from-env.js
       else
-        echo "[init] ✗ Windlass not reachable (this is okay, continuing without it)"
+        echo "[init] ✗ Windlass not reachable yet (app will retry config at runtime)"
       fi
     fi
 
