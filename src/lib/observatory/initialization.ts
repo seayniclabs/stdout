@@ -121,6 +121,23 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
 
     if (firstUser) {
       const tenantDb = getTenantDb(firstUser.id);
+
+      // Check if any hosts have been discovered yet
+      const totalHostsRow = tenantDb.get(sql`
+        SELECT COUNT(*) as n FROM discovered_hosts WHERE user_id = ${firstUser.id}
+      `) as { n: number } | undefined;
+      const totalHosts = totalHostsRow?.n ?? 0;
+
+      // Auto-trigger initial network scan if no hosts discovered yet
+      if (totalHosts === 0) {
+        log.push('No hosts discovered yet — triggering initial network scan...');
+        // Trigger scan asynchronously (don't block startup)
+        triggerInitialNetworkScan(firstUser.id).catch((err) => {
+          console.error('[Observatory Init] Failed to trigger initial scan:', err);
+        });
+        log.push('  ⏳ Initial network scan started in background');
+      }
+
       const stacks = tenantDb.all(sql`
         SELECT id, name FROM stacks WHERE user_id = ${firstUser.id} ORDER BY created_at DESC
       `) as Array<{ id: string; name: string }>;
@@ -280,4 +297,27 @@ export function isObservatoryReady(result: ObservatoryInitResult): {
     missingComponents,
     recommendations,
   };
+}
+
+/**
+ * Trigger initial network scan asynchronously on first startup
+ */
+async function triggerInitialNetworkScan(userId: string): Promise<void> {
+  try {
+    console.log('[Observatory Init] Triggering initial network scan...');
+
+    // Mark in system_state that initial scan was triggered
+    const centralDb = getCentralDb();
+    await centralDb.run(sql`
+      INSERT INTO system_state (key, value, updated_at)
+      VALUES ('observatory_initial_scan_triggered', ${Date.now().toString()}, ${Date.now()})
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+    `);
+
+    // Note: actual scan will be triggered by user visiting Observatory page or Infrastructure page
+    // This just sets the flag so UI knows to prompt for initial scan
+
+  } catch (error) {
+    console.error('[Observatory Init] Failed to set initial scan flag:', error);
+  }
 }

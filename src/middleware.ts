@@ -361,10 +361,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isTestEndpoint = pathname.startsWith('/app/api/test/');
 
   // Skip CSRF origin check for setup endpoints (no auth required during setup wizard)
+  // Also skip for comms inbound webhooks (external channels query infrastructure status)
   const isSetupEndpoint = pathname.startsWith('/app/api/network/scan') ||
                           pathname.startsWith('/app/api/network/import') ||
                           pathname.startsWith('/app/api/setup/install-windlass') ||
-                          pathname.startsWith('/app/api/setup/install-observatory');
+                          pathname.startsWith('/app/api/setup/install-observatory') ||
+                          pathname.startsWith('/app/api/comms/inbound/');
 
   if (!isBearerRequest && !isTestEndpoint && !isSetupEndpoint && !checkOrigin(context.request)) {
     return new Response('Forbidden — origin not allowed', { status: 403 });
@@ -465,6 +467,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/setup/install-observatory',
     '/app/api/test/',
     '/app/api/satellite/ping', // unauthenticated discovery endpoint — satellites probe this before setup
+    '/app/api/comms/inbound/', // External channels (Sonique, SMS, webhooks) can query infrastructure status
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));

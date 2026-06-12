@@ -10,7 +10,8 @@ import Database from 'better-sqlite3';
 import { resolve, dirname } from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';
 
-const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || '/data/central.db';
+// DB_PATH is the single source of truth — must match src/lib/db/index.ts (self-host uses /data/stdout.db)
+const dbPath = process.env.DB_PATH || process.env.DATABASE_PATH || '/data/stdout.db';
 console.log(`[apply-schema] Using database at: ${dbPath}`);
 
 const dir = dirname(dbPath);

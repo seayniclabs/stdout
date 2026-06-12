@@ -430,7 +430,8 @@ textarea.form-input {
   border-radius: var(--radius-sm);
   padding: 10px 14px;
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-top: 8px;
+  margin-bottom: 16px;
   text-align: left;
 }
 .auth-forgot, .auth-switch { font-size: 13px; color: var(--text-secondary); margin-top: 12px; }

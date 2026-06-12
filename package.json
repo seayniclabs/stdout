@@ -32,7 +32,8 @@
   "devDependencies": {
     "@playwright/test": "^1.50.0",
     "@types/better-sqlite3": "^7.6.13",
-    "drizzle-kit": "^0.31.9"
+    "drizzle-kit": "^0.31.9",
+    "playwright": "^1.60.0"
   },
   "overrides": {
     "svgo": ">=4.0.1"

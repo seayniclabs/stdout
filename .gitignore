@@ -7,6 +7,11 @@ hone
 .env
 .env.*
 
+# Secrets and license — never commit (real values live on disk / in /run/secrets)
+secrets/
+*.license
+stdout.license
+
 playwright-report/
 test-results/
 marketing-assets/

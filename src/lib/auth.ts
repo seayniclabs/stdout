@@ -11,7 +11,12 @@ export async function hashPassword(password: string): Promise<string> {
 
 export async function verifyPassword(storedHash: string, password: string): Promise<boolean> {
   if (storedHash === 'store-auth') return false;
-  return verify(storedHash, password);
+  try {
+    return await verify(storedHash, password);
+  } catch (err) {
+    console.error('[verifyPassword] Error verifying password:', err);
+    return false;
+  }
 }
 
 export async function createSession(userId: string): Promise<string> {

@@ -15,6 +15,9 @@ OFFLINE_MODE=false
 BUNDLE_PATH="stdout-bundle.tar.gz"
 LICENSE_FILE="stdout.license"
 REMOTE_TARGET=""   # e.g. charlie@192.168.0.244 — run the install ON that host over SSH
+SATELLITE_MODE=false
+SATELLITE_ROLE=""    # read-only | full-control
+SATELLITE_STDOUT_URL=""  # URL of the StdOut instance to report to
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -39,9 +42,22 @@ while [[ $# -gt 0 ]]; do
       CONFIG_FILE="$2"
       shift 2
       ;;
+    --satellite)
+      SATELLITE_MODE=true
+      shift
+      ;;
+    --satellite-role)
+      SATELLITE_ROLE="$2"
+      shift 2
+      ;;
+    --satellite-url)
+      SATELLITE_STDOUT_URL="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown option: $1"
       echo "Usage: $0 [--offline] [--bundle <path>] [--license <path>] [--remote user@host] [--config deploy.yaml]"
+      echo "       $0 --satellite [--satellite-role read-only|full-control] [--satellite-url <stdout-url>]"
       exit 1
       ;;
   esac

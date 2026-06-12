@@ -23,35 +23,12 @@ export interface WorkspaceContext {
 
 /**
  * Get the workspace context for a user.
- * If workspaceId is provided, resolves team membership.
- * Otherwise, returns the user's own workspace.
+ * SELF-HOSTED ONLY: Always returns the user's own workspace.
+ * Multi-tenant/team workspace features are disabled for self-hosted deployments.
  */
 export function getWorkspaceContext(user: SessionUser, workspaceId?: string): WorkspaceContext {
-  // Own workspace
-  if (!workspaceId || workspaceId === user.id) {
-    return { ownerId: user.id, role: 'owner', isOwnWorkspace: true };
-  }
-
-  // Team workspace — check membership
-  const db = getCentralDb();
-  const membership = db.select().from(centralSchema.teamMembers)
-    .where(and(
-      eq(centralSchema.teamMembers.ownerId, workspaceId),
-      eq(centralSchema.teamMembers.userId, user.id),
-      eq(centralSchema.teamMembers.status, 'accepted'),
-    ))
-    .get();
-
-  if (!membership) {
-    // Not a member — fall back to own workspace
-    return { ownerId: user.id, role: 'owner', isOwnWorkspace: true };
-  }
-
-  return {
-    ownerId: workspaceId,
-    role: membership.role as TeamRole,
-    isOwnWorkspace: false,
-  };
+  // Self-hosted: always own workspace, ignore team membership
+  return { ownerId: user.id, role: 'owner', isOwnWorkspace: true };
 }
 
 /**

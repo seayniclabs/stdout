@@ -242,7 +242,7 @@ function timeAgo(date: Date) {
           </div>
 
           {/* Windlass widget (if configured) — below gauges */}
-          {windlassSummary && windlassSummary.total > 0 && (
+          {windlassSummary && windlassSummary.total > 0 ? (
             <a href="/app/tools/windlass" class="windlass-widget">
               <div class="ww-header">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -255,6 +255,17 @@ function timeAgo(date: Date) {
                 <span class="ww-stat"><span class="ww-num" style="color: #F97316">{windlassSummary.totalMemory.toLocaleString()}</span> MB</span>
               </div>
             </a>
+          ) : (
+            <div class="windlass-widget windlass-empty">
+              <div class="ww-header">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span class="ww-title mono">WINDLASS</span>
+              </div>
+              <div class="ww-empty-state">
+                <p>Schedule-aware service management not configured</p>
+                <a href="/app/settings?tab=windlass" class="btn-sm btn-ghost">Configure Windlass</a>
+              </div>
+            </div>
           )}
 
           <!-- Right: Service list + Incidents -->
@@ -675,11 +686,16 @@ function timeAgo(date: Date) {
   /* Windlass widget */
   .windlass-widget { display: block; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; text-decoration: none; color: var(--text); transition: border-color 0.15s; margin-top: 8px; }
   .windlass-widget:hover { border-color: var(--accent); }
+  .windlass-empty { cursor: default; }
+  .windlass-empty:hover { border-color: var(--border); }
   .ww-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; color: var(--muted); }
   .ww-title { font-size: 0.7rem; letter-spacing: 0.08em; }
   .ww-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.35rem 1rem; }
   .ww-stat { font-size: 0.8rem; color: var(--muted); }
   .ww-num { font-family: var(--font-mono); font-weight: 700; font-size: 1rem; margin-right: 2px; }
+  .ww-empty-state { text-align: center; padding: 8px 0; }
+  .ww-empty-state p { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
+  .ww-empty-state .btn-sm { font-size: 11px; padding: 4px 10px; }
 
   .service-list { display: flex; flex-direction: column; gap: 4px; }
   .service-row {

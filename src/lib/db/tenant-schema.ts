@@ -513,3 +513,29 @@ export const stackImports = sqliteTable('stack_imports', {
   }).notNull().default('pending'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+// --- Comms Channels: Multi-channel communication layer ---
+
+export const commsChannels = sqliteTable('comms_channels', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  channelType: text('channel_type', {
+    enum: ['slack', 'sms', 'webhook', 'email', 'websocket'],
+  }).notNull(),
+  name: text('name').notNull(), // User-friendly name: "Sonique", "Team Slack", etc.
+  config: text('config').notNull(), // JSON: credentials, callback URLs, phone numbers, etc.
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const commsMessages = sqliteTable('comms_messages', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull(), // FK to comms_channels
+  direction: text('direction', {
+    enum: ['inbound', 'outbound'],
+  }).notNull(),
+  content: text('content').notNull(), // The actual message text
+  metadata: text('metadata'), // JSON: response time, tokens used, query results, etc.
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+});

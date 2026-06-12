@@ -12,7 +12,8 @@ mkdir -p /data/backups
 echo "[init] Data directories ensured"
 
 # Check if this is first run (no setup_progress table or no admin user)
-DB_PATH="${DATABASE_PATH:-${DB_PATH:-/data/central.db}}"
+# DB_PATH is the single source of truth — must match src/lib/db/index.ts (self-host uses /data/stdout.db)
+DB_PATH="${DB_PATH:-${DATABASE_PATH:-/data/stdout.db}}"
 
 if [ ! -f "$DB_PATH" ]; then
   echo "[init] First run detected - database does not exist yet"
@@ -41,7 +42,8 @@ else
       echo "[init] Checking Windlass availability at $WINDLASS_URL..."
       if curl -sf "$WINDLASS_URL/health" > /dev/null 2>&1; then
         echo "[init] ✓ Windlass is available"
-        # TODO: Auto-sync Windlass registry
+        echo "[init] Auto-configuring Windlass integration..."
+        node /app/scripts/create-windlass-config-from-env.js
       else
         echo "[init] ✗ Windlass not reachable (this is okay, continuing without it)"
       fi

@@ -600,6 +600,26 @@ function runTenantDDL(sqlite: InstanceType<typeof Database>): void {
     );
     CREATE INDEX IF NOT EXISTS idx_event_log_type ON event_log(type, created_at DESC);
     CREATE INDEX IF NOT EXISTS idx_event_log_user ON event_log(user_id, created_at DESC);
+    CREATE TABLE IF NOT EXISTS comms_channels (
+      id           TEXT PRIMARY KEY,
+      user_id      TEXT NOT NULL,
+      channel_type TEXT NOT NULL CHECK(channel_type IN ('slack', 'sms', 'webhook', 'email', 'websocket')),
+      name         TEXT NOT NULL,
+      config       TEXT NOT NULL,
+      enabled      INTEGER NOT NULL DEFAULT 1,
+      created_at   INTEGER NOT NULL,
+      updated_at   INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_comms_channels_user ON comms_channels(user_id);
+    CREATE TABLE IF NOT EXISTS comms_messages (
+      id         TEXT PRIMARY KEY,
+      channel_id TEXT NOT NULL REFERENCES comms_channels(id) ON DELETE CASCADE,
+      direction  TEXT NOT NULL CHECK(direction IN ('inbound', 'outbound')),
+      content    TEXT NOT NULL,
+      metadata   TEXT,
+      timestamp  INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_comms_messages_channel ON comms_messages(channel_id, timestamp DESC);
     CREATE VIRTUAL TABLE IF NOT EXISTS incidents_fts USING fts5(
       title, description, tags,
       content='incidents',

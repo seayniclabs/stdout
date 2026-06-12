@@ -39,7 +39,11 @@ async function createAdmin() {
     const hashedPassword = await hashPassword(password);
     const userId = await generateId();
 
-    const db = new Database('/data/central.db');
+    // Must match the app's DB resolution (src/lib/db/index.ts):
+    // self-host uses a single combined DB at DB_PATH (default ./data/stdout.db).
+    const dbPath = process.env.DB_PATH || '/data/stdout.db';
+    const db = new Database(dbPath);
+    console.log(`[init] create-admin using DB: ${dbPath}`);
 
     db.prepare(`
       INSERT INTO users (id, email, password_hash, display_name, role, email_verified, created_at, updated_at)
