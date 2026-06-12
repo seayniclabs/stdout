@@ -283,6 +283,11 @@ scheduleCveScanner();
 scheduleDockerHubScanner();
 scheduleShodanScanner();
 
+// Recurring network discovery — honors each user's scanner_schedule (P2b)
+import('./lib/observatory/scan-scheduler')
+  .then(({ startScanScheduler }) => startScanScheduler())
+  .catch((err) => console.error('[middleware] failed to start scan scheduler:', err));
+
 // Observatory initialization — runs on every service start/restart/recovery
 // Ensures AI agents always come online with full knowledge base and mission
 let observatoryInitialized = false;

@@ -220,6 +220,13 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       const blResult = await establishProvisionalBaselines(firstUser.id);
       log.push(...blResult.log);
 
+      // Seed a default recurring-scan schedule so discovery keeps running (P2b).
+      const { ensureDefaultSchedule } = await import('./scan-scheduler');
+      const seeded = await ensureDefaultSchedule(firstUser.id);
+      log.push(seeded
+        ? '  ✓ Default scan schedule created (daily 03:00 UTC) — recurring discovery enabled'
+        : '  ✓ Scan schedule already configured');
+
       // Reflect the just-seeded baselines in the count the activation phase reads.
       try {
         const bRow = centralDb.get(sql`SELECT COUNT(*) as n FROM observatory_baselines`) as { n: number } | undefined;
