@@ -524,6 +524,10 @@ safeAddColumn('tenant_preferences', 'killswitch_at', 'INTEGER'); // ms epoch
 safeAddColumn('tenant_preferences', 'god_mode_granted', 'INTEGER NOT NULL DEFAULT 0');
 safeAddColumn('tenant_preferences', 'god_mode_granted_by', 'TEXT');
 safeAddColumn('tenant_preferences', 'god_mode_granted_at', 'INTEGER');
+// rag_include_public: admin opt-in to include PUBLIC web/external resources in the learning
+// layer + RAG context. OFF by default — internal + community library docs are always included,
+// public resources only when the StdOut admin enables this. (Charlie 2026-06-12.)
+safeAddColumn('tenant_preferences', 'rag_include_public', 'INTEGER NOT NULL DEFAULT 0');
 safeAddColumn('discovered_hosts', 'stack_id', 'TEXT');
 safeAddColumn('stacks', 'previous_description', 'TEXT');
 safeAddColumn('data_sources', 'username', 'TEXT');

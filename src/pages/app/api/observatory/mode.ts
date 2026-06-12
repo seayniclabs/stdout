@@ -56,6 +56,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       mod.resetKillswitch(userId);
       break;
     }
+    case 'setRagIncludePublic': {
+      // Admin opt-in to include public web/external resources in the learning layer (off default).
+      const { setRagIncludePublic } = await import('../../../../lib/observatory/operating-mode');
+      setRagIncludePublic(userId, Boolean(body.enabled));
+      break;
+    }
     default:
       return json({ error: `Unknown op: ${op}` }, 400);
   }

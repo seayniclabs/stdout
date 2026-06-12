@@ -61,6 +61,8 @@ export interface ModeState {
   killswitchReason: string | null;
   /** Human lifted the non-destructive ceiling. */
   godModeGranted: boolean;
+  /** Admin opted to include public web/external resources in the learning layer. */
+  ragIncludePublic: boolean;
   /**
    * The EFFECTIVE mode after combining manual + auto-pilot + killswitch.
    * This is what gates run against.
@@ -78,6 +80,7 @@ interface PrefRow {
   killswitch_tripped: number | null;
   killswitch_reason: string | null;
   god_mode_granted: number | null;
+  rag_include_public: number | null;
 }
 
 function normMode(v: string | null | undefined, fallback: OperatingMode = 'discover'): OperatingMode {
@@ -115,7 +118,7 @@ export function getModeState(userId: string): ModeState {
   const row = db.get(sql`
     SELECT operating_mode, autopilot_enabled, autopilot_level, autopilot_success_count,
            autopilot_fail_count, autopilot_level_since, killswitch_tripped, killswitch_reason,
-           god_mode_granted
+           god_mode_granted, rag_include_public
     FROM tenant_preferences WHERE user_id = ${userId}
   `) as PrefRow | undefined;
 
@@ -145,6 +148,7 @@ export function getModeState(userId: string): ModeState {
     killswitchTripped,
     killswitchReason: row?.killswitch_reason ?? null,
     godModeGranted: !!row?.god_mode_granted,
+    ragIncludePublic: !!row?.rag_include_public,
     effectiveMode,
   };
 }
@@ -252,6 +256,18 @@ export function setAutopilot(userId: string, enabled: boolean): void {
       WHERE user_id = ${userId}
     `);
   }
+}
+
+/**
+ * Admin opt-in to include PUBLIC web/external resources in the learning layer + RAG (off default).
+ * Internal + community library docs are always included; this gates only public resources.
+ */
+export function setRagIncludePublic(userId: string, enabled: boolean): void {
+  ensurePrefsRow(userId);
+  getTenantDb(userId).run(sql`
+    UPDATE tenant_preferences SET rag_include_public = ${enabled ? 1 : 0}, updated_at = ${Date.now()}
+    WHERE user_id = ${userId}
+  `);
 }
 
 /** Grant/revoke god mode. Only ever called from a human (manage_settings) endpoint. */

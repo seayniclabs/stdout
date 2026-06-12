@@ -51,6 +51,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const result = await sanitizeForCommunity({
       title: doc.title,
       content: doc.content,
+      userId: locals.workspace?.ownerId || locals.user.id,
     });
 
     return new Response(JSON.stringify({
@@ -105,7 +106,8 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   }
 
   // Verify the source doc exists and belongs to this user
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const userId = locals.workspace?.ownerId || locals.user!.id;
+  const db = getTenantDb(userId);
   const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, body.docId)).get();
 
   if (!doc || doc.userId !== locals.user.id || doc.source !== 'user') {
@@ -115,10 +117,35 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  // Run value scoring
+  // SERVER-SIDE GATE — never trust the client's sanitized payload. Re-sanitize the SOURCE doc
+  // (deterministic secret scrub + LLM generalization + accuracy/appropriateness screen). A
+  // community submission MUST pass all three before it can be published.
+  const { sanitizeForCommunity } = await import('../../../lib/sanitize');
+  const gate = await sanitizeForCommunity({ title: doc.title, content: doc.content, userId });
+
+  if (gate.foundSecrets) {
+    return new Response(JSON.stringify({
+      error: 'Submission blocked: source contained credentials/secrets. These were redacted; review and re-submit.',
+      foundSecrets: true,
+      replacements: gate.replacements,
+    }), { status: 422, headers: { 'Content-Type': 'application/json' } });
+  }
+  if (gate.flagged) {
+    return new Response(JSON.stringify({
+      error: 'Submission flagged for review (accuracy/appropriateness). A human must approve before publish.',
+      flagged: true,
+      flagReason: gate.flagReason,
+    }), { status: 422, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // Use the SERVER-sanitized text (authoritative), not the client-supplied values.
+  const finalTitle = gate.sanitizedTitle;
+  const finalContent = gate.sanitizedContent;
+
+  // Run value scoring on the authoritative sanitized text.
   const score = scoreSubmission({
-    title: body.sanitizedTitle,
-    content: body.sanitizedContent,
+    title: finalTitle,
+    content: finalContent,
     docType: doc.docType,
   });
 
@@ -142,11 +169,11 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     id: submissionId,
     userId: locals.user.id,
     originalDocId: body.docId,
-    sanitizedTitle: body.sanitizedTitle,
-    sanitizedContent: body.sanitizedContent,
+    sanitizedTitle: finalTitle,
+    sanitizedContent: finalContent,
     docType: doc.docType,
     tags: doc.tags,
-    sanitizationLog: JSON.stringify(body.replacements || []),
+    sanitizationLog: JSON.stringify(gate.replacements || []),
     valueScore: score.score,
     status: 'pending',
     version: 1,

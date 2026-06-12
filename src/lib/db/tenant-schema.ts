@@ -195,6 +195,8 @@ export const tenantPreferences = sqliteTable('tenant_preferences', {
   godModeGranted: integer('god_mode_granted', { mode: 'boolean' }).notNull().default(false),
   godModeGrantedBy: text('god_mode_granted_by'),
   godModeGrantedAt: integer('god_mode_granted_at'), // ms epoch
+  // RAG: admin opt-in to include public web/external resources in the learning layer (off default).
+  ragIncludePublic: integer('rag_include_public', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 

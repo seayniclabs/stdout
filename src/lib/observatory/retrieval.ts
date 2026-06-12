@@ -5,7 +5,7 @@
  * for use in agent prompts during anomaly detection and incident investigation.
  */
 
-import { getCentralDb } from '../db';
+import { getCentralDb, getTenantDb } from '../db';
 import { sql } from 'drizzle-orm';
 import type { StandardPattern, Baseline, CustomPattern } from './types';
 
@@ -41,12 +41,23 @@ export interface RelevantKnowledge {
     resolution_summary?: string;
   }>;
 
+  // Library docs (runbooks/postmortems/guides/notes) — internal + community. Part of the learning
+  // layer alongside integrations. Public/external docs included only when the admin opts in.
+  libraryDocs: Array<{
+    id: string;
+    title: string;
+    docType: string;
+    source: string; // 'user' | 'community' | 'fork'
+    snippet: string;
+  }>;
+
   // Retrieval metadata
   retrievalStats: {
     standardPatternsFound: number;
     customPatternsFound: number;
     baselinesFound: number;
     similarIncidentsFound: number;
+    libraryDocsFound: number;
     queryTimeMs: number;
   };
 }
@@ -81,6 +92,9 @@ export async function retrieveKnowledge(
   // 4. Find similar past incidents
   const similarIncidents = await retrieveSimilarIncidents(userId, context);
 
+  // 5. Library docs (runbooks/postmortems/guides) — internal + community, public if opted in.
+  const libraryDocs = await retrieveLibraryDocs(userId, context);
+
   const queryTimeMs = Date.now() - startTime;
 
   return {
@@ -88,14 +102,92 @@ export async function retrieveKnowledge(
     baselines,
     customPatterns,
     similarIncidents,
+    libraryDocs,
     retrievalStats: {
       standardPatternsFound: standardPatterns.length,
       customPatternsFound: customPatterns.length,
       baselinesFound: baselines.length,
       similarIncidentsFound: similarIncidents.length,
+      libraryDocsFound: libraryDocs.length,
       queryTimeMs
     }
   };
+}
+
+/**
+ * Retrieve relevant library docs (runbooks/postmortems/guides/notes) from the learning layer.
+ *
+ * Sources, by policy (Charlie 2026-06-12):
+ *   - internal docs (source='user'|'fork') → ALWAYS included.
+ *   - community docs (source='community')  → ALWAYS included (they're already sanitized + gated).
+ *   - public/external resources            → ONLY when the admin set tenant_preferences
+ *                                            .rag_include_public = 1 (off by default).
+ *
+ * Matches by symptom/title keyword overlap (LIKE). Returns short snippets to keep prompt size down.
+ */
+async function retrieveLibraryDocs(
+  userId: string,
+  context: RetrievalContext,
+): Promise<RelevantKnowledge['libraryDocs']> {
+  const db = getTenantDb(userId);
+
+  // Admin opt-in for public resources.
+  let includePublic = false;
+  try {
+    const pref = db.get(sql`
+      SELECT rag_include_public FROM tenant_preferences WHERE user_id = ${userId}
+    `) as { rag_include_public: number } | undefined;
+    includePublic = !!pref?.rag_include_public;
+  } catch { /* column may not exist on very old DBs — default off */ }
+
+  // Build keyword set from symptoms + stack name.
+  const terms = Array.from(new Set(
+    [...(context.symptoms || []), context.stackName || '']
+      .join(' ')
+      .toLowerCase()
+      .replace(/[^a-z0-9 ]+/g, ' ')
+      .split(/\s+/)
+      .filter((w) => w.length >= 4),
+  )).slice(0, 6);
+
+  // Source filter: internal + community always; 'public' only when opted in. ('public' is a future
+  // source value for ingested external resources; the filter is forward-compatible.)
+  const allowedSources = includePublic
+    ? ['user', 'fork', 'community', 'public']
+    : ['user', 'fork', 'community'];
+  const sourceList = allowedSources.map((s) => `'${s}'`).join(',');
+
+  try {
+    let rows: Array<{ id: string; title: string; doc_type: string; source: string; content: string }>;
+    if (terms.length === 0) {
+      // No symptoms — return a few most-recent runbooks/postmortems as general context.
+      rows = db.all(sql`
+        SELECT id, title, doc_type, source, content FROM docs
+        WHERE user_id = ${userId}
+          AND source IN (${sql.raw(sourceList)})
+          AND doc_type IN ('runbook','postmortem','guide')
+        ORDER BY updated_at DESC LIMIT 3
+      `) as any[];
+    } else {
+      const like = `%${terms[0]}%`;
+      rows = db.all(sql`
+        SELECT id, title, doc_type, source, content FROM docs
+        WHERE user_id = ${userId}
+          AND source IN (${sql.raw(sourceList)})
+          AND (lower(title) LIKE ${like} OR lower(tags) LIKE ${like} OR lower(content) LIKE ${like})
+        ORDER BY updated_at DESC LIMIT 5
+      `) as any[];
+    }
+    return rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      docType: r.doc_type,
+      source: r.source,
+      snippet: (r.content || '').replace(/\s+/g, ' ').slice(0, 240),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -424,6 +516,15 @@ export function formatKnowledgeForPrompt(knowledge: RelevantKnowledge): string {
       if (incident.resolution_summary) {
         sections.push(`   Resolution: ${incident.resolution_summary.slice(0, 200)}...`);
       }
+    });
+  }
+
+  // Library docs (runbooks/postmortems/guides) — internal + community knowledge.
+  if (knowledge.libraryDocs && knowledge.libraryDocs.length > 0) {
+    sections.push('\n# LIBRARY DOCS');
+    knowledge.libraryDocs.forEach((doc, idx) => {
+      sections.push(`\n${idx + 1}. [${doc.docType}/${doc.source}] ${doc.title}`);
+      if (doc.snippet) sections.push(`   ${doc.snippet}...`);
     });
   }
 

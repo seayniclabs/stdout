@@ -208,6 +208,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       }
     } catch { /* FTS may not exist */ }
 
+    // Closed-loop learning: auto-document this incident IF it's novel/rare. Fire-and-forget —
+    // never blocks or breaks the resolution. Scrubs secrets before storing (PII-grade).
+    import('../../../../lib/observatory/auto-doc')
+      .then(({ maybeAutoDocument }) => maybeAutoDocument(userId, incidentId))
+      .catch(() => { /* auto-doc is best-effort */ });
+
     return new Response(JSON.stringify({ ok: true, id: resId, incidentId }), {
       status: 201, headers: { 'Content-Type': 'application/json' },
     });

@@ -70,6 +70,8 @@ function runTenantMigrations(sqlite: InstanceType<typeof Database>): void {
   safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted', 'INTEGER NOT NULL DEFAULT 0');
   safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted_by', 'TEXT');
   safeAddColumn(sqlite, 'tenant_preferences', 'god_mode_granted_at', 'INTEGER');
+  // RAG: admin opt-in to include public web/external resources (off by default) — 2026-06-12
+  safeAddColumn(sqlite, 'tenant_preferences', 'rag_include_public', 'INTEGER NOT NULL DEFAULT 0');
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS observatory_pending_fixes (
       id TEXT PRIMARY KEY,
