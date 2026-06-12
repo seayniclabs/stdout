@@ -80,14 +80,15 @@ async function runCheckForUser(userId: string): Promise<void> {
     // emit per-stack anomaly events so Observatory status page can react
     const db = getTenantDb(userId);
     const recentIncidents = db.all(sql`
-      SELECT stack_id, severity, title FROM incidents
+      SELECT id, stack_id, severity, title FROM incidents
       WHERE user_id = ${userId}
         AND tags LIKE '%observatory%'
         AND created_at > ${Math.floor(Date.now() / 1000) - 300}
       ORDER BY created_at DESC
       LIMIT 5
-    `) as Array<{ stack_id: string; severity: string; title: string }>;
+    `) as Array<{ id: string; stack_id: string; severity: string; title: string }>;
 
+    const incidentIds: string[] = [];
     for (const inc of recentIncidents) {
       emit({
         type: 'observatory.anomaly',
@@ -96,6 +97,23 @@ async function runCheckForUser(userId: string): Promise<void> {
         severity: inc.severity,
         metric: inc.title,
       });
+      if ((inc as any).id) incidentIds.push((inc as any).id);
+    }
+
+    // THE REFLEX ARC: detection just created incidents — now act on them per the operating mode,
+    // with NO HTTP trigger. discover = nothing; diagnose = auto-diagnose; autofix = diagnose + gated
+    // apply. This is what makes the loop self-running. Fire-and-forget; never blocks the tick.
+    if (incidentIds.length > 0) {
+      import('./reflex')
+        .then(({ reflexForIncidents }) => reflexForIncidents(userId, incidentIds))
+        .then((outcomes) => {
+          const acted = outcomes.filter((o) => o.diagnosed || o.applied || o.parked);
+          if (acted.length > 0) {
+            console.log(`[reflex] ${userId}: ${acted.length} incident(s) acted on`,
+              acted.map((o) => `${o.incidentId.slice(0, 8)}:${o.diagnosed ? 'dx' : ''}${o.applied ? `+${o.applied}fix` : ''}${o.parked ? `+${o.parked}park` : ''}`).join(' '));
+          }
+        })
+        .catch((err) => console.error('[reflex] error:', err));
     }
   }
 }
