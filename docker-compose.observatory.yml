@@ -168,6 +168,58 @@ services:
           tcpdump -i any -w /captures/capture.pcap -G 3600 -W 24 -Z root 'not port 22' || sleep 10;
         done"
 
+  # ── P7b tier-2 tools ───────────────────────────────────────────────────────
+  # Zeek — deep network analysis. Runs BATCH over the pcaps that observatory-pcap writes
+  # (read-only on captured traffic — no live-tap privilege needed), producing conn/dns/http
+  # logs the brain can read. Stays on the internal bridge; it only touches files, not the wire.
+  zeek:
+    image: zeek/zeek:latest
+    container_name: zeek
+    restart: unless-stopped
+    volumes:
+      - pcap-captures:/captures:ro
+      - zeek-logs:/logs
+    # Idle by default; the brain triggers an analysis run via:
+    #   docker exec zeek sh -c "cd /logs && zeek -r /captures/capture.pcap"
+    command: ["sleep", "infinity"]
+    networks:
+      - stdout-egress
+
+  # Suricata (IDS) — needs to see live LAN traffic, so HOST net + NET_RAW like pcap.
+  # Heavier (ruleset + CPU); enable when the brain needs signature-based intrusion detection.
+  # Uncomment to activate:
+  # suricata:
+  #   image: jasonish/suricata:latest
+  #   container_name: suricata
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   cap_add: [NET_ADMIN, NET_RAW, SYS_NICE]
+  #   volumes:
+  #     - suricata-logs:/var/log/suricata
+  #   command: ["-i", "any"]
+
+  # ntopng — live traffic flow UI/metrics. Loopback-only if enabled (never on the LAN).
+  # Uncomment to activate:
+  # ntopng:
+  #   image: ntop/ntopng:latest
+  #   container_name: ntopng
+  #   restart: unless-stopped
+  #   network_mode: host
+  #   command: ["--community", "-i", "any", "-w", "127.0.0.1:3333"]
+
+  # Falco — runtime kernel/syscall threat detection. Needs privileged + kernel headers / eBPF;
+  # host-specific, so left as documented opt-in rather than a default.
+  # Uncomment to activate (requires host kernel support):
+  # falco:
+  #   image: falcosecurity/falco:latest
+  #   container_name: falco
+  #   restart: unless-stopped
+  #   privileged: true
+  #   volumes:
+  #     - /var/run/docker.sock:/host/var/run/docker.sock
+  #     - /dev:/host/dev
+  #     - /proc:/host/proc:ro
+
 volumes:
   stdout-data:
   windlass-data:
@@ -176,6 +228,7 @@ volumes:
   tempo-data:
   trivy-cache:
   pcap-captures:
+  zeek-logs:
 
 networks:
   # Internal Observatory bridge. NOT a Docker `internal:true` network — that would block BOTH
