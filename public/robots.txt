@@ -1,0 +1,16 @@
+# StdOut — robots.txt
+User-agent: *
+Allow: /$
+Allow: /use-cases
+Allow: /library
+Allow: /docs
+Allow: /privacy
+Allow: /terms
+
+# Application + setup surfaces require auth — keep them out of the index
+Disallow: /app
+Disallow: /setup
+Disallow: /admin
+Disallow: /api
+
+Sitemap: https://stdout.seayniclabs.com/sitemap-index.xml

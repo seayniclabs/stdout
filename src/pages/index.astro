@@ -27,11 +27,33 @@ if (user) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="Self-hosted incident companion for homelab builders and solo DevOps. AI diagnosis, living runbooks, stack auto-discovery. $149 one-time, own it forever." />
   <title>StdOut — You've already solved this</title>
+  <link rel="canonical" href={new URL('/', Astro.site || 'https://stdout.seayniclabs.com').href} />
   <meta property="og:title" content="StdOut — Self-Hosted Incident Companion" />
   <meta property="og:description" content="Your incident memory. When something breaks at 2am, StdOut pulls up how you fixed it last time. Self-host for $149, own it forever." />
   <meta property="og:type" content="website" />
+  <meta property="og:url" content={new URL('/', Astro.site || 'https://stdout.seayniclabs.com').href} />
+  <meta property="og:image" content={new URL('/og-image.png', Astro.site || 'https://stdout.seayniclabs.com').href} />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="StdOut — Self-Hosted Incident Companion" />
+  <meta name="twitter:description" content="Your incident memory. When something breaks at 2am, StdOut pulls up how you fixed it last time. Self-host for $149, own it forever." />
+  <meta name="twitter:image" content={new URL('/og-image.png', Astro.site || 'https://stdout.seayniclabs.com').href} />
   <meta name="theme-color" content="#F97316" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="sitemap" href="/sitemap-index.xml" />
+  <script type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'StdOut',
+    applicationCategory: 'DeveloperApplication',
+    operatingSystem: 'Linux, macOS, Docker',
+    description: 'Self-hosted incident companion for homelab builders and solo DevOps. AI diagnosis, living runbooks, stack auto-discovery.',
+    url: (Astro.site || 'https://stdout.seayniclabs.com').toString(),
+    image: new URL('/og-image.png', Astro.site || 'https://stdout.seayniclabs.com').href,
+    offers: { '@type': 'Offer', price: '149', priceCurrency: 'USD' },
+    publisher: { '@type': 'Organization', name: 'Seaynic Labs LLC', url: 'https://seayniclabs.com' },
+  })} />
   <style>@import '../styles/fonts.css';</style>
   <script defer src="https://analytics.seaynicroute.com/data" data-website-id="6794355e-d87a-4022-9062-4d473bdc4716"></script>
 </head>
