@@ -245,6 +245,33 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
   fi
   if systemctl is-active --quiet avahi-daemon; then
     echo -e "${GREEN}✓ Avahi running (mDNS enabled)${NC}"
+
+    # Publish a Home-Assistant-style mDNS service record for the RUNNING app (port 8112),
+    # so the instance is discoverable as "StdOut" and reachable at stdout.local regardless of
+    # the host's own hostname. Idempotent — overwrites the service file each install.
+    if [ -d /etc/avahi ]; then
+      sudo mkdir -p /etc/avahi/services
+      sudo tee /etc/avahi/services/stdout.service > /dev/null <<'AVAHI'
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<!-- StdOut instance advertisement. Reach the app at http://stdout.local:8112 -->
+<service-group>
+  <name replace-wildcards="yes">StdOut on %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>8112</port>
+    <txt-record>path=/app</txt-record>
+    <txt-record>product=stdout</txt-record>
+  </service>
+</service-group>
+AVAHI
+      # Add a stable CNAME alias (stdout.local -> this host) if avahi-publish is available,
+      # so the magic URL works even when the host isn't named "stdout".
+      if command -v systemctl &> /dev/null; then
+        sudo systemctl reload avahi-daemon 2>/dev/null || sudo systemctl restart avahi-daemon 2>/dev/null || true
+      fi
+      echo -e "${GREEN}✓ Published mDNS service — reach StdOut at http://stdout.local:8112${NC}"
+    fi
   else
     echo -e "${YELLOW}⚠ Avahi not running - stdout.local may not work (use IP instead)${NC}"
   fi
