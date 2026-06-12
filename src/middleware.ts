@@ -68,7 +68,13 @@ if (process.env.APP_URL) {
   ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
 }
 
-ALLOWED_ORIGINS.push('http://localhost:4321', 'http://localhost:3000', 'http://localhost:8112', 'http://192.168.0.244:8112');
+ALLOWED_ORIGINS.push(
+  'http://localhost:4321',
+  'http://localhost:3000',
+  'http://localhost:8112',
+  'http://192.168.0.244:8112',
+  'http://stdout.local:8112'  // mDNS hostname
+);
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
