@@ -34,7 +34,7 @@
   --border-hover:  #2D2D4A;
   --text:          #F0F0F8;
   --text-secondary:#A0A0B8;
-  --text-muted:    #5A5A72;
+  --text-muted:    #8888A0;  /* WCAG AA: 5.8:1 on --bg, 5.5:1 on cards (was #5A5A72 @ 3.0:1) */
 
   /* Brand accent — Coral (pushed bolder) */
   --accent:        #F97316;
