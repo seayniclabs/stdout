@@ -136,13 +136,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
     credential = resolveForDiagnostics(locals.user.id, tier as 'free' | 'paid');
   } catch { /* resolver may fail if DB not ready */ }
 
-  // If no credential available at all, return a clean error
+  // resolveForDiagnostics falls back to local Ollama, so this is only hit if even that resolver
+  // throws. Local Ollama is the default; BYOK is an optional add-on (never required).
   if (!credential) {
     return new Response(JSON.stringify({
-      error: 'No AI provider configured. Add an API key in Settings > AI Providers, or ensure the platform key is available.',
+      error: 'No AI model available. Ensure local Ollama is running, or add your own API key in Settings > AI Providers.',
       retryable: false,
     }), {
-      status: 500,
+      status: 503,
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -167,7 +168,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       'diagnostics',
       credential?.provider || 'anthropic',
       result.model,
-      credential?.source || 'platform_fallback',
+      credential?.source || 'ollama',
       'success',
     );
 
@@ -190,13 +191,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
       title: `Diagnosis: ${incident.title}`,
       body: result.rootCauses[0] || 'Analysis complete',
       url: `/app/incidents/${incidentId}`,
-      metadata: { model: result.model, incidentId, credentialSource: credential?.source || 'platform_fallback' },
+      metadata: { model: result.model, incidentId, credentialSource: credential?.source || 'ollama' },
     });
 
     logAudit('ai_diagnosis', {
       userId: locals.user.id,
       ip: getClientIp(request),
-      details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens, credentialSource: credential?.source || 'platform_fallback' },
+      details: { incidentId, model: result.model, tokens: result.promptTokens + result.completionTokens, credentialSource: credential?.source || 'ollama' },
     });
 
     return new Response(JSON.stringify(result), {
@@ -212,7 +213,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       'diagnostics',
       credential?.provider || 'anthropic',
       credential?.model || 'unknown',
-      credential?.source || 'platform_fallback',
+      credential?.source || 'ollama',
       'failed',
       err?.message?.slice(0, 200),
     );

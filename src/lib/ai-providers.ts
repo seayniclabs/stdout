@@ -278,10 +278,11 @@ export async function validateKey(userId: string, providerId: string): Promise<{
 // --- Credential Router ---
 
 export interface ResolvedCredential {
-  source: 'user_key' | 'platform_fallback';
+  // 'ollama' = local model Seaynic provides (the default + floor). 'user_key' = optional BYOK add-on.
+  source: 'user_key' | 'ollama';
   provider: string;
   model: string;
-  apiKey: string;
+  apiKey: string; // empty string for ollama (no key needed)
 }
 
 /**
@@ -316,26 +317,18 @@ export function resolveForDiagnostics(userId: string, tier: 'free' | 'paid'): Re
     };
   }
 
-  // Fallback to platform key (check if any user key has fallback enabled, or no keys at all)
-  const hasFallbackDisabled = userKeys.some(k => k.platformFallback === false);
-  if (hasFallbackDisabled && userKeys.length > 0) {
-    return null; // User explicitly disabled fallback
-  }
-
-  // Platform key fallback
-  const { getAnthropicKey } = require('./diagnose');
-  try {
-    const platformKey = getAnthropicKey();
-    const model = tier === 'paid' ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001';
-    return {
-      source: 'platform_fallback',
-      provider: 'anthropic',
-      model,
-      apiKey: platformKey,
-    };
-  } catch {
-    return null;
-  }
+  // No usable BYOK key → fall back to LOCAL OLLAMA. Ollama is what Seaynic provides — the default
+  // and the floor. BYOK is an optional power add-on, never a requirement (Charlie 2026-06-12).
+  // There is no Seaynic-hosted "platform key": a self-host instance is fully self-contained.
+  const ollamaModel = tier === 'paid'
+    ? (process.env.OBSERVATORY_ANALYST_MODEL || 'qwen2.5:14b-instruct-q4_K_M')
+    : (process.env.OBSERVATORY_WATCHER_MODEL || 'llama3.2:3b-instruct-q4_K_M');
+  return {
+    source: 'ollama',
+    provider: 'ollama',
+    model: ollamaModel,
+    apiKey: '', // local — no key
+  };
 }
 
 // --- Audit ---
@@ -346,7 +339,7 @@ export function logAudit(
   capability: 'diagnostics' | 'autofix_plan' | 'autofix_apply',
   provider: string,
   model: string,
-  credentialSource: 'user_key' | 'platform_fallback',
+  credentialSource: 'user_key' | 'ollama',
   outcome: 'success' | 'failed' | 'blocked',
   failureReason?: string,
 ): void {

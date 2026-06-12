@@ -57,20 +57,21 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  // Find a user key that supports autofix
+  // Resolve the model: BYOK user key if present, otherwise LOCAL OLLAMA (the default Seaynic
+  // provides). Auto-fix never requires a user key (Charlie 2026-06-12 — Ollama is the floor).
   const credential = resolveForDiagnostics(userId, 'paid');
-  if (!credential || credential.source !== 'user_key') {
+  if (!credential) {
     return new Response(JSON.stringify({
-      error: 'Auto-fix requires your own API key. Add one in Settings > AI Providers.',
-      requiresBYOK: true,
+      error: 'No AI model available. Ensure local Ollama is running, or add your own API key in Settings > AI Providers.',
     }), {
-      status: 403, headers: { 'Content-Type': 'application/json' },
+      status: 503, headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  if (!canUseAutofix(credential.provider)) {
+  // BYOK providers must be certified for autofix; the local Ollama default is always allowed.
+  if (credential.source === 'user_key' && !canUseAutofix(credential.provider)) {
     return new Response(JSON.stringify({
-      error: `${credential.provider} is not certified for auto-fix. Use Anthropic or OpenAI.`,
+      error: `${credential.provider} is not certified for auto-fix. Use Anthropic, OpenAI, or the built-in local model.`,
     }), {
       status: 403, headers: { 'Content-Type': 'application/json' },
     });
@@ -267,7 +268,31 @@ async function callProvider(
     };
   }
 
-  // Anthropic (default) — with prompt caching for system instructions
+  // Ollama (local default — what Seaynic provides; no API key needed).
+  if (credential.provider === 'ollama') {
+    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const res = await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: credential.model,
+        system: systemPrompt,
+        prompt: userMessage,
+        stream: false,
+        options: { num_predict: 4096 },
+      }),
+      signal: AbortSignal.timeout(120000),
+    });
+    if (!res.ok) throw new Error(`Ollama error: ${res.status}`);
+    const data = await res.json() as any;
+    return {
+      text: data.response || '',
+      promptTokens: data.prompt_eval_count || 0,
+      completionTokens: data.eval_count || 0,
+    };
+  }
+
+  // Anthropic (BYOK only) — with prompt caching for system instructions
   const Anthropic = (await import('@anthropic-ai/sdk')).default;
   const client = new Anthropic({ apiKey: credential.apiKey });
   const response = await client.messages.create({

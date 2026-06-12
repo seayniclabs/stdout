@@ -130,7 +130,27 @@ export async function diagnoseIncident(opts: {
   let promptTokens = 0;
   let completionTokens = 0;
 
-  if (provider === 'openai') {
+  if (provider === 'ollama') {
+    // Local Ollama — the default model Seaynic provides (no key required).
+    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const res = await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        system: systemPrompt,
+        prompt: opts.incidentDescription,
+        stream: false,
+        options: { num_predict: 2048 },
+      }),
+      signal: AbortSignal.timeout(120000),
+    });
+    if (!res.ok) throw new Error(`Ollama error: ${res.status}`);
+    const data = await res.json() as any;
+    text = data.response || '';
+    promptTokens = data.prompt_eval_count || 0;
+    completionTokens = data.eval_count || 0;
+  } else if (provider === 'openai') {
     // OpenAI Chat Completions API
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
