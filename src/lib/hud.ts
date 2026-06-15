@@ -88,6 +88,16 @@ export async function executeCheck(monitor: typeof tenantSchema.monitors.$inferS
       return checkHTTP(monitor.target, monitor.timeoutMs, monitor.expectedStatus || 200);
     case 'tcp':
       return checkTCP(monitor.target, monitor.timeoutMs);
+    case 'output-freshness':
+      if (!monitor.jsonPath || !monitor.freshnessWindowSeconds) {
+        return { status: 'down', responseTimeMs: 0, error: 'Missing jsonPath or freshnessWindowSeconds' };
+      }
+      return checkOutputFreshness(
+        monitor.target,
+        monitor.jsonPath,
+        monitor.freshnessWindowSeconds,
+        monitor.timeoutMs
+      );
     default:
       return { status: 'down', responseTimeMs: 0, error: `Unsupported check type: ${monitor.type}` };
   }
@@ -170,6 +180,122 @@ async function checkTCP(target: string, timeoutMs: number): Promise<CheckResult>
       resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
     });
   });
+}
+
+/**
+ * Output Freshness Check — probe a JSON API and verify recent activity.
+ * Extracts a timestamp via JSONPath and alerts if too old.
+ */
+async function checkOutputFreshness(
+  url: string,
+  jsonPath: string,
+  freshnessWindowSeconds: number,
+  timeoutMs: number
+): Promise<CheckResult> {
+  const start = Date.now();
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      resolve({ status: 'down', responseTimeMs: timeoutMs, error: 'Timeout' });
+    }, timeoutMs);
+
+    try {
+      const mod = url.startsWith('https') ? https : http;
+      const req = mod.get(url, {
+        timeout: timeoutMs,
+        rejectUnauthorized: false,
+        headers: { 'User-Agent': 'StdOut-HUD/1.0' },
+      }, (res) => {
+        clearTimeout(timeout);
+        const elapsed = Date.now() - start;
+
+        let body = '';
+        res.on('data', (chunk) => { body += chunk; });
+        res.on('end', () => {
+          try {
+            const data = JSON.parse(body);
+            const timestamp = extractJSONPath(data, jsonPath);
+
+            if (!timestamp) {
+              resolve({ status: 'degraded', responseTimeMs: elapsed, error: 'JSONPath extraction failed' });
+              return;
+            }
+
+            // Parse timestamp (handles both ISO strings and Unix timestamps)
+            let timestampMs: number;
+            if (typeof timestamp === 'number') {
+              // Assume Unix timestamp in seconds if < year 3000 in milliseconds
+              timestampMs = timestamp < 32503680000 ? timestamp * 1000 : timestamp;
+            } else {
+              timestampMs = new Date(timestamp).getTime();
+            }
+
+            if (isNaN(timestampMs)) {
+              resolve({ status: 'degraded', responseTimeMs: elapsed, error: 'Invalid timestamp format' });
+              return;
+            }
+
+            const ageSeconds = (Date.now() - timestampMs) / 1000;
+
+            if (ageSeconds > freshnessWindowSeconds) {
+              resolve({
+                status: 'down',
+                responseTimeMs: elapsed,
+                error: `Output stale: ${Math.round(ageSeconds / 3600)}h old (limit: ${freshnessWindowSeconds / 3600}h)`
+              });
+            } else {
+              resolve({ status: 'healthy', responseTimeMs: elapsed });
+            }
+          } catch (err: any) {
+            resolve({ status: 'degraded', responseTimeMs: elapsed, error: `JSON parse error: ${err.message}` });
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        clearTimeout(timeout);
+        resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        clearTimeout(timeout);
+        resolve({ status: 'down', responseTimeMs: timeoutMs, error: 'Timeout' });
+      });
+    } catch (err: any) {
+      clearTimeout(timeout);
+      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+    }
+  });
+}
+
+/**
+ * Simple JSONPath extractor — handles basic paths like "$[0].field" or "$.data[0].timestamp".
+ * For production use, consider jsonpath-plus for full spec support.
+ */
+function extractJSONPath(data: any, path: string): any {
+  // Remove leading "$" if present
+  const normalized = path.startsWith('$') ? path.slice(1) : path;
+
+  // Split by dots and brackets: "[0].completed_at" → ["[0]", "completed_at"]
+  const parts = normalized.split(/\.|\[/).map(p => p.replace(/\]/g, ''));
+
+  let current = data;
+  for (const part of parts) {
+    if (part === '') continue; // Skip empty parts from leading "$"
+
+    // Array index
+    if (/^\d+$/.test(part)) {
+      current = current?.[parseInt(part)];
+    } else {
+      // Object property
+      current = current?.[part];
+    }
+
+    if (current === undefined) return null;
+  }
+
+  return current;
 }
 
 // --- Check Loop ---

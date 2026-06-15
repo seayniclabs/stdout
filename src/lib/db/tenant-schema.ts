@@ -277,9 +277,9 @@ export const monitors = sqliteTable('monitors', {
   userId: text('user_id').notNull(),
   name: text('name').notNull(),
   type: text('type', {
-    enum: ['http', 'tcp', 'docker', 'ping', 'dns'],
+    enum: ['http', 'tcp', 'docker', 'ping', 'dns', 'output-freshness'],
   }).notNull(),
-  target: text('target').notNull(),        // URL, host:port, container name
+  target: text('target').notNull(),        // URL, host:port, container name, JSON endpoint
   intervalSeconds: integer('interval_seconds').notNull().default(60),
   timeoutMs: integer('timeout_ms').notNull().default(5000),
   expectedStatus: integer('expected_status'), // HTTP: 200
@@ -293,6 +293,9 @@ export const monitors = sqliteTable('monitors', {
   consecutiveFailures: integer('consecutive_failures').notNull().default(0),
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
   lastResponseMs: integer('last_response_ms'),
+  // Output-freshness monitor fields
+  jsonPath: text('json_path'),             // JSONPath to extract timestamp (e.g., "$[0].completed_at")
+  freshnessWindowSeconds: integer('freshness_window_seconds'), // Max age before alert (e.g., 21600 = 6h)
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
