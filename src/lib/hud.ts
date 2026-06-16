@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from './db';
+import { getTenantDb, tenantSchema, getCentralDb, centralSchema } from './db';
 import { eq, and, desc, gt } from 'drizzle-orm';
 import { notify } from './notify';
 import https from 'node:https';
@@ -339,7 +339,7 @@ export function stopAllMonitors() {
 }
 
 export function startAllMonitors() {
-  const { getCentralDb, centralSchema } = require('./db');
+  // Import dynamically to avoid circular dependency issues
   const users = getCentralDb().select({ id: centralSchema.users.id })
     .from(centralSchema.users).all();
 
