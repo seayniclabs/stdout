@@ -13,6 +13,11 @@ import net from 'node:net';
  * Blocks RFC 1918, link-local, loopback, cloud metadata, and Docker internal hostnames.
  */
 export function isBlockedTarget(target: string): boolean {
+  // Allow disabling SSRF protection via env var for trusted internal networks
+  if (process.env.STDOUT_DISABLE_SSRF_PROTECTION === 'true') {
+    return false;
+  }
+
   let hostname: string;
   try {
     // Handle full URLs (http/https)
@@ -34,7 +39,7 @@ export function isBlockedTarget(target: string): boolean {
     return true;
   }
 
-  // Block localhost variants
+  // Block localhost variants (monitoring should use actual IPs, not localhost)
   if (lower === 'localhost' || lower === '[::1]' || lower.endsWith('.localhost')) {
     return true;
   }
@@ -43,19 +48,15 @@ export function isBlockedTarget(target: string): boolean {
   const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipMatch) {
     const [, a, b, c, d] = ipMatch.map(Number);
-    // 127.0.0.0/8 — loopback
+    // 127.0.0.0/8 — loopback (block - use actual IP instead)
     if (a === 127) return true;
-    // 10.0.0.0/8 — RFC 1918
-    if (a === 10) return true;
-    // 172.16.0.0/12 — RFC 1918
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    // 192.168.0.0/16 — RFC 1918
-    if (a === 192 && b === 168) return true;
-    // 169.254.0.0/16 — link-local
+    // RFC 1918 private addresses — ALLOW for self-hosted infrastructure monitoring
+    // 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16 are explicitly allowed
+    // 169.254.0.0/16 — link-local (block - usually auto-config, not real services)
     if (a === 169 && b === 254) return true;
-    // 0.0.0.0
+    // 0.0.0.0 (block - invalid target)
     if (a === 0 && b === 0 && c === 0 && d === 0) return true;
-    // Cloud metadata (AWS, GCP, Azure)
+    // Cloud metadata endpoints (AWS, GCP, Azure) - block SSRF to these
     if (a === 169 && b === 254 && c === 169 && d === 254) return true;
     if (a === 100 && b === 100 && c === 100 && d === 200) return true; // AWS IMDSv2 alt
   }
