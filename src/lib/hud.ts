@@ -195,14 +195,17 @@ async function checkOutputFreshness(
 ): Promise<CheckResult> {
   const start = Date.now();
 
+  // Strip output-freshness:// scheme and default to http://
+  const httpUrl = url.replace(/^output-freshness:\/\//, 'http://');
+
   return new Promise((resolve) => {
     const timeout = setTimeout(() => {
       resolve({ status: 'down', responseTimeMs: timeoutMs, error: 'Timeout' });
     }, timeoutMs);
 
     try {
-      const mod = url.startsWith('https') ? https : http;
-      const req = mod.get(url, {
+      const mod = httpUrl.startsWith('https') ? https : http;
+      const req = mod.get(httpUrl, {
         timeout: timeoutMs,
         rejectUnauthorized: false,
         headers: { 'User-Agent': 'StdOut-HUD/1.0' },
