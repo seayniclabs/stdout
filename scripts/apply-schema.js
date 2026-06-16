@@ -200,6 +200,8 @@ db.exec(`
     consecutive_failures INTEGER NOT NULL DEFAULT 0,
     last_checked_at INTEGER,
     last_response_ms INTEGER,
+    json_path TEXT,
+    freshness_window_seconds INTEGER,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   );
