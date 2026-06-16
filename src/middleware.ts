@@ -24,6 +24,16 @@ initAutoWiring();
 // Start the Observatory Watcher loop (polls stacks, detects anomalies)
 startWatcher();
 
+// Auto-start all monitors on boot (runs after DB init completes)
+setTimeout(async () => {
+  try {
+    const { startAllMonitors } = await import('./lib/hud');
+    startAllMonitors();
+  } catch (err) {
+    console.error('[middleware] Failed to auto-start monitors:', err);
+  }
+}, 2000);
+
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];
 

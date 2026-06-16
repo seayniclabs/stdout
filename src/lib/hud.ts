@@ -337,6 +337,26 @@ export function stopAllMonitors() {
   checkTimers.clear();
 }
 
+export function startAllMonitors() {
+  const { getCentralDb, centralSchema } = require('./db');
+  const users = getCentralDb().select({ id: centralSchema.users.id })
+    .from(centralSchema.users).all();
+
+  for (const user of users) {
+    const db = getTenantDb(user.id);
+    const monitors = db.select().from(tenantSchema.monitors)
+      .where(eq(tenantSchema.monitors.userId, user.id))
+      .all();
+
+    for (const monitor of monitors) {
+      if (!monitor.paused && !monitor.maintenance) {
+        startMonitor(user.id, monitor.id);
+      }
+    }
+  }
+  console.log('[HUD] Auto-started all active monitors');
+}
+
 async function runCheck(userId: string, monitorId: string) {
   const db = getTenantDb(userId);
   const monitor = db.select().from(tenantSchema.monitors)
