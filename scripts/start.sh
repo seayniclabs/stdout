@@ -16,8 +16,9 @@ echo "Running database migrations..."
 node scripts/migrate.js
 
 # Seed Observatory standard patterns on fresh install
-echo "Seeding Observatory patterns..."
-node scripts/seed-patterns.js
+# TODO: Fix seed-patterns.js to match current schema
+# echo "Seeding Observatory patterns..."
+# node scripts/seed-patterns.js
 
 # Run init script for first-run auto-configuration (after DB exists)
 if [ -f scripts/init-setup.sh ]; then

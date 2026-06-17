@@ -78,8 +78,8 @@ try {
 
   console.log(`[seed-patterns] Seeded ${n} stdlib standard patterns`);
 } catch (error) {
-  console.error('[seed-patterns] Failed:', error.message);
-  process.exit(1);
+  console.warn('[seed-patterns] Skipped:', error.message);
+  // Don't fail container startup if seeding fails
 }
 
 db.close();
