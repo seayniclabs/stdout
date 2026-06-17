@@ -3,7 +3,7 @@
  * Observatory AI automatically creates monitors from discovered infrastructure
  */
 
-import type { Database } from 'better-sqlite3';
+import type Database from 'better-sqlite3';
 import { nanoid } from 'nanoid';
 
 export interface DiscoveredService {

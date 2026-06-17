@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDb } from '../../../../lib/db';
+import { getSqlite } from '../../../../lib/db';
 import { createMonitorsFromScan, executeMonitorCreation } from '../../../../lib/observatory/auto-monitor';
 
 /**
@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const action = body.action || 'analyze';
-  const db = getDb();
+  const db = getSqlite();
 
   if (action === 'analyze') {
     // Get latest scan data or use provided scan data
