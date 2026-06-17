@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
-import { getScannerSchedule } from '../../../../lib/scanner';
+import { getDb, schema } from '../../../../lib/db';
+import { eq } from 'drizzle-orm';
 
 export const POST: APIRoute = async ({ locals }) => {
   const session = locals.user;
@@ -11,9 +12,11 @@ export const POST: APIRoute = async ({ locals }) => {
   }
 
   try {
-    const schedule = await getScannerSchedule();
+    const db = getDb();
+    const schedule = db.select().from(schema.scannerSchedule)
+      .where(eq(schema.scannerSchedule.userId, session.id)).get();
 
-    if (!schedule.enabled) {
+    if (schedule && !schedule.enabled) {
       return new Response(JSON.stringify({
         success: false,
         error: 'Scanner is disabled. Enable it first in the scanner settings.'
