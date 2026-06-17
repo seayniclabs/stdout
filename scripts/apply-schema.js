@@ -218,13 +218,14 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_check_results_monitor_time ON check_results(monitor_id, checked_at);
   CREATE TABLE IF NOT EXISTS uptime_daily (
+    id TEXT PRIMARY KEY,
     monitor_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
     date TEXT NOT NULL,
-    total_checks INTEGER NOT NULL DEFAULT 0,
-    successful_checks INTEGER NOT NULL DEFAULT 0,
-    avg_response_ms INTEGER,
-    p95_response_ms INTEGER,
-    PRIMARY KEY (monitor_id, date)
+    success_count INTEGER NOT NULL DEFAULT 0,
+    failure_count INTEGER NOT NULL DEFAULT 0,
+    avg_response_time INTEGER,
+    updated_at INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS scanner_schedule (
     id TEXT PRIMARY KEY,
