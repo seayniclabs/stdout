@@ -146,9 +146,10 @@ const statusClass = monitor.maintenance ? 'maintenance' : monitor.currentStatus;
         <h2>Daily Uptime</h2>
         <div class="uptime-calendar">
           {uptime30.days.map((d: any) => {
-            const pct = d.totalChecks > 0 ? (d.successfulChecks / d.totalChecks) * 100 : 0;
+            const totalChecks = d.successCount + d.failureCount;
+            const pct = totalChecks > 0 ? (d.successCount / totalChecks) * 100 : 0;
             const cls = pct >= 99.9 ? 'day-great' : pct >= 99 ? 'day-ok' : pct >= 95 ? 'day-warn' : pct > 0 ? 'day-bad' : 'day-none';
-            return <div class={`day-cell ${cls}`} title={`${d.date}: ${pct.toFixed(1)}% (${d.successfulChecks}/${d.totalChecks})`}></div>;
+            return <div class={`day-cell ${cls}`} title={`${d.date}: ${pct.toFixed(1)}% (${d.successCount}/${totalChecks})`}></div>;
           })}
         </div>
         <div class="cal-legend mono">

@@ -124,7 +124,8 @@ if (down > 0) {
             {statusPage.showUptime && m.days.length > 0 && (
               <div class="mi-calendar">
                 {m.days.slice(-90).map((d: any) => {
-                  const pct = d.totalChecks > 0 ? (d.successfulChecks / d.totalChecks) * 100 : 0;
+                  const totalChecks = d.successCount + d.failureCount;
+                  const pct = totalChecks > 0 ? (d.successCount / totalChecks) * 100 : 0;
                   const cls = pct >= 99.9 ? 'day-great' : pct >= 99 ? 'day-ok' : pct >= 95 ? 'day-warn' : pct > 0 ? 'day-bad' : 'day-none';
                   return <span class={`day ${cls}`} title={`${d.date}: ${pct.toFixed(1)}%`}></span>;
                 })}

@@ -576,12 +576,12 @@ export function getUptimeStats(userId: string, monitorId: string, days = 30) {
     ))
     .all();
 
-  const totalChecks = rows.reduce((s, r) => s + r.totalChecks, 0);
-  const successChecks = rows.reduce((s, r) => s + r.successfulChecks, 0);
+  const totalChecks = rows.reduce((s, r) => s + r.successCount + r.failureCount, 0);
+  const successChecks = rows.reduce((s, r) => s + r.successCount, 0);
   const uptimePercent = totalChecks > 0 ? (successChecks / totalChecks) * 100 : 0;
 
   const avgResponse = rows.length > 0
-    ? Math.round(rows.reduce((s, r) => s + (r.avgResponseMs || 0), 0) / rows.length)
+    ? Math.round(rows.reduce((s, r) => s + (r.avgResponseTime || 0), 0) / rows.length)
     : 0;
 
   return { uptimePercent, avgResponse, days: rows };
