@@ -76,8 +76,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (!name || !type || !target) {
       return new Response(JSON.stringify({ error: 'Name, type, and target are required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
-    if (!['http', 'tcp', 'output-freshness'].includes(type)) {
-      return new Response(JSON.stringify({ error: 'Type must be http, tcp, or output-freshness' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    if (!['http', 'tcp', 'ping', 'output-freshness'].includes(type)) {
+      return new Response(JSON.stringify({ error: 'Type must be http, tcp, ping, or output-freshness' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Validate target format
