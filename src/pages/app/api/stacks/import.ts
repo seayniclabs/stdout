@@ -182,7 +182,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     // Generate and execute monitor creation
     const suggestions = createMonitorsFromScan(db, locals.user.id, body, stack.id);
     const result = executeMonitorCreation(db, locals.user.id, suggestions);
-    monitorsCreated = result.created;
+    monitorsCreated = result.created + result.updated;
 
     // Start all created monitors
     if (monitorsCreated > 0) {
