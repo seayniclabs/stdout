@@ -81,6 +81,7 @@ ALLOWED_ORIGINS.push(
   'http://localhost:4321',
   'http://localhost:3000',
   'http://localhost:8112',
+  'http://localhost:9112',  // SSH tunnel port
   'http://192.168.0.244:8112',
   'http://stdout.local:8112'  // mDNS hostname
 );
