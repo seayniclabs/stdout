@@ -107,7 +107,7 @@ function formatDate(date: Date) {
         <button class="sidebar-item active" data-filter="all">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
           <span>All Docs</span>
-          <span class="sidebar-count mono">{allDocs.length}</span>
+          <span class="sidebar-count mono">{userDocs.length}</span>
         </button>
         <button class="sidebar-item sidebar-item--featured" data-filter="stdout">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FB923C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -161,7 +161,7 @@ function formatDate(date: Date) {
         <div class="page-header-left">
           <div class="page-title-row">
             <h1>Knowledge Base <a href="/app/docs/guide/knowledge-base" class="help-link" title="Knowledge Base documentation"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></a></h1>
-            <span class="count-badge mono">{allDocs.length}</span>
+            <span class="count-badge mono">{userDocs.length}</span>
           </div>
           <p class="page-subtitle">Your operational knowledge library. Runbooks, post-mortems, guides, and notes -- all searchable alongside your incidents.</p>
         </div>
@@ -188,7 +188,7 @@ function formatDate(date: Date) {
         <button class="mobile-tab" data-filter="community">Community</button>
       </div>
 
-      {allDocs.length === 0 ? (
+      {userDocs.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">&gt;_</div>
           <h3>Your knowledge base is empty</h3>
@@ -233,10 +233,10 @@ function formatDate(date: Date) {
           <div class="docs-section">
             <div class="section-header">
               <h2 id="section-title">All Documents</h2>
-              <span class="section-count mono" id="section-count">{allDocs.length}</span>
+              <span class="section-count mono" id="section-count">{userDocs.length}</span>
             </div>
             <div class="doc-grid" id="doc-grid">
-              {allDocs.map(doc => (
+              {userDocs.map(doc => (
                 <a href={`/app/docs/${doc.id}`}
                    class="doc-card"
                    data-type={doc.docType}
