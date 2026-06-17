@@ -20,10 +20,9 @@ services:
       - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
       - OBSERVATORY_ANALYST_MODEL=${OBSERVATORY_ANALYST_MODEL:-qwen2.5:14b-instruct-q4_K_M}
       - OBSERVATORY_WATCHER_MODEL=${OBSERVATORY_WATCHER_MODEL:-llama3.2:3b-instruct-q4_K_M}
-    secrets:
-      - secret_key
-      - anthropic_api_key
-      - resend_api_key
+      - SECRET_KEY=${SECRET_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
       interval: 30s
@@ -177,11 +176,3 @@ networks:
     ipam:
       config:
         - subnet: 10.21.0.0/24
-
-secrets:
-  secret_key:
-    file: ./secrets/stdout_secret_key
-  anthropic_api_key:
-    file: ./secrets/stdout_anthropic_api_key
-  resend_api_key:
-    file: ./secrets/stdout_resend_api_key

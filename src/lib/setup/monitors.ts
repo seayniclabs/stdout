@@ -31,7 +31,7 @@ export async function configureMonitors(
   let monitorsCreated = 0;
 
   try {
-    const { getTenantDb } = await import('../db');
+    const { getDb } = await import('../db');
     const { sql } = await import('drizzle-orm');
     const db = getDb();
 

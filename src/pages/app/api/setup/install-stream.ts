@@ -163,6 +163,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
         // Mark installation as complete in database
         const { sql } = await import('drizzle-orm');
+        const { getDb } = await import('../../../../lib/db');
         const db = getDb();
 
         await db.run(sql`
