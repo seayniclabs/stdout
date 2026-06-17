@@ -2,7 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 
-export const POST: APIRoute = async ({ locals }) => {
+export const POST: APIRoute = async ({ locals, request }) => {
   const session = locals.user;
   if (!session) {
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -27,13 +27,17 @@ export const POST: APIRoute = async ({ locals }) => {
     }
 
     // Trigger the scanner by making a request to the scanner endpoint
-    // The scanner runs in the background, so we just trigger it and return
-    const scannerUrl = process.env.SCANNER_ENDPOINT || 'http://localhost:4321/app/api/scanner/scan';
+    // Use request.url to get the correct host/port instead of hardcoded localhost:4321
+    const scannerUrl = new URL('/app/api/scanner/scan', request.url);
 
     // Fire and forget - don't wait for the scan to complete
     fetch(scannerUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        // Forward the cookie to maintain auth context
+        'Cookie': request.headers.get('Cookie') || '',
+      },
     }).catch(err => {
       console.error('[run-now] Failed to trigger scanner:', err);
     });

@@ -1,0 +1,1299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StdOut E2E Test Plan - Complete Feature Validation</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #0f172a;
+      color: #e2e8f0;
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #f1f5f9;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 32px;
+    }
+
+    .current-state {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+
+    .current-state h2 {
+      margin-top: 0;
+      font-size: 18px;
+      color: #22c55e;
+    }
+
+    .current-state ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .category {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .category h2 {
+      margin: 0 0 16px 0;
+      font-size: 20px;
+      color: #60a5fa;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .category h2 .count {
+      font-size: 14px;
+      color: #94a3b8;
+      font-weight: 400;
+    }
+
+    .test-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid #334155;
+    }
+
+    .test-item:last-child {
+      border-bottom: none;
+    }
+
+    .test-item input[type="checkbox"] {
+      margin-top: 4px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .test-item label {
+      cursor: pointer;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .test-title {
+      font-size: 15px;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+
+    .test-desc {
+      font-size: 13px;
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .test-item input[type="checkbox"]:checked + label .test-title {
+      color: #22c55e;
+      text-decoration: line-through;
+    }
+
+    .priority {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .priority.p0 {
+      background: #7f1d1d;
+      color: #fca5a5;
+    }
+
+    .priority.p1 {
+      background: #7c2d12;
+      color: #fdba74;
+    }
+
+    .stats {
+      position: sticky;
+      top: 20px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stats h3 {
+      margin: 0 0 12px 0;
+      font-size: 14px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .stat-label {
+      color: #cbd5e1;
+    }
+
+    .stat-value {
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+
+    code {
+      background: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Courier New', monospace;
+      color: #22d3ee;
+    }
+
+    .note {
+      background: #422006;
+      border-left: 3px solid #f59e0b;
+      padding: 12px 16px;
+      margin: 16px 0;
+      border-radius: 4px;
+      font-size: 13px;
+      color: #fbbf24;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 StdOut E2E Test Plan</h1>
+  <p class="subtitle">Complete feature validation from clean install to production-ready state</p>
+
+  <div class="current-state">
+    <h2>Current Deployment State</h2>
+    <ul>
+      <li><strong>Image:</strong> <code>charlieseay/stdout:latest</code> (commit: 5435624)</li>
+      <li><strong>Test host:</strong> ThinkPad @ <code>192.168.0.244:8112</code></li>
+      <li><strong>Test license:</strong> SL-eyJlIjoidGVzdEBzdGRvdXQubG9jYWwiLCJpIjoxNzgxMjI2ODMyfQ...</li>
+      <li><strong>Test credentials:</strong> admin@test.local / admin123</li>
+      <li><strong>Test environment:</strong> Production</li>
+    </ul>
+  </div>
+
+  <div class="stats">
+    <h3>Progress</h3>
+    <div class="stat-row">
+      <span class="stat-label">Total tests:</span>
+      <span class="stat-value" id="totalTests">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Completed:</span>
+      <span class="stat-value" id="completedTests">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Remaining:</span>
+      <span class="stat-value" id="remainingTests">0</span>
+    </div>
+    <div class="stat-row">
+      <span class="stat-label">Progress:</span>
+      <span class="stat-value" id="progressPercent">0%</span>
+    </div>
+  </div>
+
+  <!-- INSTALLATION & SETUP -->
+  <div class="category">
+    <h2>
+      <span>📦 Installation & Setup</span>
+      <span class="count" id="count-install"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-1">
+      <label for="test-install-1">
+        <span class="test-title">Clean installation via install.sh <span class="priority p0">P0</span></span>
+        <span class="test-desc">Wipe ThinkPad volumes, run <code>bash install.sh</code>, verify setup wizard appears at port 8888</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-2">
+      <label for="test-install-2">
+        <span class="test-title">License validation during setup <span class="priority p0">P0</span></span>
+        <span class="test-desc">Submit test license key, verify Ed25519 offline signature validation succeeds</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-3">
+      <label for="test-install-3">
+        <span class="test-title">Admin user creation <span class="priority p0">P0</span></span>
+        <span class="test-desc">Create admin account with email/password, verify account stored in DB</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-4">
+      <label for="test-install-4">
+        <span class="test-title">Environment selection <span class="priority p1">P1</span></span>
+        <span class="test-desc">Choose Production environment, verify saved to config</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-5">
+      <label for="test-install-5">
+        <span class="test-title">Setup wizard completion redirect <span class="priority p0">P0</span></span>
+        <span class="test-desc">After setup completes, verify redirect to main dashboard at port 8112</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-install-6">
+      <label for="test-install-6">
+        <span class="test-title">Container health check <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify stdout container shows healthy status within 120 seconds of startup</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- AUTHENTICATION & SESSION -->
+  <div class="category">
+    <h2>
+      <span>🔐 Authentication & Session Management</span>
+      <span class="count" id="count-auth"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-auth-1">
+      <label for="test-auth-1">
+        <span class="test-title">Login with valid credentials <span class="priority p0">P0</span></span>
+        <span class="test-desc">Login with admin@test.local / admin123, verify session cookie set</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-auth-2">
+      <label for="test-auth-2">
+        <span class="test-title">Login rejection with invalid credentials</span>
+        <span class="test-desc">Try wrong password, verify error message displayed</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-auth-3">
+      <label for="test-auth-3">
+        <span class="test-title">Session persistence across page loads</span>
+        <span class="test-desc">Login → navigate to different pages → refresh → verify still logged in</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-auth-4">
+      <label for="test-auth-4">
+        <span class="test-title">Logout functionality</span>
+        <span class="test-desc">Click logout → verify redirected to login page → verify cannot access /app/* routes</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-auth-5">
+      <label for="test-auth-5">
+        <span class="test-title">Protected route access without session</span>
+        <span class="test-desc">Visit /app/hud without logging in → verify redirected to /app/login</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- OBSERVATORY INITIALIZATION -->
+  <div class="category">
+    <h2>
+      <span>🔭 Observatory Initialization & AI Setup</span>
+      <span class="count" id="count-observatory"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-1">
+      <label for="test-obs-1">
+        <span class="test-title">Ollama installation on first boot <span class="priority p0">P0</span></span>
+        <span class="test-desc">Watch stdout logs for Ollama download/install process, verify binary at expected path</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-2">
+      <label for="test-obs-2">
+        <span class="test-title">Llama 3.2 3B model download <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify llama3.2:3b-instruct-q4_K_M downloads automatically for watcher agent</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-3">
+      <label for="test-obs-3">
+        <span class="test-title">Qwen 2.5 14B model download <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify qwen2.5:14b-instruct-q4_K_M downloads for analyst agent</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-4">
+      <label for="test-obs-4">
+        <span class="test-title">Watcher agent startup <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify Observatory watcher loop starts and connects to Ollama successfully</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-5">
+      <label for="test-obs-5">
+        <span class="test-title">Operating mode initialization <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify Observatory starts in "discover" mode by default</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-6">
+      <label for="test-obs-6">
+        <span class="test-title">Observatory UI displays connection status</span>
+        <span class="test-desc">Navigate to /app/observatory → verify shows "Ollama connected" and model info</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-7">
+      <label for="test-obs-7">
+        <span class="test-title">Operating mode selector working</span>
+        <span class="test-desc">Switch between discover/diagnose/autofix modes → verify saved and UI updates</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-8">
+      <label for="test-obs-8">
+        <span class="test-title">Auto-pilot toggle functional</span>
+        <span class="test-desc">Enable/disable auto-pilot → verify toggle state persists</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-9">
+      <label for="test-obs-9">
+        <span class="test-title">God mode human-only gate</span>
+        <span class="test-desc">Verify god mode shows warning and requires manual confirmation</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-obs-10">
+      <label for="test-obs-10">
+        <span class="test-title">Killswitch mechanism working</span>
+        <span class="test-desc">Trigger killswitch → verify all autonomous actions halted → reset successfully</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- SCANNER & DISCOVERY -->
+  <div class="category">
+    <h2>
+      <span>🔍 Scanner & Network Discovery</span>
+      <span class="count" id="count-scanner"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-1">
+      <label for="test-scan-1">
+        <span class="test-title">Manual scan trigger from Settings <span class="priority p0">P0</span></span>
+        <span class="test-desc">Click "Run Scan Now" → verify scan starts → watch for completion</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-2">
+      <label for="test-scan-2">
+        <span class="test-title">Network entity discovery <span class="priority p0">P0</span></span>
+        <span class="test-desc">After scan completes, verify entities table populated with discovered hosts</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-3">
+      <label for="test-scan-3">
+        <span class="test-title">discovered_hosts table population <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify discovered_hosts table has entries matching entities (dual-table population)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-4">
+      <label for="test-scan-4">
+        <span class="test-title">Auto-monitor creation from discovery <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify monitors automatically created for discovered hosts via syncHostMonitors()</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-5">
+      <label for="test-scan-5">
+        <span class="test-title">Stack auto-creation (My Environment) <span class="priority p1">P1</span></span>
+        <span class="test-desc">First scan should create default "My Environment" stack</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-6">
+      <label for="test-scan-6">
+        <span class="test-title">Scanner schedule configuration</span>
+        <span class="test-desc">Configure daily/weekly/hourly schedule → verify saved and displayed</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-7">
+      <label for="test-scan-7">
+        <span class="test-title">Scanner enable/disable toggle</span>
+        <span class="test-desc">Disable scanner → verify "Run Scan Now" shows error → re-enable successfully</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-scan-8">
+      <label for="test-scan-8">
+        <span class="test-title">Service discovery on found hosts</span>
+        <span class="test-desc">Verify discovered entities include service information (HTTP/TCP ports)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- NETWORK TOPOLOGY -->
+  <div class="category">
+    <h2>
+      <span>🗺️ Network Topology Visualization (DashMotion)</span>
+      <span class="count" id="count-network"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-1">
+      <label for="test-net-1">
+        <span class="test-title">Network map page loads <span class="priority p0">P0</span></span>
+        <span class="test-desc">Navigate to /app/network-map → verify page renders without errors</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-2">
+      <label for="test-net-2">
+        <span class="test-title">Animated SVG topology renders <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify DashMotion-style animated SVG with dashed connectors appears</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-3">
+      <label for="test-net-3">
+        <span class="test-title">Traveling dots animation working <span class="priority p1">P1</span></span>
+        <span class="test-desc">Verify green dots travel along connection paths (dashmotion pattern)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-4">
+      <label for="test-net-4">
+        <span class="test-title">Stats bar displays correct counts</span>
+        <span class="test-desc">Verify devices/services/monitors/connections counts match discovered entities</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-5">
+      <label for="test-net-5">
+        <span class="test-title">Node types color-coded correctly</span>
+        <span class="test-desc">Verify different entity types (router/switch/host/service) have distinct colors</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-6">
+      <label for="test-net-6">
+        <span class="test-title">Health status color coding</span>
+        <span class="test-desc">Verify nodes show health (green=healthy, yellow=degraded, red=down)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-7">
+      <label for="test-net-7">
+        <span class="test-title">Refresh button regenerates map</span>
+        <span class="test-desc">Click Refresh → verify loading state → new SVG rendered</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-8">
+      <label for="test-net-8">
+        <span class="test-title">Export SVG functionality</span>
+        <span class="test-desc">Click Export SVG → verify file downloads with datestamp filename</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-net-9">
+      <label for="test-net-9">
+        <span class="test-title">Empty state when no data</span>
+        <span class="test-desc">Test with no discovered entities → verify empty state with "Run scan" CTA</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- HUD & MONITORS -->
+  <div class="category">
+    <h2>
+      <span>📊 HUD & Monitor Management</span>
+      <span class="count" id="count-hud"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-1">
+      <label for="test-hud-1">
+        <span class="test-title">HUD page displays all monitors <span class="priority p0">P0</span></span>
+        <span class="test-desc">Navigate to /app/hud → verify all auto-created monitors appear in grid</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-2">
+      <label for="test-hud-2">
+        <span class="test-title">Monitor pending state clarity (H3 fix)</span>
+        <span class="test-desc">New monitor shows "Pending first check..." instead of "—"</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-3">
+      <label for="test-hud-3">
+        <span class="test-title">Service name truncation with tooltips (H4 fix)</span>
+        <span class="test-desc">Long service names truncate with title tooltip, 180px width, cursor:help</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-4">
+      <label for="test-hud-4">
+        <span class="test-title">Monitor form validation (H8 fix)</span>
+        <span class="test-desc">Try creating monitor with empty NAME/TARGET → verify HTML5 required validation blocks</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-5">
+      <label for="test-hud-5">
+        <span class="test-title">Manual HTTP monitor creation</span>
+        <span class="test-desc">Create HTTP monitor → verify appears in grid → starts checking</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-6">
+      <label for="test-hud-6">
+        <span class="test-title">Manual TCP monitor creation</span>
+        <span class="test-desc">Create TCP monitor for port 22 → verify port connectivity checks</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-7">
+      <label for="test-hud-7">
+        <span class="test-title">Manual Ping monitor creation</span>
+        <span class="test-desc">Create Ping monitor → verify ICMP checks running</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-8">
+      <label for="test-hud-8">
+        <span class="test-title">Output-freshness monitor creation</span>
+        <span class="test-desc">Create output-freshness monitor with JSONPath → verify stale data detection</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-9">
+      <label for="test-hud-9">
+        <span class="test-title">Monitor health checks running</span>
+        <span class="test-desc">Verify all monitors execute checks on schedule (check database check_results table)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-10">
+      <label for="test-hud-10">
+        <span class="test-title">Uptime percentage calculation</span>
+        <span class="test-desc">After several checks, verify uptime % displayed correctly</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-11">
+      <label for="test-hud-11">
+        <span class="test-title">Response time tracking</span>
+        <span class="test-desc">HTTP/TCP monitors show average response time in ms</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-12">
+      <label for="test-hud-12">
+        <span class="test-title">Monitor auto-start after container restart</span>
+        <span class="test-desc">Restart stdout container → verify all monitors resume checking automatically</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-hud-13">
+      <label for="test-hud-13">
+        <span class="test-title">Windlass status display (M2 fix)</span>
+        <span class="test-desc">Verify Windlass section shows "not connected" with clear next steps when not configured</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- INCIDENTS -->
+  <div class="category">
+    <h2>
+      <span>🚨 Incident Management</span>
+      <span class="count" id="count-incidents"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-1">
+      <label for="test-inc-1">
+        <span class="test-title">Auto-incident creation on monitor failure <span class="priority p0">P0</span></span>
+        <span class="test-desc">Cause 3 consecutive monitor failures → verify incident auto-created</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-2">
+      <label for="test-inc-2">
+        <span class="test-title">Manual incident creation</span>
+        <span class="test-desc">Create incident manually from dashboard → verify saved and appears in list</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-3">
+      <label for="test-inc-3">
+        <span class="test-title">Incident list page displays all incidents</span>
+        <span class="test-desc">Navigate to /app/incidents → verify all incidents shown with metadata</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-4">
+      <label for="test-inc-4">
+        <span class="test-title">Enhanced incident card metadata (M3 fix)</span>
+        <span class="test-desc">Verify incident cards show icons, source field, structured metadata</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-5">
+      <label for="test-inc-5">
+        <span class="test-title">Time format with pluralization (H5 fix)</span>
+        <span class="test-desc">Verify "1 minute ago" / "5 minutes ago" / "2 hours ago" format (not "5m ago")</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-6">
+      <label for="test-inc-6">
+        <span class="test-title">Incident detail page loads</span>
+        <span class="test-desc">Click incident → verify detail page shows full description and metadata</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-7">
+      <label for="test-inc-7">
+        <span class="test-title">AI Diagnosis button triggers analysis <span class="priority p0">P0</span></span>
+        <span class="test-desc">Click "AI Diagnosis" → verify Ollama generates root cause analysis</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-8">
+      <label for="test-inc-8">
+        <span class="test-title">Tool-augmented diagnosis shows proof</span>
+        <span class="test-desc">AI diagnosis runs diagnostic tool → verify "✓ Diagnostic Tool Executed" section appears</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-9">
+      <label for="test-inc-9">
+        <span class="test-title">Manage keys link destination (H6 fix)</span>
+        <span class="test-desc">Click "Manage keys" in AI Diagnosis → verify navigates to /app/settings#integrations</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-10">
+      <label for="test-inc-10">
+        <span class="test-title">Past fixes empty state (M4 fix)</span>
+        <span class="test-desc">Incident with no past fixes → verify helpful empty state with "Browse Runbooks" / "View Resolved Incidents"</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-11">
+      <label for="test-inc-11">
+        <span class="test-title">Resolution logging</span>
+        <span class="test-desc">Mark incident resolved → add resolution notes → verify saved to DB</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-inc-12">
+      <label for="test-inc-12">
+        <span class="test-title">Incident status workflow</span>
+        <span class="test-desc">Transition through: open → investigating → resolved → verify status updates</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="category">
+    <h2>
+      <span>🏠 Dashboard</span>
+      <span class="count" id="count-dashboard"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-1">
+      <label for="test-dash-1">
+        <span class="test-title">Dashboard loads after login <span class="priority p0">P0</span></span>
+        <span class="test-desc">Login → verify redirected to /app → dashboard displays</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-2">
+      <label for="test-dash-2">
+        <span class="test-title">Conditional license text (H2 fix)</span>
+        <span class="test-desc">Verify checklist shows "License activated successfully — Edition: Self-Hosted" when license present</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-3">
+      <label for="test-dash-3">
+        <span class="test-title">Contextualized add-ons banner (M1 fix)</span>
+        <span class="test-desc">Banner only appears when monitors OR stacks exist (not on empty install)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-4">
+      <label for="test-dash-4">
+        <span class="test-title">Service health summary statistics</span>
+        <span class="test-desc">Verify stacks/monitors counts match actual data</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-5">
+      <label for="test-dash-5">
+        <span class="test-title">Recent incidents activity feed</span>
+        <span class="test-desc">Verify recent incidents appear in chronological order</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-dash-6">
+      <label for="test-dash-6">
+        <span class="test-title">Quick actions working</span>
+        <span class="test-desc">Test quick action buttons navigate to correct pages</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- INFRASTRUCTURE & STACKS -->
+  <div class="category">
+    <h2>
+      <span>🏗️ Infrastructure & Stacks</span>
+      <span class="count" id="count-infra"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-1">
+      <label for="test-infra-1">
+        <span class="test-title">Stacks list page displays discovered stack</span>
+        <span class="test-desc">Navigate to /app/infrastructure → verify "My Environment" stack appears</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-2">
+      <label for="test-infra-2">
+        <span class="test-title">Stack detail page shows linked hosts</span>
+        <span class="test-desc">Click stack → verify discovered hosts displayed with IP/hostname/last seen</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-3">
+      <label for="test-infra-3">
+        <span class="test-title">Manual stack creation</span>
+        <span class="test-desc">Create new stack manually → verify saved and appears in list</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-4">
+      <label for="test-infra-4">
+        <span class="test-title">Stack editing</span>
+        <span class="test-desc">Edit stack name/description → verify changes persist</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-5">
+      <label for="test-infra-5">
+        <span class="test-title">Stack deletion</span>
+        <span class="test-desc">Delete stack → verify removed from database and UI</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-6">
+      <label for="test-infra-6">
+        <span class="test-title">Host-to-stack linking</span>
+        <span class="test-desc">Discovered hosts correctly linked to their parent stack</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-infra-7">
+      <label for="test-infra-7">
+        <span class="test-title">Service discovery within stack</span>
+        <span class="test-desc">Services detected on stack hosts appear in infrastructure view</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="category">
+    <h2>
+      <span>⚙️ Settings & Configuration</span>
+      <span class="count" id="count-settings"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-1">
+      <label for="test-set-1">
+        <span class="test-title">Settings page loads with all tabs</span>
+        <span class="test-desc">Navigate to /app/settings → verify Account/Integrations/Data tabs present</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-2">
+      <label for="test-set-2">
+        <span class="test-title">Account tab shows license status</span>
+        <span class="test-desc">Verify license key displayed, edition shown, expiry date if applicable</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-3">
+      <label for="test-set-3">
+        <span class="test-title">Profile editing</span>
+        <span class="test-desc">Change name/email → save → verify persists and updates UI</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-4">
+      <label for="test-set-4">
+        <span class="test-title">Branding customization</span>
+        <span class="test-desc">Upload logo → change brand colors → verify applied across UI</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-5">
+      <label for="test-set-5">
+        <span class="test-title">AI provider configuration (Ollama local)</span>
+        <span class="test-desc">Verify Ollama appears as connected AI provider in Integrations tab</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-6">
+      <label for="test-set-6">
+        <span class="test-title">Scanner schedule configuration</span>
+        <span class="test-desc">Change schedule to hourly/daily/weekly → save → verify applied</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-7">
+      <label for="test-set-7">
+        <span class="test-title">Run Scan Now button (M6 fix)</span>
+        <span class="test-desc">Click "Run Scan Now" next to "Save schedule" → verify scan triggers</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-8">
+      <label for="test-set-8">
+        <span class="test-title">Windlass integration detection</span>
+        <span class="test-desc">If Windlass container present → verify auto-detected and shown in Integrations</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-9">
+      <label for="test-set-9">
+        <span class="test-title">Data backup/export functionality</span>
+        <span class="test-desc">Test database export → verify download works</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-set-10">
+      <label for="test-set-10">
+        <span class="test-title">Notification preferences</span>
+        <span class="test-desc">Configure notification channels → save → verify stored in DB</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- WINDLASS INTEGRATION -->
+  <div class="category">
+    <h2>
+      <span>⚓ Windlass Integration</span>
+      <span class="count" id="count-windlass"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-1">
+      <label for="test-wind-1">
+        <span class="test-title">Windlass container auto-detection <span class="priority p0">P0</span></span>
+        <span class="test-desc">Deploy Windlass container → verify StdOut auto-detects and shows connection status</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-2">
+      <label for="test-wind-2">
+        <span class="test-title">Windlass health check endpoint</span>
+        <span class="test-desc">Verify StdOut polls Windlass /health endpoint successfully</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-3">
+      <label for="test-wind-3">
+        <span class="test-title">Service registry sync</span>
+        <span class="test-desc">Windlass services appear in StdOut service list</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-4">
+      <label for="test-wind-4">
+        <span class="test-title">Schedule management UI</span>
+        <span class="test-desc">View Windlass schedules in StdOut → verify displayed correctly</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-5">
+      <label for="test-wind-5">
+        <span class="test-title">Manual schedule override</span>
+        <span class="test-desc">Override service schedule → verify sent to Windlass and applied</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-6">
+      <label for="test-wind-6">
+        <span class="test-title">Windlass watchdog functionality</span>
+        <span class="test-desc">Stop StdOut container → verify Windlass detects and restarts it</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-wind-7">
+      <label for="test-wind-7">
+        <span class="test-title">Connection status updates in real-time</span>
+        <span class="test-desc">Stop Windlass → verify StdOut shows "degraded" → restart → shows "ok"</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- KNOWLEDGE BASE -->
+  <div class="category">
+    <h2>
+      <span>📚 Knowledge Base & Documentation</span>
+      <span class="count" id="count-kb"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-kb-1">
+      <label for="test-kb-1">
+        <span class="test-title">Knowledge base seeded on first boot</span>
+        <span class="test-desc">Verify 24 docs seeded (16 guides + 8 runbooks)</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-kb-2">
+      <label for="test-kb-2">
+        <span class="test-title">Full-text search enabled</span>
+        <span class="test-desc">Search for keyword → verify FTS5 indices return relevant docs</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-kb-3">
+      <label for="test-kb-3">
+        <span class="test-title">Docs CRUD operations</span>
+        <span class="test-desc">Create/edit/delete custom doc → verify saved to knowledge_docs table</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-kb-4">
+      <label for="test-kb-4">
+        <span class="test-title">Runbooks accessible in incident detail</span>
+        <span class="test-desc">Incident detail → "Browse Runbooks" link → verify navigates to runbooks list</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-kb-5">
+      <label for="test-kb-5">
+        <span class="test-title">Community docs toggle (RAG)</span>
+        <span class="test-desc">Enable/disable public community docs in RAG → verify Observatory setting updates</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- SECURITY & RBAC -->
+  <div class="category">
+    <h2>
+      <span>🔒 Security & Access Control</span>
+      <span class="count" id="count-security"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-1">
+      <label for="test-sec-1">
+        <span class="test-title">All API endpoints check user session <span class="priority p0">P0</span></span>
+        <span class="test-desc">Test /app/api/* routes without auth → verify 401 Unauthorized</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-2">
+      <label for="test-sec-2">
+        <span class="test-title">RBAC enforced on endpoints <span class="priority p0">P0</span></span>
+        <span class="test-desc">Verify checkRBAC() called on view/edit/admin actions</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-3">
+      <label for="test-sec-3">
+        <span class="test-title">No IDOR vulnerabilities <span class="priority p0">P0</span></span>
+        <span class="test-desc">Try accessing another user's data → verify blocked</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-4">
+      <label for="test-sec-4">
+        <span class="test-title">SQL injection prevention</span>
+        <span class="test-desc">Test malicious inputs in forms → verify parameterized queries safe</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-5">
+      <label for="test-sec-5">
+        <span class="test-title">XSS prevention</span>
+        <span class="test-desc">Test script injection in text fields → verify sanitized</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-6">
+      <label for="test-sec-6">
+        <span class="test-title">CSRF protection on forms</span>
+        <span class="test-desc">Verify CSRF tokens present on all POST forms</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-sec-7">
+      <label for="test-sec-7">
+        <span class="test-title">Secure cookie attributes</span>
+        <span class="test-desc">Session cookie has HttpOnly, Secure (if HTTPS), SameSite attributes</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- FINAL VERIFICATION -->
+  <div class="category">
+    <h2>
+      <span>✅ Final Verification & Documentation</span>
+      <span class="count" id="count-final"></span>
+    </h2>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-1">
+      <label for="test-final-1">
+        <span class="test-title">All P0 bugs fixed and verified <span class="priority p0">P0</span></span>
+        <span class="test-desc">Cross-reference bug tracker → all P0 items resolved</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-2">
+      <label for="test-final-2">
+        <span class="test-title">All P1 bugs fixed or have workaround <span class="priority p1">P1</span></span>
+        <span class="test-desc">P1 items either resolved or documented workaround exists</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-3">
+      <label for="test-final-3">
+        <span class="test-title">Create comprehensive E2E test report</span>
+        <span class="test-desc">Document all tests run, results, issues found, fixes applied</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-4">
+      <label for="test-final-4">
+        <span class="test-title">Screenshot documentation</span>
+        <span class="test-desc">Capture screenshots of all major features for docs</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-5">
+      <label for="test-final-5">
+        <span class="test-title">Clean ThinkPad redeploy after all fixes</span>
+        <span class="test-desc">Wipe volumes → fresh install → verify everything works end-to-end</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-6">
+      <label for="test-final-6">
+        <span class="test-title">Checkpoint all fixes to git</span>
+        <span class="test-desc">All code changes committed with clear messages and co-authorship</span>
+      </label>
+    </div>
+
+    <div class="test-item">
+      <input type="checkbox" id="test-final-7">
+      <label for="test-final-7">
+        <span class="test-title">Update project notes with test results</span>
+        <span class="test-desc">Update Projects/StdOut/StdOut.md with E2E test outcome and deployment status</span>
+      </label>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Note:</strong> This is a living document. Check off tests as you complete them. The progress stats at the top update automatically. After completing all tests, create a comprehensive E2E test report documenting results, issues found, and fixes applied.
+  </div>
+
+  <script>
+    function updateStats() {
+      const allCheckboxes = document.querySelectorAll('input[type="checkbox"]');
+      const total = allCheckboxes.length;
+      const completed = Array.from(allCheckboxes).filter(cb => cb.checked).length;
+      const remaining = total - completed;
+      const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+      document.getElementById('totalTests').textContent = total;
+      document.getElementById('completedTests').textContent = completed;
+      document.getElementById('remainingTests').textContent = remaining;
+      document.getElementById('progressPercent').textContent = percent + '%';
+
+      // Update category counts
+      const categories = document.querySelectorAll('.category');
+      categories.forEach(cat => {
+        const catCheckboxes = cat.querySelectorAll('input[type="checkbox"]');
+        const catTotal = catCheckboxes.length;
+        const catCompleted = Array.from(catCheckboxes).filter(cb => cb.checked).length;
+        const countEl = cat.querySelector('.count');
+        if (countEl) {
+          countEl.textContent = `${catCompleted}/${catTotal}`;
+        }
+      });
+
+      // Save state to localStorage
+      const state = {};
+      allCheckboxes.forEach(cb => {
+        state[cb.id] = cb.checked;
+      });
+      localStorage.setItem('stdout-test-state', JSON.stringify(state));
+    }
+
+    // Restore state from localStorage
+    function restoreState() {
+      const saved = localStorage.getItem('stdout-test-state');
+      if (saved) {
+        try {
+          const state = JSON.parse(saved);
+          Object.keys(state).forEach(id => {
+            const cb = document.getElementById(id);
+            if (cb) cb.checked = state[id];
+          });
+        } catch (e) {
+          console.error('Failed to restore state:', e);
+        }
+      }
+    }
+
+    // Initialize
+    restoreState();
+    updateStats();
+
+    // Listen for changes
+    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', updateStats);
+    });
+  </script>
+</body>
+</html>
