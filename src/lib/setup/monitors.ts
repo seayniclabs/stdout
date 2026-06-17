@@ -39,8 +39,8 @@ export async function configureMonitors(
 
     // Get all stacks
     const stacks = await db.all(sql`
-      SELECT id, name, type FROM stacks WHERE user_id = ${userId}
-    `) as Array<{ id: string; name: string; type: string }>;
+      SELECT id, name FROM stacks WHERE user_id = ${userId}
+    `) as Array<{ id: string; name: string }>;
 
     output.push(`Found ${stacks.length} stacks`);
 

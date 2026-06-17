@@ -392,12 +392,16 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
                     errorLog.className = 'error';
                     errorLog.textContent = `Import failed: ${importResponse.status}`;
                     scanLogs.appendChild(errorLog);
+                    scanButton.disabled = false;
+                    scanButtonText.textContent = 'Retry Scan';
                   }
                 } catch (importError) {
                   const errorLog = document.createElement('p');
                   errorLog.className = 'error';
                   errorLog.textContent = `Import failed: ${importError.message}`;
                   scanLogs.appendChild(errorLog);
+                  scanButton.disabled = false;
+                  scanButtonText.textContent = 'Retry Scan';
                 }
               } else {
                 // No hosts found - mark complete and redirect anyway

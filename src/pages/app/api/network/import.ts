@@ -5,6 +5,8 @@ import { eq, and } from 'drizzle-orm';
 import { getSetupProgress, getSetupConfig, SetupStep } from '../../../../lib/setup';
 import { emit } from '../../../../lib/events';
 
+const { stacks, discoveredHosts, discoveredServices } = schema;
+
 export const POST: APIRoute = async ({ request, locals }) => {
   const session = locals.user;
   if (!session) {
