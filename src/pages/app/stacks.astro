@@ -231,6 +231,10 @@ interface StackCard {
   running: number;
   stopped: number;
   unhealthy: number;
+  deviceCount: number;
+  serviceCount: number;
+  healthPercentage: number;
+  lastScanTime: Date | null;
   updatedAt: Date;
   incidentCount: number;
   activeIncidents: number;
@@ -241,6 +245,42 @@ const stackCards: StackCard[] = userStacks.map(stack => {
   const running = containers.filter(c => c.status === 'running').length;
   const stopped = containers.filter(c => c.status === 'stopped' || c.status === 'exited').length;
   const unhealthy = containers.filter(c => c.health === 'unhealthy').length;
+
+  // Count discovered devices and services for this stack
+  const deviceCount = db.select().from(schema.discoveredHosts)
+    .where(and(
+      eq(schema.discoveredHosts.userId, user.id),
+      or(eq(schema.discoveredHosts.stackId, stack.id), eq(schema.discoveredHosts.stackId, null))
+    ))
+    .all().length;
+
+  const serviceCount = db.select().from(schema.monitors)
+    .where(and(
+      eq(schema.monitors.userId, user.id),
+      or(eq(schema.monitors.stackId, stack.id), eq(schema.monitors.stackId, null))
+    ))
+    .all().length;
+
+  // Calculate health percentage
+  const totalMonitors = serviceCount;
+  const healthyMonitors = totalMonitors > 0
+    ? db.select().from(schema.monitors)
+        .where(and(
+          eq(schema.monitors.userId, user.id),
+          eq(schema.monitors.currentStatus, 'healthy'),
+          or(eq(schema.monitors.stackId, stack.id), eq(schema.monitors.stackId, null))
+        ))
+        .all().length
+    : 0;
+
+  const healthPercentage = totalMonitors > 0 ? Math.round((healthyMonitors / totalMonitors) * 100) : 100;
+
+  // Get last scan time from most recent stack import
+  const lastImport = db.select().from(schema.stackImports)
+    .where(eq(schema.stackImports.userId, user.id))
+    .orderBy(desc(schema.stackImports.createdAt))
+    .limit(1).get();
+
   return {
     id: stack.id,
     name: stack.name,
@@ -250,6 +290,10 @@ const stackCards: StackCard[] = userStacks.map(stack => {
     running,
     stopped,
     unhealthy,
+    deviceCount,
+    serviceCount,
+    healthPercentage,
+    lastScanTime: lastImport?.createdAt || null,
     updatedAt: stack.updatedAt,
     incidentCount: incidentsByStack.get(stack.id) || 0,
     activeIncidents: activeIncidentsByStack.get(stack.id) || 0,
@@ -384,6 +428,17 @@ function timeAgo(date: Date) {
                 <h3>{stack.name}</h3>
               </a>
               <div class="stack-badges">
+                {stack.deviceCount > 0 && (
+                  <span class="badge badge-count mono" title="Discovered network devices">{stack.deviceCount} devices</span>
+                )}
+                {stack.serviceCount > 0 && (
+                  <span class="badge badge-count mono" title="Monitored services">{stack.serviceCount} services</span>
+                )}
+                {stack.healthPercentage < 100 && (
+                  <span class="badge badge-health mono" title="Service health percentage" style={`color: ${stack.healthPercentage >= 90 ? 'var(--success)' : stack.healthPercentage >= 70 ? 'var(--warning)' : 'var(--danger)'}`}>
+                    {stack.healthPercentage}% health
+                  </span>
+                )}
                 {stack.containers.length > 0 && (
                   <span class="badge badge-count mono">{stack.containers.length} containers</span>
                 )}
@@ -392,6 +447,38 @@ function timeAgo(date: Date) {
                 )}
               </div>
             </div>
+
+            {/* Summary stats row */}
+            {(stack.deviceCount > 0 || stack.serviceCount > 0 || stack.lastScanTime) && (
+              <div class="stack-summary">
+                {stack.deviceCount > 0 && (
+                  <div class="summary-item">
+                    <span class="summary-label">Devices</span>
+                    <span class="summary-value mono">{stack.deviceCount}</span>
+                  </div>
+                )}
+                {stack.serviceCount > 0 && (
+                  <div class="summary-item">
+                    <span class="summary-label">Services</span>
+                    <span class="summary-value mono">{stack.serviceCount}</span>
+                  </div>
+                )}
+                {stack.healthPercentage >= 0 && stack.serviceCount > 0 && (
+                  <div class="summary-item">
+                    <span class="summary-label">Health</span>
+                    <span class="summary-value mono" style={`color: ${stack.healthPercentage >= 90 ? 'var(--success)' : stack.healthPercentage >= 70 ? 'var(--warning)' : 'var(--danger)'}`}>
+                      {stack.healthPercentage}%
+                    </span>
+                  </div>
+                )}
+                {stack.lastScanTime && (
+                  <div class="summary-item">
+                    <span class="summary-label">Last scan</span>
+                    <span class="summary-value mono">{timeAgo(stack.lastScanTime)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Health summary */}
             {stack.containers.length > 0 && (
@@ -614,6 +701,34 @@ function timeAgo(date: Date) {
   }
   .badge-count { color: var(--text-secondary); background: rgba(160,160,184,0.1); border: 1px solid var(--border); }
   .badge-incident { color: var(--critical); background: var(--critical-dim); }
+  .badge-health { border: 1px solid var(--border); background: rgba(160,160,184,0.05); }
+
+  /* Stack summary stats */
+  .stack-summary {
+    display: flex;
+    gap: 20px;
+    padding: 10px;
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+  }
+  .summary-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .summary-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+  }
+  .summary-value {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+  }
 
   /* Health summary */
   .health-summary {
