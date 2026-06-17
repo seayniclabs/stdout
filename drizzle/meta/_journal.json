@@ -15,6 +15,13 @@
       "when": 1781700621000,
       "tag": "0001_fix_windlass_config",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1781701100000,
+      "tag": "0002_add_fts_tables",
+      "breakpoints": true
     }
   ]
 }
