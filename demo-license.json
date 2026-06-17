@@ -1,7 +1,7 @@
 {
-  "key": "DEMO-16E094B8D5E088BD",
-  "email": "admin@example.com",
-  "issuedAt": 1781666236439,
+  "key": "DEMO-171DCD90DDCEB8CA",
+  "email": "demo@example.com",
+  "issuedAt": 1781716701487,
   "expiresAt": null,
   "signature": "demo-signature-not-validated-in-dev-mode"
 }
