@@ -172,77 +172,94 @@ const { stacks, discoveredHosts, discoveredServices } = schema;
 
 ---
 
-#### ISSUE #9: Skin seeding fails with Drizzle ORM error (P2) ⏳ OPEN
+#### ISSUE #9: Skin seeding fails with Drizzle ORM error (P2) ✅ FIXED
 **Found:** 2026-06-17 (image 3d6b126 E2E test)  
+**Fixed:** 2026-06-17 (commit 8fb1db0)
 **Steps:**
 1. Run fresh installation via setup wizard
 2. Installation reaches "Database Initialization" step
 3. Skin seeding runs as part of database init
 
-**Error log:**
+**Error log (before fix):**
 ```
 [00:00:06] ⚠ Failed to seed default skins: t.isBuiltIn.eq is not a function
 ```
 
-**Expected:** 5 default skins seeded into database  
-**Actual:** Seeding fails with Drizzle ORM method error
-
 **Root cause:** Incorrect Drizzle query syntax in `src/lib/setup/seed-skins.ts`
+- Old: `.where((t) => t.isBuiltIn.eq(true))` - invalid syntax
+- Drizzle requires importing `eq()` function from 'drizzle-orm'
 
-**Impact:** 
-- Default skins not available in database
-- Skins UI still works (loads from TypeScript defaults in `default-skins.ts`)
-- User cannot save skin preferences to database
+**Fix:**
+```typescript
+import { eq } from 'drizzle-orm';
+// ...
+.where(eq(skins.isBuiltIn, true))
+```
 
-**Status:** Documented, needs fix
+**Status:** Fixed and committed (8fb1db0), awaiting deployment verification
 
 ---
 
-#### ISSUE #10: Monitor creation fails with SQL INSERT error (P1) ⏳ OPEN
+#### ISSUE #10: Monitor creation fails with SQL INSERT error (P1) ✅ FIXED
 **Found:** 2026-06-17 (image 3d6b126 E2E test)  
+**Fixed:** 2026-06-17 (commit 8fb1db0)
 **Steps:**
 1. Complete setup wizard
 2. Installation runs "Monitor Configuration" step
 3. Attempts to create 4 default monitors for discovered stack
 
-**Error log:**
+**Error log (before fix):**
 ```
 [00:02:10] ⚠ Failed to create monitor for My Environment - Container Health: Failed to run the query ' INSERT INTO monitors ( id, user_id, stack_id, name, type, enabled, check_interval_seconds, warning_threshold, critical_threshold, created_at ) VALUES ( ?, ?, ?, ?, ?, 1, ?, ?, ?, ? ) '
-[00:02:10] ⚠ Failed to create monitor for My Environment - CPU Usage: [same error]
-[00:02:10] ⚠ Failed to create monitor for My Environment - Memory Usage: [same error]
-[00:02:10] ⚠ Failed to create monitor for My Environment - Restart Count: [same error]
 ```
 
-**Expected:** 4 monitors created successfully  
-**Actual:** All monitor INSERT queries fail
+**Root cause:** Schema mismatch in `src/lib/setup/monitors.ts`
+- Old code tried to insert non-existent columns: `enabled`, `check_interval_seconds`, `warning_threshold`, `critical_threshold`
+- Actual schema has: `interval_seconds`, `target`, `paused`, `current_status`, `consecutive_failures`, `updated_at`
 
-**Root cause:** Likely schema mismatch or incorrect column values in `src/lib/setup/monitors.ts`
+**Fix:**
+```typescript
+// Added type mapping: health/cpu/memory/restart → docker
+const typeMapping: Record<string, string> = {
+  'health': 'docker',
+  'cpu': 'docker',
+  'memory': 'docker',
+  'restart': 'docker'
+};
 
-**Impact:** No monitors auto-created during installation, users must create manually
+// Updated INSERT to match actual schema
+INSERT INTO monitors (
+  id, user_id, stack_id, name, type, target,
+  interval_seconds, paused, current_status,
+  consecutive_failures, created_at, updated_at
+) VALUES (...)
+```
 
-**Status:** Documented, needs fix
+**Status:** Fixed and committed (8fb1db0), awaiting deployment verification
 
 ---
 
-#### ISSUE #11: Skin switching fails to save preference (P2) ⏳ OPEN
+#### ISSUE #11: Skin switching fails to save preference (P2) ✅ FIXED
 **Found:** 2026-06-17 (image 3d6b126 E2E test)  
+**Fixed:** 2026-06-17 (commit 8fb1db0)
 **Steps:**
 1. Navigate to `/app/settings/skins`
 2. Click on any skin card to switch (e.g., Glacier)
 3. UI shows selected skin with indicator
 4. Error message appears: "Failed to save skin preference."
 
-**Expected:** Skin selection saved to database, persists on page reload  
-**Actual:** API call fails, preference not saved
+**Root cause:** Incorrect Drizzle query syntax in `src/pages/app/api/skins/set-active.ts`
+- Old: `.where((t) => t.userId.eq(session.id))` - invalid syntax
+- Same Drizzle ORM syntax error as ISSUE #9
 
-**Root cause:** 
-- API endpoint `/app/api/skins/set-active` failing
-- Likely related to ISSUE #9 (skin seeding failure)
-- Database may be missing required rows/tables
+**Fix:**
+```typescript
+import { eq } from 'drizzle-orm';
+// ...
+.where(eq(userSkinPreferences.userId, session.id))
+```
 
-**Impact:** Users cannot persist skin selection, reverts to default on reload
-
-**Status:** Documented, needs fix
+**Status:** Fixed and committed (8fb1db0), awaiting deployment verification
 
 ---
 
