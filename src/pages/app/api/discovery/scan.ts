@@ -163,6 +163,51 @@ export const POST: APIRoute = async ({ locals, request }) => {
           );
           entitiesCreated++;
         }
+
+        // Also populate discovered_hosts table for backward compatibility with monitor sync
+        const existingHost = db.prepare(`
+          SELECT id FROM discovered_hosts
+          WHERE ip_address = ?
+          LIMIT 1
+        `).get(device.ip) as { id: string } | undefined;
+
+        if (existingHost) {
+          // Update existing host
+          db.prepare(`
+            UPDATE discovered_hosts
+            SET hostname = ?,
+                mac_address = ?,
+                vendor = ?,
+                last_seen = ?,
+                updated_at = ?
+            WHERE id = ?
+          `).run(
+            device.hostname,
+            device.mac,
+            device.vendor,
+            now,
+            now,
+            existingHost.id
+          );
+        } else {
+          // Create new discovered_host entry
+          db.prepare(`
+            INSERT INTO discovered_hosts (
+              id, user_id, ip_address, hostname, mac_address, vendor,
+              last_seen, created_at, updated_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            nanoid(),
+            locals.user.id,
+            device.ip,
+            device.hostname,
+            device.mac,
+            device.vendor,
+            now,
+            now,
+            now
+          );
+        }
       }
     }
 
