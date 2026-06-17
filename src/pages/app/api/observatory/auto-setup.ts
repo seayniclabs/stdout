@@ -42,15 +42,44 @@ export const POST: APIRoute = async ({ locals, request }) => {
       `).get(locals.user.id) as any;
 
       if (!latestImport) {
-        return new Response(JSON.stringify({
-          error: 'No scan data available. Run scanner first.'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+        // No scan data exists - trigger automatic Docker scan
+        try {
+          const { scanLocalDocker } = await import('../../../../lib/scanner/docker-local');
+          console.log('[auto-setup] No scan data found - running automatic Docker scan...');
 
-      scanData = JSON.parse(latestImport.imported_data);
+          scanData = await scanLocalDocker();
+
+          // Import the scan data immediately
+          const { nanoid } = await import('nanoid');
+          const importId = nanoid();
+          const now = new Date().toISOString();
+
+          db.prepare(`
+            INSERT INTO stack_imports (id, user_id, source, stack_id, imported_data, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+          `).run(
+            importId,
+            locals.user.id,
+            'docker',
+            null,
+            JSON.stringify(scanData),
+            'pending',
+            now
+          );
+
+          console.log(`[auto-setup] Auto-scan complete - found ${scanData.containers?.length || 0} containers`);
+        } catch (scanError: any) {
+          console.error('[auto-setup] Auto-scan failed:', scanError.message);
+          return new Response(JSON.stringify({
+            error: 'No scan data available and auto-scan failed. Is Docker accessible?'
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+      } else {
+        scanData = JSON.parse(latestImport.imported_data);
+      }
     }
 
     // Get or create default stack
