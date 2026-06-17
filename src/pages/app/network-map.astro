@@ -1,0 +1,291 @@
+---
+export const prerender = false;
+import Layout from '../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+---
+<Layout title="Network Map — StdOut">
+  <div class="network-map-page">
+    <div class="page-header">
+      <div class="header-left">
+        <h1>Network Topology</h1>
+        <p class="page-subtitle">Live visualization of your infrastructure</p>
+      </div>
+      <div class="header-right">
+        <button id="refreshMapBtn" class="btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          Refresh
+        </button>
+        <button id="exportSVGBtn" class="btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+          Export SVG
+        </button>
+      </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stats-bar" id="statsBar">
+      <div class="stat-item">
+        <span class="stat-label">Devices</span>
+        <span class="stat-value mono" id="deviceCount">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Services</span>
+        <span class="stat-value mono" id="serviceCount">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Monitors</span>
+        <span class="stat-value mono" id="monitorCount">—</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Connections</span>
+        <span class="stat-value mono" id="connectionCount">—</span>
+      </div>
+    </div>
+
+    <!-- Map Container -->
+    <div class="map-container" id="mapContainer">
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p>Generating network topology...</p>
+      </div>
+      <div class="map-content" id="mapContent"></div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M12 6v6l4 2"/>
+      </svg>
+      <h3>No Network Data</h3>
+      <p>Run a network discovery scan to populate the topology map.</p>
+      <a href="/app/hud" class="btn-primary">Go to HUD</a>
+    </div>
+  </div>
+
+  <style>
+    .network-map-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+      gap: 16px;
+    }
+
+    .header-left h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .header-right {
+      display: flex;
+      gap: 12px;
+    }
+
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-item {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .stat-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .map-container {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      min-height: 600px;
+      position: relative;
+      overflow: auto;
+    }
+
+    .loading-state {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-state p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .map-content {
+      width: 100%;
+      height: 100%;
+      min-height: 600px;
+    }
+
+    .map-content svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 80px 24px;
+    }
+
+    .empty-state svg {
+      opacity: 0.3;
+      margin: 0 auto 24px;
+    }
+
+    .empty-state h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0 0 8px 0;
+      color: var(--text);
+    }
+
+    .empty-state p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0 0 24px 0;
+    }
+  </style>
+
+  <script>
+    async function loadNetworkMap() {
+      const loadingState = document.getElementById('loadingState');
+      const mapContent = document.getElementById('mapContent');
+      const emptyState = document.getElementById('emptyState');
+
+      try {
+        const res = await fetch('/app/api/visualization/network-map', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        const data = await res.json();
+
+        if (data.success && data.svg) {
+          // Hide loading, show map
+          if (loadingState) loadingState.style.display = 'none';
+          if (mapContent) {
+            mapContent.innerHTML = data.svg;
+            mapContent.style.display = 'block';
+          }
+
+          // Update stats
+          if (data.stats) {
+            const deviceCount = document.getElementById('deviceCount');
+            const serviceCount = document.getElementById('serviceCount');
+            const monitorCount = document.getElementById('monitorCount');
+            const connectionCount = document.getElementById('connectionCount');
+
+            if (deviceCount) deviceCount.textContent = data.stats.devices.toString();
+            if (serviceCount) serviceCount.textContent = data.stats.services.toString();
+            if (monitorCount) monitorCount.textContent = data.stats.monitors.toString();
+            if (connectionCount) connectionCount.textContent = data.stats.connections.toString();
+          }
+        } else {
+          // Show empty state
+          if (loadingState) loadingState.style.display = 'none';
+          if (emptyState) emptyState.style.display = 'block';
+        }
+      } catch (error) {
+        console.error('[network-map] Failed to load:', error);
+        if (loadingState) loadingState.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'block';
+      }
+    }
+
+    // Refresh button
+    document.getElementById('refreshMapBtn')?.addEventListener('click', () => {
+      const loadingState = document.getElementById('loadingState');
+      const mapContent = document.getElementById('mapContent');
+      const emptyState = document.getElementById('emptyState');
+
+      if (loadingState) loadingState.style.display = 'block';
+      if (mapContent) mapContent.style.display = 'none';
+      if (emptyState) emptyState.style.display = 'none';
+
+      loadNetworkMap();
+    });
+
+    // Export SVG button
+    document.getElementById('exportSVGBtn')?.addEventListener('click', () => {
+      const mapContent = document.getElementById('mapContent');
+      if (!mapContent) return;
+
+      const svg = mapContent.querySelector('svg');
+      if (!svg) return;
+
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const blob = new Blob([svgData], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `network-topology-${new Date().toISOString().split('T')[0]}.svg`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Load on page load
+    loadNetworkMap();
+  </script>
+</Layout>

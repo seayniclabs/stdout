@@ -596,3 +596,86 @@ export function getServiceSummary(userId: string) {
   return { total: services.length, running, stopped, scheduled, totalMemory };
 }
 
+/**
+ * Auto-detect Windlass on common endpoints and configure if found
+ * Checks localhost:8116 (default) and host.docker.internal:8116 (from container)
+ */
+export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
+  const db = getDb();
+
+  // Check if already configured
+  const existing = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId))
+    .get();
+
+  if (existing && existing.enabled) {
+    console.log('[windlass] Already configured, skipping auto-detect');
+    return true;
+  }
+
+  // Try common endpoints
+  const endpoints = [
+    'http://localhost:8116',
+    'http://host.docker.internal:8116',
+    'http://windlass:8116', // Docker compose service name
+  ];
+
+  for (const endpoint of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+
+      const res = await fetch(`${endpoint}/status.json`, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const status = await res.json() as WindlassStatus;
+
+        // Verify it's actually Windlass (has expected structure)
+        if (status.services && Array.isArray(status.services)) {
+          console.log(`[windlass] Auto-detected at ${endpoint}`);
+
+          // Create or update config
+          const now = new Date();
+          if (existing) {
+            db.update(schema.windlassConfig).set({
+              endpointUrl: endpoint,
+              enabled: true,
+              lastSyncAt: now,
+              lastSyncStatus: 'success',
+              updatedAt: now,
+            }).where(eq(schema.windlassConfig.userId, userId)).run();
+          } else {
+            db.insert(schema.windlassConfig).values({
+              id: nanoid(),
+              userId,
+              endpointUrl: endpoint,
+              enabled: true,
+              lastSyncAt: now,
+              lastSyncStatus: 'success',
+              createdAt: now,
+              updatedAt: now,
+            }).run();
+          }
+
+          // Run initial sync
+          try {
+            await syncFromEndpoint(userId);
+            console.log('[windlass] Initial sync complete');
+          } catch (err) {
+            console.error('[windlass] Initial sync failed:', err);
+          }
+
+          return true;
+        }
+      }
+    } catch (err) {
+      // Continue trying other endpoints
+      continue;
+    }
+  }
+
+  console.log('[windlass] Auto-detect failed - no Windlass found on common endpoints');
+  return false;
+}
+
