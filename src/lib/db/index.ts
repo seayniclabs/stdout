@@ -29,7 +29,15 @@ function initSqlite(dbPath: string): InstanceType<typeof Database> {
 export function getDb(): BetterSQLite3Database<typeof schema> {
   if (!_db) {
     const sqlite = initSqlite(DB_PATH);
-    _db = drizzle(sqlite, { schema });
+    _db = drizzle(sqlite, {
+      schema,
+      logger: {
+        logQuery(query: string, params: unknown[]) {
+          console.log('[SQL]', query);
+          console.log('[SQL PARAMS]', params);
+        }
+      }
+    });
   }
   return _db;
 }
