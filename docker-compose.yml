@@ -2,7 +2,7 @@ services:
   # StdOut Incident Companion
   stdout:
     build: .
-    image: ghcr.io/seayniclabs/stdout:latest  # Pre-built image (pull if available, build if not)
+    image: charlieseay/stdout:latest  # Pre-built image (pull if available, build if not)
     container_name: stdout
     restart: unless-stopped
     ports:
@@ -37,7 +37,7 @@ services:
 
   # Windlass Scheduler
   windlass:
-    image: ghcr.io/seayniclabs/windlass:latest
+    image: charlieseay/windlass:latest
     container_name: windlass
     restart: unless-stopped
     ports:

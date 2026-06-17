@@ -88,8 +88,9 @@
 
 ---
 
-#### ISSUE #5: Monitor Configuration fails with "no such column: type" (P2) ⏳ NEW
+#### ISSUE #5: Monitor Configuration fails with "no such column: type" (P2) ⏳ OPEN
 **Found:** 2026-06-17 22:23 UTC (during retest after fix)  
+**Confirmed:** 2026-06-17 23:30 UTC (Docker Hub image test)
 **Log:**
 ```
 [00:00:09] ▶ Starting: Monitor Configuration
@@ -101,6 +102,46 @@
 **Actual:** SQL error - `type` column doesn't exist in stacks table
 
 **Root cause:** Schema mismatch - `src/lib/setup/monitors.ts` line 42 queries `SELECT id, name, type FROM stacks` but stacks table doesn't have `type` column
+
+**Status:** Confirmed in Docker Hub deployment, not yet fixed
+
+---
+
+#### ISSUE #6: Scanner UI doesn't update after scan completion (P2) ⏳ NEW
+**Found:** 2026-06-17 23:28 UTC (Docker Hub deployment test)  
+**Steps:**
+1. Complete setup wizard through Step 4 - Scanner
+2. Click "Scan All Networks"
+3. Scanner completes: "Found 37 host(s)"
+4. Button still shows "Scanning..." (disabled)
+5. No "Import All Hosts" or "Continue" button appears
+
+**Expected:** After scan completes, button updates to "Import All Hosts" or similar  
+**Actual:** Button stays as "Scanning..." indefinitely, UI doesn't reflect completion
+
+**Impact:** Users cannot import discovered hosts via UI, must skip scanner step
+
+**Workaround:** Click "Skip for Now" to continue setup
+
+**Status:** Documented, not yet fixed
+
+---
+
+#### ISSUE #7: Windlass installation hangs during Observatory setup (P2) ⏳ NEW
+**Found:** 2026-06-17 23:29 UTC (Docker Hub deployment test)  
+**Steps:**
+1. Complete setup wizard through Step 6 - Windlass
+2. Click "Continue" on Windlass configuration page
+3. Installation starts automatically
+4. Shows "Starting Observatory services..." indefinitely
+5. "Installation Complete!" button remains disabled
+
+**Expected:** Installation completes and enables Continue button  
+**Actual:** Hangs on Observatory services step, never completes
+
+**Impact:** Users cannot complete Windlass setup via wizard
+
+**Workaround:** Force navigate to `/setup/ticketing` to skip
 
 **Status:** Documented, not yet fixed
 

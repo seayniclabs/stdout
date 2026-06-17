@@ -1,8 +1,9 @@
 # StdOut E2E Quick Test Results — 2026-06-17 22:30 UTC
 
-**Image:** ghcr.io/seayniclabs/stdout:f541b3f  
+**Image:** charlieseay/stdout:f541b3f (Docker Hub - CORRECTED)  
 **Deployment:** ThinkPad 192.168.0.244:8112  
 **Test Method:** Manual Chrome DevTools navigation  
+**Note:** Previous tests used wrong registry (ghcr.io). Corrected to Docker Hub.  
 
 ---
 
