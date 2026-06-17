@@ -1,0 +1,427 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { checkRBAC } = await import('../../../lib/rbac');
+const rbacBlock = checkRBAC(Astro.locals, 'manage_monitors');
+if (rbacBlock) return Astro.redirect('/app');
+---
+<Layout title="Observatory Tools — StdOut">
+  <div class="tools-page">
+    <div class="page-header">
+      <div class="header-left">
+        <h1>Observatory Network Tools</h1>
+        <p class="page-subtitle">Professional network analysis and diagnostics</p>
+      </div>
+    </div>
+
+    <!-- Tool Categories -->
+    <div class="tool-grid">
+      <!-- Packet Capture -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">📦</div>
+          <h3>Packet Capture</h3>
+        </div>
+        <p class="tool-description">Capture and analyze network traffic using tcpdump/tshark</p>
+        <div class="tool-form">
+          <label>
+            <span>Interface</span>
+            <select id="pcap-interface" class="form-input">
+              <option value="any">any</option>
+              <option value="eth0">eth0</option>
+              <option value="wlan0">wlan0</option>
+            </select>
+          </label>
+          <label>
+            <span>Filter</span>
+            <input type="text" id="pcap-filter" class="form-input" placeholder="host 192.168.1.1 or port 80" />
+          </label>
+          <label>
+            <span>Duration (seconds)</span>
+            <input type="number" id="pcap-duration" class="form-input" value="30" min="5" max="300" />
+          </label>
+          <button class="btn-primary" id="startPcapBtn">Start Capture</button>
+        </div>
+        <div class="tool-output" id="pcapOutput" style="display: none;"></div>
+      </div>
+
+      <!-- Port Scan -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🔍</div>
+          <h3>Port Scan</h3>
+        </div>
+        <p class="tool-description">Scan network hosts for open ports using nmap</p>
+        <div class="tool-form">
+          <label>
+            <span>Target</span>
+            <input type="text" id="portscan-target" class="form-input" placeholder="192.168.1.1 or 192.168.1.0/24" required />
+          </label>
+          <label>
+            <span>Port Range</span>
+            <input type="text" id="portscan-ports" class="form-input" placeholder="1-1000 or 22,80,443" value="1-1000" />
+          </label>
+          <label>
+            <span>Scan Type</span>
+            <select id="portscan-type" class="form-input">
+              <option value="syn">SYN Scan (fast)</option>
+              <option value="connect">Connect Scan (reliable)</option>
+              <option value="service">Service Detection</option>
+            </select>
+          </label>
+          <button class="btn-primary" id="startPortScanBtn">Start Scan</button>
+        </div>
+        <div class="tool-output" id="portscanOutput" style="display: none;"></div>
+      </div>
+
+      <!-- DNS Lookup -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🌐</div>
+          <h3>DNS Lookup</h3>
+        </div>
+        <p class="tool-description">Query DNS records and reverse lookups</p>
+        <div class="tool-form">
+          <label>
+            <span>Target</span>
+            <input type="text" id="dns-target" class="form-input" placeholder="example.com or 8.8.8.8" required />
+          </label>
+          <label>
+            <span>Record Type</span>
+            <select id="dns-type" class="form-input">
+              <option value="A">A (IPv4 address)</option>
+              <option value="AAAA">AAAA (IPv6 address)</option>
+              <option value="CNAME">CNAME (canonical name)</option>
+              <option value="MX">MX (mail exchange)</option>
+              <option value="TXT">TXT (text records)</option>
+              <option value="PTR">PTR (reverse lookup)</option>
+            </select>
+          </label>
+          <button class="btn-primary" id="startDnsBtn">Lookup</button>
+        </div>
+        <div class="tool-output" id="dnsOutput" style="display: none;"></div>
+      </div>
+
+      <!-- Ping -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">📡</div>
+          <h3>Ping</h3>
+        </div>
+        <p class="tool-description">Test network reachability and latency</p>
+        <div class="tool-form">
+          <label>
+            <span>Target</span>
+            <input type="text" id="ping-target" class="form-input" placeholder="192.168.1.1 or example.com" required />
+          </label>
+          <label>
+            <span>Count</span>
+            <input type="number" id="ping-count" class="form-input" value="10" min="1" max="100" />
+          </label>
+          <button class="btn-primary" id="startPingBtn">Ping</button>
+        </div>
+        <div class="tool-output" id="pingOutput" style="display: none;"></div>
+      </div>
+
+      <!-- Traceroute -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🛤️</div>
+          <h3>Traceroute</h3>
+        </div>
+        <p class="tool-description">Trace network path to destination</p>
+        <div class="tool-form">
+          <label>
+            <span>Target</span>
+            <input type="text" id="traceroute-target" class="form-input" placeholder="192.168.1.1 or example.com" required />
+          </label>
+          <label>
+            <span>Max Hops</span>
+            <input type="number" id="traceroute-hops" class="form-input" value="30" min="1" max="64" />
+          </label>
+          <button class="btn-primary" id="startTracerouteBtn">Trace</button>
+        </div>
+        <div class="tool-output" id="tracerouteOutput" style="display: none;"></div>
+      </div>
+
+      <!-- Network Discovery -->
+      <div class="tool-card">
+        <div class="tool-header">
+          <div class="tool-icon">🗺️</div>
+          <h3>Network Discovery</h3>
+        </div>
+        <p class="tool-description">Comprehensive network scan (ARP + mDNS + SSDP)</p>
+        <div class="tool-form">
+          <label>
+            <span>Timeout (seconds)</span>
+            <input type="number" id="discovery-timeout" class="form-input" value="15" min="5" max="60" />
+          </label>
+          <div class="checkbox-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="discovery-arp" checked />
+              <span>ARP Scan</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="discovery-mdns" checked />
+              <span>mDNS/Bonjour</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="discovery-ssdp" checked />
+              <span>SSDP/UPnP</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="discovery-vendor" checked />
+              <span>Vendor Lookup</span>
+            </label>
+          </div>
+          <button class="btn-primary" id="startDiscoveryBtn">Discover Network</button>
+        </div>
+        <div class="tool-output" id="discoveryOutput" style="display: none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .tools-page {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .page-header {
+      margin-bottom: 32px;
+    }
+
+    .header-left h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .page-subtitle {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .tool-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 24px;
+    }
+
+    .tool-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .tool-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .tool-icon {
+      font-size: 32px;
+    }
+
+    .tool-header h3 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .tool-description {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    .tool-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tool-form label {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .tool-form label > span {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-input {
+      padding: 8px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+    }
+
+    .tool-output {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'Fira Code', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .btn-primary {
+      align-self: flex-start;
+    }
+  </style>
+
+  <script>
+    // Tool execution functions
+    async function executeTool(toolName: string, params: Record<string, any>) {
+      const outputEl = document.getElementById(`${toolName}Output`);
+      if (!outputEl) return;
+
+      outputEl.style.display = 'block';
+      outputEl.textContent = 'Running...\n';
+
+      try {
+        const res = await fetch(`/app/api/observatory/tools/${toolName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          outputEl.textContent = data.output || JSON.stringify(data, null, 2);
+        } else {
+          outputEl.textContent = `Error: ${data.error || 'Unknown error'}`;
+        }
+      } catch (error) {
+        outputEl.textContent = `Error: ${error instanceof Error ? error.message : 'Network error'}`;
+      }
+    }
+
+    // Packet Capture
+    document.getElementById('startPcapBtn')?.addEventListener('click', () => {
+      const iface = (document.getElementById('pcap-interface') as HTMLSelectElement).value;
+      const filter = (document.getElementById('pcap-filter') as HTMLInputElement).value;
+      const duration = (document.getElementById('pcap-duration') as HTMLInputElement).value;
+
+      executeTool('pcap', { interface: iface, filter, duration: parseInt(duration) });
+    });
+
+    // Port Scan
+    document.getElementById('startPortScanBtn')?.addEventListener('click', () => {
+      const target = (document.getElementById('portscan-target') as HTMLInputElement).value;
+      const ports = (document.getElementById('portscan-ports') as HTMLInputElement).value;
+      const type = (document.getElementById('portscan-type') as HTMLSelectElement).value;
+
+      if (!target) {
+        alert('Target is required');
+        return;
+      }
+
+      executeTool('portscan', { target, ports, scanType: type });
+    });
+
+    // DNS Lookup
+    document.getElementById('startDnsBtn')?.addEventListener('click', () => {
+      const target = (document.getElementById('dns-target') as HTMLInputElement).value;
+      const type = (document.getElementById('dns-type') as HTMLSelectElement).value;
+
+      if (!target) {
+        alert('Target is required');
+        return;
+      }
+
+      executeTool('dns', { target, recordType: type });
+    });
+
+    // Ping
+    document.getElementById('startPingBtn')?.addEventListener('click', () => {
+      const target = (document.getElementById('ping-target') as HTMLInputElement).value;
+      const count = (document.getElementById('ping-count') as HTMLInputElement).value;
+
+      if (!target) {
+        alert('Target is required');
+        return;
+      }
+
+      executeTool('ping', { target, count: parseInt(count) });
+    });
+
+    // Traceroute
+    document.getElementById('startTracerouteBtn')?.addEventListener('click', () => {
+      const target = (document.getElementById('traceroute-target') as HTMLInputElement).value;
+      const hops = (document.getElementById('traceroute-hops') as HTMLInputElement).value;
+
+      if (!target) {
+        alert('Target is required');
+        return;
+      }
+
+      executeTool('traceroute', { target, maxHops: parseInt(hops) });
+    });
+
+    // Network Discovery
+    document.getElementById('startDiscoveryBtn')?.addEventListener('click', () => {
+      const timeout = (document.getElementById('discovery-timeout') as HTMLInputElement).value;
+      const arpScan = (document.getElementById('discovery-arp') as HTMLInputElement).checked;
+      const mdnsScan = (document.getElementById('discovery-mdns') as HTMLInputElement).checked;
+      const ssdpScan = (document.getElementById('discovery-ssdp') as HTMLInputElement).checked;
+      const vendorLookup = (document.getElementById('discovery-vendor') as HTMLInputElement).checked;
+
+      executeTool('discovery', {
+        timeout: parseInt(timeout),
+        arpScan,
+        mdnsScan,
+        ssdpScan,
+        vendorLookup,
+      });
+    });
+  </script>
+</Layout>

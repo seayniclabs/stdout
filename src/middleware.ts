@@ -33,6 +33,27 @@ setTimeout(async () => {
   }
 }, 2000);
 
+// Auto-detect Windlass on startup (tries common endpoints)
+setTimeout(async () => {
+  try {
+    const { autoDetectAndConfigure } = await import('./lib/windlass');
+    const { getSqlite } = await import('./lib/db');
+
+    // Try to detect Windlass for each user
+    const db = getSqlite();
+    const users = db.prepare('SELECT id FROM users').all() as Array<{ id: string }>;
+
+    for (const user of users) {
+      const detected = await autoDetectAndConfigure(user.id);
+      if (detected) {
+        console.log(`[middleware] Windlass auto-detected for user ${user.id}`);
+      }
+    }
+  } catch (err) {
+    console.error('[middleware] Windlass auto-detection failed:', err);
+  }
+}, 5000); // Run after monitors start
+
 // --- Bearer Token Auth (for scanner API) ---
 const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];
 
