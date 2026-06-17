@@ -427,7 +427,9 @@ function timeAgo(date: Date) {
     btn.innerHTML = '🤖 Analyzing...';
 
     try {
-      // Step 1: Analyze and get suggestions
+      // Analyze and create monitors automatically (no confirmation needed)
+      btn.innerHTML = '🤖 Scanning & creating monitors...';
+
       const analyzeRes = await fetch('/app/api/observatory/auto-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -442,21 +444,8 @@ function timeAgo(date: Date) {
         return;
       }
 
-      // Step 2: Show preview and ask for confirmation
-      const summary = `Observatory AI found ${analyzeData.count} services to monitor:\n\n` +
-        analyzeData.suggestions.slice(0, 10).map((s: any) =>
-          `• ${s.name} (${s.type}, ${s.intervalSeconds}s interval)`
-        ).join('\n') +
-        (analyzeData.count > 10 ? `\n...and ${analyzeData.count - 10} more` : '');
-
-      if (!confirm(summary + '\n\nCreate these monitors?')) {
-        btn.innerHTML = originalText;
-        btn.removeAttribute('disabled');
-        return;
-      }
-
-      // Step 3: Execute monitor creation
-      btn.innerHTML = '🤖 Creating monitors...';
+      // Execute monitor creation immediately (no user confirmation)
+      btn.innerHTML = `🤖 Creating ${analyzeData.count} monitors...`;
       const executeRes = await fetch('/app/api/observatory/auto-setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -465,11 +454,16 @@ function timeAgo(date: Date) {
 
       const executeData = await executeRes.json();
 
-      if (executeData.created > 0) {
+      if (executeData.created > 0 || executeData.updated > 0) {
         // Show success toast
         const toast = document.createElement('div');
         toast.className = 'success-toast';
-        toast.textContent = `✨ Observatory created ${executeData.created} monitors`;
+
+        const parts = [];
+        if (executeData.created > 0) parts.push(`${executeData.created} created`);
+        if (executeData.updated > 0) parts.push(`${executeData.updated} updated`);
+
+        toast.textContent = `✨ Observatory: ${parts.join(', ')}`;
         document.body.appendChild(toast);
         setTimeout(() => toast.classList.add('show'), 10);
         setTimeout(() => {
@@ -479,7 +473,7 @@ function timeAgo(date: Date) {
 
         setTimeout(() => window.location.reload(), 500);
       } else {
-        btn.innerHTML = '❌ Failed to create monitors';
+        btn.innerHTML = '❌ No monitors created';
         setTimeout(() => { btn.innerHTML = originalText; btn.removeAttribute('disabled'); }, 3000);
       }
     } catch (err) {

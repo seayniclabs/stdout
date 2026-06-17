@@ -148,8 +148,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     return new Response(JSON.stringify({
       created: result.created,
+      updated: result.updated,
       errors: result.errors,
-      success: result.created > 0
+      success: result.created > 0 || result.updated > 0
     }), {
       headers: { 'Content-Type': 'application/json' }
     });

@@ -250,45 +250,82 @@ export function createMonitorsFromScan(
 
 /**
  * Execute monitor creation (actually insert into database)
+ * Updates existing monitors instead of creating duplicates
  */
 export function executeMonitorCreation(
   db: Database,
   userId: string,
   suggestions: MonitorSuggestion[]
-): { created: number; errors: string[] } {
+): { created: number; updated: number; errors: string[] } {
   const errors: string[] = [];
   let created = 0;
+  let updated = 0;
 
   for (const suggestion of suggestions) {
     try {
+      // Check for existing monitor with same target
+      const existing = db.prepare(`
+        SELECT id FROM monitors
+        WHERE user_id = ? AND target = ?
+        LIMIT 1
+      `).get(userId, suggestion.target) as { id: string } | undefined;
+
       const now = new Date().toISOString();
 
-      db.prepare(`
-        INSERT INTO monitors (
-          id, user_id, name, type, target, interval_seconds, timeout_ms,
-          expected_status, retries, stack_id, paused, maintenance,
-          current_status, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'unknown', ?, ?)
-      `).run(
-        nanoid(),
-        userId,
-        suggestion.name,
-        suggestion.type,
-        suggestion.target,
-        suggestion.intervalSeconds,
-        suggestion.timeoutMs,
-        suggestion.expectedStatus || null,
-        suggestion.retries,
-        suggestion.stackId || null,
-        now,
-        now
-      );
+      if (existing) {
+        // Update existing monitor with AI-recommended settings
+        db.prepare(`
+          UPDATE monitors
+          SET name = ?,
+              type = ?,
+              interval_seconds = ?,
+              timeout_ms = ?,
+              expected_status = ?,
+              retries = ?,
+              updated_at = ?
+          WHERE id = ?
+        `).run(
+          suggestion.name,
+          suggestion.type,
+          suggestion.intervalSeconds,
+          suggestion.timeoutMs,
+          suggestion.expectedStatus || null,
+          suggestion.retries,
+          now,
+          existing.id
+        );
 
-      created++;
+        console.log(`[auto-monitor] Updated existing: ${suggestion.name} (${suggestion.target})`);
+        updated++;
+      } else {
+        // Create new monitor
+        db.prepare(`
+          INSERT INTO monitors (
+            id, user_id, name, type, target, interval_seconds, timeout_ms,
+            expected_status, retries, stack_id, paused, maintenance,
+            current_status, created_at, updated_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'unknown', ?, ?)
+        `).run(
+          nanoid(),
+          userId,
+          suggestion.name,
+          suggestion.type,
+          suggestion.target,
+          suggestion.intervalSeconds,
+          suggestion.timeoutMs,
+          suggestion.expectedStatus || null,
+          suggestion.retries,
+          suggestion.stackId || null,
+          now,
+          now
+        );
+
+        created++;
+      }
     } catch (error: any) {
       errors.push(`${suggestion.name}: ${error.message}`);
     }
   }
 
-  return { created, errors };
+  return { created, updated, errors };
 }
