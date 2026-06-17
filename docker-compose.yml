@@ -17,6 +17,9 @@ services:
       - APP_URL=${APP_URL:-http://localhost:8112}
       - WINDLASS_URL=${WINDLASS_URL:-http://windlass:8116}
       - SENTINEL_API_URL=${SENTINEL_API_URL:-http://observatory-sentinel:8081}
+      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OBSERVATORY_ANALYST_MODEL=${OBSERVATORY_ANALYST_MODEL:-qwen2.5:14b-instruct-q4_K_M}
+      - OBSERVATORY_WATCHER_MODEL=${OBSERVATORY_WATCHER_MODEL:-llama3.2:3b-instruct-q4_K_M}
     secrets:
       - secret_key
       - anthropic_api_key
