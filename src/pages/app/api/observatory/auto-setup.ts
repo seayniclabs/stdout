@@ -132,8 +132,15 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const result = executeMonitorCreation(db, locals.user.id, suggestions);
 
+    // Also sync monitors for all discovered hosts
+    const { syncHostMonitors } = await import('../../../../lib/observatory/sync-host-monitors');
+    const hostResult = syncHostMonitors(db, locals.user.id);
+
+    const totalCreated = result.created + hostResult.created;
+    const totalUpdated = result.updated + hostResult.updated;
+
     // Start all created monitors
-    if (result.created > 0) {
+    if (totalCreated > 0) {
       const { startMonitor } = await import('../../../../lib/hud');
       const monitors = db.prepare('SELECT id FROM monitors WHERE user_id = ?').all(locals.user.id) as any[];
 
@@ -147,10 +154,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     return new Response(JSON.stringify({
-      created: result.created,
-      updated: result.updated,
+      created: totalCreated,
+      updated: totalUpdated,
       errors: result.errors,
-      success: result.created > 0 || result.updated > 0
+      success: totalCreated > 0 || totalUpdated > 0
     }), {
       headers: { 'Content-Type': 'application/json' }
     });
