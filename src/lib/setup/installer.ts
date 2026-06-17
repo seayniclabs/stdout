@@ -109,7 +109,17 @@ export async function runDatabaseInit(
     const tenantDb = getDb();
     output.push('✓ Tenant schema initialized');
 
-    onProgress(70, 'Seeding Observatory patterns...');
+    onProgress(60, 'Seeding default skins...');
+    // Seed the 5 built-in skins
+    try {
+      const { seedDefaultSkins } = await import('./seed-skins');
+      await seedDefaultSkins();
+      output.push('✓ Default skins seeded (5 built-in themes)');
+    } catch (skinError) {
+      warnings.push('Failed to seed default skins: ' + (skinError instanceof Error ? skinError.message : 'unknown error'));
+    }
+
+    onProgress(75, 'Seeding Observatory patterns...');
     // Check if patterns already seeded
     const patternCount = await db.get(sql`
       SELECT COUNT(*) as count

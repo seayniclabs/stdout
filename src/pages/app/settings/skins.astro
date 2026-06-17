@@ -1,0 +1,328 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { defaultSkins } from '../../../lib/skins/default-skins';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+---
+
+<Layout title="Appearance — StdOut">
+  <div class="settings-page">
+    <div class="settings-header">
+      <a href="/app/settings" class="breadcrumb-link">&larr; Settings</a>
+      <h1>Appearance</h1>
+    </div>
+
+    <!-- Skins Section -->
+    <section class="section">
+      <h2>Skins</h2>
+      <p class="section-desc">Choose a visual theme for StdOut. Skins change colors, contrast, and overall mood.</p>
+
+      <div class="skins-grid">
+        {defaultSkins.map(skin => (
+          <button class="skin-card" data-skin-id={skin.id} data-skin={JSON.stringify(skin)}>
+            <div class="skin-preview" data-skin-colors={JSON.stringify(skin.colors)}>
+              <div class="skin-preview-bar" style={`background: ${skin.colors.bg}`}>
+                <span style={`background: ${skin.colors.accent}`}></span>
+                <span style={`background: ${skin.colors.critical}`}></span>
+                <span style={`background: ${skin.colors.teal}`}></span>
+              </div>
+              <div class="skin-preview-surface" style={`background: ${skin.colors.bgSurface}; border-color: ${skin.colors.border}`}>
+                <span style={`background: ${skin.colors.text}`}></span>
+                <span style={`background: ${skin.colors.textSecondary}`}></span>
+                <span style={`background: ${skin.colors.textMuted}`}></span>
+              </div>
+            </div>
+            <div class="skin-info">
+              <h3 class="skin-name">{skin.name}</h3>
+              <p class="skin-desc">{skin.description}</p>
+              <div class="skin-tags">
+                {skin.tags.map(tag => (
+                  <span class="skin-tag">{tag}</span>
+                ))}
+              </div>
+            </div>
+            <div class="skin-check-icon">✓</div>
+          </button>
+        ))}
+      </div>
+
+      <div id="skinStatus" class="backup-status" style="margin-top: 1rem;"></div>
+    </section>
+
+    <!-- Skin Editor Section (Future) -->
+    <section class="section" style="opacity: 0.5; pointer-events: none;">
+      <h2>Custom Skin Editor</h2>
+      <p class="section-desc">Create your own skin or modify an existing one. Coming soon.</p>
+      <button class="btn btn-secondary btn-sm" disabled>Open Editor</button>
+    </section>
+
+    <!-- Import/Export Section (Future) -->
+    <section class="section" style="opacity: 0.5; pointer-events: none;">
+      <h2>Import & Export</h2>
+      <p class="section-desc">Share skins with the community or import custom themes. Coming soon.</p>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary btn-sm" disabled>Import Skin</button>
+        <button class="btn btn-secondary btn-sm" disabled>Export Active Skin</button>
+      </div>
+    </section>
+  </div>
+</Layout>
+
+<style>
+  .breadcrumb-link {
+    font-size: 14px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+    transition: color 0.2s;
+  }
+  .breadcrumb-link:hover {
+    color: var(--accent-light);
+  }
+
+  .settings-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .settings-header {
+    margin-bottom: 2rem;
+  }
+
+  .settings-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .section {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .section-desc {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin: 0 0 1.5rem 0;
+  }
+
+  .skins-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .skin-card {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    overflow: hidden;
+  }
+
+  .skin-card:hover {
+    border-color: var(--border-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .skin-card.active {
+    border-color: var(--accent);
+    background: var(--bg-surface);
+  }
+
+  .skin-card.active .skin-check-icon {
+    display: flex;
+  }
+
+  .skin-preview {
+    height: 80px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .skin-preview-bar {
+    height: 20px;
+    display: flex;
+    gap: 4px;
+    padding: 0 4px;
+    align-items: center;
+  }
+
+  .skin-preview-bar span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  .skin-preview-surface {
+    flex: 1;
+    border: 1px solid;
+    border-radius: 4px;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .skin-preview-surface span {
+    height: 4px;
+    border-radius: 2px;
+  }
+
+  .skin-preview-surface span:nth-child(1) {
+    width: 70%;
+  }
+
+  .skin-preview-surface span:nth-child(2) {
+    width: 50%;
+  }
+
+  .skin-preview-surface span:nth-child(3) {
+    width: 40%;
+  }
+
+  .skin-info {
+    margin-bottom: 0.5rem;
+  }
+
+  .skin-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: var(--text);
+  }
+
+  .skin-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .skin-tags {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+  }
+
+  .skin-tag {
+    font-size: 10px;
+    padding: 2px 6px;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .skin-check-icon {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 24px;
+    height: 24px;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .backup-status {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .backup-status.success {
+    color: var(--low);
+  }
+
+  .backup-status.error {
+    color: var(--critical);
+  }
+</style>
+
+<script>
+  import { applySkin, getActiveSkinId } from '../../../lib/skins/apply-skin';
+
+  // Load active skin from localStorage and highlight the active card
+  const activeSkinId = getActiveSkinId() || 'built-in-obsidian';
+  const activeCard = document.querySelector(`[data-skin-id="${activeSkinId}"]`);
+  if (activeCard) {
+    activeCard.classList.add('active');
+  }
+
+  // Handle skin selection
+  document.querySelectorAll('.skin-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      const skinData = card.getAttribute('data-skin');
+      if (!skinData) return;
+
+      const skin = JSON.parse(skinData);
+
+      // Apply skin immediately (preview)
+      applySkin(skin);
+
+      // Update active state
+      document.querySelectorAll('.skin-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+
+      // Save preference to database
+      const statusEl = document.getElementById('skinStatus');
+      if (statusEl) {
+        statusEl.textContent = 'Applying skin...';
+        statusEl.className = 'backup-status';
+      }
+
+      try {
+        const response = await fetch('/app/api/skins/set-active', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ skinId: skin.id }),
+        });
+
+        if (response.ok) {
+          if (statusEl) {
+            statusEl.textContent = `${skin.name} skin applied successfully.`;
+            statusEl.className = 'backup-status success';
+          }
+        } else {
+          if (statusEl) {
+            statusEl.textContent = 'Failed to save skin preference.';
+            statusEl.className = 'backup-status error';
+          }
+        }
+      } catch (error) {
+        if (statusEl) {
+          statusEl.textContent = 'Network error.';
+          statusEl.className = 'backup-status error';
+        }
+      }
+    });
+  });
+</script>

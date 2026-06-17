@@ -878,5 +878,14 @@ const currentWsId = ws?.ownerId || user?.id;
       }
     }
   </style>
+
+  <!-- Load active skin on page load -->
+  <script>
+    import { loadSavedSkin } from '../lib/skins/apply-skin';
+    import { defaultSkins } from '../lib/skins/default-skins';
+
+    // Apply saved skin or default (Obsidian) on page load
+    loadSavedSkin(defaultSkins[0], defaultSkins);
+  </script>
 </body>
 </html>

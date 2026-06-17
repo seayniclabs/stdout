@@ -684,3 +684,33 @@ export const entityRelationships = sqliteTable('entity_relationships', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// --- SKINS & THEMING ---
+
+export const skins = sqliteTable('skins', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // null for built-in skins
+  name: text('name').notNull(),
+  description: text('description'),
+  author: text('author'),
+  version: text('version').notNull().default('1.0.0'),
+  isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
+  isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(false),
+  colors: text('colors').notNull(), // JSON
+  typography: text('typography'), // JSON
+  spacing: text('spacing'), // JSON
+  shadows: text('shadows'), // JSON
+  effects: text('effects'), // JSON
+  thumbnail: text('thumbnail'),
+  tags: text('tags'),
+  installCount: integer('install_count').notNull().default(0),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const userSkinPreferences = sqliteTable('user_skin_preferences', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  activeSkinId: text('active_skin_id').references(() => skins.id, { onDelete: 'set null' }),
+  customOverrides: text('custom_overrides'), // JSON
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});

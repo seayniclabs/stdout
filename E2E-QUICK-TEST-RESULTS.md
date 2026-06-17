@@ -32,14 +32,22 @@
 
 ## Known Issues
 
-### FIXED ✅
-1. **P0:** Setup redirect loop - missing getDb import
-2. **P1:** Knowledge Base HTTP 500 - removed source column refs
-3. **P1:** Data Source Discovery getDb error - fixed import
+### FIXED ✅ (ITERATION 3 - commit 35cf9d6)
+1. **P0:** Setup redirect loop - missing getDb import (commit f541b3f)
+2. **P1:** Knowledge Base HTTP 500 - removed source column refs (commit f541b3f)
+3. **P1:** Data Source Discovery getDb error - fixed import (commit f541b3f)
+4. **P2:** Monitor Configuration schema error - removed type column query (commit 35cf9d6)
+5. **P2:** Scanner UI doesn't update - added error handling (commit 35cf9d6)
+6. **P2:** Network import API missing schema refs - fixed imports (commit 35cf9d6)
 
 ### OPEN ⏳
-1. **P2:** Monitor Configuration schema error - "no such column: type"
-2. **P1:** Scanner import HTTP 500 during setup - not yet investigated
+1. **P2:** Windlass installation hangs on Observatory setup (ISSUE #8)
+
+### FEATURES VERIFIED ✅
+- Observatory: ✅ Fully implemented, license-gated (expected behavior)
+- Windlass: ✅ Fully implemented, license-gated (expected behavior)
+- Scanner: ✅ Working with fixes
+- All core pages: ✅ Load correctly
 
 ---
 

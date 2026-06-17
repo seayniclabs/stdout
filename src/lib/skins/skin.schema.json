@@ -1,0 +1,114 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "StdOut Skin Schema",
+  "description": "Defines the structure of a StdOut skin. Skins are JSON documents containing CSS variable values.",
+  "type": "object",
+  "required": ["name", "version", "colors"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Human-readable skin name",
+      "minLength": 1,
+      "maxLength": 50
+    },
+    "description": {
+      "type": "string",
+      "description": "Brief description of the skin's visual style",
+      "maxLength": 200
+    },
+    "author": {
+      "type": "string",
+      "description": "Skin creator's name or email",
+      "maxLength": 100
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version (e.g., 1.0.0)",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "tags": {
+      "type": "array",
+      "description": "Categories for filtering",
+      "items": {
+        "type": "string",
+        "enum": ["dark", "light", "high-contrast", "colorful", "minimal", "retro", "modern", "neon", "pastel"]
+      }
+    },
+    "colors": {
+      "type": "object",
+      "description": "Color variable definitions",
+      "required": ["bg", "bgSurface", "bgElevated", "text", "textSecondary", "accent"],
+      "properties": {
+        "bg": { "type": "string", "description": "Main background color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "bgSurface": { "type": "string", "description": "Card/surface background", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "bgElevated": { "type": "string", "description": "Elevated surface (modals, popovers)", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "bgHover": { "type": "string", "description": "Hover state background", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "border": { "type": "string", "description": "Default border color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "borderHover": { "type": "string", "description": "Border hover state", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "text": { "type": "string", "description": "Primary text color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "textSecondary": { "type": "string", "description": "Secondary text", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "textMuted": { "type": "string", "description": "Muted/disabled text", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accent": { "type": "string", "description": "Primary accent color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accentLight": { "type": "string", "description": "Lighter accent variant", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accentBright": { "type": "string", "description": "Bright accent for highlights", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "accentDim": { "type": "string", "description": "Transparent accent for backgrounds", "pattern": "^rgba?\\([^)]+\\)$" },
+        "accentGlow": { "type": "string", "description": "Glow/shadow color for accent", "pattern": "^rgba?\\([^)]+\\)$" },
+        "accentBtn": { "type": "string", "description": "Accent for button text (WCAG compliant)", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "critical": { "type": "string", "description": "Critical severity color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "criticalDim": { "type": "string", "description": "Critical background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "criticalGlow": { "type": "string", "description": "Critical glow", "pattern": "^rgba?\\([^)]+\\)$" },
+        "high": { "type": "string", "description": "High severity color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "highDim": { "type": "string", "description": "High severity background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "highGlow": { "type": "string", "description": "High severity glow", "pattern": "^rgba?\\([^)]+\\)$" },
+        "medium": { "type": "string", "description": "Medium severity color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "mediumDim": { "type": "string", "description": "Medium severity background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "low": { "type": "string", "description": "Low severity color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "lowDim": { "type": "string", "description": "Low severity background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "lowGlow": { "type": "string", "description": "Low severity glow", "pattern": "^rgba?\\([^)]+\\)$" },
+        "resolved": { "type": "string", "description": "Resolved status color", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "teal": { "type": "string", "description": "Secondary accent (teal)", "pattern": "^#[0-9A-Fa-f]{6}$" },
+        "tealDim": { "type": "string", "description": "Teal background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "tealGlow": { "type": "string", "description": "Teal glow", "pattern": "^rgba?\\([^)]+\\)$" },
+        "glassBg": { "type": "string", "description": "Glass panel background", "pattern": "^rgba?\\([^)]+\\)$" },
+        "glassBorder": { "type": "string", "description": "Glass border color", "pattern": "^rgba?\\([^)]+\\)$" }
+      }
+    },
+    "typography": {
+      "type": "object",
+      "description": "Typography settings",
+      "properties": {
+        "fontUi": { "type": "string", "description": "UI font stack" },
+        "fontMono": { "type": "string", "description": "Monospace font stack" }
+      }
+    },
+    "spacing": {
+      "type": "object",
+      "description": "Spacing and border radius tokens",
+      "properties": {
+        "radius": { "type": "string", "description": "Default border radius", "pattern": "^\\d+px$" },
+        "radiusSm": { "type": "string", "description": "Small radius", "pattern": "^\\d+px$" },
+        "radiusLg": { "type": "string", "description": "Large radius", "pattern": "^\\d+px$" },
+        "transition": { "type": "string", "description": "Default transition timing" }
+      }
+    },
+    "shadows": {
+      "type": "object",
+      "description": "Shadow definitions",
+      "properties": {
+        "shadowSm": { "type": "string", "description": "Small shadow" },
+        "shadowMd": { "type": "string", "description": "Medium shadow" },
+        "shadowLg": { "type": "string", "description": "Large shadow" },
+        "shadowXl": { "type": "string", "description": "Extra large shadow" },
+        "shadowGlow": { "type": "string", "description": "Glow effect shadow" },
+        "shadowInset": { "type": "string", "description": "Inset shadow for depth" }
+      }
+    },
+    "effects": {
+      "type": "object",
+      "description": "Visual effects (blur, opacity, etc.)",
+      "properties": {
+        "glassBlur": { "type": "string", "description": "Backdrop filter blur for glass panels" }
+      }
+    }
+  }
+}
