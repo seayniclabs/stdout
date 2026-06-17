@@ -35,7 +35,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (!scanData) {
       // Fetch latest stack import
       const latestImport = db.prepare(`
-        SELECT data FROM stack_imports
+        SELECT imported_data FROM stack_imports
         WHERE user_id = ?
         ORDER BY created_at DESC
         LIMIT 1
@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         });
       }
 
-      scanData = JSON.parse(latestImport.data);
+      scanData = JSON.parse(latestImport.imported_data);
     }
 
     // Get or create default stack

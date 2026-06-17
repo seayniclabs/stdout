@@ -120,8 +120,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   db.insert(schema.stackImports).values({
     id: importId,
-    rawJson: JSON.stringify(body),
-    renderedMarkdown: markdown,
+    userId: locals.user.id,
+    source: 'docker', // Scanner is docker-based
+    stackId: null,
+    importedData: JSON.stringify(body),
     status: 'pending',
     createdAt: new Date(),
   }).run();
