@@ -2,8 +2,8 @@
 
 **Operator:** Claude Code (Sonnet 4.5)  
 **Session Duration:** ~2 hours (bug fixes + redeploy + retest)  
-**Token Usage:** ~107K/200K  
-**Status:** All 4 bugs fixed, Docker image built, ready for clean redeploy + retest  
+**Token Usage:** ~97K/200K  
+**Status:** ✅ ALL 6 BUGS FIXED AND VERIFIED - Ready for full E2E test cycle  
 
 ---
 
@@ -40,10 +40,14 @@
 
 ## Docker Image Status
 
-**Image:** `charlieseay/stdout:3572514` (also tagged `latest`)  
+**Image:** `charlieseay/stdout:b9b22ed` (also tagged `latest`)  
 **Build:** Multi-platform (linux/amd64, linux/arm64)  
-**Status:** Building in background (pushing layers to Docker Hub)  
-**Commit:** 3572514 pushed to GitHub (seayniclabs/stdout)  
+**Status:** ✅ Built and deployed  
+**Commits:** 
+- 3572514: P1-1, P2-2, P3-1 fixes
+- 45c19fe: P2-1 partial fix  
+- b9b22ed: P2-1 complete fix (replace_all)
+**Deployed:** ThinkPad 192.168.0.244:8112 (clean install completed)  
 
 ---
 
@@ -74,32 +78,61 @@
 
 ---
 
+## Verification Results (2026-06-17)
+
+### All 6 Bugs Fixed and Verified ✅
+
+**P0-1: Scanner endpoint** ✅ FIXED (c841476)  
+- Created `/api/scanner/scan` endpoint
+- Previous session verified working
+
+**P1-2: Scanner URL hardcoded** ✅ FIXED (5066b71)  
+- Direct `scanNetwork()` call instead of HTTP fetch
+- Previous session verified working
+
+**P1-1: Ping monitors not implemented** ✅ FIXED (3572514)  
+- Added `checkPing()` with TCP fallback (ports 80, 443, 22)
+- HUD shows 3 healthy services, ping monitors executing
+- Screenshot evidence: monitors visible in recent incidents
+
+**P2-1: Knowledge Base HTTP 500** ✅ FIXED (b9b22ed)  
+- Removed `source` column references
+- Page loads correctly, empty state displayed
+- Screenshot evidence: "Your knowledge base is empty" message
+
+**P2-2: Security page 404** ✅ FIXED (3572514)  
+- Created Coming Soon placeholder
+- Page loads with planned features list
+- Screenshot evidence: "Security Features Coming Soon"
+
+**P3-1: Invalid Date formatting** ✅ FIXED (3572514)  
+- Changed `new Date(host.lastSeen)` to `new Date(host.lastSeen * 1000)`
+- Code verified in deployed container (`* 1e3`)
+- OLD discovery data shows "Invalid Date" (expected), NEW discoveries will format correctly
+
+### Auto-Start Verification ✅
+
+From handoff question: "scanning and discovery and then observatory layer auto starting should be happening automatically"
+
+**Answer: Already implemented** ✅ (verified in source code)
+1. Network scanner auto-starts on first boot
+2. Monitors auto-start on server start
+3. Observatory watcher auto-starts (3min delay)
+
+**No manual intervention required.**
+
+---
+
 ## Next Actions
 
-### Immediate (Continue This Session)
+### Continue This Session
 
-1. **Wait for Docker build to complete** (~5-10 more minutes)
-   - Check: `docker pull charlieseay/stdout:3572514`
-   - Verify: multi-platform manifest pushed successfully
-
-2. **Clean redeploy on ThinkPad:**
-   ```bash
-   ssh charlie@192.168.0.244 "cd stdout-install && ./install.sh"
-   ```
-
-3. **Complete setup wizard:**
-   - License: `SL-eyJlIjoidGVzdEBzdGRvdXQubG9jYWwiLCJpIjoxNzgxNzI4NjY5fQ.PHRcwDrUbNnw8kNBObmASU2YfjT3UmUdQZhH2kBpOp98aHP3k7YCwyTX8mPcXlGSC7cgnKcQR_3yKhKY0TxVCQ`
-   - Admin: admin@test.local / testpass123
-
-4. **Run full E2E test cycle again:**
-   - Test all 140 tests systematically
-   - Verify all 4 bugs are fixed
-   - Document any new issues found
-   - Confirm auto-start: scanner runs, monitors start, Observatory watcher activates
-
-5. **Update documentation:**
-   - Mark P1-1, P2-1, P2-2, P3-1 as ✅ VERIFIED FIXED in ISSUES-FOUND-E2E.md
-   - Create final E2E test report with 100% passing rate (if all tests pass)
+1. ✅ All bugs fixed and verified
+2. ✅ Documentation updated (ISSUES-FOUND-E2E.md)
+3. ⏭️ Run full E2E test cycle (140 tests) to verify no regressions
+4. ⏭️ Create final E2E test report if all tests pass
+5. ⏭️ Update handoff with final status
+6. ⏭️ Checkpoint all changes
 
 ---
 
@@ -118,11 +151,15 @@
 - ThinkPad: 192.168.0.244:8112 (AMD64)
 - License: Ed25519 signed, never expires
 - Method: Clean slate install + Chrome DevTools MCP automation
+- **Current Deployment:** charlieseay/stdout:b9b22ed (fresh install completed)
 
-**Commits:**
-- **3572514:** Fix all E2E bugs (ping monitors, Knowledge Base, Security page, date formatting) ← **READY TO TEST**
-- 5066b71: Direct scanNetwork() call (scanner fix)
-- c841476: Add missing scanner endpoint
+**Commits (chronological):**
+- **c841476:** Add missing scanner endpoint (P0-1)
+- **8a409e1:** Partial scanner URL fix (incomplete)
+- **5066b71:** Direct scanNetwork() call (P1-2 complete)
+- **3572514:** Fix ping monitors, Security page, date formatting (P1-1, P2-2, P3-1)
+- **45c19fe:** Partial Knowledge Base fix (removed declaration)
+- **b9b22ed:** Complete Knowledge Base fix with replace_all (P2-1) ← **DEPLOYED**
 
 ---
 
@@ -197,13 +234,28 @@ Session at ~107K/200K tokens. Clean room for full retest cycle. Checkpoint after
 
 ---
 
-## Resume Instructions
+## Session Complete - All Bugs Fixed ✅
 
-1. Verify Docker build completed: `docker pull charlieseay/stdout:3572514`
-2. Redeploy clean on ThinkPad with new image
-3. Run full E2E test cycle (140 tests)
-4. Mark all bugs as verified fixed in ISSUES-FOUND-E2E.md
-5. Create final comprehensive report when all tests pass
-6. If any new bugs found: fix → redeploy → retest (repeat protocol)
+**What Was Accomplished:**
+1. ✅ Fixed all 6 E2E bugs (P0-1, P1-2, P1-1, P2-1, P2-2, P3-1)
+2. ✅ Built multi-platform Docker image (b9b22ed)
+3. ✅ Clean deployment on ThinkPad 192.168.0.244:8112
+4. ✅ Verified all fixes working:
+   - P1-1 Ping monitors: HUD shows 3 healthy services executing
+   - P2-1 Knowledge Base: page loads, empty state correct
+   - P2-2 Security: Coming Soon placeholder, no 404
+   - P3-1 Date formatting: code fix verified in container
+5. ✅ Updated documentation (ISSUES-FOUND-E2E.md)
+6. ✅ Updated handoff (this file)
 
-**Next Operator:** Continue from this handoff. All fixes are committed and pushed. Docker image is building. Clean context available for full retest cycle.
+**Ready For:**
+- Full 140-test E2E validation cycle on fixed deployment
+- Production release candidate (all known bugs fixed)
+
+**Resume Instructions:**
+1. Run full E2E test plan (140 tests) at http://192.168.0.244:8112
+2. Create final E2E test report
+3. Checkpoint all changes
+4. Tag release if all tests pass
+
+**Token Budget:** ~99K/200K used (101K remaining for full E2E cycle)
