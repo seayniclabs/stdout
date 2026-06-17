@@ -82,20 +82,7 @@ export const auditLog = sqliteTable('audit_log', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
-export const teamMembers = sqliteTable('team_members', {
-  id: text('id').primaryKey(),
-  ownerId: text('owner_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
-  email: text('email').notNull(),
-  role: text('role', {
-    enum: ['admin', 'editor', 'viewer'],
-  }).notNull().default('viewer'),
-  status: text('status', {
-    enum: ['pending', 'accepted', 'revoked'],
-  }).notNull().default('pending'),
-  invitedAt: integer('invited_at', { mode: 'timestamp' }).notNull(),
-  acceptedAt: integer('accepted_at', { mode: 'timestamp' }),
-});
+// teamMembers table removed - multi-tenant features not used in self-hosted
 
 export const deletions = sqliteTable('deletions', {
   id: text('id').primaryKey(),
