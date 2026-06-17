@@ -27,7 +27,7 @@
  * Design pattern: default-deny + earn-trust + auto-retreat (mirrors degradation-mode.ts gating).
  */
 
-import { getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { ApplyClassification } from '../autofix-apply';

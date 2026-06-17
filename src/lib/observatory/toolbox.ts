@@ -20,7 +20,7 @@
  */
 
 import { execFile } from 'node:child_process';
-import { getCentralDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 export type SafetyClass = 'read-only' | 'mutating' | 'gated';

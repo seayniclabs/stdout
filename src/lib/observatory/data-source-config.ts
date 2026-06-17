@@ -14,7 +14,7 @@
  * Falls back to the canonical loopback ports if unset.
  */
 
-import { getCentralDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 interface ProbeTarget {

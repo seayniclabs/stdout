@@ -1,4 +1,4 @@
-import { getCentralDb, getTenantDb, centralSchema, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and, desc, gt } from 'drizzle-orm';
 import { getUptimeStats } from './hud';
 import fs from 'node:fs';

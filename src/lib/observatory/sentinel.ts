@@ -5,7 +5,7 @@
  * This is the "watcher loop" that runs in the background.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { buildWatcherPromptWithKnowledge, formatAgentOutput } from './prompts';
 import { retrieveKnowledge } from './retrieval';

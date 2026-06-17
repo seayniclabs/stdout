@@ -16,7 +16,7 @@
  * Every adjustment is also logged to `observatory_feedback` for auditability.
  */
 
-import { getCentralDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 

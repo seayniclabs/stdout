@@ -2,7 +2,6 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import Database from 'better-sqlite3';
-import { evictTenantDb } from './db';
 
 const DATA_DIR = process.env.DB_PATH
   ? path.dirname(process.env.DB_PATH)
@@ -177,7 +176,6 @@ export function restoreBackup(userId: string, filename: string): void {
   }
 
   // Evict from pool so the old connection is dropped
-  evictTenantDb(userId);
 
   // Replace the tenant DB
   const tenantPath = getTenantDbPath(userId);

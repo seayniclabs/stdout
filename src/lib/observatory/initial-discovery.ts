@@ -11,7 +11,7 @@
  * Idempotent and safe: skips if a scan is already in progress; updates existing hosts in place.
  */
 
-import { getTenantDb, getCentralDb } from '../db';
+import { getDb } from '../db';
 import { discoveredHosts, stacks } from '../db/tenant-schema';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';

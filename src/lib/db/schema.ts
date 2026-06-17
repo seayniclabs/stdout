@@ -85,6 +85,12 @@ export const auditLog = sqliteTable('audit_log', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const deletions = sqliteTable('deletions', {
+  id: text('id').primaryKey(),
+  emailHash: text('email_hash').notNull(),
+  deletedAt: integer('deleted_at', { mode: 'timestamp' }).notNull(),
+});
+
 // --- INFRASTRUCTURE & MONITORING ---
 
 export const stacks = sqliteTable('stacks', {
@@ -444,6 +450,42 @@ export const notificationPreferences = sqliteTable('notification_preferences', {
   channelId: text('channel_id').notNull(),
   eventType: text('event_type').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// --- TENANT PREFERENCES (temporary - remove in Task 8) ---
+// NOTE: This table is kept temporarily to avoid breaking the build.
+// It will be removed in Task 8 when workspace UI is cleaned up.
+
+export const tenantPreferences = sqliteTable('tenant_preferences', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  workspaceName: text('workspace_name'),
+  accentColor: text('accent_color'),
+  logoUrl: text('logo_url'),
+  onboardingProgress: text('onboarding_progress'),
+  onboardingDismissed: integer('onboarding_dismissed', { mode: 'boolean' }).notNull().default(false),
+  addonsDismissed: integer('addons_dismissed', { mode: 'boolean' }).notNull().default(false),
+  addonsHidden: integer('addons_hidden', { mode: 'boolean' }).notNull().default(false),
+  addonsCache: text('addons_cache'),
+  addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp' }),
+  operatingMode: text('operating_mode', {
+    enum: ['discover', 'diagnose', 'autofix'],
+  }).notNull().default('discover'),
+  autopilotEnabled: integer('autopilot_enabled', { mode: 'boolean' }).notNull().default(false),
+  autopilotLevel: text('autopilot_level', {
+    enum: ['discover', 'diagnose', 'autofix'],
+  }).notNull().default('discover'),
+  autopilotSuccessCount: integer('autopilot_success_count').notNull().default(0),
+  autopilotFailCount: integer('autopilot_fail_count').notNull().default(0),
+  autopilotLevelSince: integer('autopilot_level_since'),
+  killswitchTripped: integer('killswitch_tripped', { mode: 'boolean' }).notNull().default(false),
+  killswitchReason: text('killswitch_reason'),
+  killswitchAt: integer('killswitch_at'),
+  godModeGranted: integer('god_mode_granted', { mode: 'boolean' }).notNull().default(false),
+  godModeGrantedBy: text('god_mode_granted_by'),
+  godModeGrantedAt: integer('god_mode_granted_at'),
+  ragIncludePublic: integer('rag_include_public', { mode: 'boolean' }).notNull().default(false),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 

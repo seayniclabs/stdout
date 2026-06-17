@@ -5,7 +5,7 @@
  * for use in agent prompts during anomaly detection and incident investigation.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import type { StandardPattern, Baseline, CustomPattern } from './types';
 

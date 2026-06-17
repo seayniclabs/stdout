@@ -11,7 +11,7 @@
  * Call startWatcher() once at middleware startup. It is idempotent.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { emit } from '../events';
 import { runScheduledCheck, createIncidentFromAnomaly } from './sentinel';

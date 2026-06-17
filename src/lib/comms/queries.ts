@@ -5,7 +5,7 @@
  * via the comms API (Sonique, Slack, SMS, etc.)
  */
 
-import { getTenantDb } from '../db';
+import { getDb } from '../db';
 import { tenantSchema } from '../db';
 import { eq, desc, and, sql, gte } from 'drizzle-orm';
 

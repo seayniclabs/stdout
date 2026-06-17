@@ -11,7 +11,7 @@
  * (the snapshot simply omits it), and an empty snapshot means "no data this tick" — never an error.
  */
 
-import { getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 interface PromResult {

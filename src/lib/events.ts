@@ -10,7 +10,7 @@
  * imported, Observatory adds it to its watch list.
  */
 
-import { getCentralDb } from './db';
+import { getDb } from './db';
 import { sql } from 'drizzle-orm';
 
 // ── Event catalog ─────────────────────────────────────────────────────────────

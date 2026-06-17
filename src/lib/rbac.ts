@@ -8,7 +8,7 @@
 // When a team member accesses the workspace, they use the owner's tenant DB.
 // The session tracks which workspace the user is currently viewing.
 
-import { getCentralDb, centralSchema, getTenantDb } from './db';
+import { getDb, schema } from './db';
 import { eq, and } from 'drizzle-orm';
 import { getUserLimits } from './tiers';
 import type { SessionUser } from './auth';

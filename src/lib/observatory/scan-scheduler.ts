@@ -11,7 +11,7 @@
  * persists hosts, emits host.discovered, and lets auto-wire create monitors.
  */
 
-import { getCentralDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // evaluate schedules every 5 minutes

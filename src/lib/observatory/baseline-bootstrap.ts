@@ -17,7 +17,7 @@
  * disk_percent, network_errors). Means/std-devs are deliberately generous starting points.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 interface ProvisionalMetric {

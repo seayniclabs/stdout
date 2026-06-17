@@ -1,6 +1,6 @@
 // Setup wizard state management - v2
 import { nanoid } from 'nanoid';
-import { getCentralDb } from './db';
+import { getDb } from './db';
 import { setupProgress, setupConfig, users, license } from './db/central-schema';
 import { eq, desc } from 'drizzle-orm';
 

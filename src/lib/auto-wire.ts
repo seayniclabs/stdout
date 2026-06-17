@@ -14,7 +14,7 @@
  */
 
 import { on } from './events';
-import { getCentralDb, getTenantDb } from './db';
+import { getDb } from './db';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 

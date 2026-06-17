@@ -13,7 +13,7 @@
  * Zero manual steps required.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 export interface InstallStep {

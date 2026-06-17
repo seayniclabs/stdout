@@ -8,7 +8,7 @@
 import { AGENT_PERSONAS } from './agents';
 import { METRIC_INTERPRETATIONS } from './metrics-guide';
 import { setupObservatory } from './setup';
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { emit } from '../events';
 

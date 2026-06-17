@@ -19,7 +19,7 @@
  * Fire-and-forget: called after add_resolution; never blocks the request, never throws upward.
  */
 
-import { getCentralDb, getTenantDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { scrubSecrets } from '../secret-scrub';

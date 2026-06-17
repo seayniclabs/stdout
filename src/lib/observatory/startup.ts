@@ -11,7 +11,7 @@
  */
 
 import { initializeObservatory, isObservatoryReady } from './initialization';
-import { getCentralDb } from '../db';
+import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 
 export interface StartupResult {
