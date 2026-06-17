@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
 
 const { userSkinPreferences } = schema;
@@ -30,7 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const existing = await db
       .select()
       .from(userSkinPreferences)
-      .where((t) => t.userId.eq(session.id))
+      .where(eq(userSkinPreferences.userId, session.id))
       .limit(1);
 
     if (existing.length > 0) {
@@ -41,7 +42,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           activeSkinId: skinId,
           updatedAt: now,
         })
-        .where((t) => t.userId.eq(session.id));
+        .where(eq(userSkinPreferences.userId, session.id));
     } else {
       // Create new preference row
       await db.insert(userSkinPreferences).values({

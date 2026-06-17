@@ -109,6 +109,15 @@ export async function configureMonitors(
 
           // Create monitor
           const monitorId = `mon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+          const now = Date.now();
+
+          // Map monitor types to schema-compatible types
+          const typeMapping: Record<string, string> = {
+            'health': 'docker',
+            'cpu': 'docker',
+            'memory': 'docker',
+            'restart': 'docker'
+          };
 
           await db.run(sql`
             INSERT INTO monitors (
@@ -117,22 +126,26 @@ export async function configureMonitors(
               stack_id,
               name,
               type,
-              enabled,
-              check_interval_seconds,
-              warning_threshold,
-              critical_threshold,
-              created_at
+              target,
+              interval_seconds,
+              paused,
+              current_status,
+              consecutive_failures,
+              created_at,
+              updated_at
             ) VALUES (
               ${monitorId},
               ${userId},
               ${stack.id},
               ${`${stack.name} - ${template.name}`},
-              ${template.type},
-              1,
+              ${typeMapping[template.type] || 'docker'},
+              ${stack.id},
               ${template.checkInterval},
-              ${template.thresholds.warning},
-              ${template.thresholds.critical},
-              ${Date.now()}
+              0,
+              'unknown',
+              0,
+              ${now},
+              ${now}
             )
           `);
 

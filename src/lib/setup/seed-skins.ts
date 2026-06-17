@@ -5,6 +5,7 @@
 // Called during installation step or on first app load.
 // ============================================================================
 
+import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../db';
 import { defaultSkins } from '../skins/default-skins';
 
@@ -17,7 +18,7 @@ export async function seedDefaultSkins(): Promise<void> {
   const existing = await db
     .select()
     .from(skins)
-    .where((t) => t.isBuiltIn.eq(true))
+    .where(eq(skins.isBuiltIn, true))
     .limit(1);
 
   if (existing.length > 0) {
