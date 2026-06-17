@@ -13,7 +13,7 @@ interface ContainerInfo {
   name: string;
   image: string;
   status: string;
-  ports: Array<{ host: string; container: string }>;
+  ports: Array<{ PublicPort?: number; PrivatePort: number; IP?: string }>;
   networks: string[];
   health?: string;
 }
@@ -48,16 +48,26 @@ export async function scanLocalDocker(): Promise<ScanResult> {
       const [name, image, status, portsStr, networksStr] = line.split('|');
 
       // Parse ports (format: "0.0.0.0:8080->80/tcp, 443/tcp")
-      const ports: Array<{ host: string; container: string }> = [];
+      // Use Docker API format: PublicPort (host) and PrivatePort (container)
+      const ports: Array<{ PublicPort?: number; PrivatePort: number; IP?: string }> = [];
       if (portsStr) {
         for (const portMapping of portsStr.split(',')) {
           const match = portMapping.trim().match(/(?:([^:]+):)?(\d+)->(\d+)/);
           if (match) {
-            const [, host, hostPort, containerPort] = match;
+            const [, ip, hostPort, containerPort] = match;
             ports.push({
-              host: host || '0.0.0.0',
-              container: containerPort,
+              PublicPort: hostPort ? parseInt(hostPort) : undefined,
+              PrivatePort: parseInt(containerPort),
+              IP: ip || undefined,
             });
+          } else {
+            // Internal port only (no mapping)
+            const internalMatch = portMapping.trim().match(/(\d+)\//);
+            if (internalMatch) {
+              ports.push({
+                PrivatePort: parseInt(internalMatch[1]),
+              });
+            }
           }
         }
       }
