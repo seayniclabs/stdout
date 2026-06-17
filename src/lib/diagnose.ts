@@ -1,14 +1,17 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'fs';
 
-export function getAnthropicKey(): string {
+export function getAnthropicKey(): string | null {
   const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
   try {
-    return readFileSync(keyPath, 'utf-8').trim();
+    const key = readFileSync(keyPath, 'utf-8').trim();
+    // Return null if file exists but is empty (Ollama-only deployment)
+    if (!key) return null;
+    return key;
   } catch {
     // Fall back to environment variable (local dev)
     if (process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
-    throw new Error(`Anthropic API key not found at ${keyPath} and ANTHROPIC_API_KEY env var not set`);
+    return null; // No platform key available — use Ollama
   }
 }
 
@@ -18,8 +21,12 @@ function getClient(apiKey?: string): Anthropic {
     // BYOK: create a fresh client with the user's key (don't cache)
     return new Anthropic({ apiKey });
   }
+  const platformKey = getAnthropicKey();
+  if (!platformKey) {
+    throw new Error('No Anthropic API key available. Use Ollama provider or configure BYOK.');
+  }
   if (!_client) {
-    _client = new Anthropic({ apiKey: getAnthropicKey() });
+    _client = new Anthropic({ apiKey: platformKey });
   }
   return _client;
 }
