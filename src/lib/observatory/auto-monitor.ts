@@ -140,6 +140,36 @@ export function generateMonitorConfig(service: DiscoveredService): MonitorSugges
 }
 
 /**
+ * Infer port from service name or image for well-known services
+ */
+function inferPortFromService(name: string, image: string): { port: number; protocol: 'http' | 'https' } | null {
+  const nameLower = name.toLowerCase();
+  const imageLower = image.toLowerCase();
+
+  // Well-known service ports
+  const serviceMap: Record<string, { port: number; protocol: 'http' | 'https' }> = {
+    'stdout': { port: 8112, protocol: 'http' },
+    'windlass': { port: 8116, protocol: 'http' },
+    'prometheus': { port: 9090, protocol: 'http' },
+    'grafana': { port: 3000, protocol: 'http' },
+    'loki': { port: 3100, protocol: 'http' },
+    'tempo': { port: 3200, protocol: 'http' },
+    'influxdb': { port: 8086, protocol: 'http' },
+    'postgres': { port: 5432, protocol: 'http' }, // health check endpoint if available
+    'redis': { port: 6379, protocol: 'http' },
+    'mongodb': { port: 27017, protocol: 'http' },
+  };
+
+  for (const [key, value] of Object.entries(serviceMap)) {
+    if (nameLower.includes(key) || imageLower.includes(key)) {
+      return value;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Create monitors from scan results
  */
 export function createMonitorsFromScan(
@@ -154,29 +184,50 @@ export function createMonitorsFromScan(
   if (scanData.containers) {
     for (const container of scanData.containers) {
       const name = container.name || container.Names?.[0]?.replace('/', '') || 'Unknown';
+      const image = container.image || container.Image || '';
       const ports = container.ports || container.Ports || [];
+      const networks = container.networks || container.Networks || [];
+      const isHostNetwork = networks.includes('host');
 
-      // Skip if no accessible ports
-      if (!ports.length) continue;
+      let port: number | undefined;
+      let isPublic = false;
+      let protocol: 'http' | 'https' | 'tcp' | 'ping' = 'tcp';
 
-      // Get primary port
-      const primaryPort = ports[0];
-      const port = primaryPort.PublicPort || primaryPort.PrivatePort;
-      const isPublic = !!primaryPort.PublicPort;
+      // Try to get port from scan data first
+      if (ports.length > 0) {
+        const primaryPort = ports[0];
+        port = primaryPort.PublicPort || primaryPort.PrivatePort;
+        isPublic = !!primaryPort.PublicPort;
+      }
 
+      // If no port found but it's a known service, infer the port
+      if (!port) {
+        const inferred = inferPortFromService(name, image);
+        if (inferred) {
+          port = inferred.port;
+          protocol = inferred.protocol;
+          // Host network services are accessible on localhost
+          isPublic = isHostNetwork;
+        }
+      }
+
+      // Skip if still no port
       if (!port) continue;
 
       // Classify service
-      const type = classifyService(name, port, container.image || container.Image);
+      const type = classifyService(name, port, image);
 
-      // Determine target
+      // Determine target based on network mode and port
       let target: string;
-      let protocol: 'http' | 'https' | 'tcp' | 'ping' = 'tcp';
 
-      if (isPublic) {
-        // Public port - use localhost or scan host
-        if (port === 80 || port === 443 || (port >= 3000 && port <= 9000)) {
-          protocol = port === 443 ? 'https' : 'http';
+      // If protocol wasn't set by inferPortFromService, determine it
+      if (protocol === 'tcp' && (port === 80 || port === 443 || (port >= 3000 && port <= 9000))) {
+        protocol = port === 443 ? 'https' : 'http';
+      }
+
+      if (isPublic || isHostNetwork) {
+        // Public port or host network - use localhost
+        if (protocol === 'http' || protocol === 'https') {
           target = `${protocol}://localhost:${port}`;
         } else {
           target = `localhost:${port}`;
@@ -185,14 +236,14 @@ export function createMonitorsFromScan(
         // Internal port - use container IP if available
         const ip = container.ip || container.NetworkSettings?.IPAddress;
         if (ip) {
-          if (port === 80 || port === 443 || (port >= 3000 && port <= 9000)) {
-            protocol = port === 443 ? 'https' : 'http';
+          if (protocol === 'http' || protocol === 'https') {
             target = `${protocol}://${ip}:${port}`;
           } else {
             target = `${ip}:${port}`;
           }
         } else {
-          continue; // Skip if no accessible target
+          // No IP and not on host network - skip
+          continue;
         }
       }
 
