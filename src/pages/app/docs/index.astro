@@ -61,13 +61,13 @@ const stdoutDocs = communityDocs.filter(d =>
 // If no tagged docs found, fall back to all community guides
 const stdoutDocsDisplay = stdoutDocs.length > 0 ? stdoutDocs : communityDocs.filter(d => d.docType === 'guide');
 
-// Recently updated (last 5 from all docs)
-const recentlyUpdated = [...allDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
+// Recently updated (last 5 from user docs only, since community docs are empty)
+const recentlyUpdated = [...userDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
 
-// Featured: community docs + most recently updated non-community docs (up to 4 total)
+// Featured: community docs + most recently updated user docs (up to 4 total)
 const featured = [
   ...communityDocs.slice(0, 2),
-  ...userDocs.filter(d => !communityDocs.some(c => c.id === d.id)).slice(0, 2),
+  ...userDocs.slice(0, 2),
 ].slice(0, 4);
 
 function truncate(str: string, max: number) {
