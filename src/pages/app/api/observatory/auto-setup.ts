@@ -134,7 +134,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Also sync monitors for all discovered hosts
     const { syncHostMonitors } = await import('../../../../lib/observatory/sync-host-monitors');
+    console.log('[auto-setup] Syncing host monitors...');
     const hostResult = syncHostMonitors(db, locals.user.id);
+    console.log(`[auto-setup] Host monitors: ${hostResult.created} created, ${hostResult.updated} updated`);
 
     const totalCreated = result.created + hostResult.created;
     const totalUpdated = result.updated + hostResult.updated;
