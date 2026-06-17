@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { notify } from '../../../../lib/notify';
 
@@ -53,9 +53,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   // Validate stack if provided
   if (stackId) {
-    const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-    const stack = db.select().from(tenantSchema.stacks)
-      .where(eq(tenantSchema.stacks.id, stackId)).get();
+    const db = getDb();
+    const stack = db.select().from(schema.stacks)
+      .where(eq(schema.stacks.id, stackId)).get();
     if (!stack) {
       return new Response(JSON.stringify({ error: 'Stack not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
@@ -63,9 +63,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const id = nanoid();
   const now = new Date();
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
 
-  db.insert(tenantSchema.incidents).values({
+  db.insert(schema.incidents).values({
     id,
     userId: locals.user.id,
     stackId,

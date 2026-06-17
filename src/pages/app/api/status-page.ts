@@ -1,15 +1,15 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // GET — return current status page config
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const page = db.select().from(tenantSchema.statusPage)
-    .where(eq(tenantSchema.statusPage.userId, locals.user.id)).get();
+  const db = getDb();
+  const page = db.select().from(schema.statusPage)
+    .where(eq(schema.statusPage.userId, locals.user.id)).get();
 
   return new Response(JSON.stringify({ page: page || null }), {
     headers: { 'Content-Type': 'application/json' },
@@ -35,9 +35,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const existing = db.select().from(tenantSchema.statusPage)
-    .where(eq(tenantSchema.statusPage.userId, locals.user.id)).get();
+  const db = getDb();
+  const existing = db.select().from(schema.statusPage)
+    .where(eq(schema.statusPage.userId, locals.user.id)).get();
 
   // Validate slug
   let slug = (body.slug || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
@@ -64,13 +64,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
   };
 
   if (existing) {
-    db.update(tenantSchema.statusPage).set(values)
+    db.update(schema.statusPage).set(values)
       .where(and(
-        eq(tenantSchema.statusPage.id, existing.id),
-        eq(tenantSchema.statusPage.userId, locals.user.id),
+        eq(schema.statusPage.id, existing.id),
+        eq(schema.statusPage.userId, locals.user.id),
       )).run();
   } else {
-    db.insert(tenantSchema.statusPage).values({
+    db.insert(schema.statusPage).values({
       id: nanoid(), userId: locals.user.id, createdAt: new Date(), ...values,
     }).run();
   }

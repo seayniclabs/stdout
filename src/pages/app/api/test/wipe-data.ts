@@ -4,7 +4,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getCentralDb, centralSchema, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,17 +20,17 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const db = getCentralDb();
+    const db = getDb();
 
     // Delete all data from all tables (in correct order to respect foreign keys)
-    db.delete(centralSchema.sessions).run();
-    db.delete(centralSchema.apiTokens).run();
-    db.delete(centralSchema.setupProgress).run();
-    db.delete(centralSchema.users).run();
+    db.delete(schema.sessions).run();
+    db.delete(schema.apiTokens).run();
+    db.delete(schema.setupProgress).run();
+    db.delete(schema.users).run();
 
     // Delete tenant/user data tables
-    db.delete(tenantSchema.discoveredServices).run();
-    db.delete(tenantSchema.discoveredHosts).run();
+    db.delete(schema.discoveredServices).run();
+    db.delete(schema.discoveredHosts).run();
 
     // Delete setup_config.json if it exists
     const DATA_DIR = process.env.DB_PATH ? path.dirname(process.env.DB_PATH) : './data';

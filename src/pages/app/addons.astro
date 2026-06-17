@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq } from 'drizzle-orm';
 import { fetchAddons, rankAddons, WHATS_NEW, COMING_SOON, type Addon } from '../../lib/addons';
 
@@ -8,11 +8,11 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
-const db = getTenantDb(userId);
+const db = getDb();
 
 // Get tenant preferences for cache
-const prefs = db.select().from(tenantSchema.tenantPreferences)
-  .where(eq(tenantSchema.tenantPreferences.userId, user.id))
+const prefs = db.select().from(schema.tenantPreferences)
+  .where(eq(schema.tenantPreferences.userId, user.id))
   .get();
 
 // Fetch products (cached 24hr, 2s timeout, static fallback)
@@ -23,15 +23,15 @@ const allAddons = await fetchAddons(
 
 // Cache the result if fresh
 if (allAddons.length > 0 && prefs) {
-  db.update(tenantSchema.tenantPreferences)
+  db.update(schema.tenantPreferences)
     .set({ addonsCache: JSON.stringify(allAddons), addonsCacheAt: new Date() })
-    .where(eq(tenantSchema.tenantPreferences.userId, user.id))
+    .where(eq(schema.tenantPreferences.userId, user.id))
     .run();
 }
 
 // Get detected services from stacks for ranking
-const stacks = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id))
+const stacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id))
   .all();
 
 const detectedServices: string[] = [];
@@ -48,8 +48,8 @@ const recommended = rankAddons(allAddons, detectedServices, 3);
 
 // Get user's existing interest flags
 const interests = db.select()
-  .from(tenantSchema.addonInterest)
-  .where(eq(tenantSchema.addonInterest.userId, user.id))
+  .from(schema.addonInterest)
+  .where(eq(schema.addonInterest.userId, user.id))
   .all();
 const interestedIds = new Set(interests.map(i => i.toolId));
 ---

@@ -1,6 +1,6 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
@@ -8,10 +8,10 @@ if (!user) return Astro.redirect('/app/login');
 if (user.role !== 'superadmin') return Astro.redirect('/app');
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
-const db = getTenantDb(userId);
+const db = getDb();
 
 // Get all unknown tools, grouped and counted
-const allTools = db.select().from(tenantSchema.unknownTools).all();
+const allTools = db.select().from(schema.unknownTools).all();
 
 const frequency = new Map<string, { count: number; firstSeen: Date; lastSeen: Date }>();
 for (const t of allTools) {

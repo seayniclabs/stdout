@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // POST /app/api/addons/notify — register interest in a Coming Soon item
@@ -21,15 +21,15 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Check for existing interest (no duplicates)
   const existing = db.select()
-    .from(tenantSchema.addonInterest)
+    .from(schema.addonInterest)
     .where(
       and(
-        eq(tenantSchema.addonInterest.toolId, toolId),
-        eq(tenantSchema.addonInterest.userId, locals.user.id),
+        eq(schema.addonInterest.toolId, toolId),
+        eq(schema.addonInterest.userId, locals.user.id),
       )
     )
     .get();
@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return Response.json({ ok: true, alreadyRegistered: true });
   }
 
-  db.insert(tenantSchema.addonInterest).values({
+  db.insert(schema.addonInterest).values({
     toolId,
     userId: locals.user.id,
     createdAt: new Date(),

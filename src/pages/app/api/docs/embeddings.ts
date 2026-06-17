@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb } from '../../../../lib/db';
-import { docs, docEmbeddings } from '../../../../lib/db/tenant-schema';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 
 // Simple cosine similarity calculation
@@ -34,7 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { action, docId, query } = body;
 
-    const db = getTenantDb(session.id);
+    const db = getDb();
 
     if (action === 'generate') {
       // Generate embeddings for a document

@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getCentralDb, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq } from 'drizzle-orm';
 
 const token = Astro.url.searchParams.get('token') || '';
@@ -9,8 +9,8 @@ let success = false;
 let error = '';
 
 if (token) {
-  const verification = getCentralDb().select().from(centralSchema.emailVerifications)
-    .where(eq(centralSchema.emailVerifications.token, token)).get();
+  const verification = getDb().select().from(schema.emailVerifications)
+    .where(eq(schema.emailVerifications.token, token)).get();
 
   if (!verification) {
     error = 'Invalid verification link.';
@@ -20,14 +20,14 @@ if (token) {
     error = 'This verification link has expired. Log in to request a new one.';
   } else {
     // Mark verification as used
-    getCentralDb().update(centralSchema.emailVerifications)
+    getDb().update(schema.emailVerifications)
       .set({ usedAt: new Date() })
-      .where(eq(centralSchema.emailVerifications.id, verification.id)).run();
+      .where(eq(schema.emailVerifications.id, verification.id)).run();
 
     // Mark user as verified
-    getCentralDb().update(centralSchema.users)
+    getDb().update(schema.users)
       .set({ emailVerified: true, emailVerifiedAt: new Date(), updatedAt: new Date() })
-      .where(eq(centralSchema.users.id, verification.userId)).run();
+      .where(eq(schema.users.id, verification.userId)).run();
 
     success = true;
   }

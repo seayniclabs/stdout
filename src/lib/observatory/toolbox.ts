@@ -219,7 +219,7 @@ async function auditTool(
   detail: string | undefined,
 ): Promise<void> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
     const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     db.run(sql`
       INSERT INTO observatory_agent_runs

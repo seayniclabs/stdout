@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCentralDb } from '../lib/db';
+import { getDb } from '../lib/db';
 import { sql } from 'drizzle-orm';
 
 // In-memory cache for the healthz response (10s TTL).
@@ -25,7 +25,7 @@ interface HealthResponse {
 
 async function checkDatabase(): Promise<'ok' | 'down'> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
     db.run(sql`SELECT 1`);
     return 'ok';
   } catch (e) {

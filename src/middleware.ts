@@ -1,6 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { validateSession, getSessionFromCookies, SESSION_COOKIE, getUserCount, sessionCookieOptions } from './lib/auth';
-import { getCentralDb, centralSchema } from './lib/db';
+import { getDb, schema } from './lib/db';
 import { getWorkspaceContext } from './lib/rbac';
 import { eq, sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
@@ -50,22 +50,22 @@ function validateBearerToken(request: Request): { userId: string } | null {
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
   console.log('[validateBearerToken] tokenHash:', tokenHash.slice(0, 20) + '...');
 
-  const row = getCentralDb()
+  const row = getDb()
     .select({
-      id: centralSchema.apiTokens.id,
-      userId: centralSchema.apiTokens.userId,
+      id: schema.apiTokens.id,
+      userId: schema.apiTokens.userId,
     })
-    .from(centralSchema.apiTokens)
-    .where(eq(centralSchema.apiTokens.tokenHash, tokenHash))
+    .from(schema.apiTokens)
+    .where(eq(schema.apiTokens.tokenHash, tokenHash))
     .get();
 
   console.log('[validateBearerToken] row found:', row ? 'YES' : 'NO');
   if (!row) return null;
 
   // Update last_used_at
-  getCentralDb().update(centralSchema.apiTokens)
+  getDb().update(schema.apiTokens)
     .set({ lastUsedAt: new Date() })
-    .where(eq(centralSchema.apiTokens.id, row.id))
+    .where(eq(schema.apiTokens.id, row.id))
     .run();
 
   return { userId: row.userId };
@@ -232,7 +232,7 @@ setInterval(() => {
 setInterval(async () => {
   try {
     const { syncFromEndpoint, getConfig } = await import('./lib/windlass');
-    const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+    const users = getDb().select({ id: schema.users.id }).from(schema.users).all();
     const now = Date.now();
     for (const u of users) {
       try {
@@ -280,8 +280,8 @@ setInterval(async () => {
   try {
     const { syncCommunityLibrary } = await import('./lib/community-kb');
     const { getCentralDb, centralSchema } = await import('./lib/db');
-    const users = getCentralDb().select({ id: centralSchema.users.id })
-      .from(centralSchema.users).all();
+    const users = getDb().select({ id: schema.users.id })
+      .from(schema.users).all();
     for (const u of users) {
       const summary = await syncCommunityLibrary(u.id);
       if (!summary.skipped && (summary.added || summary.updated || summary.removed)) {
@@ -350,7 +350,7 @@ let installationComplete = false;
       return;
     }
 
-    const db = getCentralDb();
+    const db = getDb();
 
     // Check if installation has been completed
     const result = await db.get(sql`
@@ -457,7 +457,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (shouldCheckInstallation && !installationComplete) {
     // Re-check DB in case installation completed after startup (installer runs after app starts)
     try {
-      const db = getCentralDb();
+      const db = getDb();
       const result = await db.get(sql`
         SELECT value FROM system_state WHERE key = 'installation_complete'
       `) as { value: string } | undefined;

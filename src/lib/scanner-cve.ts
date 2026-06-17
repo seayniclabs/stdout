@@ -7,7 +7,7 @@
  */
 
 import { fireAlert } from './alert-router';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 
 const IMAGES = [
   'nginx-proxy-manager', 'homepage', 'authentik', 'vaultwarden', 'portainer-ce',
@@ -67,8 +67,8 @@ async function queryNvd(imageName: string): Promise<CveResult[]> {
 
 function getAdminUserId(): string | null {
   try {
-    const db = getCentralDb();
-    return db.select({ id: centralSchema.users.id }).from(centralSchema.users).limit(1).get()?.id ?? null;
+    const db = getDb();
+    return db.select({ id: schema.users.id }).from(schema.users).limit(1).get()?.id ?? null;
   } catch {
     return null;
   }

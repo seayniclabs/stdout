@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCentralDb, getTenantDb } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
 
 /**
@@ -15,8 +15,8 @@ import { sql } from 'drizzle-orm';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const centralDb = getCentralDb();
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
+  const centralDb = getDb();
+  const db = getDb();
   const userId = locals.user.id;
   const now = Math.floor(Date.now() / 1000);
 

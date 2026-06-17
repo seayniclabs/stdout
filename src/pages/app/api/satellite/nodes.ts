@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { nanoid } from 'nanoid';
-import { getCentralDb } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { logAudit, getClientIp } from '../../../../lib/audit';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
@@ -20,7 +20,7 @@ function hashToken(token: string): string {
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getCentralDb();
+  const db = getDb();
   const rows = db.all(sql`
     SELECT id, name, description, tags, last_seen, last_report, alert_state, created_at
     FROM satellite_agents
@@ -66,7 +66,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const id = nanoid();
   const now = Math.floor(Date.now() / 1000);
 
-  const db = getCentralDb();
+  const db = getDb();
   db.run(sql`
     INSERT INTO satellite_agents (id, user_id, name, description, tags, token_hash, alert_state, created_at)
     VALUES (${id}, ${locals.user.id}, ${name}, ${description}, ${JSON.stringify(tags)}, ${tokenHash}, 'ok', ${now})
@@ -99,7 +99,7 @@ export const DELETE: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Node ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getCentralDb();
+  const db = getDb();
   // Verify ownership before delete
   const existing = db.get(sql`
     SELECT id FROM satellite_agents WHERE id = ${nodeId} AND user_id = ${locals.user.id}

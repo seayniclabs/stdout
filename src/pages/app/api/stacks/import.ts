@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { and, eq } from 'drizzle-orm';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
 import { checkRBAC } from '../../../../lib/rbac';
 import { requireLicense } from '../../../../lib/license';
@@ -36,8 +36,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   // Tier gate: stack count
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const stackCount = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, locals.user.id)).all().length;
+  const db = getDb();
+  const stackCount = db.select().from(schema.stacks).where(eq(schema.stacks.userId, locals.user.id)).all().length;
   const gate = checkCountLimit(locals.user, 'maxStacks', stackCount, 'Stack');
   if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 
@@ -83,15 +83,15 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Only register sources that don't already exist for this user
     for (const source of detected) {
-      const existing = db.select().from(tenantSchema.dataSources)
+      const existing = db.select().from(schema.dataSources)
         .where(and(
-          eq(tenantSchema.dataSources.userId, locals.user.id),
-          eq(tenantSchema.dataSources.type, source.type),
+          eq(schema.dataSources.userId, locals.user.id),
+          eq(schema.dataSources.type, source.type),
         ))
         .get();
 
       if (!existing) {
-        db.insert(tenantSchema.dataSources).values({
+        db.insert(schema.dataSources).values({
           id: nanoid(),
           userId: locals.user.id,
           name: source.name,
@@ -118,7 +118,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const importId = nanoid();
 
-  db.insert(tenantSchema.stackImports).values({
+  db.insert(schema.stackImports).values({
     id: importId,
     rawJson: JSON.stringify(body),
     renderedMarkdown: markdown,
@@ -140,11 +140,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
     for (const tool of unknowns) {
       // Check for existing entry with a targeted DB query (not .all())
       const existing = db.select()
-        .from(tenantSchema.unknownTools)
-        .where(eq(tenantSchema.unknownTools.toolName, tool))
+        .from(schema.unknownTools)
+        .where(eq(schema.unknownTools.toolName, tool))
         .get();
       if (!existing) {
-        db.insert(tenantSchema.unknownTools).values({
+        db.insert(schema.unknownTools).values({
           toolName: tool,
           detectedAt: new Date(),
         }).run();
@@ -212,10 +212,10 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
     const name = (source.name || '').trim();
     if (!normalizedType || !endpoint) continue;
 
-    const existing = db.select().from(tenantSchema.dataSources)
+    const existing = db.select().from(schema.dataSources)
       .where(and(
-        eq(tenantSchema.dataSources.userId, userId),
-        eq(tenantSchema.dataSources.type, normalizedType),
+        eq(schema.dataSources.userId, userId),
+        eq(schema.dataSources.type, normalizedType),
       ))
       .get();
 
@@ -227,7 +227,7 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
     if (existing) {
       // Preserve user-entered secrets and Influx-specific fields.
       // Update endpoint/health to reflect latest scanner detection.
-      db.update(tenantSchema.dataSources).set({
+      db.update(schema.dataSources).set({
         name: existing.name || `${name || 'Prometheus'} (auto-detected)`,
         url: endpoint,
         enabled: true,
@@ -235,8 +235,8 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
         lastTestStatus: testStatus,
         updatedAt: now,
       }).where(and(
-        eq(tenantSchema.dataSources.id, existing.id),
-        eq(tenantSchema.dataSources.userId, existing.userId),
+        eq(schema.dataSources.id, existing.id),
+        eq(schema.dataSources.userId, existing.userId),
       )).run();
     } else {
       // Use tool name for label, not hardcoded "Prometheus"
@@ -246,7 +246,7 @@ function syncDetectedDataSources(db: ReturnType<typeof getTenantDb>, userId: str
         crowdsec: 'CrowdSec', pihole: 'Pi-hole',
       };
       const label = typeLabels[normalizedType] || normalizedType;
-      db.insert(tenantSchema.dataSources).values({
+      db.insert(schema.dataSources).values({
         id: nanoid(),
         userId,
         name: `${name || label} (auto-detected)`,

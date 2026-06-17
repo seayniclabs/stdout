@@ -1,8 +1,7 @@
 import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { getTenantDb } from '../../../../lib/db';
-import { discoveredHosts, discoveredServices } from '../../../../lib/db/tenant-schema';
+import { getDb, schema } from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq, and } from 'drizzle-orm';
 
@@ -50,7 +49,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 };
 
 async function scanServicesInBackground(hosts: Array<{ ip: string; hostname?: string }>, userId: string) {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const COMMON_PORTS = [
     { port: 22, service: 'SSH' },
     { port: 80, service: 'HTTP' },

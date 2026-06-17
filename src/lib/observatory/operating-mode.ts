@@ -92,7 +92,7 @@ function normMode(v: string | null | undefined, fallback: OperatingMode = 'disco
  * Returns the prefs row id.
  */
 function ensurePrefsRow(userId: string): void {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const existing = db.get(sql`SELECT id FROM tenant_preferences WHERE user_id = ${userId}`) as
     | { id: string }
     | undefined;
@@ -114,7 +114,7 @@ function ensurePrefsRow(userId: string): void {
  */
 export function getModeState(userId: string): ModeState {
   ensurePrefsRow(userId);
-  const db = getTenantDb(userId);
+  const db = getDb();
   const row = db.get(sql`
     SELECT operating_mode, autopilot_enabled, autopilot_level, autopilot_success_count,
            autopilot_fail_count, autopilot_level_since, killswitch_tripped, killswitch_reason,
@@ -229,7 +229,7 @@ export function decideAutonomous(
 
 export function setOperatingMode(userId: string, mode: OperatingMode): void {
   ensurePrefsRow(userId);
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences SET operating_mode = ${mode}, updated_at = ${Date.now()}
     WHERE user_id = ${userId}
   `);
@@ -243,7 +243,7 @@ export function setAutopilot(userId: string, enabled: boolean): void {
   ensurePrefsRow(userId);
   const now = Date.now();
   if (enabled) {
-    getTenantDb(userId).run(sql`
+    getDb().run(sql`
       UPDATE tenant_preferences
       SET autopilot_enabled = 1, autopilot_level = 'discover',
           autopilot_success_count = 0, autopilot_fail_count = 0, autopilot_level_since = ${now},
@@ -251,7 +251,7 @@ export function setAutopilot(userId: string, enabled: boolean): void {
       WHERE user_id = ${userId}
     `);
   } else {
-    getTenantDb(userId).run(sql`
+    getDb().run(sql`
       UPDATE tenant_preferences SET autopilot_enabled = 0, updated_at = ${now}
       WHERE user_id = ${userId}
     `);
@@ -264,7 +264,7 @@ export function setAutopilot(userId: string, enabled: boolean): void {
  */
 export function setRagIncludePublic(userId: string, enabled: boolean): void {
   ensurePrefsRow(userId);
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences SET rag_include_public = ${enabled ? 1 : 0}, updated_at = ${Date.now()}
     WHERE user_id = ${userId}
   `);
@@ -274,7 +274,7 @@ export function setRagIncludePublic(userId: string, enabled: boolean): void {
 export function setGodMode(userId: string, granted: boolean, grantedBy: string): void {
   ensurePrefsRow(userId);
   const now = Date.now();
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences
     SET god_mode_granted = ${granted ? 1 : 0},
         god_mode_granted_by = ${granted ? grantedBy : null},
@@ -294,7 +294,7 @@ export function setGodMode(userId: string, granted: boolean, grantedBy: string):
 export function tripKillswitch(userId: string, reason: string): void {
   ensurePrefsRow(userId);
   const now = Date.now();
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences
     SET killswitch_tripped = 1, killswitch_reason = ${reason.slice(0, 500)}, killswitch_at = ${now},
         autopilot_level = 'diagnose', autopilot_success_count = 0,
@@ -307,7 +307,7 @@ export function tripKillswitch(userId: string, reason: string): void {
 /** Human clears the killswitch. Auto-pilot may re-earn higher levels via the success gate. */
 export function resetKillswitch(userId: string): void {
   ensurePrefsRow(userId);
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences
     SET killswitch_tripped = 0, killswitch_reason = NULL, updated_at = ${Date.now()}
     WHERE user_id = ${userId}
@@ -329,7 +329,7 @@ export function recordAutonomousOutcome(
   opts: { loopSignal?: boolean; catastrophe?: string } = {},
 ): { promoted?: OperatingMode; killswitch?: boolean } {
   const state = getModeState(userId);
-  const db = getTenantDb(userId);
+  const db = getDb();
   const now = Date.now();
 
   // Catastrophe or detected loop → immediate killswitch, regardless of success flag.
@@ -385,7 +385,7 @@ export function maybePromote(userId: string): { promoted?: OperatingMode } {
   const next = RANK_MODE[nextRank];
   const now = Date.now();
   // Promote and reset counters so the NEXT level must independently earn its promotion.
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE tenant_preferences
     SET autopilot_level = ${next}, autopilot_success_count = 0, autopilot_fail_count = 0,
         autopilot_level_since = ${now}, updated_at = ${now}
@@ -422,7 +422,7 @@ export function parkPendingFix(
   reason: string,
   proposedBy: string,
 ): { id: string; deduped: boolean } {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const existing = db.get(sql`
     SELECT id FROM observatory_pending_fixes
     WHERE incident_id = ${incidentId} AND command = ${command} AND status = 'pending'
@@ -441,7 +441,7 @@ export function parkPendingFix(
 }
 
 export function listPendingFixes(userId: string, status = 'pending'): PendingFix[] {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const rows = db.all(sql`
     SELECT id, user_id, incident_id, command, classification, reason, proposed_by, status, created_at
     FROM observatory_pending_fixes
@@ -462,7 +462,7 @@ export function listPendingFixes(userId: string, status = 'pending'): PendingFix
 }
 
 export function getPendingFix(userId: string, id: string): PendingFix | null {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const r = db.get(sql`
     SELECT id, user_id, incident_id, command, classification, reason, proposed_by, status, created_at
     FROM observatory_pending_fixes WHERE id = ${id} AND user_id = ${userId}
@@ -483,7 +483,7 @@ export function decidePendingFix(
   decidedBy: string,
   applyResult?: unknown,
 ): void {
-  getTenantDb(userId).run(sql`
+  getDb().run(sql`
     UPDATE observatory_pending_fixes
     SET status = ${status}, decided_by = ${decidedBy}, decided_at = ${Date.now()},
         apply_result = ${applyResult !== undefined ? JSON.stringify(applyResult) : null}

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { stacks, docs, monitors, windlassServices } from '../../lib/db/tenant-schema';
 import { count, eq, sql } from 'drizzle-orm';
 
@@ -9,7 +9,7 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
-  const db = getTenantDb(session.id);
+  const db = getDb();
 
   // Gather system metadata
   const [stackCount] = await db.select({ count: count() }).from(stacks).where(eq(stacks.userId, session.id));

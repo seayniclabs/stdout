@@ -53,7 +53,7 @@ async function promQuery(baseUrl: string, query: string): Promise<number | null>
  */
 function resolvePrometheusUrl(userId: string): string | null {
   try {
-    const db = getTenantDb(userId);
+    const db = getDb();
     const row = db.get(sql`
       SELECT url FROM data_sources
       WHERE user_id = ${userId} AND type = 'prometheus' AND enabled = 1

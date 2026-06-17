@@ -98,15 +98,15 @@ export async function runDatabaseInit(
 
   try {
     onProgress(10, 'Checking database connection...');
-    const db = getCentralDb();
+    const db = getDb();
     output.push('✓ Database connection established');
 
     onProgress(30, 'Initializing central schema...');
-    // Database schema is created automatically by getCentralDb()
+    // Database schema is created automatically by getDb()
     output.push('✓ Central schema initialized');
 
     onProgress(50, 'Initializing tenant schema...');
-    const tenantDb = getTenantDb(userId);
+    const tenantDb = getDb();
     output.push('✓ Tenant schema initialized');
 
     onProgress(70, 'Seeding Observatory patterns...');
@@ -163,7 +163,7 @@ export async function runScannerSetup(
   try {
     onProgress(10, 'Generating scanner configuration...');
 
-    const db = getTenantDb(userId);
+    const db = getDb();
 
     // Create API token for scanner
     const tokenId = `token_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -494,7 +494,7 @@ export async function runHealthCheck(
 
   try {
     onProgress(20, 'Checking database...');
-    const db = getCentralDb();
+    const db = getDb();
     await db.get(sql`SELECT 1`);
     output.push('✓ Database healthy');
 

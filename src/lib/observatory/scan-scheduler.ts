@@ -61,7 +61,7 @@ export function dueKey(row: ScheduleRow, now: Date): string | null {
 }
 
 async function tick(): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   let rows: ScheduleRow[];
   try {
     rows = db.all(sql`
@@ -103,7 +103,7 @@ async function tick(): Promise<void> {
  * UTC) if the user has none. Idempotent: never overwrites an existing schedule.
  */
 export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
-  const db = getCentralDb();
+  const db = getDb();
   try {
     const existing = db.get(sql`SELECT id FROM scanner_schedule WHERE user_id = ${userId} LIMIT 1`) as { id: string } | undefined;
     if (existing) return false;

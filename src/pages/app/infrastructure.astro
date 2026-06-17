@@ -1,14 +1,14 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { discoveredHosts, discoveredServices } from '../../lib/db/tenant-schema';
 import { eq } from 'drizzle-orm';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
-const db = getTenantDb(session.id);
+const db = getDb();
 
 // Fetch all discovered hosts with their services
 const hosts = await db

@@ -6,7 +6,7 @@
  */
 
 import { fireAlert } from './alert-router';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 import { emit } from './events';
 
 interface HeartbeatTarget {
@@ -65,9 +65,9 @@ async function pingUrl(url: string): Promise<'up' | 'down'> {
 
 function getAdminUserId(): string | null {
   try {
-    const db = getCentralDb();
-    const row = db.select({ id: centralSchema.users.id })
-      .from(centralSchema.users)
+    const db = getDb();
+    const row = db.select({ id: schema.users.id })
+      .from(schema.users)
       .limit(1)
       .get();
     return row?.id ?? null;
@@ -129,7 +129,7 @@ async function runHeartbeat(): Promise<void> {
 }
 
 async function checkStaleSatellites(): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   const now = Math.floor(Date.now() / 1000);
   const warningThreshold = now - 5 * 60;    // 5 min
   const criticalThreshold = now - 15 * 60;  // 15 min

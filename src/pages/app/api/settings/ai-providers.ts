@@ -137,14 +137,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const { getTenantDb, tenantSchema } = await import('../../../../lib/db');
     const { eq, and } = await import('drizzle-orm');
 
-    const db = getTenantDb(userId);
-    const existing = db.select().from(tenantSchema.aiProviderKeys)
+    const db = getDb();
+    const existing = db.select().from(schema.aiProviderKeys)
       .where(and(
-        eq(tenantSchema.aiProviderKeys.userId, userId),
-        eq(tenantSchema.aiProviderKeys.provider, provider),
+        eq(schema.aiProviderKeys.userId, userId),
+        eq(schema.aiProviderKeys.provider, provider),
       ))
       .get();
 
@@ -159,11 +158,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (autofixModel !== undefined) updates.autofixModel = autofixModel;
     if (platformFallback !== undefined) updates.platformFallback = platformFallback;
 
-    db.update(tenantSchema.aiProviderKeys)
+    db.update(schema.aiProviderKeys)
       .set(updates)
       .where(and(
-        eq(tenantSchema.aiProviderKeys.id, existing.id),
-        eq(tenantSchema.aiProviderKeys.userId, userId),
+        eq(schema.aiProviderKeys.id, existing.id),
+        eq(schema.aiProviderKeys.userId, userId),
       ))
       .run();
 

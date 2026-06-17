@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { startMonitor } from '../../../../lib/hud';
 
@@ -8,11 +8,11 @@ import { startMonitor } from '../../../../lib/hud';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
 
   // Find most recent confirmed import
-  const lastImport = db.select().from(tenantSchema.stackImports)
-    .where(eq(tenantSchema.stackImports.status, 'confirmed'))
+  const lastImport = db.select().from(schema.stackImports)
+    .where(eq(schema.stackImports.status, 'confirmed'))
     .all()
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
@@ -26,8 +26,8 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   // Get existing monitors to avoid duplicates
-  const existingMonitors = db.select().from(tenantSchema.monitors)
-    .where(eq(tenantSchema.monitors.userId, locals.user.id)).all();
+  const existingMonitors = db.select().from(schema.monitors)
+    .where(eq(schema.monitors.userId, locals.user.id)).all();
   const existingTargets = new Set(existingMonitors.map(m => m.target.toLowerCase()));
 
   const suggestions: any[] = [];
@@ -112,13 +112,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'No monitors provided' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
   const now = new Date();
   const created: string[] = [];
 
   for (const m of monitors) {
     const id = nanoid();
-    db.insert(tenantSchema.monitors).values({
+    db.insert(schema.monitors).values({
       id,
       userId: locals.user.id,
       name: m.name,

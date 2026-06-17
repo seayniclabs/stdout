@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, inArray } from 'drizzle-orm';
 import { logAudit, getClientIp } from '../../../lib/audit';
 
@@ -9,25 +9,25 @@ export const GET: APIRoute = async ({ locals, request }) => {
   const rbacBlock = checkRBAC(locals, 'export_data');
   if (rbacBlock) return rbacBlock;
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
 
-  const stacks = db.select().from(tenantSchema.stacks)
-    .where(eq(tenantSchema.stacks.userId, locals.user.id)).all();
+  const stacks = db.select().from(schema.stacks)
+    .where(eq(schema.stacks.userId, locals.user.id)).all();
 
-  const incidents = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, locals.user.id)).all();
+  const incidents = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.userId, locals.user.id)).all();
 
-  const resolutions = db.select().from(tenantSchema.resolutions)
-    .where(eq(tenantSchema.resolutions.userId, locals.user.id)).all();
+  const resolutions = db.select().from(schema.resolutions)
+    .where(eq(schema.resolutions.userId, locals.user.id)).all();
 
   const userIncidentIds = incidents.map(i => i.id);
   const diagnoses = userIncidentIds.length > 0
-    ? db.select().from(tenantSchema.diagnoses)
-        .where(inArray(tenantSchema.diagnoses.incidentId, userIncidentIds)).all()
+    ? db.select().from(schema.diagnoses)
+        .where(inArray(schema.diagnoses.incidentId, userIncidentIds)).all()
     : [];
 
-  const docs = db.select().from(tenantSchema.docs)
-    .where(eq(tenantSchema.docs.userId, locals.user.id)).all();
+  const docs = db.select().from(schema.docs)
+    .where(eq(schema.docs.userId, locals.user.id)).all();
 
   const exportData = {
     exportedAt: new Date().toISOString(),

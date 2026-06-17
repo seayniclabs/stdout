@@ -29,7 +29,7 @@ const STATE_LAST_RUN = 'observatory_discovery_last_run';
 const STATE_HOST_COUNT = 'observatory_discovery_host_count';
 
 async function setState(key: string, value: string): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   const now = Date.now();
   await db.run(sql`
     INSERT INTO system_state (key, value, updated_at)
@@ -39,7 +39,7 @@ async function setState(key: string, value: string): Promise<void> {
 }
 
 export async function getDiscoveryState(): Promise<string> {
-  const db = getCentralDb();
+  const db = getDb();
   const row = db.get(sql`SELECT value FROM system_state WHERE key = ${STATE_PROGRESS}`) as
     | { value: string }
     | undefined;
@@ -93,7 +93,7 @@ async function pingSweep(subnet: string): Promise<Array<{ ip: string; hostname?:
 
 /** Get or create the user's default stack to link discovered hosts to. */
 async function getOrCreateDefaultStack(userId: string): Promise<string> {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const existing = await db.select().from(stacks).where(eq(stacks.userId, userId)).limit(1);
   if (existing.length > 0) return existing[0].id;
 
@@ -118,7 +118,7 @@ async function persistHost(
   ip: string,
   hostname: string | null
 ): Promise<void> {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const now = new Date();
 
   const existing = await db
@@ -230,7 +230,7 @@ async function runDeepScan(userId: string, ips: string[]): Promise<void> {
   await setState(STATE_DEEP, 'running');
   console.log(`[initial-discovery] deep scan starting for ${ips.length} hosts (background)...`);
 
-  const db = getTenantDb(userId);
+  const db = getDb();
   // Common service ports — fast, targeted (not a full 65k sweep) to stay out of the way.
   const PORTS = '22,53,80,135,139,443,445,3000,3306,5432,5672,6379,8080,8112,8116,8443,9090,9100';
 

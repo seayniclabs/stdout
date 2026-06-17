@@ -130,6 +130,7 @@ db.exec(`
     model TEXT NOT NULL,
     prompt_tokens INTEGER,
     completion_tokens INTEGER,
+    tool_used TEXT,
     created_at INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS tenant_preferences (

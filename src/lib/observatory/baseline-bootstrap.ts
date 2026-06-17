@@ -47,8 +47,8 @@ export interface BaselineBootstrapResult {
  */
 export async function establishProvisionalBaselines(userId: string): Promise<BaselineBootstrapResult> {
   const log: string[] = [];
-  const central = getCentralDb();
-  const tenant = getTenantDb(userId);
+  const central = getDb();
+  const tenant = getDb();
 
   const stacks = tenant.all(sql`
     SELECT id, name FROM stacks WHERE user_id = ${userId}

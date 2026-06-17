@@ -1,6 +1,6 @@
 import http from 'node:http';
 import https from 'node:https';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { decrypt } from './crypto';
 import { eq, and } from 'drizzle-orm';
 
@@ -71,12 +71,12 @@ function setCache(key: string, data: any): void {
  * Returns null if none configured. Decrypts the token.
  */
 export function getInfluxConfig(userId: string): InfluxConfig | null {
-  const db = getTenantDb(userId);
-  const ds = db.select().from(tenantSchema.dataSources)
+  const db = getDb();
+  const ds = db.select().from(schema.dataSources)
     .where(and(
-      eq(tenantSchema.dataSources.userId, userId),
-      eq(tenantSchema.dataSources.type, 'influxdb'),
-      eq(tenantSchema.dataSources.enabled, true),
+      eq(schema.dataSources.userId, userId),
+      eq(schema.dataSources.type, 'influxdb'),
+      eq(schema.dataSources.enabled, true),
     ))
     .limit(1)
     .all();

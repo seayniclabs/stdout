@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { diagnoseIncident } from '../../../lib/diagnose';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import { notify } from '../../../lib/notify';
@@ -74,8 +74,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user!.id;
-  const db = getTenantDb(userId);
-  const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, incidentId)).get();
+  const db = getDb();
+  const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Incident not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json' },
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Get stack context
   let stackContext = 'No stack description provided.';
   if (incident.stackId) {
-    const stack = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, incident.stackId)).get();
+    const stack = db.select().from(schema.stacks).where(eq(schema.stacks.id, incident.stackId)).get();
     if (stack) stackContext = stack.description;
   }
 
@@ -132,8 +132,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Fetch enabled data sources for diagnosis context enrichment
   let dataSources: Array<{ type: string; name: string; enabled: boolean }> = [];
   try {
-    const allSources = db.select().from(tenantSchema.dataSources)
-      .where(eq(tenantSchema.dataSources.userId, locals.user.id))
+    const allSources = db.select().from(schema.dataSources)
+      .where(eq(schema.dataSources.userId, locals.user.id))
       .all();
     dataSources = allSources.map((s) => ({
       type: s.type,
@@ -211,7 +211,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Store diagnosis
     const diagId = nanoid();
-    db.insert(tenantSchema.diagnoses).values({
+    db.insert(schema.diagnoses).values({
       id: diagId,
       incidentId,
       rootCauses: JSON.stringify(result.rootCauses),

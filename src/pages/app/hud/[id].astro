@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats, startMonitor } from '../../../lib/hud';
 
@@ -9,10 +9,10 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
-const monitor = db.select().from(tenantSchema.monitors)
-  .where(and(eq(tenantSchema.monitors.id, id!), eq(tenantSchema.monitors.userId, user.id))).get();
+const monitor = db.select().from(schema.monitors)
+  .where(and(eq(schema.monitors.id, id!), eq(schema.monitors.userId, user.id))).get();
 
 if (!monitor) return Astro.redirect('/app/hud');
 
@@ -28,15 +28,15 @@ const uptime24h = getUptimeStats(user.id, id!, 1);
 
 // Related incidents (by stack or by HUD auto-tag matching this monitor name)
 const incidentsByStack = monitor.stackId
-  ? db.select().from(tenantSchema.incidents)
-      .where(eq(tenantSchema.incidents.stackId, monitor.stackId))
-      .orderBy(desc(tenantSchema.incidents.createdAt))
+  ? db.select().from(schema.incidents)
+      .where(eq(schema.incidents.stackId, monitor.stackId))
+      .orderBy(desc(schema.incidents.createdAt))
       .limit(10).all()
   : [];
 
-const incidentsByName = db.select().from(tenantSchema.incidents)
-  .where(eq(tenantSchema.incidents.userId, user.id))
-  .orderBy(desc(tenantSchema.incidents.createdAt))
+const incidentsByName = db.select().from(schema.incidents)
+  .where(eq(schema.incidents.userId, user.id))
+  .orderBy(desc(schema.incidents.createdAt))
   .all()
   .filter(i => i.title.toLowerCase().includes(monitor.name.toLowerCase()))
   .slice(0, 10);
@@ -52,8 +52,8 @@ const incidents = [...incidentsByStack, ...incidentsByName].filter(i => {
 // Past resolutions for this service (from resolved incidents)
 const resolvedIncidents = incidents.filter(i => i.status === 'resolved');
 const pastResolutions = resolvedIncidents.flatMap(i => {
-  return db.select().from(tenantSchema.resolutions)
-    .where(eq(tenantSchema.resolutions.incidentId, i.id))
+  return db.select().from(schema.resolutions)
+    .where(eq(schema.resolutions.incidentId, i.id))
     .all()
     .map(r => ({ ...r, incidentTitle: i.title }));
 }).slice(0, 5);

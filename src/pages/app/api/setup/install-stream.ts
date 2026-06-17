@@ -162,9 +162,8 @@ export const GET: APIRoute = async ({ locals }) => {
         watcher.completeStep('health_check', healthResult);
 
         // Mark installation as complete in database
-        const { getCentralDb } = await import('../../../../lib/db');
         const { sql } = await import('drizzle-orm');
-        const db = getCentralDb();
+        const db = getDb();
 
         await db.run(sql`
           INSERT INTO system_state (key, value, updated_at)

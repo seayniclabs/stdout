@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // --- Branding ---
@@ -8,13 +8,13 @@ import { eq, and } from 'drizzle-orm';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
 
-  const branding = db.select().from(tenantSchema.tenantPreferences)
-    .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id)).get();
+  const branding = db.select().from(schema.tenantPreferences)
+    .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
 
-  const notifications = db.select().from(tenantSchema.notificationPreferences)
-    .where(eq(tenantSchema.notificationPreferences.userId, locals.user.id)).all();
+  const notifications = db.select().from(schema.notificationPreferences)
+    .where(eq(schema.notificationPreferences.userId, locals.user.id)).all();
 
   return new Response(JSON.stringify({ branding: branding || null, notifications }), {
     headers: { 'Content-Type': 'application/json' },
@@ -32,13 +32,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
   const action = body.action;
 
   // --- Branding ---
   if (action === 'update_branding') {
-    const existing = db.select().from(tenantSchema.tenantPreferences)
-      .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id)).get();
+    const existing = db.select().from(schema.tenantPreferences)
+      .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
 
     const values = {
       workspaceName: (body.workspaceName || '').trim() || null,
@@ -48,13 +48,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     };
 
     if (existing) {
-      db.update(tenantSchema.tenantPreferences).set(values)
+      db.update(schema.tenantPreferences).set(values)
         .where(and(
-          eq(tenantSchema.tenantPreferences.id, existing.id),
-          eq(tenantSchema.tenantPreferences.userId, locals.user.id),
+          eq(schema.tenantPreferences.id, existing.id),
+          eq(schema.tenantPreferences.userId, locals.user.id),
         )).run();
     } else {
-      db.insert(tenantSchema.tenantPreferences).values({
+      db.insert(schema.tenantPreferences).values({
         id: nanoid(), userId: locals.user.id, ...values,
       }).run();
     }
@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     const id = nanoid();
     const now = new Date();
-    db.insert(tenantSchema.notificationPreferences).values({
+    db.insert(schema.notificationPreferences).values({
       id, userId: locals.user.id, channel, destination,
       events: JSON.stringify(events), enabled: true, createdAt: now, updatedAt: now,
     }).run();
@@ -89,9 +89,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   if (action === 'toggle_notification') {
     const notifId = body.id;
     const enabled = body.enabled;
-    db.update(tenantSchema.notificationPreferences)
+    db.update(schema.notificationPreferences)
       .set({ enabled, updatedAt: new Date() })
-      .where(and(eq(tenantSchema.notificationPreferences.id, notifId), eq(tenantSchema.notificationPreferences.userId, locals.user.id)))
+      .where(and(eq(schema.notificationPreferences.id, notifId), eq(schema.notificationPreferences.userId, locals.user.id)))
       .run();
     return new Response(JSON.stringify({ toggled: true }), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -99,8 +99,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // --- Delete notification ---
   if (action === 'delete_notification') {
     const notifId = body.id;
-    db.delete(tenantSchema.notificationPreferences)
-      .where(and(eq(tenantSchema.notificationPreferences.id, notifId), eq(tenantSchema.notificationPreferences.userId, locals.user.id)))
+    db.delete(schema.notificationPreferences)
+      .where(and(eq(schema.notificationPreferences.id, notifId), eq(schema.notificationPreferences.userId, locals.user.id)))
       .run();
     return new Response(JSON.stringify({ deleted: true }), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -117,9 +117,9 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const existing = db.select().from(tenantSchema.tenantPreferences)
-    .where(eq(tenantSchema.tenantPreferences.userId, locals.user.id)).get();
+  const db = getDb();
+  const existing = db.select().from(schema.tenantPreferences)
+    .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
 
   const updates: any = { updatedAt: new Date() };
 
@@ -131,13 +131,13 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   }
 
   if (existing) {
-    db.update(tenantSchema.tenantPreferences).set(updates)
+    db.update(schema.tenantPreferences).set(updates)
       .where(and(
-        eq(tenantSchema.tenantPreferences.id, existing.id),
-        eq(tenantSchema.tenantPreferences.userId, locals.user.id),
+        eq(schema.tenantPreferences.id, existing.id),
+        eq(schema.tenantPreferences.userId, locals.user.id),
       )).run();
   } else {
-    db.insert(tenantSchema.tenantPreferences).values({
+    db.insert(schema.tenantPreferences).values({
       id: nanoid(), userId: locals.user.id, ...updates,
     }).run();
   }

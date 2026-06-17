@@ -42,7 +42,7 @@ export function startWatcher(): void {
 }
 
 async function bootstrap(): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   const users = db.all(sql`SELECT id FROM users WHERE role != 'deleted'`) as { id: string }[];
 
   for (const { id: userId } of users) {
@@ -78,7 +78,7 @@ async function runCheckForUser(userId: string): Promise<void> {
   if (result.anomaliesDetected > 0) {
     // anomalies were already turned into incidents by runScheduledCheck
     // emit per-stack anomaly events so Observatory status page can react
-    const db = getTenantDb(userId);
+    const db = getDb();
     const recentIncidents = db.all(sql`
       SELECT id, stack_id, severity, title FROM incidents
       WHERE user_id = ${userId}
@@ -119,7 +119,7 @@ async function runCheckForUser(userId: string): Promise<void> {
 }
 
 async function processWatchQueue(): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
 
   const pending = db.all(sql`
     SELECT key, value FROM system_state
@@ -168,7 +168,7 @@ async function processWatchQueue(): Promise<void> {
 }
 
 async function ensureStackMonitored(userId: string, stackId: string, stackName: string): Promise<void> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Check if the stack already has a monitor
   const existing = db.get(sql`
@@ -213,7 +213,7 @@ async function ensureStackMonitored(userId: string, stackId: string, stackName: 
   if (hosts.length === 0) {
     console.log(`[watcher] stack ${stackId} has no hosts yet — will retry on next queue pass`);
     // Reset to pending so it's re-tried when hosts arrive
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     const key = `observatory_watch:${stackId}`;
     const existing = centralDb.get(sql`SELECT value FROM system_state WHERE key = ${key}`) as { value: string } | undefined;
     if (existing) {

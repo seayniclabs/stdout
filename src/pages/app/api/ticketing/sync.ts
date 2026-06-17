@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { SyncEngine } from '../../../../lib/ticketing/sync/SyncEngine';
 
 export const POST: APIRoute = async ({ request, locals }) => {
@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { connectorId } = body;
 
-    const db = getTenantDb(session.id);
+    const db = getDb();
     const syncEngine = new SyncEngine(db as any, session.id);
 
     let results;

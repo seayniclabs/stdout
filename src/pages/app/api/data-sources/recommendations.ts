@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { and, desc, eq } from 'drizzle-orm';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 
 type MissingSource = {
   type?: string;
@@ -11,14 +11,14 @@ type MissingSource = {
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
+  const db = getDb();
 
   const latestImport = db.select()
-    .from(tenantSchema.stackImports)
+    .from(schema.stackImports)
     .where(and(
-      eq(tenantSchema.stackImports.status, 'confirmed'),
+      eq(schema.stackImports.status, 'confirmed'),
     ))
-    .orderBy(desc(tenantSchema.stackImports.createdAt))
+    .orderBy(desc(schema.stackImports.createdAt))
     .limit(20)
     .all()
     // Prefer imports that contain scanner modules with data_sources.

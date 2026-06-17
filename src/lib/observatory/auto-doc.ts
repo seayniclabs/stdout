@@ -41,7 +41,7 @@ export interface AutoDocResult {
  */
 export async function maybeAutoDocument(userId: string, incidentId: string): Promise<AutoDocResult> {
   try {
-    const tenant = getTenantDb(userId);
+    const tenant = getDb();
 
     const incident = tenant.get(sql`
       SELECT id, title, description, severity, tags FROM incidents
@@ -87,7 +87,7 @@ export async function maybeAutoDocument(userId: string, incidentId: string): Pro
     const category = VALID_CATEGORIES.has(distilled.category) ? distilled.category : 'service_crash';
     const now = Date.now();
     const id = `pat_auto_${nanoid(12)}`;
-    const central = getCentralDb();
+    const central = getDb();
     central.run(sql`
       INSERT INTO observatory_standard_patterns
         (id, pattern_name, category, symptoms, common_causes, resolution_steps,
@@ -112,8 +112,8 @@ export async function maybeAutoDocument(userId: string, incidentId: string): Pro
  * reasonable match means "not novel, skip".
  */
 async function hasCloseMatch(userId: string, title: string, description: string): Promise<boolean> {
-  const central = getCentralDb();
-  const tenant = getTenantDb(userId);
+  const central = getDb();
+  const tenant = getDb();
 
   // Keywords for FTS: significant words from the title (drop short/common tokens).
   const terms = Array.from(

@@ -17,7 +17,7 @@
  * breaks the Watcher tick. This is what makes the loop self-running rather than waiting to be poked.
  */
 
-import { getTenantDb, tenantSchema } from '../db';
+import { getDb, schema } from '../db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { canDiagnose, canAutofix, decideAutonomous, parkPendingFix, recordAutonomousOutcome } from './operating-mode';
@@ -42,9 +42,9 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
     return { ...base, skipped: 'discover mode — eyes only' };
   }
 
-  const db = getTenantDb(userId);
-  const incident = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.id, incidentId)).get();
+  const db = getDb();
+  const incident = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.id, incidentId)).get();
   if (!incident) return { ...base, skipped: 'incident not found' };
 
   // Resolve the diagnosis model (Ollama by default).
@@ -58,8 +58,8 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
   // Stack context.
   let stackContext = 'No stack description provided.';
   if (incident.stackId) {
-    const stack = db.select().from(tenantSchema.stacks)
-      .where(eq(tenantSchema.stacks.id, incident.stackId)).get();
+    const stack = db.select().from(schema.stacks)
+      .where(eq(schema.stacks.id, incident.stackId)).get();
     if (stack) stackContext = stack.description;
   }
 
@@ -94,7 +94,7 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
     });
     suggestedCommands = result.suggestedCommands || [];
 
-    db.insert(tenantSchema.diagnoses).values({
+    db.insert(schema.diagnoses).values({
       id: nanoid(),
       incidentId,
       rootCauses: JSON.stringify(result.rootCauses),
@@ -119,8 +119,8 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
 
   // autofix mode: route each suggested command through the autonomous gate.
   const { classifyAutoApply, applyRemediation } = await import('../autofix-apply');
-  const wConfig = db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId)).get();
+  const wConfig = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId)).get();
   const execViaWindlass = async (cmd: string) => {
     if (!wConfig?.endpointUrl) throw new Error('Windlass not configured');
     const url = wConfig.endpointUrl.replace(/\/$/, '') + '/exec';

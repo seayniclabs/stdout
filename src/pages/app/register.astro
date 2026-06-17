@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { nanoid } from 'nanoid';
-import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword, getUserCount } from '../../lib/auth';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
@@ -45,10 +45,10 @@ if (Astro.request.method === 'POST') {
     } else if (getUserCount() >= MAX_USERS_BUILTIN) {
       error = 'Maximum user limit reached (10 users for builtin authentication). Contact your administrator or use OIDC.';
     } else {
-      const existing = getCentralDb()
+      const existing = getDb()
         .select()
-        .from(centralSchema.users)
-        .where(eq(centralSchema.users.email, email))
+        .from(schema.users)
+        .where(eq(schema.users.email, email))
         .get();
 
       if (existing) {
@@ -57,7 +57,7 @@ if (Astro.request.method === 'POST') {
         const id = nanoid();
         const now = new Date();
         const passwordHash = await hashPassword(password);
-        getCentralDb().insert(centralSchema.users).values({
+        getDb().insert(schema.users).values({
           id,
           email,
           passwordHash,
@@ -67,7 +67,7 @@ if (Astro.request.method === 'POST') {
           updatedAt: now,
         }).run();
 
-        getTenantDb(id);
+        getDb();
         logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
         sendVerificationEmail(email, id).catch(() => {});
 

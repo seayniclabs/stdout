@@ -54,7 +54,7 @@ export function recordPatternOutcome(opts: {
   agentType?: string;
   notes?: string;
 }): FeedbackResult {
-  const db = getCentralDb();
+  const db = getDb();
   const now = Date.now();
   const delta = opts.success ? UP : -DOWN;
 

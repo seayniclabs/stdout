@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq, desc } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
@@ -10,9 +10,9 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
-const incident = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, id!)).get();
+const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, id!)).get();
 if (!incident || incident.userId !== user.id) return Astro.redirect('/app');
 
 // Handle resolution POST
@@ -26,7 +26,7 @@ if (Astro.request.method === 'POST') {
       if (content) {
         const resId = nanoid();
         const now = new Date();
-        db.insert(tenantSchema.resolutions).values({
+        db.insert(schema.resolutions).values({
           id: resId, incidentId: id!, userId: user.id, content, createdAt: now,
         }).run();
 
@@ -36,14 +36,14 @@ if (Astro.request.method === 'POST') {
           rawDb.prepare('INSERT INTO resolutions_fts(rowid, content) SELECT rowid, content FROM resolutions WHERE id = ?').run(resId);
         }
 
-        db.update(tenantSchema.incidents).set({ status: 'resolved', resolvedAt: now, updatedAt: now }).where(eq(tenantSchema.incidents.id, id!)).run();
+        db.update(schema.incidents).set({ status: 'resolved', resolvedAt: now, updatedAt: now }).where(eq(schema.incidents.id, id!)).run();
       }
     } else if (action === 'status') {
       const status = form.get('status') as string;
       if (['active', 'investigating', 'monitoring', 'resolved'].includes(status)) {
         const updates: any = { status, updatedAt: new Date() };
         if (status === 'resolved') updates.resolvedAt = new Date();
-        db.update(tenantSchema.incidents).set(updates).where(eq(tenantSchema.incidents.id, id!)).run();
+        db.update(schema.incidents).set(updates).where(eq(schema.incidents.id, id!)).run();
       }
     }
 
@@ -52,15 +52,15 @@ if (Astro.request.method === 'POST') {
 }
 
 // Re-fetch after potential POST
-const current = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, id!)).get()!;
-const resolutions = db.select().from(tenantSchema.resolutions).where(eq(tenantSchema.resolutions.incidentId, id!)).orderBy(desc(tenantSchema.resolutions.createdAt)).all();
-const diagnosis = db.select().from(tenantSchema.diagnoses).where(eq(tenantSchema.diagnoses.incidentId, id!)).orderBy(desc(tenantSchema.diagnoses.createdAt)).limit(1).all();
+const current = db.select().from(schema.incidents).where(eq(schema.incidents.id, id!)).get()!;
+const resolutions = db.select().from(schema.resolutions).where(eq(schema.resolutions.incidentId, id!)).orderBy(desc(schema.resolutions.createdAt)).all();
+const diagnosis = db.select().from(schema.diagnoses).where(eq(schema.diagnoses.incidentId, id!)).orderBy(desc(schema.diagnoses.createdAt)).limit(1).all();
 const latestDiagnosis = diagnosis[0] || null;
 
 // Get stack context if linked
 let stackName = '';
 if (current.stackId) {
-  const stack = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, current.stackId)).get();
+  const stack = db.select().from(schema.stacks).where(eq(schema.stacks.id, current.stackId)).get();
   if (stack) stackName = stack.name;
 }
 

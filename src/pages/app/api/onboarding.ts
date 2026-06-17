@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -17,9 +17,9 @@ export const VALID_STEPS = [
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
-  const prefs = db.select().from(tenantSchema.tenantPreferences)
-    .where(eq(tenantSchema.tenantPreferences.userId, locals.workspace?.ownerId || locals.user.id))
+  const db = getDb();
+  const prefs = db.select().from(schema.tenantPreferences)
+    .where(eq(schema.tenantPreferences.userId, locals.workspace?.ownerId || locals.user.id))
     .get();
 
   const completed: string[] = prefs?.onboardingProgress
@@ -39,22 +39,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const { action, step } = body as { action?: string; step?: string };
 
   const ownerId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(ownerId);
+  const db = getDb();
 
-  let prefs = db.select().from(tenantSchema.tenantPreferences)
-    .where(eq(tenantSchema.tenantPreferences.userId, ownerId))
+  let prefs = db.select().from(schema.tenantPreferences)
+    .where(eq(schema.tenantPreferences.userId, ownerId))
     .get();
 
   if (!prefs) {
-    db.insert(tenantSchema.tenantPreferences).values({
+    db.insert(schema.tenantPreferences).values({
       id: nanoid(),
       userId: ownerId,
       onboardingProgress: '[]',
       onboardingDismissed: false,
       updatedAt: new Date(),
     }).run();
-    prefs = db.select().from(tenantSchema.tenantPreferences)
-      .where(eq(tenantSchema.tenantPreferences.userId, ownerId))
+    prefs = db.select().from(schema.tenantPreferences)
+      .where(eq(schema.tenantPreferences.userId, ownerId))
       .get()!;
   }
 
@@ -63,9 +63,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
     : [];
 
   if (action === 'dismiss') {
-    db.update(tenantSchema.tenantPreferences)
+    db.update(schema.tenantPreferences)
       .set({ onboardingDismissed: true, updatedAt: new Date() })
-      .where(eq(tenantSchema.tenantPreferences.userId, ownerId))
+      .where(eq(schema.tenantPreferences.userId, ownerId))
       .run();
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' },
@@ -74,12 +74,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   if (action === 'complete' && step && (VALID_STEPS as readonly string[]).includes(step) && !completed.includes(step)) {
     completed.push(step);
-    db.update(tenantSchema.tenantPreferences)
+    db.update(schema.tenantPreferences)
       .set({
         onboardingProgress: JSON.stringify(completed),
         updatedAt: new Date(),
       })
-      .where(eq(tenantSchema.tenantPreferences.userId, ownerId))
+      .where(eq(schema.tenantPreferences.userId, ownerId))
       .run();
   }
 

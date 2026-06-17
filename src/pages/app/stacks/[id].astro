@@ -1,39 +1,39 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
-const stack = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.id, id!)).get();
+const stack = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.id, id!)).get();
 
 if (!stack || stack.userId !== user.id) return Astro.redirect('/app/stacks');
 
 const justImported = Astro.url.searchParams.get('imported') === '1';
 
 // Get incidents linked to this stack
-const stackIncidents = db.select().from(tenantSchema.incidents)
-  .where(eq(tenantSchema.incidents.stackId, id!))
-  .orderBy(desc(tenantSchema.incidents.createdAt))
+const stackIncidents = db.select().from(schema.incidents)
+  .where(eq(schema.incidents.stackId, id!))
+  .orderBy(desc(schema.incidents.createdAt))
   .all();
 
 // Get discovered hosts linked to this stack
-const discoveredHosts = db.select().from(tenantSchema.discoveredHosts)
-  .where(eq(tenantSchema.discoveredHosts.stackId, id!))
-  .orderBy(desc(tenantSchema.discoveredHosts.lastSeen))
+const discoveredHosts = db.select().from(schema.discoveredHosts)
+  .where(eq(schema.discoveredHosts.stackId, id!))
+  .orderBy(desc(schema.discoveredHosts.lastSeen))
   .all();
 
 // Get services for these hosts
 const hostIds = discoveredHosts.map(h => h.id);
 const discoveredServices = hostIds.length > 0
-  ? db.select().from(tenantSchema.discoveredServices)
-      .where(eq(tenantSchema.discoveredServices.hostId, hostIds[0])) // TODO: use IN clause
+  ? db.select().from(schema.discoveredServices)
+      .where(eq(schema.discoveredServices.hostId, hostIds[0])) // TODO: use IN clause
       .all()
   : [];
 

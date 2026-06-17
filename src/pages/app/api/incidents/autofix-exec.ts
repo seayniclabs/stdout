@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { assertAutofixCommandAllowed } from '../../../../lib/autofix-exec-policy';
 
@@ -58,9 +58,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   // Verify incident exists
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
-  const incident = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.id, incidentId)).get();
+  const db = getDb();
+  const incident = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Incident not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json' },

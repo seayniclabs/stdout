@@ -9,7 +9,7 @@
 
 import { nanoid } from 'nanoid';
 import crypto from 'node:crypto';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 import { encrypt, decrypt } from './crypto';
 
@@ -114,21 +114,21 @@ export function saveProviderKey(
     throw new Error(`Provider ${providerId} is not available`);
   }
 
-  const db = getTenantDb(userId);
+  const db = getDb();
   const now = new Date();
   const fp = fingerprint(apiKey);
   const encryptedKey = encrypt(apiKey);
 
   // Check for existing key for this provider
-  const existing = db.select().from(tenantSchema.aiProviderKeys)
+  const existing = db.select().from(schema.aiProviderKeys)
     .where(and(
-      eq(tenantSchema.aiProviderKeys.userId, userId),
-      eq(tenantSchema.aiProviderKeys.provider, providerId),
+      eq(schema.aiProviderKeys.userId, userId),
+      eq(schema.aiProviderKeys.provider, providerId),
     ))
     .get();
 
   if (existing) {
-    db.update(tenantSchema.aiProviderKeys)
+    db.update(schema.aiProviderKeys)
       .set({
         encryptedApiKey: encryptedKey,
         keyFingerprint: fp,
@@ -137,13 +137,13 @@ export function saveProviderKey(
         autofixModel: autofixModel || existing.autofixModel,
         updatedAt: now,
       })
-      .where(eq(tenantSchema.aiProviderKeys.id, existing.id))
+      .where(eq(schema.aiProviderKeys.id, existing.id))
       .run();
     return { id: existing.id, fingerprint: fp };
   }
 
   const id = nanoid();
-  db.insert(tenantSchema.aiProviderKeys).values({
+  db.insert(schema.aiProviderKeys).values({
     id,
     userId,
     provider: providerId,
@@ -161,41 +161,41 @@ export function saveProviderKey(
 }
 
 export function listProviderKeys(userId: string) {
-  const db = getTenantDb(userId);
+  const db = getDb();
   return db.select({
-    id: tenantSchema.aiProviderKeys.id,
-    provider: tenantSchema.aiProviderKeys.provider,
-    keyFingerprint: tenantSchema.aiProviderKeys.keyFingerprint,
-    status: tenantSchema.aiProviderKeys.status,
-    diagnosticsModel: tenantSchema.aiProviderKeys.diagnosticsModel,
-    autofixModel: tenantSchema.aiProviderKeys.autofixModel,
-    platformFallback: tenantSchema.aiProviderKeys.platformFallback,
-    lastValidatedAt: tenantSchema.aiProviderKeys.lastValidatedAt,
-    createdAt: tenantSchema.aiProviderKeys.createdAt,
-    updatedAt: tenantSchema.aiProviderKeys.updatedAt,
-  }).from(tenantSchema.aiProviderKeys)
-    .where(eq(tenantSchema.aiProviderKeys.userId, userId))
+    id: schema.aiProviderKeys.id,
+    provider: schema.aiProviderKeys.provider,
+    keyFingerprint: schema.aiProviderKeys.keyFingerprint,
+    status: schema.aiProviderKeys.status,
+    diagnosticsModel: schema.aiProviderKeys.diagnosticsModel,
+    autofixModel: schema.aiProviderKeys.autofixModel,
+    platformFallback: schema.aiProviderKeys.platformFallback,
+    lastValidatedAt: schema.aiProviderKeys.lastValidatedAt,
+    createdAt: schema.aiProviderKeys.createdAt,
+    updatedAt: schema.aiProviderKeys.updatedAt,
+  }).from(schema.aiProviderKeys)
+    .where(eq(schema.aiProviderKeys.userId, userId))
     .all();
 }
 
 export function deleteProviderKey(userId: string, keyId: string): boolean {
-  const db = getTenantDb(userId);
-  const result = db.delete(tenantSchema.aiProviderKeys)
+  const db = getDb();
+  const result = db.delete(schema.aiProviderKeys)
     .where(and(
-      eq(tenantSchema.aiProviderKeys.id, keyId),
-      eq(tenantSchema.aiProviderKeys.userId, userId),
+      eq(schema.aiProviderKeys.id, keyId),
+      eq(schema.aiProviderKeys.userId, userId),
     ))
     .run();
   return result.changes > 0;
 }
 
 export function getDecryptedKey(userId: string, providerId: string): string | null {
-  const db = getTenantDb(userId);
-  const row = db.select().from(tenantSchema.aiProviderKeys)
+  const db = getDb();
+  const row = db.select().from(schema.aiProviderKeys)
     .where(and(
-      eq(tenantSchema.aiProviderKeys.userId, userId),
-      eq(tenantSchema.aiProviderKeys.provider, providerId),
-      eq(tenantSchema.aiProviderKeys.status, 'active'),
+      eq(schema.aiProviderKeys.userId, userId),
+      eq(schema.aiProviderKeys.provider, providerId),
+      eq(schema.aiProviderKeys.status, 'active'),
     ))
     .get();
 
@@ -212,7 +212,7 @@ export async function validateKey(userId: string, providerId: string): Promise<{
   const policy = PROVIDER_POLICIES[providerId];
   if (!policy) return { valid: false, error: 'Unknown provider' };
 
-  const db = getTenantDb(userId);
+  const db = getDb();
   const now = new Date();
 
   try {
@@ -249,25 +249,25 @@ export async function validateKey(userId: string, providerId: string): Promise<{
     }
 
     // Update validation status
-    db.update(tenantSchema.aiProviderKeys)
+    db.update(schema.aiProviderKeys)
       .set({
         status: valid ? 'active' : 'invalid',
         lastValidatedAt: now,
         updatedAt: now,
       })
       .where(and(
-        eq(tenantSchema.aiProviderKeys.userId, userId),
-        eq(tenantSchema.aiProviderKeys.provider, providerId),
+        eq(schema.aiProviderKeys.userId, userId),
+        eq(schema.aiProviderKeys.provider, providerId),
       ))
       .run();
 
     return { valid, error: valid ? undefined : 'API key validation failed' };
   } catch (err: any) {
-    db.update(tenantSchema.aiProviderKeys)
+    db.update(schema.aiProviderKeys)
       .set({ status: 'invalid', lastValidatedAt: now, updatedAt: now })
       .where(and(
-        eq(tenantSchema.aiProviderKeys.userId, userId),
-        eq(tenantSchema.aiProviderKeys.provider, providerId),
+        eq(schema.aiProviderKeys.userId, userId),
+        eq(schema.aiProviderKeys.provider, providerId),
       ))
       .run();
 
@@ -290,13 +290,13 @@ export interface ResolvedCredential {
  * Priority: user key (if configured + valid) → platform key (fallback).
  */
 export function resolveForDiagnostics(userId: string, tier: 'free' | 'paid'): ResolvedCredential | null {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Check for active user keys (prefer Anthropic, then others)
-  const userKeys = db.select().from(tenantSchema.aiProviderKeys)
+  const userKeys = db.select().from(schema.aiProviderKeys)
     .where(and(
-      eq(tenantSchema.aiProviderKeys.userId, userId),
-      eq(tenantSchema.aiProviderKeys.status, 'active'),
+      eq(schema.aiProviderKeys.userId, userId),
+      eq(schema.aiProviderKeys.status, 'active'),
     ))
     .all();
 
@@ -343,8 +343,8 @@ export function logAudit(
   outcome: 'success' | 'failed' | 'blocked',
   failureReason?: string,
 ): void {
-  const db = getTenantDb(userId);
-  db.insert(tenantSchema.aiExecutionAudit).values({
+  const db = getDb();
+  db.insert(schema.aiExecutionAudit).values({
     id: nanoid(),
     userId,
     incidentId,

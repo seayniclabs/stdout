@@ -2,7 +2,7 @@ import http from 'node:http';
 import https from 'node:https';
 import { and, eq } from 'drizzle-orm';
 import { decrypt } from './crypto';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import type { ContainerMetrics, MetricPoint, ResourceSnapshot } from './influx';
 
 export interface PrometheusConfig {
@@ -26,12 +26,12 @@ interface PrometheusResponse {
 }
 
 export function getPrometheusConfig(userId: string): PrometheusConfig | null {
-  const db = getTenantDb(userId);
-  const sources = db.select().from(tenantSchema.dataSources)
+  const db = getDb();
+  const sources = db.select().from(schema.dataSources)
     .where(and(
-      eq(tenantSchema.dataSources.userId, userId),
-      eq(tenantSchema.dataSources.type, 'prometheus'),
-      eq(tenantSchema.dataSources.enabled, true),
+      eq(schema.dataSources.userId, userId),
+      eq(schema.dataSources.type, 'prometheus'),
+      eq(schema.dataSources.enabled, true),
     ))
     .limit(1)
     .all();

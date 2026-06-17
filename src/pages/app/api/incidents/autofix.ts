@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 
@@ -32,11 +32,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Fetch incident
-  const incident = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.id, incidentId)).get();
+  const incident = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.id, incidentId)).get();
   if (!incident || incident.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Incident not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json' },
@@ -80,14 +80,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Get stack context
   let stackContext = 'No stack description provided.';
   if (incident.stackId) {
-    const stack = db.select().from(tenantSchema.stacks)
-      .where(eq(tenantSchema.stacks.id, incident.stackId)).get();
+    const stack = db.select().from(schema.stacks)
+      .where(eq(schema.stacks.id, incident.stackId)).get();
     if (stack) stackContext = stack.description;
   }
 
   // Get latest diagnosis for context
-  const diagnosis = db.select().from(tenantSchema.diagnoses)
-    .where(eq(tenantSchema.diagnoses.incidentId, incidentId))
+  const diagnosis = db.select().from(schema.diagnoses)
+    .where(eq(schema.diagnoses.incidentId, incidentId))
     .get();
 
   const diagnosisContext = diagnosis
@@ -223,8 +223,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // Resolve the Windlass /exec endpoint from the user's windlass config.
-    const wConfig = db.select().from(tenantSchema.windlassConfig)
-      .where(eq(tenantSchema.windlassConfig.userId, userId)).get();
+    const wConfig = db.select().from(schema.windlassConfig)
+      .where(eq(schema.windlassConfig.userId, userId)).get();
 
     const execViaWindlass = async (cmd: string) => {
       if (!wConfig?.endpointUrl) throw new Error('Windlass not configured — cannot apply remediation');

@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getCentralDb, getTenantDb, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { createSession, SESSION_COOKIE, sessionCookieOptions, verifyPassword } from '../../lib/auth';
 import { isAccountLocked, recordFailedLogin, resetLoginAttempts, validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
@@ -36,10 +36,10 @@ if (Astro.request.method === 'POST') {
         const mins = Math.ceil((lockout.retryAfterSec || 0) / 60);
         error = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
       } else {
-        const localUser = getCentralDb()
+        const localUser = getDb()
           .select()
-          .from(centralSchema.users)
-          .where(eq(centralSchema.users.email, email))
+          .from(schema.users)
+          .where(eq(schema.users.email, email))
           .get();
 
         if (!localUser) {

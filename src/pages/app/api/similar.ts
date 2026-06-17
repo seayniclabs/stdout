@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 
 export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
@@ -13,7 +13,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
   const rawDb = (db as any).$client;
   if (!rawDb?.prepare) {
     return new Response(JSON.stringify({ matches: [] }), {

@@ -59,7 +59,7 @@ async function autoCreateHostMonitor(
   ip: string,
   hostname: string | null,
 ): Promise<void> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Check if a monitor already targets this IP
   const existing = db.get(sql`
@@ -96,7 +96,7 @@ async function linkSatelliteToHost(
   name: string,
   tags: string[],
 ): Promise<void> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Try to match by hostname (case-insensitive) or IP in the agent name
   // e.g. agent named "hetzner-web-01" matches host with hostname "hetzner-web-01"
@@ -113,7 +113,7 @@ async function linkSatelliteToHost(
   if (!host) return;
 
   // Record the link in system_state so Observatory can use it
-  const centralDb = getCentralDb();
+  const centralDb = getDb();
   const now = Math.floor(Date.now() / 1000);
   centralDb.run(sql`
     INSERT OR REPLACE INTO system_state (key, value, updated_at)
@@ -136,7 +136,7 @@ async function notifyObservatoryOfStack(
 ): Promise<void> {
   // Write a pending Observatory task into system_state.
   // The Watcher picks these up on its next tick and creates baselines.
-  const centralDb = getCentralDb();
+  const centralDb = getDb();
   const now = Math.floor(Date.now() / 1000);
 
   centralDb.run(sql`

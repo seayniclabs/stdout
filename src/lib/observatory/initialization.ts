@@ -60,7 +60,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
   // ── Phase 2: Knowledge Base ───────────────────────────────────────────────
   log.push('=== PHASE 2: KNOWLEDGE BASE ===');
   try {
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
 
     // Count standard patterns (if table exists)
     let standardPatternsCount = 0;
@@ -80,7 +80,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     // Get first user to check incident history (self-host = single user)
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
     if (firstUser) {
-      const tenantDb = getTenantDb(firstUser.id);
+      const tenantDb = getDb();
       const incRow = tenantDb.get(sql`SELECT COUNT(*) as n FROM incidents WHERE status = 'resolved'`) as { n: number } | undefined;
       const userIncidentsCount = incRow?.n ?? 0;
 
@@ -116,11 +116,11 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
   // ── Phase 3: Infrastructure Discovery ────────────────────────────────────
   log.push('=== PHASE 3: INFRASTRUCTURE DISCOVERY ===');
   try {
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
 
     if (firstUser) {
-      const tenantDb = getTenantDb(firstUser.id);
+      const tenantDb = getDb();
 
       // Check if any hosts have been discovered yet
       const totalHostsRow = tenantDb.get(sql`
@@ -175,11 +175,11 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
   // ── Phase 4: Monitors ─────────────────────────────────────────────────────
   log.push('=== PHASE 4: MONITORS ===');
   try {
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
 
     if (firstUser) {
-      const tenantDb = getTenantDb(firstUser.id);
+      const tenantDb = getDb();
       const existingMonitors = tenantDb.all(sql`
         SELECT id, name, type, current_status FROM monitors WHERE user_id = ${firstUser.id} ORDER BY created_at DESC
       `) as Array<{ id: string; name: string; type: string; current_status: string }>;
@@ -208,7 +208,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
   // instead of waiting 7 days. Both are idempotent and non-fatal.
   log.push('=== PHASE 4.5: DATA SOURCES & BASELINE ===');
   try {
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
 
     if (firstUser) {
@@ -256,7 +256,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     log.push(`${analyst.name} Agent: STANDBY — activates on ${analyst.trigger_severities?.join(', ')} severity`);
 
     // Emit observatory.started for each registered user
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
     if (firstUser) {
       emit({
@@ -347,7 +347,7 @@ async function triggerInitialNetworkScan(userId: string): Promise<void> {
     console.log('[Observatory Init] Triggering initial network scan...');
 
     // Mark in system_state that initial scan was triggered
-    const centralDb = getCentralDb();
+    const centralDb = getDb();
     await centralDb.run(sql`
       INSERT INTO system_state (key, value, updated_at)
       VALUES ('observatory_initial_scan_triggered', ${Date.now().toString()}, ${Date.now()})

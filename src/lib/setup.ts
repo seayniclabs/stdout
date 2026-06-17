@@ -44,7 +44,7 @@ export interface SetupState {
  */
 export async function getSetupProgress(): Promise<SetupState> {
   console.log('[setup] getSetupProgress() called');
-  const db = getCentralDb();
+  const db = getDb();
 
   // Get all completed steps
   let steps = await db.select().from(setupProgress).orderBy(setupProgress.stepNumber);
@@ -114,7 +114,7 @@ export async function getSetupProgress(): Promise<SetupState> {
  * Complete a setup step
  */
 export async function completeStep(step: SetupStep, data?: any): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   const now = new Date();
 
   // Check if step record exists
@@ -160,7 +160,7 @@ export async function isSetupComplete(): Promise<boolean> {
  * Check if admin account exists (Step 1 complete)
  */
 export async function hasAdminAccount(): Promise<boolean> {
-  const db = getCentralDb();
+  const db = getDb();
   const user = await db.select().from(users).limit(1);
   return user.length > 0;
 }
@@ -169,7 +169,7 @@ export async function hasAdminAccount(): Promise<boolean> {
  * Get setup config value
  */
 export async function getSetupConfig(key: string): Promise<string | null> {
-  const db = getCentralDb();
+  const db = getDb();
   const config = await db.select().from(setupConfig).where(eq(setupConfig.key, key)).limit(1);
   return config[0]?.value || null;
 }
@@ -178,7 +178,7 @@ export async function getSetupConfig(key: string): Promise<string | null> {
  * Set setup config value
  */
 export async function setSetupConfig(key: string, value: string): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
   const now = new Date();
 
   // Upsert
@@ -199,7 +199,7 @@ export async function setSetupConfig(key: string, value: string): Promise<void> 
  * Check if license is activated
  */
 export async function hasActiveLicense(): Promise<boolean> {
-  const db = getCentralDb();
+  const db = getDb();
   const lic = await db.select().from(license).limit(1);
   return lic.length > 0;
 }

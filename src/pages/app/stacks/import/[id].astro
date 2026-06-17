@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../../middleware';
@@ -11,10 +11,10 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
-const importRecord = db.select().from(tenantSchema.stackImports)
-  .where(eq(tenantSchema.stackImports.id, id!)).get();
+const importRecord = db.select().from(schema.stackImports)
+  .where(eq(schema.stackImports.id, id!)).get();
 
 if (!importRecord) return Astro.redirect('/app/stacks');
 
@@ -51,8 +51,8 @@ if (Astro.request.method === 'POST') {
 
       if (targetStackId) {
         // Merge: preserve existing containers not covered by this scan
-        const existingStack = db.select().from(tenantSchema.stacks)
-          .where(eq(tenantSchema.stacks.id, existingStackId)).get();
+        const existingStack = db.select().from(schema.stacks)
+          .where(eq(schema.stacks.id, existingStackId)).get();
 
         let finalMarkdown = markdown;
 
@@ -92,15 +92,15 @@ if (Astro.request.method === 'POST') {
         }
 
         // Update existing stack
-        db.update(tenantSchema.stacks).set({
+        db.update(schema.stacks).set({
           description: finalMarkdown,
           updatedAt: new Date(),
-        }).where(eq(tenantSchema.stacks.id, existingStackId)).run();
+        }).where(eq(schema.stacks.id, existingStackId)).run();
       } else {
         // Create new stack
         targetStackId = nanoid();
         const now = new Date();
-        db.insert(tenantSchema.stacks).values({
+        db.insert(schema.stacks).values({
           id: targetStackId, userId: user.id, name: stackName,
           description: markdown, createdAt: now, updatedAt: now,
         }).run();
@@ -108,15 +108,15 @@ if (Astro.request.method === 'POST') {
       }
 
       // Mark import as confirmed
-      db.update(tenantSchema.stackImports)
+      db.update(schema.stackImports)
         .set({ status: 'confirmed' })
-        .where(eq(tenantSchema.stackImports.id, id!)).run();
+        .where(eq(schema.stackImports.id, id!)).run();
 
       return Astro.redirect(`/app/stacks/${targetStackId}?imported=1`);
     } else if (action === 'discard') {
-      db.update(tenantSchema.stackImports)
+      db.update(schema.stackImports)
         .set({ status: 'discarded' })
-        .where(eq(tenantSchema.stackImports.id, id!)).run();
+        .where(eq(schema.stackImports.id, id!)).run();
       return Astro.redirect('/app/stacks');
     }
   }
@@ -131,8 +131,8 @@ const networks = scanData.networks || [];
 const hostInfo = scanData.host || null;
 
 // Get existing stacks for "update existing" option
-const userStacks = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const userStacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id)).all();
 
 function renderFilteredMarkdown(data: any): string {
   const lines: string[] = [

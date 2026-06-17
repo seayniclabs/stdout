@@ -1,7 +1,7 @@
 import { hash, verify } from '@node-rs/argon2';
 import { nanoid } from 'nanoid';
 import { eq, sql } from 'drizzle-orm';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
@@ -22,7 +22,7 @@ export async function verifyPassword(storedHash: string, password: string): Prom
 export async function createSession(userId: string): Promise<string> {
   const id = nanoid(32);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  getCentralDb().insert(centralSchema.sessions).values({ id, userId, expiresAt }).run();
+  getDb().insert(schema.sessions).values({ id, userId, expiresAt }).run();
   return id;
 }
 
@@ -34,26 +34,26 @@ export type SessionUser = {
 };
 
 export function getUserCount(): number {
-  const row = getCentralDb()
+  const row = getDb()
     .select({ count: sql<number>`count(*)` })
-    .from(centralSchema.users)
+    .from(schema.users)
     .get();
   return Number(row?.count ?? 0);
 }
 
 export function validateSession(sessionId: string): SessionUser | null {
-  const row = getCentralDb()
+  const row = getDb()
     .select({
-      sessionId: centralSchema.sessions.id,
-      expiresAt: centralSchema.sessions.expiresAt,
-      userId: centralSchema.users.id,
-      email: centralSchema.users.email,
-      displayName: centralSchema.users.displayName,
-      role: centralSchema.users.role,
+      sessionId: schema.sessions.id,
+      expiresAt: schema.sessions.expiresAt,
+      userId: schema.users.id,
+      email: schema.users.email,
+      displayName: schema.users.displayName,
+      role: schema.users.role,
     })
-    .from(centralSchema.sessions)
-    .innerJoin(centralSchema.users, eq(centralSchema.sessions.userId, centralSchema.users.id))
-    .where(eq(centralSchema.sessions.id, sessionId))
+    .from(schema.sessions)
+    .innerJoin(schema.users, eq(schema.sessions.userId, schema.users.id))
+    .where(eq(schema.sessions.id, sessionId))
     .get();
 
   if (!row) return null;
@@ -72,7 +72,7 @@ export function validateSession(sessionId: string): SessionUser | null {
   }
 
   if (!Number.isFinite(expiresAtMs) || expiresAtMs < Date.now()) {
-    getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
+    getDb().delete(schema.sessions).where(eq(schema.sessions.id, sessionId)).run();
     return null;
   }
 
@@ -85,7 +85,7 @@ export function validateSession(sessionId: string): SessionUser | null {
 }
 
 export function deleteSession(sessionId: string): void {
-  getCentralDb().delete(centralSchema.sessions).where(eq(centralSchema.sessions.id, sessionId)).run();
+  getDb().delete(schema.sessions).where(eq(schema.sessions.id, sessionId)).run();
 }
 
 export const SESSION_COOKIE = 'sl_session';

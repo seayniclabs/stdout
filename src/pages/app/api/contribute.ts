@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { sanitizeForCommunity } from '../../../lib/sanitize';
@@ -30,8 +30,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, body.docId)).get();
+  const db = getDb();
+  const doc = db.select().from(schema.docs).where(eq(schema.docs.id, body.docId)).get();
 
   if (!doc || doc.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Document not found' }), {
@@ -107,8 +107,8 @@ export const PUT: APIRoute = async ({ locals, request }) => {
 
   // Verify the source doc exists and belongs to this user
   const userId = locals.workspace?.ownerId || locals.user!.id;
-  const db = getTenantDb(userId);
-  const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, body.docId)).get();
+  const db = getDb();
+  const doc = db.select().from(schema.docs).where(eq(schema.docs.id, body.docId)).get();
 
   if (!doc || doc.userId !== locals.user.id || doc.source !== 'user') {
     return new Response(JSON.stringify({ error: 'Document not found or not eligible' }), {
@@ -161,11 +161,11 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   }
 
   // Save to central DB
-  const centralDb = getCentralDb();
+  const centralDb = getDb();
   const submissionId = nanoid();
   const now = new Date();
 
-  centralDb.insert(centralSchema.communitySubmissions).values({
+  centralDb.insert(schema.communitySubmissions).values({
     id: submissionId,
     userId: locals.user.id,
     originalDocId: body.docId,
@@ -214,9 +214,9 @@ export const DELETE: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const centralDb = getCentralDb();
-  const submission = centralDb.select().from(centralSchema.communitySubmissions)
-    .where(eq(centralSchema.communitySubmissions.id, body.submissionId)).get();
+  const centralDb = getDb();
+  const submission = centralDb.select().from(schema.communitySubmissions)
+    .where(eq(schema.communitySubmissions.id, body.submissionId)).get();
 
   if (!submission || submission.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Submission not found' }), {
@@ -226,10 +226,10 @@ export const DELETE: APIRoute = async ({ locals, request }) => {
   }
 
   // Mark as withdrawn (don't delete — audit trail)
-  centralDb.update(centralSchema.communitySubmissions).set({
+  centralDb.update(schema.communitySubmissions).set({
     status: 'withdrawn',
     updatedAt: new Date(),
-  }).where(eq(centralSchema.communitySubmissions.id, body.submissionId)).run();
+  }).where(eq(schema.communitySubmissions.id, body.submissionId)).run();
 
   return new Response(JSON.stringify({ status: 'withdrawn' }), {
     headers: { 'Content-Type': 'application/json' },

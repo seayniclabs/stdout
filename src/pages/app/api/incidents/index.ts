@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -11,14 +11,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const id = url.searchParams.get('id');
 
   // Single incident by ID
   if (id) {
-    const incident = db.select().from(tenantSchema.incidents)
-      .where(and(eq(tenantSchema.incidents.id, id), eq(tenantSchema.incidents.userId, locals.user.id)))
+    const incident = db.select().from(schema.incidents)
+      .where(and(eq(schema.incidents.id, id), eq(schema.incidents.userId, locals.user.id)))
       .get();
     if (!incident) {
       return new Response(JSON.stringify({ error: 'Incident not found' }), {
@@ -27,14 +27,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
     }
 
     // Include resolutions and latest diagnosis
-    const resolutions = db.select().from(tenantSchema.resolutions)
-      .where(eq(tenantSchema.resolutions.incidentId, id))
-      .orderBy(desc(tenantSchema.resolutions.createdAt))
+    const resolutions = db.select().from(schema.resolutions)
+      .where(eq(schema.resolutions.incidentId, id))
+      .orderBy(desc(schema.resolutions.createdAt))
       .all();
 
-    const diagnosis = db.select().from(tenantSchema.diagnoses)
-      .where(eq(tenantSchema.diagnoses.incidentId, id))
-      .orderBy(desc(tenantSchema.diagnoses.createdAt))
+    const diagnosis = db.select().from(schema.diagnoses)
+      .where(eq(schema.diagnoses.incidentId, id))
+      .orderBy(desc(schema.diagnoses.createdAt))
       .limit(1)
       .all();
 
@@ -48,9 +48,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   // List with filters
-  let query = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, locals.user.id))
-    .orderBy(desc(tenantSchema.incidents.createdAt));
+  let query = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.userId, locals.user.id))
+    .orderBy(desc(schema.incidents.createdAt));
 
   const allIncidents = query.all();
 
@@ -84,7 +84,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
   const action = body.action || 'create';
 
   // --- Create incident ---
@@ -99,7 +99,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const id = nanoid();
     const now = new Date();
 
-    db.insert(tenantSchema.incidents).values({
+    db.insert(schema.incidents).values({
       id,
       userId: locals.user.id,
       title,
@@ -122,8 +122,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       }
     } catch { /* FTS may not exist */ }
 
-    const incident = db.select().from(tenantSchema.incidents)
-      .where(eq(tenantSchema.incidents.id, id)).get();
+    const incident = db.select().from(schema.incidents)
+      .where(eq(schema.incidents.id, id)).get();
 
     return new Response(JSON.stringify({ id, incident }), {
       status: 201, headers: { 'Content-Type': 'application/json' },
@@ -146,8 +146,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const incident = db.select().from(tenantSchema.incidents)
-      .where(and(eq(tenantSchema.incidents.id, incidentId), eq(tenantSchema.incidents.userId, locals.user.id)))
+    const incident = db.select().from(schema.incidents)
+      .where(and(eq(schema.incidents.id, incidentId), eq(schema.incidents.userId, locals.user.id)))
       .get();
 
     if (!incident) {
@@ -159,10 +159,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const updates: any = { status, updatedAt: new Date() };
     if (status === 'resolved') updates.resolvedAt = new Date();
 
-    db.update(tenantSchema.incidents).set(updates)
+    db.update(schema.incidents).set(updates)
       .where(and(
-        eq(tenantSchema.incidents.id, incidentId),
-        eq(tenantSchema.incidents.userId, locals.user.id),
+        eq(schema.incidents.id, incidentId),
+        eq(schema.incidents.userId, locals.user.id),
       )).run();
 
     return new Response(JSON.stringify({ ok: true, incidentId, status }), {
@@ -179,8 +179,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const incident = db.select().from(tenantSchema.incidents)
-      .where(and(eq(tenantSchema.incidents.id, incidentId), eq(tenantSchema.incidents.userId, locals.user.id)))
+    const incident = db.select().from(schema.incidents)
+      .where(and(eq(schema.incidents.id, incidentId), eq(schema.incidents.userId, locals.user.id)))
       .get();
 
     if (!incident) {
@@ -190,7 +190,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     const resId = nanoid();
-    db.insert(tenantSchema.resolutions).values({
+    db.insert(schema.resolutions).values({
       id: resId,
       incidentId,
       userId: locals.user.id,
@@ -239,10 +239,10 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
-  const incident = db.select().from(tenantSchema.incidents)
-    .where(and(eq(tenantSchema.incidents.id, id), eq(tenantSchema.incidents.userId, locals.user.id)))
+  const incident = db.select().from(schema.incidents)
+    .where(and(eq(schema.incidents.id, id), eq(schema.incidents.userId, locals.user.id)))
     .get();
 
   if (!incident) {
@@ -252,11 +252,11 @@ export const DELETE: APIRoute = async ({ locals, url }) => {
   }
 
   // Delete resolutions and diagnoses first (incident already verified; resolutions may be authored by multiple users)
-  db.delete(tenantSchema.resolutions).where(eq(tenantSchema.resolutions.incidentId, id)).run();
-  db.delete(tenantSchema.diagnoses).where(eq(tenantSchema.diagnoses.incidentId, id)).run();
-  db.delete(tenantSchema.incidents).where(and(
-    eq(tenantSchema.incidents.id, id),
-    eq(tenantSchema.incidents.userId, incident.userId),
+  db.delete(schema.resolutions).where(eq(schema.resolutions.incidentId, id)).run();
+  db.delete(schema.diagnoses).where(eq(schema.diagnoses.incidentId, id)).run();
+  db.delete(schema.incidents).where(and(
+    eq(schema.incidents.id, id),
+    eq(schema.incidents.userId, incident.userId),
   )).run();
 
   return new Response(JSON.stringify({ ok: true, deleted: id }), {

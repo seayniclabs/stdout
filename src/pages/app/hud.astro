@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq, desc, gt, and } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats, startMonitor } from '../../lib/hud';
 import { getServiceSummary, getConfig as getWindlassConfig } from '../../lib/windlass';
@@ -9,10 +9,10 @@ import { getServiceSummary, getConfig as getWindlassConfig } from '../../lib/win
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
-const allMonitors = db.select().from(tenantSchema.monitors)
-  .where(eq(tenantSchema.monitors.userId, user.id))
-  .orderBy(desc(tenantSchema.monitors.createdAt))
+const db = getDb();
+const allMonitors = db.select().from(schema.monitors)
+  .where(eq(schema.monitors.userId, user.id))
+  .orderBy(desc(schema.monitors.createdAt))
   .all();
 
 // Ensure monitors are running
@@ -41,12 +41,12 @@ const totalUptime = monitorsData.length > 0
 // 7d incident count
 const sevenDaysAgo = new Date();
 sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-const recentIncidents = db.select().from(tenantSchema.incidents)
+const recentIncidents = db.select().from(schema.incidents)
   .where(and(
-    eq(tenantSchema.incidents.userId, user.id),
-    gt(tenantSchema.incidents.createdAt, sevenDaysAgo),
+    eq(schema.incidents.userId, user.id),
+    gt(schema.incidents.createdAt, sevenDaysAgo),
   ))
-  .orderBy(desc(tenantSchema.incidents.createdAt))
+  .orderBy(desc(schema.incidents.createdAt))
   .all();
 const incidentCount7d = recentIncidents.length;
 
@@ -55,22 +55,22 @@ function gaugePercent(value: number, max: number) {
   return Math.min(100, Math.max(0, (value / max) * 100));
 }
 
-const stacks = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const stacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id)).all();
 
 // Windlass service summary (if configured)
 const windlassConfig = getWindlassConfig(user.id);
 const windlassSummary = windlassConfig ? getServiceSummary(user.id) : null;
 
 // Scanner schedule data
-const schedule = db.select().from(tenantSchema.scannerSchedule)
-  .where(eq(tenantSchema.scannerSchedule.userId, user.id))
+const schedule = db.select().from(schema.scannerSchedule)
+  .where(eq(schema.scannerSchedule.userId, user.id))
   .limit(1).all();
 const scannerScheduleData = schedule.length > 0 ? schedule[0] : null;
 
 // Last scan time from stack imports
-const recentImports = db.select().from(tenantSchema.stackImports)
-  .orderBy(desc(tenantSchema.stackImports.createdAt))
+const recentImports = db.select().from(schema.stackImports)
+  .orderBy(desc(schema.stackImports.createdAt))
   .limit(1).all();
 const lastScanTime = recentImports.length > 0 ? recentImports[0].createdAt : null;
 

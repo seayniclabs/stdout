@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 
 /**
@@ -11,21 +11,21 @@ export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const requests = db.select({
-    id: tenantSchema.featureRequests.id,
-    title: tenantSchema.featureRequests.title,
-    description: tenantSchema.featureRequests.description,
-    category: tenantSchema.featureRequests.category,
-    status: tenantSchema.featureRequests.status,
-    responseToUser: tenantSchema.featureRequests.responseToUser,
-    votes: tenantSchema.featureRequests.votes,
-    createdAt: tenantSchema.featureRequests.createdAt,
-    updatedAt: tenantSchema.featureRequests.updatedAt,
-  }).from(tenantSchema.featureRequests)
-    .where(eq(tenantSchema.featureRequests.userId, locals.user.id))
-    .orderBy(desc(tenantSchema.featureRequests.createdAt))
+    id: schema.featureRequests.id,
+    title: schema.featureRequests.title,
+    description: schema.featureRequests.description,
+    category: schema.featureRequests.category,
+    status: schema.featureRequests.status,
+    responseToUser: schema.featureRequests.responseToUser,
+    votes: schema.featureRequests.votes,
+    createdAt: schema.featureRequests.createdAt,
+    updatedAt: schema.featureRequests.updatedAt,
+  }).from(schema.featureRequests)
+    .where(eq(schema.featureRequests.userId, locals.user.id))
+    .orderBy(desc(schema.featureRequests.createdAt))
     .all();
 
   return new Response(JSON.stringify({ requests }), {
@@ -55,11 +55,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
   const id = nanoid();
   const now = new Date();
 
-  db.insert(tenantSchema.featureRequests).values({
+  db.insert(schema.featureRequests).values({
     id,
     userId: locals.user.id,
     title,
@@ -75,10 +75,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
   try {
     const resendKey = process.env.RESEND_API_KEY;
     if (resendKey) {
-      const { getCentralDb, centralSchema } = await import('../../../lib/db');
-      const centralDb = getCentralDb();
-      const user = centralDb.select().from(centralSchema.users)
-        .where(eq(centralSchema.users.id, locals.user.id)).get();
+      // User table is in the same DB now (no central/tenant split)
+      const centralDb = db;
+      const user = centralDb.select().from(schema.users)
+        .where(eq(schema.users.id, locals.user.id)).get();
 
       const userEmail = user?.email || 'unknown';
       const userName = user?.displayName || userEmail;

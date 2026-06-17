@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb } from '../../../../../lib/db';
-import { tenantSchema } from '../../../../../lib/db';
+import { getDb, schema } from '../../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import {
   getSystemHealth,
@@ -65,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const db = getTenantDb(userId);
+    const db = getDb();
     const now = Date.now();
 
     // Log inbound message
@@ -73,7 +72,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // Only log if we have a channel_id (optional for now)
     if (channel_id) {
-      db.insert(tenantSchema.commsMessages).values({
+      db.insert(schema.commsMessages).values({
         id: messageId,
         channelId: channel_id,
         direction: 'inbound',
@@ -90,7 +89,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Log outbound message
     if (channel_id) {
       const outMessageId = `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      db.insert(tenantSchema.commsMessages).values({
+      db.insert(schema.commsMessages).values({
         id: outMessageId,
         channelId: channel_id,
         direction: 'outbound',

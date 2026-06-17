@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 
 // POST /app/api/addons/dismiss — dismiss the add-ons banner for this session
@@ -9,11 +9,11 @@ export const POST: APIRoute = async ({ locals }) => {
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const db = getTenantDb(userId);
+  const db = getDb();
 
-  db.update(tenantSchema.tenantPreferences)
+  db.update(schema.tenantPreferences)
     .set({ addonsDismissed: true })
-    .where(eq(tenantSchema.tenantPreferences.userId, userId))
+    .where(eq(schema.tenantPreferences.userId, userId))
     .run();
 
   return Response.json({ ok: true });

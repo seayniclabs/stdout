@@ -33,7 +33,7 @@ export async function configureMonitors(
   try {
     const { getTenantDb } = await import('../db');
     const { sql } = await import('drizzle-orm');
-    const db = getTenantDb(userId);
+    const db = getDb();
 
     onProgress(10, 'Checking for existing stacks...');
 

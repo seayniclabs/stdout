@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCentralDb, centralSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 /**
@@ -20,10 +20,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (block) return block;
 
   const status = url.searchParams.get('status') || 'pending';
-  const db = getCentralDb();
-  const rows = db.select().from(centralSchema.communitySubmissions)
-    .where(eq(centralSchema.communitySubmissions.status, status as any))
-    .orderBy(desc(centralSchema.communitySubmissions.createdAt))
+  const db = getDb();
+  const rows = db.select().from(schema.communitySubmissions)
+    .where(eq(schema.communitySubmissions.status, status as any))
+    .orderBy(desc(schema.communitySubmissions.createdAt))
     .all();
 
   return json({ submissions: rows });
@@ -43,22 +43,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return json({ error: "id and decision ('publish'|'reject') are required" }, 400);
   }
 
-  const db = getCentralDb();
-  const sub = db.select().from(centralSchema.communitySubmissions)
-    .where(eq(centralSchema.communitySubmissions.id, id)).get();
+  const db = getDb();
+  const sub = db.select().from(schema.communitySubmissions)
+    .where(eq(schema.communitySubmissions.id, id)).get();
   if (!sub) return json({ error: 'Submission not found' }, 404);
   if (sub.status !== 'pending') return json({ error: `Already ${sub.status}` }, 409);
 
   const now = new Date();
   const newStatus = decision === 'publish' ? 'published' : 'rejected';
-  db.update(centralSchema.communitySubmissions)
+  db.update(schema.communitySubmissions)
     .set({
       status: newStatus,
       reviewNotes: (notes || '').slice(0, 1000) || null,
       updatedAt: now,
       ...(decision === 'publish' ? { publishedAt: now } : {}),
     })
-    .where(eq(centralSchema.communitySubmissions.id, id))
+    .where(eq(schema.communitySubmissions.id, id))
     .run();
 
   return json({ ok: true, id, status: newStatus });

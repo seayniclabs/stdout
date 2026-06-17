@@ -39,17 +39,17 @@ export interface SatelliteStatus {
  * Get overall system health summary
  */
 export async function getSystemHealth(userId: string): Promise<SystemHealthSummary> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Get monitor counts by status - fetch all and count in JS
   const monitors = db
     .select()
-    .from(tenantSchema.monitors)
+    .from(schema.monitors)
     .where(
       and(
-        eq(tenantSchema.monitors.userId, userId),
-        eq(tenantSchema.monitors.paused, false),
-        eq(tenantSchema.monitors.maintenance, false)
+        eq(schema.monitors.userId, userId),
+        eq(schema.monitors.paused, false),
+        eq(schema.monitors.maintenance, false)
       )
     )
     .all();
@@ -62,8 +62,8 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
   // Get open incidents - count manually to avoid SQL issues
   const allIncidents = db
     .select()
-    .from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, userId))
+    .from(schema.incidents)
+    .where(eq(schema.incidents.userId, userId))
     .all();
 
   const alerts_open = allIncidents.filter(i => !i.resolvedAt).length;
@@ -97,14 +97,14 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
  * Get recent incidents (last 7 days)
  */
 export async function getRecentIncidents(userId: string, limit = 5): Promise<RecentIncident[]> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Get all incidents and filter in JS to avoid timestamp conversion issues
   const allIncidents = db
     .select()
-    .from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, userId))
-    .orderBy(desc(tenantSchema.incidents.createdAt))
+    .from(schema.incidents)
+    .where(eq(schema.incidents.userId, userId))
+    .orderBy(desc(schema.incidents.createdAt))
     .all();
 
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -117,8 +117,8 @@ export async function getRecentIncidents(userId: string, limit = 5): Promise<Rec
     if (inc.stackId) {
       const stack = db
         .select()
-        .from(tenantSchema.stacks)
-        .where(eq(tenantSchema.stacks.id, inc.stackId))
+        .from(schema.stacks)
+        .where(eq(schema.stacks.id, inc.stackId))
         .get();
       stack_name = stack?.name || null;
     }
@@ -152,12 +152,12 @@ export async function getStacksSummary(userId: string): Promise<{
   total: number;
   names: string[];
 }> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const stacks = db
     .select()
-    .from(tenantSchema.stacks)
-    .where(eq(tenantSchema.stacks.userId, userId))
+    .from(schema.stacks)
+    .where(eq(schema.stacks.userId, userId))
     .all();
 
   return {

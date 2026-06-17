@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { nanoid } from 'nanoid';
-import { getCentralDb, centralSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import { eq, and } from 'drizzle-orm';
 
@@ -17,14 +17,14 @@ function hashToken(token: string): string {
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const tokens = getCentralDb().select({
-    id: centralSchema.apiTokens.id,
-    name: centralSchema.apiTokens.name,
-    lastUsedAt: centralSchema.apiTokens.lastUsedAt,
-    createdAt: centralSchema.apiTokens.createdAt,
+  const tokens = getDb().select({
+    id: schema.apiTokens.id,
+    name: schema.apiTokens.name,
+    lastUsedAt: schema.apiTokens.lastUsedAt,
+    createdAt: schema.apiTokens.createdAt,
   })
-    .from(centralSchema.apiTokens)
-    .where(eq(centralSchema.apiTokens.userId, locals.user.id))
+    .from(schema.apiTokens)
+    .where(eq(schema.apiTokens.userId, locals.user.id))
     .all();
 
   return new Response(JSON.stringify({ tokens }), {
@@ -52,7 +52,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const tokenHash = hashToken(rawToken);
   const id = nanoid();
 
-  getCentralDb().insert(centralSchema.apiTokens).values({
+  getDb().insert(schema.apiTokens).values({
     id,
     userId: locals.user.id,
     name,
@@ -85,8 +85,8 @@ export const DELETE: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Token ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  getCentralDb().delete(centralSchema.apiTokens)
-    .where(and(eq(centralSchema.apiTokens.id, tokenId), eq(centralSchema.apiTokens.userId, locals.user.id)))
+  getDb().delete(schema.apiTokens)
+    .where(and(eq(schema.apiTokens.id, tokenId), eq(schema.apiTokens.userId, locals.user.id)))
     .run();
 
   logAudit('token_revoke', {

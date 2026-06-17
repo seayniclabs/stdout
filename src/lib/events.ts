@@ -71,7 +71,7 @@ export function emit(event: StdOutEvent): void {
 
 async function persistEvent(event: StdOutEvent): Promise<void> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
     const now = Math.floor(Date.now() / 1000);
     db.run(sql`
       INSERT INTO event_log (id, type, user_id, payload, created_at)

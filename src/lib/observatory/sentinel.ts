@@ -43,7 +43,7 @@ export async function checkStackForAnomalies(
   stackId: string,
   metrics: MetricSnapshot
 ): Promise<AnomalyDetection | null> {
-  const db = getCentralDb();
+  const db = getDb();
 
   // 1. Retrieve baselines for this stack
   const baselines = await retrieveBaselines(stackId);
@@ -93,7 +93,7 @@ export async function checkStackForAnomalies(
 async function retrieveBaselines(
   stackId: string
 ): Promise<Record<string, { mean: number; stdDev: number; sampleCount: number }>> {
-  const db = getCentralDb();
+  const db = getDb();
 
   // Columns are mean / std_dev (see observatory_baselines DDL in scripts/apply-schema.js).
   const rows = await db.all(sql`
@@ -132,7 +132,7 @@ async function getRecentIncidents(
   stackId: string,
   hoursBack: number
 ): Promise<Array<{ id: string; title: string; severity: string; createdAt: Date }>> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const cutoff = Date.now() - (hoursBack * 60 * 60 * 1000);
 
@@ -246,7 +246,7 @@ async function recordAgentRun(
     executionTimeMs: number;
   }
 ): Promise<void> {
-  const db = getCentralDb();
+  const db = getDb();
 
   const id = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -287,7 +287,7 @@ export async function createIncidentFromAnomaly(
   stackId: string,
   detection: AnomalyDetection
 ): Promise<string> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const id = `inc_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const now = Date.now();
@@ -350,7 +350,7 @@ export async function runScheduledCheck(userId: string): Promise<{
   anomaliesDetected: number;
   incidentsCreated: number;
 }> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Get all active stacks
   const stacks = await db.all(sql`

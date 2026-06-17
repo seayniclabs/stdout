@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCentralDb, getTenantDb, tenantSchema, centralSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { sendWindlassWeeklyDigest } from '../../../../lib/alert-router';
 import { sumRecoveredGbHoursFromServices } from '../../../../lib/windlass-weekly-digest-math';
@@ -7,9 +7,9 @@ import { sumRecoveredGbHoursFromServices } from '../../../../lib/windlass-weekly
 const SELF_HOST = process.env.STDOUT_MODE !== 'saas';
 
 function computeRecoveredGbHours(userId: string): { recoveredGbHours: number; serviceCount: number } {
-  const db = getTenantDb(userId);
-  const services = db.select().from(tenantSchema.windlassServices)
-    .where(eq(tenantSchema.windlassServices.userId, userId))
+  const db = getDb();
+  const services = db.select().from(schema.windlassServices)
+    .where(eq(schema.windlassServices.userId, userId))
     .all();
   return { recoveredGbHours: sumRecoveredGbHoursFromServices(services), serviceCount: services.length };
 }
@@ -23,7 +23,7 @@ function digestSecretMatches(request: Request, hasSession: boolean): boolean {
 }
 
 async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<Response> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   const { recoveredGbHours, serviceCount } = computeRecoveredGbHours(userId);
 
@@ -37,8 +37,8 @@ async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<R
   }
 
   if (!force) {
-    const cfg = db.select().from(tenantSchema.windlassConfig)
-      .where(eq(tenantSchema.windlassConfig.userId, userId))
+    const cfg = db.select().from(schema.windlassConfig)
+      .where(eq(schema.windlassConfig.userId, userId))
       .get();
     const last = cfg?.lastWeeklyDigestAt ? new Date(cfg.lastWeeklyDigestAt).getTime() : 0;
     if (last && Date.now() - last < 6 * 24 * 60 * 60 * 1000) {
@@ -70,9 +70,9 @@ async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<R
     });
   }
 
-  db.update(tenantSchema.windlassConfig)
+  db.update(schema.windlassConfig)
     .set({ lastWeeklyDigestAt: now, updatedAt: now })
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+    .where(eq(schema.windlassConfig.userId, userId))
     .run();
 
   return new Response(JSON.stringify({
@@ -131,12 +131,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+  const users = getDb().select({ id: schema.users.id }).from(schema.users).all();
   const results: { userId: string; status: number; body: unknown }[] = [];
 
   for (const { id } of users) {
-    const cfg = getTenantDb(id).select().from(tenantSchema.windlassConfig)
-      .where(eq(tenantSchema.windlassConfig.userId, id))
+    const cfg = getDb().select().from(schema.windlassConfig)
+      .where(eq(schema.windlassConfig.userId, id))
       .get();
     if (!cfg?.enabled) continue;
 
@@ -179,12 +179,12 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const users = getCentralDb().select({ id: centralSchema.users.id }).from(centralSchema.users).all();
+  const users = getDb().select({ id: schema.users.id }).from(schema.users).all();
   const results: { userId: string; status: number; body: unknown }[] = [];
 
   for (const { id } of users) {
-    const cfg = getTenantDb(id).select().from(tenantSchema.windlassConfig)
-      .where(eq(tenantSchema.windlassConfig.userId, id))
+    const cfg = getDb().select().from(schema.windlassConfig)
+      .where(eq(schema.windlassConfig.userId, id))
       .get();
     if (!cfg?.enabled) continue;
 

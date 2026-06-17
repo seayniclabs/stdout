@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq, and, or, desc } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
@@ -11,7 +11,7 @@ import { canPerform, getWorkspaceOwnerId } from '../../lib/rbac';
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 const ws = Astro.locals.workspace;
 const workspaceOwnerId = getWorkspaceOwnerId(Astro.locals);
 const allowedStackUserIds = new Set([user.id, workspaceOwnerId]);
@@ -44,12 +44,12 @@ if (Astro.request.method === 'POST') {
     if (!error && action === 'create' && name) {
       const id = nanoid();
       const now = new Date();
-      db.insert(tenantSchema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
+      db.insert(schema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
     } else if (!error && action === 'update') {
       const stackId = form.get('stackId') as string;
       if (stackId && name) {
         // Save previous description for undo
-        const existing = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).get();
+        const existing = db.select().from(schema.stacks).where(eq(schema.stacks.id, stackId)).get();
         if (!stackAccessible(existing)) {
           error = 'Stack not found.';
         } else if (existing) {
@@ -59,14 +59,14 @@ if (Astro.request.method === 'POST') {
             // Description has content but no valid container headers — save anyway but flag
             console.warn(`Stack ${stackId} edited with non-parseable description`);
           }
-          db.update(tenantSchema.stacks).set({
+          db.update(schema.stacks).set({
             name,
             description,
             previousDescription: existing.description,
             updatedAt: new Date(),
           }).where(and(
-            eq(tenantSchema.stacks.id, stackId),
-            eq(tenantSchema.stacks.userId, existing.userId),
+            eq(schema.stacks.id, stackId),
+            eq(schema.stacks.userId, existing.userId),
           )).run();
         }
       }
@@ -74,30 +74,30 @@ if (Astro.request.method === 'POST') {
       // Undo: restore previous description
       const stackId = form.get('stackId') as string;
       if (stackId) {
-        const existing = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).get();
+        const existing = db.select().from(schema.stacks).where(eq(schema.stacks.id, stackId)).get();
         if (!stackAccessible(existing)) {
           error = 'Stack not found.';
         } else if (existing?.previousDescription) {
-          db.update(tenantSchema.stacks).set({
+          db.update(schema.stacks).set({
             description: existing.previousDescription,
             previousDescription: null,
             updatedAt: new Date(),
           }).where(and(
-            eq(tenantSchema.stacks.id, stackId),
-            eq(tenantSchema.stacks.userId, existing.userId),
+            eq(schema.stacks.id, stackId),
+            eq(schema.stacks.userId, existing.userId),
           )).run();
         }
       }
     } else if (!error && action === 'delete') {
       const stackId = form.get('stackId') as string;
       if (stackId) {
-        const existing = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, stackId)).get();
+        const existing = db.select().from(schema.stacks).where(eq(schema.stacks.id, stackId)).get();
         if (!stackAccessible(existing)) {
           error = 'Stack not found.';
         } else if (existing) {
-          db.delete(tenantSchema.stacks).where(and(
-            eq(tenantSchema.stacks.id, stackId),
-            eq(tenantSchema.stacks.userId, existing.userId),
+          db.delete(schema.stacks).where(and(
+            eq(schema.stacks.id, stackId),
+            eq(schema.stacks.userId, existing.userId),
           )).run();
         }
       }
@@ -105,12 +105,12 @@ if (Astro.request.method === 'POST') {
       // Re-import from the last confirmed scan — reset it to pending so user can review
       const importId = form.get('importId') as string;
       if (importId) {
-        const existing = db.select().from(tenantSchema.stackImports)
-          .where(eq(tenantSchema.stackImports.id, importId)).get();
+        const existing = db.select().from(schema.stackImports)
+          .where(eq(schema.stackImports.id, importId)).get();
         if (existing) {
           // Create a new pending import from the same raw data
           const newId = nanoid();
-          db.insert(tenantSchema.stackImports).values({
+          db.insert(schema.stackImports).values({
             id: newId,
             rawJson: existing.rawJson,
             renderedMarkdown: existing.renderedMarkdown,
@@ -128,14 +128,14 @@ if (Astro.request.method === 'POST') {
 }
 
 const editId = Astro.url.searchParams.get('edit');
-const userStacks = db.select().from(tenantSchema.stacks)
+const userStacks = db.select().from(schema.stacks)
   .where(
     workspaceOwnerId !== user.id
       ? or(
-          eq(tenantSchema.stacks.userId, user.id),
-          eq(tenantSchema.stacks.userId, workspaceOwnerId),
+          eq(schema.stacks.userId, user.id),
+          eq(schema.stacks.userId, workspaceOwnerId),
         )
-      : eq(tenantSchema.stacks.userId, user.id),
+      : eq(schema.stacks.userId, user.id),
   )
   .all();
 if (editId) {
@@ -144,28 +144,28 @@ if (editId) {
 }
 
 // Get monitor count (to detect stacks-deleted-but-monitors-exist state)
-const monitorCount = db.select().from(tenantSchema.monitors)
-  .where(eq(tenantSchema.monitors.userId, user.id)).all().length;
+const monitorCount = db.select().from(schema.monitors)
+  .where(eq(schema.monitors.userId, user.id)).all().length;
 
 // Get pending imports
-const pendingImports = db.select().from(tenantSchema.stackImports)
-  .where(eq(tenantSchema.stackImports.status, 'pending')).all();
+const pendingImports = db.select().from(schema.stackImports)
+  .where(eq(schema.stackImports.status, 'pending')).all();
 
 // Get last confirmed import (for re-import option)
-const lastConfirmedImport = db.select().from(tenantSchema.stackImports)
-  .where(eq(tenantSchema.stackImports.status, 'confirmed'))
-  .orderBy(desc(tenantSchema.stackImports.createdAt))
+const lastConfirmedImport = db.select().from(schema.stackImports)
+  .where(eq(schema.stackImports.status, 'confirmed'))
+  .orderBy(desc(schema.stackImports.createdAt))
   .limit(1).all()[0] || null;
 
 // Get the most recent import (confirmed or pending) for "Last scan" timestamp
-const recentImports = db.select().from(tenantSchema.stackImports)
-  .orderBy(desc(tenantSchema.stackImports.createdAt))
+const recentImports = db.select().from(schema.stackImports)
+  .orderBy(desc(schema.stackImports.createdAt))
   .limit(1).all();
 const lastScanTime = recentImports.length > 0 ? recentImports[0].createdAt : null;
 
 // Get incidents per stack
-const allIncidents = db.select().from(tenantSchema.incidents)
-  .where(eq(tenantSchema.incidents.userId, user.id)).all();
+const allIncidents = db.select().from(schema.incidents)
+  .where(eq(schema.incidents.userId, user.id)).all();
 const incidentsByStack = new Map<string, number>();
 const activeIncidentsByStack = new Map<string, number>();
 for (const inc of allIncidents) {

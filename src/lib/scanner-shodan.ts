@@ -7,15 +7,15 @@
  */
 
 import { fireAlert } from './alert-router';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 
 // Ports expected to be publicly visible (Cloudflare Tunnel only, no raw exposure)
 const EXPECTED_PORTS = new Set<number>([80, 443]);
 
 function getAdminUserId(): string | null {
   try {
-    const db = getCentralDb();
-    return db.select({ id: centralSchema.users.id }).from(centralSchema.users).limit(1).get()?.id ?? null;
+    const db = getDb();
+    return db.select({ id: schema.users.id }).from(schema.users).limit(1).get()?.id ?? null;
   } catch {
     return null;
   }

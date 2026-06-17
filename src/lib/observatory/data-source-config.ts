@@ -75,7 +75,7 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
   const unreachable: string[] = [];
   let configured = 0;
 
-  const db = getCentralDb();
+  const db = getDb();
   const targets = buildTargets();
 
   for (const t of targets) {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import crypto from 'node:crypto';
 import { nanoid } from 'nanoid';
-import { getCentralDb } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { fireAlert } from '../../../../lib/alert-router';
 import { sql } from 'drizzle-orm';
 import { emit } from '../../../../lib/events';
@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const tokenHash = hashToken(rawToken);
-  const db = getCentralDb();
+  const db = getDb();
 
   const agent = db.get(sql`
     SELECT id, user_id, name, alert_state FROM satellite_agents WHERE token_hash = ${tokenHash}

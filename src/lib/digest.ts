@@ -20,13 +20,13 @@ interface DigestData {
 }
 
 export function generateDigest(userId: string): DigestData | null {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Incidents this week
-  const allIncidents = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, userId))
+  const allIncidents = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.userId, userId))
     .all();
 
   const weekIncidents = allIncidents.filter(i => i.createdAt >= weekAgo);
@@ -41,8 +41,8 @@ export function generateDigest(userId: string): DigestData | null {
     .map(i => ({ title: i.title, severity: i.severity, status: i.status, id: i.id }));
 
   // Monitors
-  const monitors = db.select().from(tenantSchema.monitors)
-    .where(eq(tenantSchema.monitors.userId, userId))
+  const monitors = db.select().from(schema.monitors)
+    .where(eq(schema.monitors.userId, userId))
     .all();
 
   const monitorsHealthy = monitors.filter(m => m.currentStatus === 'healthy').length;
@@ -64,13 +64,13 @@ export function generateDigest(userId: string): DigestData | null {
     .slice(0, 3);
 
   // Docs and resolutions this week
-  const docs = db.select().from(tenantSchema.docs)
-    .where(eq(tenantSchema.docs.userId, userId))
+  const docs = db.select().from(schema.docs)
+    .where(eq(schema.docs.userId, userId))
     .all()
     .filter(d => d.createdAt >= weekAgo);
 
-  const resolutions = db.select().from(tenantSchema.resolutions)
-    .where(eq(tenantSchema.resolutions.userId, userId))
+  const resolutions = db.select().from(schema.resolutions)
+    .where(eq(schema.resolutions.userId, userId))
     .all()
     .filter(r => r.createdAt >= weekAgo);
 
@@ -214,16 +214,16 @@ export async function sendWeeklyDigests(): Promise<number> {
   }
 
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
-  const allUsers = getCentralDb().select().from(centralSchema.users).all();
+  const allUsers = getDb().select().from(schema.users).all();
   let sent = 0;
 
   for (const user of allUsers) {
     // Check if user has email notifications enabled
-    const db = getTenantDb(user.id);
-    const notifs = db.select().from(tenantSchema.notificationPreferences)
+    const db = getDb();
+    const notifs = db.select().from(schema.notificationPreferences)
       .where(and(
-        eq(tenantSchema.notificationPreferences.userId, user.id),
-        eq(tenantSchema.notificationPreferences.enabled, true),
+        eq(schema.notificationPreferences.userId, user.id),
+        eq(schema.notificationPreferences.enabled, true),
       ))
       .all();
 

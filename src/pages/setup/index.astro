@@ -3,7 +3,7 @@ export const prerender = false;
 import Layout from '../../layouts/SetupLayout.astro';
 import SetupProgress from '../../components/SetupProgress.astro';
 import { getSetupProgress, completeStep, SetupStep, setSetupConfig } from '../../lib/setup';
-import { getCentralDb, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { createSession, SESSION_COOKIE, sessionCookieOptions, hashPassword } from '../../lib/auth';
 import { validateCsrf } from '../../middleware';
 import { nanoid } from 'nanoid';
@@ -45,11 +45,11 @@ if (Astro.request.method === 'POST') {
       error = 'Password must be at least 8 characters.';
     } else {
       // Check if user already exists
-      const db = getCentralDb();
+      const db = getDb();
       const existingUser = db
         .select()
-        .from(centralSchema.users)
-        .where(eq(centralSchema.users.email, email))
+        .from(schema.users)
+        .where(eq(schema.users.email, email))
         .get();
 
       if (existingUser) {
@@ -60,7 +60,7 @@ if (Astro.request.method === 'POST') {
         const passwordHash = await hashPassword(password);
         const now = new Date();
 
-        db.insert(centralSchema.users).values({
+        db.insert(schema.users).values({
           id: userId,
           email,
           passwordHash,
@@ -74,7 +74,7 @@ if (Astro.request.method === 'POST') {
         const rawToken = `stdout_scan_${nanoid(32)}`;
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
 
-        db.insert(centralSchema.apiTokens).values({
+        db.insert(schema.apiTokens).values({
           id: nanoid(),
           userId: userId,
           name: 'Scanner (Auto-created during setup)',

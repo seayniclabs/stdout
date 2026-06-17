@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // GET /app/api/incidents/export?id=xxx&format=markdown|json
@@ -9,28 +9,28 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const incidentId = url.searchParams.get('id');
   const format = url.searchParams.get('format') || 'markdown';
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
+  const db = getDb();
 
   // Single incident export
   if (incidentId) {
-    const incident = db.select().from(tenantSchema.incidents)
-      .where(and(eq(tenantSchema.incidents.id, incidentId), eq(tenantSchema.incidents.userId, locals.user.id))).get();
+    const incident = db.select().from(schema.incidents)
+      .where(and(eq(schema.incidents.id, incidentId), eq(schema.incidents.userId, locals.user.id))).get();
 
     if (!incident) {
       return new Response(JSON.stringify({ error: 'Incident not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const resolutions = db.select().from(tenantSchema.resolutions)
-      .where(eq(tenantSchema.resolutions.incidentId, incidentId)).all();
+    const resolutions = db.select().from(schema.resolutions)
+      .where(eq(schema.resolutions.incidentId, incidentId)).all();
 
-    const diagnoses = db.select().from(tenantSchema.diagnoses)
-      .where(eq(tenantSchema.diagnoses.incidentId, incidentId)).all();
+    const diagnoses = db.select().from(schema.diagnoses)
+      .where(eq(schema.diagnoses.incidentId, incidentId)).all();
 
     // Stack context
     let stackName = '';
     if (incident.stackId) {
-      const stack = db.select().from(tenantSchema.stacks)
-        .where(eq(tenantSchema.stacks.id, incident.stackId)).get();
+      const stack = db.select().from(schema.stacks)
+        .where(eq(schema.stacks.id, incident.stackId)).get();
       if (stack) stackName = stack.name;
     }
 
@@ -55,13 +55,13 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   // Bulk export — all incidents
-  const allIncidents = db.select().from(tenantSchema.incidents)
-    .where(eq(tenantSchema.incidents.userId, locals.user.id)).all();
+  const allIncidents = db.select().from(schema.incidents)
+    .where(eq(schema.incidents.userId, locals.user.id)).all();
 
   if (format === 'json') {
     const data = allIncidents.map(i => {
-      const resolutions = db.select().from(tenantSchema.resolutions)
-        .where(eq(tenantSchema.resolutions.incidentId, i.id)).all();
+      const resolutions = db.select().from(schema.resolutions)
+        .where(eq(schema.resolutions.incidentId, i.id)).all();
       return { ...i, resolutions };
     });
     return new Response(JSON.stringify(data, null, 2), {
@@ -74,8 +74,8 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
   // Bulk markdown
   const sections = allIncidents.map(i => {
-    const resolutions = db.select().from(tenantSchema.resolutions)
-      .where(eq(tenantSchema.resolutions.incidentId, i.id)).all();
+    const resolutions = db.select().from(schema.resolutions)
+      .where(eq(schema.resolutions.incidentId, i.id)).all();
     return renderIncidentMarkdown(i, resolutions, [], '');
   });
 

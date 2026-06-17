@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 import crypto from 'node:crypto';
 
 // SL-<base64url>.<base64url> — signed format
@@ -13,7 +13,7 @@ export function isValidLicenseKeyFormat(key: string): boolean {
 }
 
 export function getStoredLicense() {
-  return getCentralDb().select().from(centralSchema.license).limit(1).get() ?? null;
+  return getDb().select().from(schema.license).limit(1).get() ?? null;
 }
 
 export function getLicenseKeyForUpdateCheck(): string | null {
@@ -22,8 +22,8 @@ export function getLicenseKeyForUpdateCheck(): string | null {
 
 export function storeLicense(key: string, email: string, edition = 'self-host'): void {
   const now = new Date();
-  getCentralDb().delete(centralSchema.license).run();
-  getCentralDb().insert(centralSchema.license).values({
+  getDb().delete(schema.license).run();
+  getDb().insert(schema.license).values({
     key: key.trim(),
     email: email.trim(),
     edition,
@@ -35,9 +35,9 @@ export function storeLicense(key: string, email: string, edition = 'self-host'):
 export function touchLicenseCheckedAt(): void {
   const row = getStoredLicense();
   if (!row) return;
-  getCentralDb().update(centralSchema.license)
+  getDb().update(schema.license)
     .set({ lastCheckedAt: new Date() })
-    .where(eq(centralSchema.license.key, row.key))
+    .where(eq(schema.license.key, row.key))
     .run();
 }
 

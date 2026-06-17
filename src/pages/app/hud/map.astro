@@ -1,19 +1,19 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
-const monitors = db.select().from(tenantSchema.monitors)
-  .where(eq(tenantSchema.monitors.userId, user.id)).all();
+const db = getDb();
+const monitors = db.select().from(schema.monitors)
+  .where(eq(schema.monitors.userId, user.id)).all();
 
 // Try to get stack data for grouping
-const stacks = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const stacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id)).all();
 
 // Group monitors by stack
 const stackMap = new Map<string, typeof monitors>();

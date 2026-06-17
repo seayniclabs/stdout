@@ -1,5 +1,5 @@
 import { and, desc, eq, max } from 'drizzle-orm';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { nanoid } from 'nanoid';
 
 export const COMMUNITY_SYNC_URL = 'https://stdout.seayniclabs.com/library/api/sync';
@@ -31,10 +31,10 @@ export interface SyncSummary {
 }
 
 function getLastSyncedVersion(workspaceUserId: string): number {
-  const db = getTenantDb(workspaceUserId);
-  const row = db.select({ v: max(tenantSchema.docs.communityVersion) })
-    .from(tenantSchema.docs)
-    .where(eq(tenantSchema.docs.source, 'community'))
+  const db = getDb();
+  const row = db.select({ v: max(schema.docs.communityVersion) })
+    .from(schema.docs)
+    .where(eq(schema.docs.source, 'community'))
     .get();
   return row?.v ?? 0;
 }
@@ -69,19 +69,19 @@ export async function syncCommunityLibrary(workspaceUserId: string): Promise<Syn
     };
   }
 
-  const db = getTenantDb(workspaceUserId);
+  const db = getDb();
   const now = new Date();
 
   for (const doc of payload.docs) {
-    const existing = db.select().from(tenantSchema.docs)
+    const existing = db.select().from(schema.docs)
       .where(and(
-        eq(tenantSchema.docs.communityDocId, doc.id),
-        eq(tenantSchema.docs.source, 'community'),
+        eq(schema.docs.communityDocId, doc.id),
+        eq(schema.docs.source, 'community'),
       )).get();
 
     if (existing) {
       if ((existing.communityVersion ?? 0) < doc.version) {
-        db.update(tenantSchema.docs).set({
+        db.update(schema.docs).set({
           title: doc.title,
           content: doc.content,
           docType: doc.docType,
@@ -89,11 +89,11 @@ export async function syncCommunityLibrary(workspaceUserId: string): Promise<Syn
           sizeBytes: doc.content.length,
           communityVersion: doc.version,
           updatedAt: now,
-        }).where(eq(tenantSchema.docs.id, existing.id)).run();
+        }).where(eq(schema.docs.id, existing.id)).run();
         updated++;
       }
     } else {
-      db.insert(tenantSchema.docs).values({
+      db.insert(schema.docs).values({
         id: nanoid(),
         userId: workspaceUserId,
         title: doc.title,
@@ -112,10 +112,10 @@ export async function syncCommunityLibrary(workspaceUserId: string): Promise<Syn
   }
 
   for (const id of payload.withdrawn) {
-    const r = db.delete(tenantSchema.docs)
+    const r = db.delete(schema.docs)
       .where(and(
-        eq(tenantSchema.docs.communityDocId, id),
-        eq(tenantSchema.docs.source, 'community'),
+        eq(schema.docs.communityDocId, id),
+        eq(schema.docs.source, 'community'),
       )).run();
     removed += r.changes ?? 0;
   }

@@ -1,4 +1,4 @@
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and } from 'drizzle-orm';
 import fs from 'node:fs';
 import { isBlockedTarget } from './hud';
@@ -26,11 +26,11 @@ interface NotifyPayload {
  * Runs async — does not block the request.
  */
 export async function notify(userId: string, payload: NotifyPayload): Promise<void> {
-  const db = getTenantDb(userId);
-  const prefs = db.select().from(tenantSchema.notificationPreferences)
+  const db = getDb();
+  const prefs = db.select().from(schema.notificationPreferences)
     .where(and(
-      eq(tenantSchema.notificationPreferences.userId, userId),
-      eq(tenantSchema.notificationPreferences.enabled, true),
+      eq(schema.notificationPreferences.userId, userId),
+      eq(schema.notificationPreferences.enabled, true),
     ))
     .all();
 

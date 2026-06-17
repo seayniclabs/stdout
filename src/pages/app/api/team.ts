@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getCentralDb, centralSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getUserLimits } from '../../../lib/tiers';
 import { checkRBAC, getTeamMembers, getWorkspaceOwnerId } from '../../../lib/rbac';
@@ -34,7 +34,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   const action = body.action;
-  const db = getCentralDb();
+  const db = getDb();
 
   if (action === 'invite') {
     const email = (body.email || '').trim().toLowerCase();
@@ -72,12 +72,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
 
     // Check if the invitee has a StdOut account
-    const invitee = db.select().from(centralSchema.users).where(eq(centralSchema.users.email, email)).get();
+    const invitee = db.select().from(schema.users).where(eq(schema.users.email, email)).get();
 
     const id = nanoid();
     const now = new Date();
 
-    db.insert(centralSchema.teamMembers).values({
+    db.insert(schema.teamMembers).values({
       id,
       ownerId: workspaceOwnerId,
       userId: invitee?.id || null,
@@ -112,10 +112,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const member = db.select().from(centralSchema.teamMembers)
+    const member = db.select().from(schema.teamMembers)
       .where(and(
-        eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+        eq(schema.teamMembers.id, memberId),
+        eq(schema.teamMembers.ownerId, workspaceOwnerId),
       )).get();
 
     if (!member) {
@@ -124,11 +124,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    db.update(centralSchema.teamMembers)
+    db.update(schema.teamMembers)
       .set({ role: newRole })
       .where(and(
-        eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+        eq(schema.teamMembers.id, memberId),
+        eq(schema.teamMembers.ownerId, workspaceOwnerId),
       ))
       .run();
 
@@ -152,10 +152,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const member = db.select().from(centralSchema.teamMembers)
+    const member = db.select().from(schema.teamMembers)
       .where(and(
-        eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+        eq(schema.teamMembers.id, memberId),
+        eq(schema.teamMembers.ownerId, workspaceOwnerId),
       )).get();
 
     if (!member) {
@@ -164,11 +164,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    db.update(centralSchema.teamMembers)
+    db.update(schema.teamMembers)
       .set({ status: 'revoked' })
       .where(and(
-        eq(centralSchema.teamMembers.id, memberId),
-        eq(centralSchema.teamMembers.ownerId, workspaceOwnerId),
+        eq(schema.teamMembers.id, memberId),
+        eq(schema.teamMembers.ownerId, workspaceOwnerId),
       ))
       .run();
 

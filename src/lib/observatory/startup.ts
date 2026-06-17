@@ -122,7 +122,7 @@ export async function startupObservatory(): Promise<StartupResult> {
  */
 async function getLastStartupTime(): Promise<number | null> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
     const row = await db.get(
       sql`SELECT value FROM system_state WHERE key = 'observatory_last_startup'`
     ) as { value: string } | undefined;
@@ -138,7 +138,7 @@ async function getLastStartupTime(): Promise<number | null> {
  */
 async function recordStartupTime(success: boolean): Promise<void> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
     const now = Date.now();
     const nowStr = now.toString();
 
@@ -195,7 +195,7 @@ export async function getStartupStats(): Promise<{
   uptimeSinceLastStartup: number;
 }> {
   try {
-    const db = getCentralDb();
+    const db = getDb();
 
     const countRow = await db.get(
       sql`SELECT value FROM system_state WHERE key = 'observatory_startup_count'`

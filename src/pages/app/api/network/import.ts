@@ -1,7 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, getCentralDb, centralSchema } from '../../../../lib/db';
-import { discoveredHosts, discoveredServices, stacks } from '../../../../lib/db/tenant-schema';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getSetupProgress, getSetupConfig, SetupStep } from '../../../../lib/setup';
 import { emit } from '../../../../lib/events';
@@ -26,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const db = getTenantDb(session.id);
+    const db = getDb();
     const now = new Date();
     let importedHosts = 0;
     let importedServices = 0;

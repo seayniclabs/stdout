@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { getConfig } from '../../../../lib/windlass';
 
@@ -51,22 +51,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const db = getTenantDb(userId);
+  const db = getDb();
   const existing = getConfig(userId);
   const now = new Date();
 
   if (existing) {
-    db.update(tenantSchema.windlassConfig)
+    db.update(schema.windlassConfig)
       .set({
         endpointUrl,
         syncIntervalSeconds: syncIntervalSeconds || 60,
         enabled: enabled !== false,
         updatedAt: now,
       })
-      .where(eq(tenantSchema.windlassConfig.userId, userId))
+      .where(eq(schema.windlassConfig.userId, userId))
       .run();
   } else {
-    db.insert(tenantSchema.windlassConfig).values({
+    db.insert(schema.windlassConfig).values({
       id: nanoid(),
       userId,
       endpointUrl,

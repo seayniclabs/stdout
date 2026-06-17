@@ -61,9 +61,9 @@ const ROLE_PERMISSIONS: Record<TeamRole, RBACAction[]> = {
  * (same as `getWorkspaceOwnerId` for that workspace), not an arbitrary filter.
  */
 export function getTeamMembers(ownerId: string) {
-  const db = getCentralDb();
-  return db.select().from(centralSchema.teamMembers)
-    .where(eq(centralSchema.teamMembers.ownerId, ownerId))
+  const db = getDb();
+  return db.select().from(schema.teamMembers)
+    .where(eq(schema.teamMembers.ownerId, ownerId))
     .all();
 }
 
@@ -71,28 +71,28 @@ export function getTeamMembers(ownerId: string) {
  * Get all workspaces a user has access to (their own + any teams they're on).
  */
 export function getUserWorkspaces(userId: string) {
-  const db = getCentralDb();
+  const db = getDb();
 
   // Own workspace is always available
   const own = db.select({
-    id: centralSchema.users.id,
-    displayName: centralSchema.users.displayName,
-    email: centralSchema.users.email,
-  }).from(centralSchema.users)
-    .where(eq(centralSchema.users.id, userId))
+    id: schema.users.id,
+    displayName: schema.users.displayName,
+    email: schema.users.email,
+  }).from(schema.users)
+    .where(eq(schema.users.id, userId))
     .get();
 
   // Team workspaces
   const memberships = db.select({
-    ownerId: centralSchema.teamMembers.ownerId,
-    role: centralSchema.teamMembers.role,
-    ownerName: centralSchema.users.displayName,
-    ownerEmail: centralSchema.users.email,
-  }).from(centralSchema.teamMembers)
-    .innerJoin(centralSchema.users, eq(centralSchema.teamMembers.ownerId, centralSchema.users.id))
+    ownerId: schema.teamMembers.ownerId,
+    role: schema.teamMembers.role,
+    ownerName: schema.users.displayName,
+    ownerEmail: schema.users.email,
+  }).from(schema.teamMembers)
+    .innerJoin(schema.users, eq(schema.teamMembers.ownerId, schema.users.id))
     .where(and(
-      eq(centralSchema.teamMembers.userId, userId),
-      eq(centralSchema.teamMembers.status, 'accepted'),
+      eq(schema.teamMembers.userId, userId),
+      eq(schema.teamMembers.status, 'accepted'),
     ))
     .all();
 

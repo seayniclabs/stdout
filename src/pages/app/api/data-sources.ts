@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { encrypt, decrypt } from '../../../lib/crypto';
 import { testConnection as testInfluxConnection } from '../../../lib/influx';
@@ -23,9 +23,9 @@ function canMutateDataSource(locals: App.Locals, rowUserId: string): boolean {
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
+  const db = getDb();
   // Tenant DB is already workspace-scoped — list all rows so team members see shared integrations.
-  const sources = db.select().from(tenantSchema.dataSources).all();
+  const sources = db.select().from(schema.dataSources).all();
 
   // Strip encrypted tokens/passwords — return masked version
   const safe = sources.map(s => ({
@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
   }
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user.id);
+  const db = getDb();
   const action = body.action;
 
   // --- Create ---
@@ -93,7 +93,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const id = nanoid();
     const now = new Date();
 
-    db.insert(tenantSchema.dataSources).values({
+    db.insert(schema.dataSources).values({
       id,
       userId: locals.user.id,
       name,
@@ -123,8 +123,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const existing = db.select().from(tenantSchema.dataSources)
-      .where(eq(tenantSchema.dataSources.id, dsId))
+    const existing = db.select().from(schema.dataSources)
+      .where(eq(schema.dataSources.id, dsId))
       .get();
 
     if (!existing || !canMutateDataSource(locals, existing.userId)) {
@@ -158,10 +158,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       updates.password = body.password ? encrypt(body.password) : null;
     }
 
-    db.update(tenantSchema.dataSources).set(updates)
+    db.update(schema.dataSources).set(updates)
       .where(and(
-        eq(tenantSchema.dataSources.id, dsId),
-        eq(tenantSchema.dataSources.userId, locals.user.id),
+        eq(schema.dataSources.id, dsId),
+        eq(schema.dataSources.userId, locals.user.id),
       )).run();
 
     return new Response(JSON.stringify({ updated: true }), {
@@ -172,18 +172,18 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // --- Delete ---
   if (action === 'delete') {
     const dsId = body.id;
-    const row = db.select().from(tenantSchema.dataSources)
-      .where(eq(tenantSchema.dataSources.id, dsId))
+    const row = db.select().from(schema.dataSources)
+      .where(eq(schema.dataSources.id, dsId))
       .get();
     if (!row || !canMutateDataSource(locals, row.userId)) {
       return new Response(JSON.stringify({ error: 'Not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
       });
     }
-    db.delete(tenantSchema.dataSources)
+    db.delete(schema.dataSources)
       .where(and(
-        eq(tenantSchema.dataSources.id, dsId),
-        eq(tenantSchema.dataSources.userId, row.userId),
+        eq(schema.dataSources.id, dsId),
+        eq(schema.dataSources.userId, row.userId),
       )).run();
 
     return new Response(JSON.stringify({ deleted: true }), {
@@ -207,8 +207,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       password: string | null;
     } | undefined;
     if (body.id) {
-      storedRow = db.select().from(tenantSchema.dataSources)
-        .where(eq(tenantSchema.dataSources.id, body.id))
+      storedRow = db.select().from(schema.dataSources)
+        .where(eq(schema.dataSources.id, body.id))
         .get();
       if (!storedRow || !canMutateDataSource(locals, storedRow.userId)) {
         return new Response(JSON.stringify({ ok: false, error: 'Not found' }), {
@@ -265,13 +265,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
     // Update last test status if we have an ID
     if (body.id && storedRow) {
-      db.update(tenantSchema.dataSources).set({
+      db.update(schema.dataSources).set({
         lastTestedAt: new Date(),
         lastTestStatus: result.ok ? 'ok' : (result.error || 'error'),
         updatedAt: new Date(),
       }).where(and(
-        eq(tenantSchema.dataSources.id, body.id),
-        eq(tenantSchema.dataSources.userId, storedRow.userId),
+        eq(schema.dataSources.id, body.id),
+        eq(schema.dataSources.userId, storedRow.userId),
       )).run();
     }
 

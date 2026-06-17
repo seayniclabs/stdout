@@ -1,32 +1,32 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
 // Get user's incidents
 const userIncidents = db
   .select()
-  .from(tenantSchema.incidents)
-  .where(eq(tenantSchema.incidents.userId, user.id))
-  .orderBy(desc(tenantSchema.incidents.createdAt))
+  .from(schema.incidents)
+  .where(eq(schema.incidents.userId, user.id))
+  .orderBy(desc(schema.incidents.createdAt))
   .all();
 
 // Get stacks for service name lookup
-const allStacks = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id)).all();
+const allStacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id)).all();
 const stackMap = Object.fromEntries(allStacks.map(s => [s.id, s.name]));
 
 // Get diagnoses for AI diagnosis indicator
-const allDiagnoses = db.select().from(tenantSchema.diagnoses).all();
+const allDiagnoses = db.select().from(schema.diagnoses).all();
 const diagnosedIncidentIds = new Set(allDiagnoses.map(d => d.incidentId));
 
 // Get resolutions for resolution preview
-const allResolutions = db.select().from(tenantSchema.resolutions).all();
+const allResolutions = db.select().from(schema.resolutions).all();
 const resolutionMap = Object.fromEntries(allResolutions.map(r => [r.incidentId, r.content]));
 
 // Partition incidents

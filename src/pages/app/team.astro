@@ -3,7 +3,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getUserLimits } from '../../lib/tiers';
 import { getTeamMembers, getWorkspaceOwnerId } from '../../lib/rbac';
-import { getCentralDb, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { inArray } from 'drizzle-orm';
 
@@ -19,17 +19,17 @@ let activityLog: any[] = [];
 if (isOwnWorkspace) {
   members = getTeamMembers(getWorkspaceOwnerId(Astro.locals));
   try {
-    const db = getCentralDb();
+    const db = getDb();
     activityLog = db.select({
-      action: centralSchema.auditLog.action,
-      details: centralSchema.auditLog.details,
-      createdAt: centralSchema.auditLog.createdAt,
-    }).from(centralSchema.auditLog)
+      action: schema.auditLog.action,
+      details: schema.auditLog.details,
+      createdAt: schema.auditLog.createdAt,
+    }).from(schema.auditLog)
       .where(and(
-        eq(centralSchema.auditLog.userId, user.id),
-        inArray(centralSchema.auditLog.action, ['team_invite', 'team_role_update', 'team_remove']),
+        eq(schema.auditLog.userId, user.id),
+        inArray(schema.auditLog.action, ['team_invite', 'team_role_update', 'team_remove']),
       ))
-      .orderBy(desc(centralSchema.auditLog.createdAt))
+      .orderBy(desc(schema.auditLog.createdAt))
       .limit(25)
       .all();
   } catch {}

@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getCentralDb, centralSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq, gt, and } from 'drizzle-orm';
 import { syncCommunityLibrary } from '../../../lib/community-kb';
 
@@ -15,21 +15,21 @@ import { syncCommunityLibrary } from '../../../lib/community-kb';
 export const GET: APIRoute = async ({ url }) => {
   const sinceVersion = parseInt(url.searchParams.get('since_version') || '0', 10) || 0;
 
-  const centralDb = getCentralDb();
+  const centralDb = getDb();
 
   // Get published submissions with version > sinceVersion
-  const published = centralDb.select().from(centralSchema.communitySubmissions)
+  const published = centralDb.select().from(schema.communitySubmissions)
     .where(and(
-      eq(centralSchema.communitySubmissions.status, 'published'),
-      gt(centralSchema.communitySubmissions.version, sinceVersion),
+      eq(schema.communitySubmissions.status, 'published'),
+      gt(schema.communitySubmissions.version, sinceVersion),
     ))
     .all();
 
   // Get withdrawn submissions (so clients can remove them locally)
   const withdrawn = centralDb.select({
-    id: centralSchema.communitySubmissions.id,
-  }).from(centralSchema.communitySubmissions)
-    .where(eq(centralSchema.communitySubmissions.status, 'withdrawn'))
+    id: schema.communitySubmissions.id,
+  }).from(schema.communitySubmissions)
+    .where(eq(schema.communitySubmissions.status, 'withdrawn'))
     .all();
 
   const docs = published.map(sub => ({

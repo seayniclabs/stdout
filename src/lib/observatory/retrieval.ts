@@ -76,7 +76,7 @@ export async function retrieveKnowledge(
   context: RetrievalContext
 ): Promise<RelevantKnowledge> {
   const startTime = Date.now();
-  const db = getCentralDb();
+  const db = getDb();
 
   // 1. Retrieve standard patterns
   const standardPatterns = await retrieveStandardPatterns(context);
@@ -129,7 +129,7 @@ async function retrieveLibraryDocs(
   userId: string,
   context: RetrievalContext,
 ): Promise<RelevantKnowledge['libraryDocs']> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Admin opt-in for public resources.
   let includePublic = false;
@@ -201,7 +201,7 @@ async function retrieveLibraryDocs(
 async function retrieveStandardPatterns(
   context: RetrievalContext
 ): Promise<StandardPattern[]> {
-  const db = getCentralDb();
+  const db = getDb();
 
   // Build query conditions
   const conditions: string[] = [];
@@ -286,7 +286,7 @@ async function retrieveBaselines(
   stackId: string,
   metricName: string
 ): Promise<Baseline[]> {
-  const db = getCentralDb();
+  const db = getDb();
 
   const rows = await db.all(sql`
     SELECT
@@ -332,7 +332,7 @@ async function retrieveCustomPatterns(
   userId: string,
   context: RetrievalContext
 ): Promise<CustomPattern[]> {
-  const db = getCentralDb();
+  const db = getDb();
 
   // Build query conditions (same logic as standard patterns)
   const conditions: string[] = ['user_id = ?'];
@@ -424,7 +424,7 @@ async function retrieveSimilarIncidents(
   resolved_at: number | null;
   resolution_summary?: string;
 }>> {
-  const db = getCentralDb();
+  const db = getDb();
 
   // Build FTS search query from symptoms
   if (!context.symptoms || context.symptoms.length === 0) {

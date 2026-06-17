@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 
 // GET — returns the user's scan schedule (used by scanner polling)
@@ -8,9 +8,9 @@ import { eq, and } from 'drizzle-orm';
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const schedule = db.select().from(tenantSchema.scannerSchedule)
-    .where(eq(tenantSchema.scannerSchedule.userId, locals.user.id)).get();
+  const db = getDb();
+  const schedule = db.select().from(schema.scannerSchedule)
+    .where(eq(schema.scannerSchedule.userId, locals.user.id)).get();
 
   if (!schedule) {
     // Return defaults if no schedule configured yet
@@ -73,9 +73,9 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     ? body.subnets
     : null;
 
-  const db = getTenantDb(locals.workspace?.ownerId || locals.user!.id);
-  const existing = db.select().from(tenantSchema.scannerSchedule)
-    .where(eq(tenantSchema.scannerSchedule.userId, locals.user.id)).get();
+  const db = getDb();
+  const existing = db.select().from(schema.scannerSchedule)
+    .where(eq(schema.scannerSchedule.userId, locals.user.id)).get();
 
   const values = {
     interval,
@@ -89,13 +89,13 @@ export const PUT: APIRoute = async ({ locals, request }) => {
   };
 
   if (existing) {
-    db.update(tenantSchema.scannerSchedule).set(values)
+    db.update(schema.scannerSchedule).set(values)
       .where(and(
-        eq(tenantSchema.scannerSchedule.id, existing.id),
-        eq(tenantSchema.scannerSchedule.userId, locals.user.id),
+        eq(schema.scannerSchedule.id, existing.id),
+        eq(schema.scannerSchedule.userId, locals.user.id),
       )).run();
   } else {
-    db.insert(tenantSchema.scannerSchedule).values({
+    db.insert(schema.scannerSchedule).values({
       id: nanoid(), userId: locals.user.id, ...values,
     }).run();
   }

@@ -6,7 +6,7 @@
  */
 
 import type { APIRoute } from 'astro';
-import { getCentralDb } from '../../../../lib/db';
+import { getDb } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ locals, url }) => {
@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const userId = locals.workspace?.ownerId || locals.user.id;
 
   try {
-    const db = getCentralDb();
+    const db = getDb();
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const agentName = url.searchParams.get('agent'); // Filter by agent
 

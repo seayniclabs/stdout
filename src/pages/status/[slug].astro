@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import '../../styles/global.css';
-import { getCentralDb, getTenantDb, tenantSchema, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats } from '../../lib/hud';
 
@@ -13,13 +13,13 @@ const { slug } = Astro.params;
 let statusPage: any = null;
 let pageOwner: string = '';
 
-const allUsers = getCentralDb().select({ id: centralSchema.users.id })
-  .from(centralSchema.users).all();
+const allUsers = getDb().select({ id: schema.users.id })
+  .from(schema.users).all();
 
 for (const user of allUsers) {
-  const db = getTenantDb(user.id);
-  const page = db.select().from(tenantSchema.statusPage)
-    .where(eq(tenantSchema.statusPage.slug, slug!)).get();
+  const db = getDb();
+  const page = db.select().from(schema.statusPage)
+    .where(eq(schema.statusPage.slug, slug!)).get();
   if (page && page.enabled) {
     statusPage = page;
     pageOwner = user.id;
@@ -35,9 +35,9 @@ if (!statusPage) {
 let monitorIds: string[] = [];
 try { monitorIds = JSON.parse(statusPage.monitorIds); } catch {}
 
-const db = getTenantDb(pageOwner);
-const allMonitors = db.select().from(tenantSchema.monitors)
-  .where(eq(tenantSchema.monitors.userId, pageOwner))
+const db = getDb();
+const allMonitors = db.select().from(schema.monitors)
+  .where(eq(schema.monitors.userId, pageOwner))
   .all()
   .filter(m => monitorIds.includes(m.id));
 

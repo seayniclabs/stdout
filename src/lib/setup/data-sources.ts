@@ -137,7 +137,7 @@ export async function discoverDataSources(
     // Save to database
     const { getCentralDb } = await import('../db');
     const { sql } = await import('drizzle-orm');
-    const db = getCentralDb();
+    const db = getDb();
 
     for (const source of discovered) {
       try {

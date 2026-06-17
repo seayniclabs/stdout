@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import { getTenantDb, tenantSchema } from '../lib/db';
+import { getDb, schema } from '../lib/db';
 import { getUserWorkspaces } from '../lib/rbac';
 import { getUserLimits } from '../lib/tiers';
 import { eq } from 'drizzle-orm';
@@ -52,9 +52,9 @@ let workspaces: { own: any; teams: any[] } = { own: null, teams: [] };
 if (user) {
   try {
     const dbOwnerId = wsOwnerId || user.id;
-    const db = getTenantDb(dbOwnerId);
-    const prefs = db.select().from(tenantSchema.tenantPreferences)
-      .where(eq(tenantSchema.tenantPreferences.userId, dbOwnerId)).get();
+    const db = getDb();
+    const prefs = db.select().from(schema.tenantPreferences)
+      .where(eq(schema.tenantPreferences.userId, dbOwnerId)).get();
     if (prefs?.workspaceName) workspaceName = prefs.workspaceName;
     if (prefs?.accentColor && /^#[0-9a-fA-F]{3,8}$/.test(prefs.accentColor)) {
       accentOverride = prefs.accentColor;

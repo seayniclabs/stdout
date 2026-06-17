@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
@@ -14,12 +14,12 @@ const ws = Astro.locals.workspace;
 if (ws && !ws.isOwnWorkspace && !canPerform(ws.role, 'create')) return Astro.redirect('/app');
 const { tier, limits } = getUserLimits(user);
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
 // Get stacks and incidents for linking
-const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
-const userIncidents = db.select({ id: tenantSchema.incidents.id, title: tenantSchema.incidents.title })
-  .from(tenantSchema.incidents).where(eq(tenantSchema.incidents.userId, user.id)).all();
+const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+const userIncidents = db.select({ id: schema.incidents.id, title: schema.incidents.title })
+  .from(schema.incidents).where(eq(schema.incidents.userId, user.id)).all();
 
 let error = '';
 
@@ -59,7 +59,7 @@ if (Astro.request.method === 'POST') {
       const now = new Date();
       const sizeBytes = new TextEncoder().encode(content).length;
 
-      db.insert(tenantSchema.docs).values({
+      db.insert(schema.docs).values({
         id, userId: user.id, title, content, docType, stackId, incidentId, tags, sizeBytes,
         createdAt: now, updatedAt: now,
       }).run();

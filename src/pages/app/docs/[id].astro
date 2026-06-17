@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import { getTenantDb, tenantSchema } from '../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../../middleware';
 import { nanoid } from 'nanoid';
@@ -10,9 +10,9 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const { id } = Astro.params;
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
-const doc = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).get();
+const doc = db.select().from(schema.docs).where(eq(schema.docs.id, id!)).get();
 // Allow viewing community docs (any user) or own docs
 if (!doc || (doc.userId !== user.id && doc.source !== 'community')) return Astro.redirect('/app/docs');
 
@@ -25,9 +25,9 @@ if (isCommunityDoc && Astro.url.searchParams.get('edit') === 'true') {
 }
 
 // Get stacks and incidents for edit form
-const userStacks = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.userId, user.id)).all();
-const userIncidents = db.select({ id: tenantSchema.incidents.id, title: tenantSchema.incidents.title })
-  .from(tenantSchema.incidents).where(eq(tenantSchema.incidents.userId, user.id)).all();
+const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+const userIncidents = db.select({ id: schema.incidents.id, title: schema.incidents.title })
+  .from(schema.incidents).where(eq(schema.incidents.userId, user.id)).all();
 
 let error = '';
 const editing = Astro.url.searchParams.get('edit') === 'true';
@@ -52,9 +52,9 @@ if (Astro.request.method === 'POST') {
         error = 'Title and content are required.';
       } else {
         const sizeBytes = new TextEncoder().encode(content).length;
-        db.update(tenantSchema.docs).set({
+        db.update(schema.docs).set({
           title, content, docType, stackId, incidentId, tags, sizeBytes, updatedAt: new Date(),
-        }).where(eq(tenantSchema.docs.id, id!)).run();
+        }).where(eq(schema.docs.id, id!)).run();
 
         // Re-sync FTS
         const rawDb = (db as any).$client;
@@ -74,7 +74,7 @@ if (Astro.request.method === 'POST') {
       // Fork a community doc into user's own KB
       const forkId = nanoid();
       const sizeBytes = new TextEncoder().encode(doc.content).length;
-      db.insert(tenantSchema.docs).values({
+      db.insert(schema.docs).values({
         id: forkId,
         userId: user.id,
         title: doc.title,
@@ -104,7 +104,7 @@ if (Astro.request.method === 'POST') {
       if (rawDb?.prepare) {
         try { rawDb.prepare('DELETE FROM docs_fts WHERE rowid = (SELECT rowid FROM docs WHERE id = ?)').run(id); } catch (e) { console.error('FTS sync error:', e); }
       }
-      db.delete(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).run();
+      db.delete(schema.docs).where(eq(schema.docs.id, id!)).run();
       return Astro.redirect('/app/docs');
     }
   } else {
@@ -113,7 +113,7 @@ if (Astro.request.method === 'POST') {
 }
 
 // Re-fetch after potential POST
-const current = db.select().from(tenantSchema.docs).where(eq(tenantSchema.docs.id, id!)).get()!;
+const current = db.select().from(schema.docs).where(eq(schema.docs.id, id!)).get()!;
 
 const typeLabels: Record<string, string> = { runbook: 'Runbook', postmortem: 'Post-Mortem', guide: 'Guide', note: 'Note' };
 const typeColors: Record<string, string> = { runbook: 'var(--accent-light)', postmortem: 'var(--critical)', guide: 'var(--low)', note: 'var(--text-muted)' };
@@ -122,11 +122,11 @@ const typeColors: Record<string, string> = { runbook: 'var(--accent-light)', pos
 let stackName = '';
 let incidentTitle = '';
 if (current.stackId) {
-  const s = db.select().from(tenantSchema.stacks).where(eq(tenantSchema.stacks.id, current.stackId)).get();
+  const s = db.select().from(schema.stacks).where(eq(schema.stacks.id, current.stackId)).get();
   if (s) stackName = s.name;
 }
 if (current.incidentId) {
-  const i = db.select().from(tenantSchema.incidents).where(eq(tenantSchema.incidents.id, current.incidentId)).get();
+  const i = db.select().from(schema.incidents).where(eq(schema.incidents.id, current.incidentId)).get();
   if (i) incidentTitle = i.title;
 }
 ---

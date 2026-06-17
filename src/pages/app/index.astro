@@ -1,6 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getTenantDb, getCentralDb, tenantSchema, centralSchema } from '../../lib/db';
+import { getDb, schema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats } from '../../lib/hud';
 import { checkForUpdate, getLicenseNotice, type UpdateCheckResult } from '../../lib/update-check';
@@ -17,12 +17,12 @@ try {
 const hasUpdate = updateInfo?.hasUpdate ?? false;
 const licenseNotice = getLicenseNotice();
 
-const db = getTenantDb(Astro.locals.workspace?.ownerId || user.id);
+const db = getDb();
 
 // --- Monitors data ---
-const allMonitors = db.select().from(tenantSchema.monitors)
-  .where(eq(tenantSchema.monitors.userId, user.id))
-  .orderBy(desc(tenantSchema.monitors.createdAt))
+const allMonitors = db.select().from(schema.monitors)
+  .where(eq(schema.monitors.userId, user.id))
+  .orderBy(desc(schema.monitors.createdAt))
   .all();
 
 const monitorsData = allMonitors.map(m => {
@@ -42,46 +42,46 @@ const totalUptime = monitorsData.length > 0
   : 0;
 
 // --- Incidents data ---
-const allIncidents = db.select().from(tenantSchema.incidents)
-  .where(eq(tenantSchema.incidents.userId, user.id))
-  .orderBy(desc(tenantSchema.incidents.createdAt))
+const allIncidents = db.select().from(schema.incidents)
+  .where(eq(schema.incidents.userId, user.id))
+  .orderBy(desc(schema.incidents.createdAt))
   .all();
 
 const activeIncidents = allIncidents.filter(i => i.status !== 'resolved');
 const recentIncidents = allIncidents.slice(0, 5);
 
 // --- Docs count ---
-const docsCount = db.select().from(tenantSchema.docs)
-  .where(eq(tenantSchema.docs.userId, user.id))
+const docsCount = db.select().from(schema.docs)
+  .where(eq(schema.docs.userId, user.id))
   .all().length;
 
 // --- Stacks count ---
-const stacksCount = db.select().from(tenantSchema.stacks)
-  .where(eq(tenantSchema.stacks.userId, user.id))
+const stacksCount = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.userId, user.id))
   .all().length;
 
 // --- Pending imports ---
-const pendingImports = db.select().from(tenantSchema.stackImports)
-  .where(eq(tenantSchema.stackImports.status, 'pending')).all();
+const pendingImports = db.select().from(schema.stackImports)
+  .where(eq(schema.stackImports.status, 'pending')).all();
 
 // --- Onboarding state ---
-const tokens = getCentralDb().select().from(centralSchema.apiTokens)
-  .where(eq(centralSchema.apiTokens.userId, user.id)).all();
+const tokens = getDb().select().from(schema.apiTokens)
+  .where(eq(schema.apiTokens.userId, user.id)).all();
 const hasToken = tokens.length > 0;
 
 // Load onboarding progress from tenant preferences
-const prefs = db.select().from(tenantSchema.tenantPreferences)
-  .where(eq(tenantSchema.tenantPreferences.userId, user.id)).get();
+const prefs = db.select().from(schema.tenantPreferences)
+  .where(eq(schema.tenantPreferences.userId, user.id)).get();
 const onboardingDismissed = prefs?.onboardingDismissed ?? false;
 const savedProgress: string[] = prefs?.onboardingProgress ? JSON.parse(prefs.onboardingProgress) : [];
 
-const confirmedImport = db.select().from(tenantSchema.stackImports)
-  .where(eq(tenantSchema.stackImports.status, 'confirmed'))
+const confirmedImport = db.select().from(schema.stackImports)
+  .where(eq(schema.stackImports.status, 'confirmed'))
   .all()
   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
-const windlassCfg = db.select().from(tenantSchema.windlassConfig)
-  .where(eq(tenantSchema.windlassConfig.userId, user.id))
+const windlassCfg = db.select().from(schema.windlassConfig)
+  .where(eq(schema.windlassConfig.userId, user.id))
   .get();
 
 const autoCompleted = new Set(savedProgress);

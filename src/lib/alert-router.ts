@@ -6,7 +6,7 @@
  */
 
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and, desc } from 'drizzle-orm';
 import { encrypt, decrypt } from './crypto';
 
@@ -18,7 +18,7 @@ export function createChannel(
   name: string,
   config: Record<string, string>,
 ): string {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const id = nanoid();
   const now = new Date();
 
@@ -31,7 +31,7 @@ export function createChannel(
     safeConfig.secret = encrypt(safeConfig.secret);
   }
 
-  db.insert(tenantSchema.alertChannels).values({
+  db.insert(schema.alertChannels).values({
     id,
     userId,
     type,
@@ -46,9 +46,9 @@ export function createChannel(
 }
 
 export function listChannels(userId: string) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.alertChannels)
-    .where(eq(tenantSchema.alertChannels.userId, userId))
+  const db = getDb();
+  return db.select().from(schema.alertChannels)
+    .where(eq(schema.alertChannels.userId, userId))
     .all()
     .map(ch => ({
       ...ch,
@@ -65,22 +65,22 @@ function maskConfig(type: string, config: Record<string, string>): Record<string
 }
 
 export function deleteChannel(userId: string, channelId: string): boolean {
-  const db = getTenantDb(userId);
+  const db = getDb();
   // Also delete associated rules
-  db.delete(tenantSchema.alertRules)
-    .where(and(eq(tenantSchema.alertRules.userId, userId), eq(tenantSchema.alertRules.channelId, channelId)))
+  db.delete(schema.alertRules)
+    .where(and(eq(schema.alertRules.userId, userId), eq(schema.alertRules.channelId, channelId)))
     .run();
-  const result = db.delete(tenantSchema.alertChannels)
-    .where(and(eq(tenantSchema.alertChannels.id, channelId), eq(tenantSchema.alertChannels.userId, userId)))
+  const result = db.delete(schema.alertChannels)
+    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
     .run();
   return result.changes > 0;
 }
 
 export function toggleChannel(userId: string, channelId: string, enabled: boolean): void {
-  const db = getTenantDb(userId);
-  db.update(tenantSchema.alertChannels)
+  const db = getDb();
+  db.update(schema.alertChannels)
     .set({ enabled, updatedAt: new Date() })
-    .where(and(eq(tenantSchema.alertChannels.id, channelId), eq(tenantSchema.alertChannels.userId, userId)))
+    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
     .run();
 }
 
@@ -92,9 +92,9 @@ export function createRule(
   serviceId: string | null,
   severityMin: 'info' | 'warning' | 'critical',
 ): string {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const id = nanoid();
-  db.insert(tenantSchema.alertRules).values({
+  db.insert(schema.alertRules).values({
     id,
     userId,
     serviceId,
@@ -107,16 +107,16 @@ export function createRule(
 }
 
 export function listRules(userId: string) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.alertRules)
-    .where(eq(tenantSchema.alertRules.userId, userId))
+  const db = getDb();
+  return db.select().from(schema.alertRules)
+    .where(eq(schema.alertRules.userId, userId))
     .all();
 }
 
 export function deleteRule(userId: string, ruleId: string): boolean {
-  const db = getTenantDb(userId);
-  const result = db.delete(tenantSchema.alertRules)
-    .where(and(eq(tenantSchema.alertRules.id, ruleId), eq(tenantSchema.alertRules.userId, userId)))
+  const db = getDb();
+  const result = db.delete(schema.alertRules)
+    .where(and(eq(schema.alertRules.id, ruleId), eq(schema.alertRules.userId, userId)))
     .run();
   return result.changes > 0;
 }
@@ -124,17 +124,17 @@ export function deleteRule(userId: string, ruleId: string): boolean {
 // --- Alert Event History ---
 
 export function listAlertEvents(userId: string, limit = 50, serviceId?: string) {
-  const db = getTenantDb(userId);
+  const db = getDb();
   if (serviceId) {
-    return db.select().from(tenantSchema.alertEvents)
-      .where(and(eq(tenantSchema.alertEvents.userId, userId), eq(tenantSchema.alertEvents.serviceId, serviceId)))
-      .orderBy(desc(tenantSchema.alertEvents.createdAt))
+    return db.select().from(schema.alertEvents)
+      .where(and(eq(schema.alertEvents.userId, userId), eq(schema.alertEvents.serviceId, serviceId)))
+      .orderBy(desc(schema.alertEvents.createdAt))
       .limit(limit)
       .all();
   }
-  return db.select().from(tenantSchema.alertEvents)
-    .where(eq(tenantSchema.alertEvents.userId, userId))
-    .orderBy(desc(tenantSchema.alertEvents.createdAt))
+  return db.select().from(schema.alertEvents)
+    .where(eq(schema.alertEvents.userId, userId))
+    .orderBy(desc(schema.alertEvents.createdAt))
     .limit(limit)
     .all();
 }
@@ -163,7 +163,7 @@ export interface AlertInput {
  * Returns the event ID and whether it was suppressed.
  */
 export async function fireAlert(input: AlertInput): Promise<{ eventId: string; suppressed: boolean; channelsNotified: string[] }> {
-  const db = getTenantDb(input.userId);
+  const db = getDb();
   const eventId = nanoid();
   const now = new Date();
 
@@ -172,10 +172,10 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
   let suppressionReason: string | null = null;
 
   if (input.serviceId) {
-    const service = db.select().from(tenantSchema.windlassServices)
+    const service = db.select().from(schema.windlassServices)
       .where(and(
-        eq(tenantSchema.windlassServices.id, input.serviceId),
-        eq(tenantSchema.windlassServices.userId, input.userId),
+        eq(schema.windlassServices.id, input.serviceId),
+        eq(schema.windlassServices.userId, input.userId),
       ))
       .get();
 
@@ -201,12 +201,12 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
       // Flap suppression: check for recent opposite event in last 5 minutes
       if (!suppressed && (input.eventType === 'service_down' || input.eventType === 'service_up')) {
         const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
-        const recentEvents = db.select().from(tenantSchema.alertEvents)
+        const recentEvents = db.select().from(schema.alertEvents)
           .where(and(
-            eq(tenantSchema.alertEvents.userId, input.userId),
-            eq(tenantSchema.alertEvents.serviceId, input.serviceId),
+            eq(schema.alertEvents.userId, input.userId),
+            eq(schema.alertEvents.serviceId, input.serviceId),
           ))
-          .orderBy(desc(tenantSchema.alertEvents.createdAt))
+          .orderBy(desc(schema.alertEvents.createdAt))
           .limit(3)
           .all();
 
@@ -231,10 +231,10 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
 
   if (!suppressed) {
     // Get all enabled rules matching this service + severity
-    const rules = db.select().from(tenantSchema.alertRules)
+    const rules = db.select().from(schema.alertRules)
       .where(and(
-        eq(tenantSchema.alertRules.userId, input.userId),
-        eq(tenantSchema.alertRules.enabled, true),
+        eq(schema.alertRules.userId, input.userId),
+        eq(schema.alertRules.enabled, true),
       ))
       .all();
 
@@ -246,10 +246,10 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
 
     // Get unique channels
     const channelIds = [...new Set(matchingRules.map(r => r.channelId))];
-    const channels = db.select().from(tenantSchema.alertChannels)
+    const channels = db.select().from(schema.alertChannels)
       .where(and(
-        eq(tenantSchema.alertChannels.userId, input.userId),
-        eq(tenantSchema.alertChannels.enabled, true),
+        eq(schema.alertChannels.userId, input.userId),
+        eq(schema.alertChannels.enabled, true),
       ))
       .all()
       .filter(ch => channelIds.includes(ch.id));
@@ -266,7 +266,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
   }
 
   // --- Record event ---
-  db.insert(tenantSchema.alertEvents).values({
+  db.insert(schema.alertEvents).values({
     id: eventId,
     userId: input.userId,
     serviceId: input.serviceId,
@@ -362,9 +362,9 @@ async function dispatchToChannel(
 // --- Test Channel ---
 
 export async function testChannel(userId: string, channelId: string): Promise<{ success: boolean; error?: string }> {
-  const db = getTenantDb(userId);
-  const channel = db.select().from(tenantSchema.alertChannels)
-    .where(and(eq(tenantSchema.alertChannels.id, channelId), eq(tenantSchema.alertChannels.userId, userId)))
+  const db = getDb();
+  const channel = db.select().from(schema.alertChannels)
+    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
     .get();
 
   if (!channel) return { success: false, error: 'Channel not found' };
@@ -389,11 +389,11 @@ export async function sendWindlassWeeklyDigest(
   summary: { recoveredGbHours: number; serviceCount: number; weekLabel: string },
   opts?: { skipCooldown?: boolean },
 ): Promise<{ sent: boolean; skipped?: string }> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   if (!opts?.skipCooldown) {
-    const cfg = db.select().from(tenantSchema.windlassConfig)
-      .where(eq(tenantSchema.windlassConfig.userId, userId))
+    const cfg = db.select().from(schema.windlassConfig)
+      .where(eq(schema.windlassConfig.userId, userId))
       .get();
     const last = cfg?.lastWeeklyDigestAt ? new Date(cfg.lastWeeklyDigestAt).getTime() : 0;
     if (last && Date.now() - last < 6 * 24 * 60 * 60 * 1000) {
@@ -401,10 +401,10 @@ export async function sendWindlassWeeklyDigest(
     }
   }
 
-  const channels = db.select().from(tenantSchema.alertChannels)
+  const channels = db.select().from(schema.alertChannels)
     .where(and(
-      eq(tenantSchema.alertChannels.userId, userId),
-      eq(tenantSchema.alertChannels.enabled, true),
+      eq(schema.alertChannels.userId, userId),
+      eq(schema.alertChannels.enabled, true),
     ))
     .all()
     .filter(ch => ch.type === 'email' || ch.type === 'telegram');

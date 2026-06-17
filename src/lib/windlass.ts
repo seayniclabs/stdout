@@ -7,7 +7,7 @@
  */
 
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and, desc, isNull } from 'drizzle-orm';
 import { fireAlert } from './alert-router';
 import { sendWindlassWeeklyDigest } from './alert-router';
@@ -76,11 +76,11 @@ const TYPE_MAP: Record<string, string> = {
  * Returns the number of services synced, or throws on failure.
  */
 export async function syncFromEndpoint(userId: string): Promise<{ synced: number; summary: WindlassStatus['summary'] }> {
-  const db = getTenantDb(userId);
+  const db = getDb();
 
   // Get config
-  const config = db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+  const config = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId))
     .get();
 
   if (!config || !config.enabled) {
@@ -140,8 +140,8 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       runtimeWindowEnd = new Date(first.end).toTimeString().slice(0, 5);
     }
 
-    const existing = db.select().from(tenantSchema.windlassServices)
-      .where(and(eq(tenantSchema.windlassServices.id, id), eq(tenantSchema.windlassServices.userId, userId)))
+    const existing = db.select().from(schema.windlassServices)
+      .where(and(eq(schema.windlassServices.id, id), eq(schema.windlassServices.userId, userId)))
       .get();
 
     const rawAnalytics = status.service_analytics?.[svc.name] || null;
@@ -197,7 +197,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         }
       }
 
-      db.update(tenantSchema.windlassServices)
+      db.update(schema.windlassServices)
         .set({
           name: svc.name,
           serviceType,
@@ -221,10 +221,10 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
           lastMemoryShedReason,
           updatedAt: now,
         })
-        .where(and(eq(tenantSchema.windlassServices.id, id), eq(tenantSchema.windlassServices.userId, userId)))
+        .where(and(eq(schema.windlassServices.id, id), eq(schema.windlassServices.userId, userId)))
         .run();
     } else {
-      db.insert(tenantSchema.windlassServices).values({
+      db.insert(schema.windlassServices).values({
         id,
         userId,
         name: svc.name,
@@ -267,19 +267,19 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       : evt.action === 'service_stopped' ? 'service_stopped'
       : 'config_changed';
 
-    const existingEvent = db.select().from(tenantSchema.windlassEvents)
+    const existingEvent = db.select().from(schema.windlassEvents)
       .where(and(
-        eq(tenantSchema.windlassEvents.userId, userId),
+        eq(schema.windlassEvents.userId, userId),
         serviceId === null
-          ? isNull(tenantSchema.windlassEvents.serviceId)
-          : eq(tenantSchema.windlassEvents.serviceId, serviceId),
-        eq(tenantSchema.windlassEvents.eventType, eventType as any),
-        eq(tenantSchema.windlassEvents.createdAt, eventAt),
+          ? isNull(schema.windlassEvents.serviceId)
+          : eq(schema.windlassEvents.serviceId, serviceId),
+        eq(schema.windlassEvents.eventType, eventType as any),
+        eq(schema.windlassEvents.createdAt, eventAt),
       ))
       .get();
 
     if (!existingEvent) {
-      db.insert(tenantSchema.windlassEvents).values({
+      db.insert(schema.windlassEvents).values({
         id: nanoid(),
         userId,
         serviceId,
@@ -291,17 +291,17 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
 
     if (eventType === 'memory_shed' && serviceId) {
       const reason = evt.reason || '';
-      db.update(tenantSchema.windlassServices)
+      db.update(schema.windlassServices)
         .set({ lastMemoryShedReason: reason, updatedAt: now })
-        .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+        .where(and(eq(schema.windlassServices.id, serviceId), eq(schema.windlassServices.userId, userId)))
         .run();
     }
   }
 
   // --- Reconciliation: mark missing services as decommissioned ---
   // Services that haven't been seen for 24+ hours are marked as stale
-  const allServices = db.select().from(tenantSchema.windlassServices)
-    .where(eq(tenantSchema.windlassServices.userId, userId))
+  const allServices = db.select().from(schema.windlassServices)
+    .where(eq(schema.windlassServices.userId, userId))
     .all();
 
   const syncedServiceNames = new Set(status.services.map(s => s.name.toLowerCase().replace(/[^a-z0-9-]/g, '-')));
@@ -312,12 +312,12 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       // Service is missing from latest sync
       if (!svc.decommissionedAt && svc.updatedAt < oneDayAgo) {
         // Mark as decommissioned if it's been missing for 24+ hours
-        db.update(tenantSchema.windlassServices)
+        db.update(schema.windlassServices)
           .set({
             decommissionedAt: now,
             updatedAt: now,
           })
-          .where(and(eq(tenantSchema.windlassServices.id, svc.id), eq(tenantSchema.windlassServices.userId, userId)))
+          .where(and(eq(schema.windlassServices.id, svc.id), eq(schema.windlassServices.userId, userId)))
           .run();
 
         logEvent(userId, svc.id, 'decommissioned', `Service auto-decommissioned: no longer appears in Windlass endpoint`);
@@ -334,12 +334,12 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
       }
     } else if (svc.decommissionedAt) {
       // Service is back — un-decommission it
-      db.update(tenantSchema.windlassServices)
+      db.update(schema.windlassServices)
         .set({
           decommissionedAt: null,
           updatedAt: now,
         })
-        .where(and(eq(tenantSchema.windlassServices.id, svc.id), eq(tenantSchema.windlassServices.userId, userId)))
+        .where(and(eq(schema.windlassServices.id, svc.id), eq(schema.windlassServices.userId, userId)))
         .run();
 
       logEvent(userId, svc.id, 'reactivated', `Service reactivated: appeared again in Windlass endpoint`);
@@ -349,14 +349,14 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
   const n8nSnapshot = JSON.stringify(status.n8n_workflow_windows ?? []);
 
   // Update sync status + last n8n windows from engine (timeline reads this; avoids StdOut→localhost n8n hop)
-  db.update(tenantSchema.windlassConfig)
+  db.update(schema.windlassConfig)
     .set({
       lastSyncAt: now,
       lastSyncStatus: 'ok',
       n8nWorkflowWindowsJson: n8nSnapshot,
       updatedAt: now,
     })
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+    .where(eq(schema.windlassConfig.userId, userId))
     .run();
 
   await maybeSendWeeklyDigest(userId);
@@ -388,9 +388,9 @@ export async function getN8nWorkflowWindowsForDisplay(userId: string): Promise<N
 }
 
 async function maybeSendWeeklyDigest(userId: string): Promise<void> {
-  const db = getTenantDb(userId);
-  const config = db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+  const db = getDb();
+  const config = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId))
     .get();
   if (!config) return;
 
@@ -400,8 +400,8 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
     && (now.getTime() - new Date(config.lastWeeklyDigestAt).getTime()) < (6 * 24 * 60 * 60 * 1000);
   if (alreadySentThisWeek || now.getUTCDay() !== 0) return;
 
-  const services = db.select().from(tenantSchema.windlassServices)
-    .where(eq(tenantSchema.windlassServices.userId, userId))
+  const services = db.select().from(schema.windlassServices)
+    .where(eq(schema.windlassServices.userId, userId))
     .all();
 
   const recoveredGbHours = sumRecoveredGbHoursFromServices(services);
@@ -414,9 +414,9 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
   }, { skipCooldown: true });
   if (!sent.sent) return;
 
-  db.update(tenantSchema.windlassConfig)
+  db.update(schema.windlassConfig)
     .set({ lastWeeklyDigestAt: now, updatedAt: now })
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+    .where(eq(schema.windlassConfig.userId, userId))
     .run();
 }
 
@@ -484,15 +484,15 @@ export async function controlService(
   serviceId: string,
   action: 'start' | 'stop' | 'restart'
 ): Promise<void> {
-  const db = getTenantDb(userId);
-  const config = db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+  const db = getDb();
+  const config = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId))
     .get();
 
   if (!config) throw new Error('Windlass not configured');
 
-  const service = db.select().from(tenantSchema.windlassServices)
-    .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+  const service = db.select().from(schema.windlassServices)
+    .where(and(eq(schema.windlassServices.id, serviceId), eq(schema.windlassServices.userId, userId)))
     .get();
 
   if (!service) throw new Error('Service not found');
@@ -526,8 +526,8 @@ export function logEvent(
   eventType: string,
   detail: string
 ): void {
-  const db = getTenantDb(userId);
-  db.insert(tenantSchema.windlassEvents).values({
+  const db = getDb();
+  db.insert(schema.windlassEvents).values({
     id: nanoid(),
     userId,
     serviceId,
@@ -538,22 +538,22 @@ export function logEvent(
 }
 
 export function getRecentEvents(userId: string, limit = 50): any[] {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.windlassEvents)
-    .where(eq(tenantSchema.windlassEvents.userId, userId))
-    .orderBy(desc(tenantSchema.windlassEvents.createdAt))
+  const db = getDb();
+  return db.select().from(schema.windlassEvents)
+    .where(eq(schema.windlassEvents.userId, userId))
+    .orderBy(desc(schema.windlassEvents.createdAt))
     .limit(limit)
     .all();
 }
 
 export function getServiceEvents(userId: string, serviceId: string, limit = 20): any[] {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.windlassEvents)
+  const db = getDb();
+  return db.select().from(schema.windlassEvents)
     .where(and(
-      eq(tenantSchema.windlassEvents.userId, userId),
-      eq(tenantSchema.windlassEvents.serviceId, serviceId),
+      eq(schema.windlassEvents.userId, userId),
+      eq(schema.windlassEvents.serviceId, serviceId),
     ))
-    .orderBy(desc(tenantSchema.windlassEvents.createdAt))
+    .orderBy(desc(schema.windlassEvents.createdAt))
     .limit(limit)
     .all();
 }
@@ -561,26 +561,26 @@ export function getServiceEvents(userId: string, serviceId: string, limit = 20):
 // --- Queries ---
 
 export function getAllServices(userId: string) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.windlassServices)
-    .where(eq(tenantSchema.windlassServices.userId, userId))
+  const db = getDb();
+  return db.select().from(schema.windlassServices)
+    .where(eq(schema.windlassServices.userId, userId))
     .all();
 }
 
 export function getService(userId: string, serviceId: string) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.windlassServices)
+  const db = getDb();
+  return db.select().from(schema.windlassServices)
     .where(and(
-      eq(tenantSchema.windlassServices.id, serviceId),
-      eq(tenantSchema.windlassServices.userId, userId),
+      eq(schema.windlassServices.id, serviceId),
+      eq(schema.windlassServices.userId, userId),
     ))
     .get();
 }
 
 export function getConfig(userId: string) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId))
+  const db = getDb();
+  return db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId))
     .get();
 }
 

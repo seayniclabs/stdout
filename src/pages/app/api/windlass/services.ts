@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getAllServices, getService, syncFromEndpoint, controlService } from '../../../../lib/windlass';
 
@@ -89,7 +89,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const db = getTenantDb(userId);
+    const db = getDb();
     const service = getService(userId, serviceId);
     if (!service) {
       return new Response(JSON.stringify({ error: 'Service not found' }), {
@@ -106,13 +106,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
       overrideUntil = new Date(Date.now() + mins * 60 * 1000);
     }
 
-    db.update(tenantSchema.windlassServices)
+    db.update(schema.windlassServices)
       .set({
         overrideUntil,
         overrideReason: overrideUntil ? (reason || `Manual override for ${duration || 60} minutes`) : null,
         updatedAt: new Date(),
       })
-      .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+      .where(and(eq(schema.windlassServices.id, serviceId), eq(schema.windlassServices.userId, userId)))
       .run();
 
     const { logEvent } = await import('../../../../lib/windlass');
@@ -132,7 +132,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    const db = getTenantDb(userId);
+    const db = getDb();
     const service = getService(userId, serviceId);
     if (!service) {
       return new Response(JSON.stringify({ error: 'Service not found' }), {
@@ -140,7 +140,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       });
     }
 
-    db.update(tenantSchema.windlassServices)
+    db.update(schema.windlassServices)
       .set({
         serviceType: 'schedule',
         classification: 'scheduled',
@@ -149,7 +149,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         schedulingSuggestion: null,
         updatedAt: new Date(),
       })
-      .where(and(eq(tenantSchema.windlassServices.id, serviceId), eq(tenantSchema.windlassServices.userId, userId)))
+      .where(and(eq(schema.windlassServices.id, serviceId), eq(schema.windlassServices.userId, userId)))
       .run();
 
     const { logEvent } = await import('../../../../lib/windlass');

@@ -2,7 +2,7 @@
 export const prerender = false;
 
 import type { APIRoute } from 'astro';
-import { getTenantDb } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { discoveredServices, discoveredHosts } from '../../../../lib/db/tenant-schema';
 import { eq } from 'drizzle-orm';
 import { promises as fs } from 'node:fs';
@@ -20,7 +20,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const body = await request.json();
     const { serviceIds } = body; // Array of service IDs to add to monitoring
 
-    const db = getTenantDb(locals.workspace?.ownerId || session.id);
+    const db = getDb();
 
     // Fetch services with their host info
     const services = [];

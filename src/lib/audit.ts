@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 
 export type AuditAction =
   | 'login'
@@ -34,7 +34,7 @@ export function logAudit(
   } = {}
 ): void {
   try {
-    getCentralDb().insert(centralSchema.auditLog).values({
+    getDb().insert(schema.auditLog).values({
       id: nanoid(),
       userId: opts.userId || null,
       action,

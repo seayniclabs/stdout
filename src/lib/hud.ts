@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid';
-import { getTenantDb, tenantSchema, getCentralDb, centralSchema } from './db';
+import { getDb, schema } from './db';
 import { eq, and, desc, gt } from 'drizzle-orm';
 import { notify } from './notify';
 import https from 'node:https';
@@ -76,7 +76,7 @@ interface CheckResult {
   error?: string;
 }
 
-export async function executeCheck(monitor: typeof tenantSchema.monitors.$inferSelect): Promise<CheckResult> {
+export async function executeCheck(monitor: typeof schema.monitors.$inferSelect): Promise<CheckResult> {
   // SSRF protection: block requests to internal/private networks in SaaS mode.
   // Self-host operators own the network — monitoring internal targets is the point.
   const isSelfHost = process.env.STDOUT_MODE === 'selfhost';
@@ -309,9 +309,9 @@ const checkTimers: Map<string, ReturnType<typeof setInterval>> = new Map();
 export function startMonitor(userId: string, monitorId: string) {
   stopMonitor(monitorId); // clear any existing timer
 
-  const db = getTenantDb(userId);
-  const monitor = db.select().from(tenantSchema.monitors)
-    .where(eq(tenantSchema.monitors.id, monitorId)).get();
+  const db = getDb();
+  const monitor = db.select().from(schema.monitors)
+    .where(eq(schema.monitors.id, monitorId)).get();
 
   if (!monitor || monitor.paused || monitor.maintenance) return;
 
@@ -343,13 +343,13 @@ export function stopAllMonitors() {
 
 export function startAllMonitors() {
   // Import dynamically to avoid circular dependency issues
-  const users = getCentralDb().select({ id: centralSchema.users.id })
-    .from(centralSchema.users).all();
+  const users = getDb().select({ id: schema.users.id })
+    .from(schema.users).all();
 
   for (const user of users) {
-    const db = getTenantDb(user.id);
-    const monitors = db.select().from(tenantSchema.monitors)
-      .where(eq(tenantSchema.monitors.userId, user.id))
+    const db = getDb();
+    const monitors = db.select().from(schema.monitors)
+      .where(eq(schema.monitors.userId, user.id))
       .all();
 
     for (const monitor of monitors) {
@@ -362,9 +362,9 @@ export function startAllMonitors() {
 }
 
 async function runCheck(userId: string, monitorId: string) {
-  const db = getTenantDb(userId);
-  const monitor = db.select().from(tenantSchema.monitors)
-    .where(eq(tenantSchema.monitors.id, monitorId)).get();
+  const db = getDb();
+  const monitor = db.select().from(schema.monitors)
+    .where(eq(schema.monitors.id, monitorId)).get();
 
   if (!monitor || monitor.paused || monitor.maintenance) return;
 
@@ -372,7 +372,7 @@ async function runCheck(userId: string, monitorId: string) {
   const now = new Date();
 
   // Record check result
-  db.insert(tenantSchema.checkResults).values({
+  db.insert(schema.checkResults).values({
     id: nanoid(),
     monitorId,
     status: result.status,
@@ -400,13 +400,13 @@ async function runCheck(userId: string, monitorId: string) {
     newStatus = 'healthy';
   }
 
-  db.update(tenantSchema.monitors).set({
+  db.update(schema.monitors).set({
     currentStatus: newStatus,
     consecutiveFailures: newFailures,
     lastCheckedAt: now,
     lastResponseMs: result.responseTimeMs,
     updatedAt: now,
-  }).where(eq(tenantSchema.monitors.id, monitorId)).run();
+  }).where(eq(schema.monitors.id, monitorId)).run();
 
   // --- State transition handling ---
 
@@ -426,7 +426,7 @@ async function runCheck(userId: string, monitorId: string) {
       '*Auto-created by HUD monitor.*',
     ].join('\n');
 
-    db.insert(tenantSchema.incidents).values({
+    db.insert(schema.incidents).values({
       id: incidentId,
       userId,
       stackId: monitor.stackId || null,
@@ -458,12 +458,12 @@ async function runCheck(userId: string, monitorId: string) {
   // Down → Healthy: add recovery note to most recent auto-incident + notify
   if (newStatus === 'healthy' && previousStatus === 'down') {
     // Find the most recent auto-created incident for this monitor
-    const recentIncident = db.select().from(tenantSchema.incidents)
+    const recentIncident = db.select().from(schema.incidents)
       .where(and(
-        eq(tenantSchema.incidents.userId, userId),
-        eq(tenantSchema.incidents.status, 'active'),
+        eq(schema.incidents.userId, userId),
+        eq(schema.incidents.status, 'active'),
       ))
-      .orderBy(desc(tenantSchema.incidents.createdAt))
+      .orderBy(desc(schema.incidents.createdAt))
       .all()
       .find(i => i.title === `${monitor.name} is down` && i.tags?.includes('hud'));
 
@@ -477,7 +477,7 @@ async function runCheck(userId: string, monitorId: string) {
         : `${downtimeMins}m`;
 
       // Add resolution
-      db.insert(tenantSchema.resolutions).values({
+      db.insert(schema.resolutions).values({
         id: nanoid(),
         incidentId: recentIncident.id,
         userId,
@@ -486,11 +486,11 @@ async function runCheck(userId: string, monitorId: string) {
       }).run();
 
       // Mark incident as resolved
-      db.update(tenantSchema.incidents).set({
+      db.update(schema.incidents).set({
         status: 'resolved',
         resolvedAt: now,
         updatedAt: now,
-      }).where(eq(tenantSchema.incidents.id, recentIncident.id)).run();
+      }).where(eq(schema.incidents.id, recentIncident.id)).run();
     }
 
     // Fire recovery notification
@@ -504,10 +504,10 @@ async function runCheck(userId: string, monitorId: string) {
 
   // Update daily aggregation
   const dateStr = now.toISOString().split('T')[0];
-  const existing = db.select().from(tenantSchema.uptimeDaily)
+  const existing = db.select().from(schema.uptimeDaily)
     .where(and(
-      eq(tenantSchema.uptimeDaily.monitorId, monitorId),
-      eq(tenantSchema.uptimeDaily.date, dateStr)
+      eq(schema.uptimeDaily.monitorId, monitorId),
+      eq(schema.uptimeDaily.date, dateStr)
     )).get();
 
   if (existing) {
@@ -517,16 +517,16 @@ async function runCheck(userId: string, monitorId: string) {
       ? Math.round((existing.avgResponseMs * existing.totalChecks + result.responseTimeMs) / newTotal)
       : result.responseTimeMs;
 
-    db.update(tenantSchema.uptimeDaily).set({
+    db.update(schema.uptimeDaily).set({
       totalChecks: newTotal,
       successfulChecks: newSuccess,
       avgResponseMs: newAvg,
     }).where(and(
-      eq(tenantSchema.uptimeDaily.monitorId, monitorId),
-      eq(tenantSchema.uptimeDaily.date, dateStr)
+      eq(schema.uptimeDaily.monitorId, monitorId),
+      eq(schema.uptimeDaily.date, dateStr)
     )).run();
   } else {
-    db.insert(tenantSchema.uptimeDaily).values({
+    db.insert(schema.uptimeDaily).values({
       monitorId,
       date: dateStr,
       totalChecks: 1,
@@ -549,25 +549,25 @@ export function resumeAllMonitors() {
 // --- Query helpers ---
 
 export function getRecentChecks(userId: string, monitorId: string, limit = 60) {
-  const db = getTenantDb(userId);
-  return db.select().from(tenantSchema.checkResults)
-    .where(eq(tenantSchema.checkResults.monitorId, monitorId))
-    .orderBy(desc(tenantSchema.checkResults.checkedAt))
+  const db = getDb();
+  return db.select().from(schema.checkResults)
+    .where(eq(schema.checkResults.monitorId, monitorId))
+    .orderBy(desc(schema.checkResults.checkedAt))
     .limit(limit)
     .all()
     .reverse(); // chronological order
 }
 
 export function getUptimeStats(userId: string, monitorId: string, days = 30) {
-  const db = getTenantDb(userId);
+  const db = getDb();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  const rows = db.select().from(tenantSchema.uptimeDaily)
+  const rows = db.select().from(schema.uptimeDaily)
     .where(and(
-      eq(tenantSchema.uptimeDaily.monitorId, monitorId),
-      gt(tenantSchema.uptimeDaily.date, cutoffStr)
+      eq(schema.uptimeDaily.monitorId, monitorId),
+      gt(schema.uptimeDaily.date, cutoffStr)
     ))
     .all();
 

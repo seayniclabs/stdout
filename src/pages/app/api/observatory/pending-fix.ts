@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getTenantDb, tenantSchema } from '../../../../lib/db';
+import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 
 /**
@@ -54,9 +54,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   // --- approve: apply the command via Windlass /exec (human = the confirmation) ---
-  const db = getTenantDb(userId);
-  const wConfig = db.select().from(tenantSchema.windlassConfig)
-    .where(eq(tenantSchema.windlassConfig.userId, userId)).get();
+  const db = getDb();
+  const wConfig = db.select().from(schema.windlassConfig)
+    .where(eq(schema.windlassConfig.userId, userId)).get();
 
   const execViaWindlass = async (cmd: string) => {
     if (!wConfig?.endpointUrl) throw new Error('Windlass not configured — cannot apply remediation');
