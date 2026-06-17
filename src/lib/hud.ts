@@ -375,8 +375,9 @@ async function runCheck(userId: string, monitorId: string) {
   db.insert(schema.checkResults).values({
     id: nanoid(),
     monitorId,
-    status: result.status,
-    responseTimeMs: result.responseTimeMs,
+    userId,
+    success: result.status === 'healthy',
+    responseTime: result.responseTimeMs,
     statusCode: result.statusCode || null,
     error: result.error || null,
     checkedAt: now,
@@ -511,28 +512,32 @@ async function runCheck(userId: string, monitorId: string) {
     )).get();
 
   if (existing) {
-    const newTotal = existing.totalChecks + 1;
-    const newSuccess = existing.successfulChecks + (result.status !== 'down' ? 1 : 0);
-    const newAvg = existing.avgResponseMs
-      ? Math.round((existing.avgResponseMs * existing.totalChecks + result.responseTimeMs) / newTotal)
+    const newSuccess = existing.successCount + (result.status !== 'down' ? 1 : 0);
+    const newFailure = existing.failureCount + (result.status === 'down' ? 1 : 0);
+    const totalChecks = newSuccess + newFailure;
+    const newAvg = existing.avgResponseTime
+      ? Math.round((existing.avgResponseTime * (existing.successCount + existing.failureCount) + result.responseTimeMs) / totalChecks)
       : result.responseTimeMs;
 
     db.update(schema.uptimeDaily).set({
-      totalChecks: newTotal,
-      successfulChecks: newSuccess,
-      avgResponseMs: newAvg,
+      successCount: newSuccess,
+      failureCount: newFailure,
+      avgResponseTime: newAvg,
+      updatedAt: now,
     }).where(and(
       eq(schema.uptimeDaily.monitorId, monitorId),
       eq(schema.uptimeDaily.date, dateStr)
     )).run();
   } else {
     db.insert(schema.uptimeDaily).values({
+      id: nanoid(),
       monitorId,
+      userId,
       date: dateStr,
-      totalChecks: 1,
-      successfulChecks: result.status !== 'down' ? 1 : 0,
-      avgResponseMs: result.responseTimeMs,
-      p95ResponseMs: result.responseTimeMs,
+      successCount: result.status !== 'down' ? 1 : 0,
+      failureCount: result.status === 'down' ? 1 : 0,
+      avgResponseTime: result.responseTimeMs,
+      updatedAt: now,
     }).run();
   }
 }

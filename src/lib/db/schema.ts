@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
 // ============================================================================
 // UNIFIED SCHEMA FOR SELF-HOSTED StdOut
@@ -286,16 +286,16 @@ export const docEmbeddings = sqliteTable('doc_embeddings', {
 
 export const observatoryStandardPatterns = sqliteTable('observatory_standard_patterns', {
   id: text('id').primaryKey(),
+  patternName: text('pattern_name').notNull(),
   category: text('category').notNull(),
-  title: text('title').notNull(),
-  pattern: text('pattern').notNull(),
-  description: text('description').notNull(),
-  suggestedCommands: text('suggested_commands'),
+  symptoms: text('symptoms').notNull(),
+  commonCauses: text('common_causes').notNull(),
+  resolutionSteps: text('resolution_steps').notNull(),
   preventionSteps: text('prevention_steps'),
-  severity: text('severity', {
-    enum: ['critical', 'high', 'medium', 'low'],
-  }).notNull().default('medium'),
+  confidenceThreshold: real('confidence_threshold').notNull(),
+  source: text('source').notNull().default('stdlib'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const observatoryCustomPatterns = sqliteTable('observatory_custom_patterns', {

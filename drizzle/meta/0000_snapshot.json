@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "b2d8149d-32b3-43ba-9baf-f7bda84e8de8",
+  "id": "d1b6f044-247a-4637-a446-351335a06c1d",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "addon_interest": {
@@ -2042,6 +2042,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "pattern_name": {
+          "name": "pattern_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "category": {
           "name": "category",
           "type": "text",
@@ -2049,32 +2056,25 @@
           "notNull": true,
           "autoincrement": false
         },
-        "title": {
-          "name": "title",
+        "symptoms": {
+          "name": "symptoms",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "pattern": {
-          "name": "pattern",
+        "common_causes": {
+          "name": "common_causes",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "description": {
-          "name": "description",
+        "resolution_steps": {
+          "name": "resolution_steps",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "suggested_commands": {
-          "name": "suggested_commands",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         },
         "prevention_steps": {
@@ -2084,16 +2084,30 @@
           "notNull": false,
           "autoincrement": false
         },
-        "severity": {
-          "name": "severity",
+        "confidence_threshold": {
+          "name": "confidence_threshold",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source": {
+          "name": "source",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false,
-          "default": "'medium'"
+          "default": "'stdlib'"
         },
         "created_at": {
           "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

@@ -327,14 +327,16 @@ CREATE TABLE `observatory_pending_fixes` (
 --> statement-breakpoint
 CREATE TABLE `observatory_standard_patterns` (
 	`id` text PRIMARY KEY NOT NULL,
+	`pattern_name` text NOT NULL,
 	`category` text NOT NULL,
-	`title` text NOT NULL,
-	`pattern` text NOT NULL,
-	`description` text NOT NULL,
-	`suggested_commands` text,
+	`symptoms` text NOT NULL,
+	`common_causes` text NOT NULL,
+	`resolution_steps` text NOT NULL,
 	`prevention_steps` text,
-	`severity` text DEFAULT 'medium' NOT NULL,
-	`created_at` integer NOT NULL
+	`confidence_threshold` real NOT NULL,
+	`source` text DEFAULT 'stdlib' NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `resolutions` (
