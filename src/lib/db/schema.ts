@@ -393,17 +393,19 @@ export const aiProviderKeys = sqliteTable('ai_provider_keys', {
 export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
-  relatedId: text('related_id'),
-  executionType: text('execution_type').notNull(),
+  incidentId: text('incident_id'),
+  capability: text('capability', {
+    enum: ['diagnostics', 'autofix_plan', 'autofix_apply'],
+  }).notNull(),
   provider: text('provider').notNull(),
   model: text('model').notNull(),
   credentialSource: text('credential_source', {
     enum: ['user_key', 'platform_key', 'ollama'],
   }).notNull(),
-  status: text('status', {
-    enum: ['success', 'failed'],
+  outcome: text('outcome', {
+    enum: ['success', 'failed', 'blocked'],
   }).notNull(),
-  errorMessage: text('error_message'),
+  failureReason: text('failure_reason'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
