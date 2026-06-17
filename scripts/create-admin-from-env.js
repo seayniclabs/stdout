@@ -46,15 +46,14 @@ async function createAdmin() {
     console.log(`[init] create-admin using DB: ${dbPath}`);
 
     db.prepare(`
-      INSERT INTO users (id, email, password_hash, display_name, role, email_verified, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, password_hash, display_name, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       email,
       hashedPassword,
       email.split('@')[0],
       'admin',
-      1,
       Date.now(),
       Date.now()
     );
