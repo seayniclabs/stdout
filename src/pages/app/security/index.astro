@@ -1,0 +1,130 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+---
+
+<Layout title="Security - StdOut">
+  <div class="container">
+    <div class="page-header">
+      <div>
+        <h1>Security</h1>
+        <p class="subtitle">Security audit logs and compliance monitoring</p>
+      </div>
+    </div>
+
+    <div class="empty-state">
+      <div class="empty-icon">🔒</div>
+      <h2>Security Features Coming Soon</h2>
+      <p>Security audit logging, vulnerability scanning, and compliance monitoring will be available in a future release.</p>
+
+      <div class="planned-features">
+        <h3>Planned Features:</h3>
+        <ul>
+          <li>Audit log viewer for all system actions</li>
+          <li>CVE vulnerability scanning for discovered services</li>
+          <li>Security compliance reports (CIS, NIST)</li>
+          <li>Access control and permission management</li>
+          <li>TLS certificate monitoring and expiration alerts</li>
+          <li>Failed authentication attempt tracking</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+    color: #fff;
+  }
+
+  .subtitle {
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1.5rem;
+    opacity: 0.5;
+  }
+
+  .empty-state h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #fff;
+  }
+
+  .empty-state > p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0 0 2rem 0;
+    font-size: 1rem;
+  }
+
+  .planned-features {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: left;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+  }
+
+  .planned-features h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    color: #fff;
+  }
+
+  .planned-features ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .planned-features li {
+    padding: 0.75rem 0;
+    color: rgba(255, 255, 255, 0.8);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .planned-features li:last-child {
+    border-bottom: none;
+  }
+
+  .planned-features li::before {
+    content: '→ ';
+    color: rgba(255, 255, 255, 0.4);
+    margin-right: 0.5rem;
+  }
+</style>

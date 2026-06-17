@@ -9,18 +9,14 @@ if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
 
-// Fetch user's own docs + community docs
-const allDocs = db.select().from(schema.docs)
-  .where(or(
-    eq(schema.docs.userId, user.id),
-    eq(schema.docs.source, 'community')
-  ))
+// Fetch user's own docs
+const userDocs = db.select().from(schema.docs)
+  .where(eq(schema.docs.userId, user.id))
   .orderBy(desc(schema.docs.updatedAt))
   .all();
 
-// Split into user docs and community docs for display
-const userDocs = allDocs.filter(d => d.source !== 'community');
-const communityDocs = allDocs.filter(d => d.source === 'community');
+// Community docs feature not yet implemented
+const communityDocs: typeof userDocs = [];
 
 const typeLabels: Record<string, string> = {
   runbook: 'Runbook',

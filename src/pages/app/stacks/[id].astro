@@ -142,7 +142,7 @@ const hasStructuredData = containers.length > 0;
               <div class="host-ip mono">{host.ipAddress}</div>
               {host.hostname && <div class="host-name">{host.hostname}</div>}
               <div class="host-meta">
-                <span class="host-seen">Last seen {new Date(host.lastSeen).toLocaleString()}</span>
+                <span class="host-seen">Last seen {new Date(host.lastSeen * 1000).toLocaleString()}</span>
               </div>
             </div>
           ))}

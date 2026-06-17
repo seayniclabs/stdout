@@ -89,6 +89,8 @@ export async function executeCheck(monitor: typeof schema.monitors.$inferSelect)
       return checkHTTP(monitor.target, monitor.timeoutMs, monitor.expectedStatus || 200);
     case 'tcp':
       return checkTCP(monitor.target, monitor.timeoutMs);
+    case 'ping':
+      return checkPing(monitor.target, monitor.timeoutMs);
     case 'output-freshness':
       if (!monitor.jsonPath || !monitor.freshnessWindowSeconds) {
         return { status: 'down', responseTimeMs: 0, error: 'Missing jsonPath or freshnessWindowSeconds' };
@@ -181,6 +183,53 @@ async function checkTCP(target: string, timeoutMs: number): Promise<CheckResult>
       resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
     });
   });
+}
+
+/**
+ * Ping check — uses TCP connection test as ICMP requires root privileges.
+ * Attempts to connect to common service ports (80, 443, 22) to verify host is reachable.
+ */
+async function checkPing(target: string, timeoutMs: number): Promise<CheckResult> {
+  const start = Date.now();
+
+  // Extract host (remove port if present in target)
+  const host = target.split(':')[0];
+
+  // Try common ports in order: HTTP (80), HTTPS (443), SSH (22)
+  const ports = [80, 443, 22];
+
+  for (const port of ports) {
+    const result = await new Promise<{ success: boolean; error?: string }>((resolve) => {
+      const socket = new net.Socket();
+
+      const timeout = setTimeout(() => {
+        socket.destroy();
+        resolve({ success: false, error: 'Timeout' });
+      }, Math.floor(timeoutMs / ports.length)); // Divide timeout across ports
+
+      socket.connect(port, host, () => {
+        clearTimeout(timeout);
+        socket.destroy();
+        resolve({ success: true });
+      });
+
+      socket.on('error', () => {
+        clearTimeout(timeout);
+        socket.destroy();
+        resolve({ success: false });
+      });
+    });
+
+    if (result.success) {
+      const elapsed = Date.now() - start;
+      const status = elapsed > (timeoutMs * 0.8) ? 'degraded' : 'healthy';
+      return { status, responseTimeMs: elapsed };
+    }
+  }
+
+  // All ports failed
+  const elapsed = Date.now() - start;
+  return { status: 'down', responseTimeMs: elapsed, error: 'No response on ports 80, 443, or 22' };
 }
 
 /**
