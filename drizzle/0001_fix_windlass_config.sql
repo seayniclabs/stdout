@@ -1,4 +1,3 @@
--- Fix windlass_config schema to match code expectations
 DROP TABLE IF EXISTS windlass_config;
 
 CREATE TABLE `windlass_config` (
