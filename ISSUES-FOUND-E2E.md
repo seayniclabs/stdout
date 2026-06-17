@@ -42,7 +42,32 @@ Created `/src/pages/app/api/scanner/scan.ts` that forwards to `/api/discovery/sc
 
 ## High Priority (P1)
 
-*(None found yet - testing in progress)*
+### ❌ P1-1: Scanner run-now hardcoded localhost:4321 URL
+**Severity:** P1 (blocks scanner in production)  
+**Component:** Scanner API  
+**Impact:** "Run Scan Now" button fails with ECONNREFUSED when trying to trigger scan  
+
+**Root Cause:**  
+- `/api/scanner/run-now` hardcodes `http://localhost:4321/app/api/scanner/scan`
+- Production containers run on port 3000, not 4321 (dev server port)
+- Fetch fails with ECONNREFUSED
+
+**Evidence:**
+```
+[run-now] Failed to trigger scanner: TypeError: fetch failed
+    at node:internal/deps/undici/undici:14976:13
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  [cause]: AggregateError [ECONNREFUSED]
+```
+
+**Fix Applied:**  
+- Changed from hardcoded `http://localhost:4321` to `new URL('/app/api/scanner/scan', request.url)`
+- Now uses the same host/port as the incoming request
+- Forwards auth cookie to maintain session context
+
+**Commit:** 8a409e1  
+**Status:** Fixed, awaiting retest after clean redeploy  
+**Testing:** Will verify "Run Scan Now" completes successfully and populates entities table
 
 ---
 
