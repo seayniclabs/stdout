@@ -3,7 +3,7 @@
 declare namespace App {
   interface Locals {
     user: import('./lib/auth').SessionUser | null;
-    workspace: import('./lib/rbac').WorkspaceContext | null;
+    workspace: null; // No multi-tenancy in self-hosted mode
     nonce: string;
     csrfToken: string;
   }

@@ -1,7 +1,6 @@
 import { defineMiddleware } from 'astro:middleware';
 import { validateSession, getSessionFromCookies, SESSION_COOKIE, getUserCount, sessionCookieOptions } from './lib/auth';
 import { getDb, schema } from './lib/db';
-import { getWorkspaceContext } from './lib/rbac';
 import { eq, sql } from 'drizzle-orm';
 import crypto from 'node:crypto';
 import { startHeartbeat } from './lib/scanner-heartbeat';
@@ -421,18 +420,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // Resolve workspace context (own workspace or team workspace)
-  if (context.locals.user) {
-    const wsParam = context.url.searchParams.get('ws') || context.cookies.get('sl_workspace')?.value;
-    context.locals.workspace = getWorkspaceContext(context.locals.user, wsParam || undefined);
-
-    // Persist workspace selection in cookie
-    if (wsParam && wsParam !== context.locals.user.id) {
-      context.cookies.set('sl_workspace', wsParam, sessionCookieOptions(30 * 24 * 60 * 60));
-    }
-  } else {
-    context.locals.workspace = null;
-  }
+  // No workspace context needed for self-hosted mode
+  context.locals.workspace = null;
 
   // Nonce for CSP
   const nonce = generateNonce();
