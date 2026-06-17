@@ -18,6 +18,7 @@ RUN npm ci --omit=dev
 RUN apk del python3 make g++
 # Keep nmap for network discovery
 COPY --from=build /app/drizzle.config.ts ./
+COPY --from=build /app/drizzle ./drizzle
 COPY --from=build /app/src/lib/db/schema.ts ./src/lib/db/schema.ts
 COPY --from=build /app/src/lib/db/index.ts ./src/lib/db/index.ts
 COPY --from=build /app/scripts ./scripts
