@@ -17,19 +17,25 @@
 
 ### Issues Found
 
-#### ISSUE #1: Setup wizard completes but redirects back to /app/setup (P0 BLOCKER)
+#### ISSUE #1: Setup wizard completes but redirects back to /app/setup (P0 BLOCKER) ✅ FIXED & VERIFIED
 **Found:** 2026-06-17 22:10 UTC  
-**Steps:**
+**Fixed:** 2026-06-17 22:20 UTC (commit f541b3f)  
+**Verified:** 2026-06-17 22:23 UTC (clean install + retest)
+
+**Steps to reproduce:**
 1. Complete full setup wizard (all 7 steps)
 2. Click "Start Installation" on final setup page
 3. Installation completes with errors (see #3, #4)
 4. Navigate to /app → redirects back to /app/setup
 
 **Expected:** Dashboard loads  
-**Actual:** Stuck in setup loop, cannot access application
+**Actual (before fix):** Stuck in setup loop, cannot access application
 
-**Database:** User exists (stdout.db = 520KB), setup completed  
-**Root cause:** Unknown — likely "setup_complete" flag not set correctly
+**Root cause:** Missing `getDb` import in `src/pages/app/api/setup/install-stream.ts` line 166 prevented `installation_complete` flag from being set in `system_state` table, causing middleware to redirect all `/app` requests to `/app/setup`
+
+**Fix:** Added `import { getDb } from '../../../../lib/db'` before use
+
+**Verification result:** ✅ Dashboard loads successfully at http://192.168.0.244:8112/app after setup completes
 
 ---
 
@@ -48,31 +54,55 @@
 
 ---
 
-#### ISSUE #3: Installation step "Data Source Discovery" fails with "getDb is not defined" (P1)
+#### ISSUE #3: Installation step "Data Source Discovery" fails with "getDb is not defined" (P1) ✅ FIXED & VERIFIED
 **Found:** 2026-06-17 22:08 UTC (automated installation step)  
-**Log:**
+**Fixed:** 2026-06-17 22:20 UTC (commit f541b3f)  
+**Verified:** 2026-06-17 22:23 UTC (retest shows step completes)
+
+**Log (before fix):**
 ```
 [00:02:12] ▶ Starting: Data Source Discovery
 [00:02:12] ✗ Failed: Data Source Discovery
 [00:02:12] ⚠ getDb is not defined
 ```
 
-**Expected:** Discover running containers as data sources  
-**Actual:** ReferenceError thrown
+**Fix:** Changed `import { getCentralDb }` to `import { getDb }` in `src/lib/setup/data-sources.ts` line 138
+
+**Verification result:** ✅ Step completes successfully - "Found 2 running containers"
 
 ---
 
-#### ISSUE #4: Installation step "Monitor Configuration" fails with "getDb is not defined" (P1)
+#### ISSUE #4: Installation step "Monitor Configuration" fails with "getDb is not defined" (P1) ✅ FIXED
 **Found:** 2026-06-17 22:08 UTC (automated installation step)  
-**Log:**
+**Fixed:** 2026-06-17 22:20 UTC (commit f541b3f)
+**Log (before fix):**
 ```
 [00:02:12] ▶ Starting: Monitor Configuration
 [00:02:12] ✗ Failed: Monitor Configuration
 [00:02:12] ⚠ getDb is not defined
 ```
 
-**Expected:** Auto-configure monitors for discovered services  
-**Actual:** ReferenceError thrown
+**Fix:** Added `import { getDb } from '../db'` to `src/lib/setup/monitors.ts` line 34
+
+**Verification:** Installation now completes, but reveals new issue #5 (schema error)
+
+---
+
+#### ISSUE #5: Monitor Configuration fails with "no such column: type" (P2) ⏳ NEW
+**Found:** 2026-06-17 22:23 UTC (during retest after fix)  
+**Log:**
+```
+[00:00:09] ▶ Starting: Monitor Configuration
+[00:00:09] ✗ Failed: Monitor Configuration
+[00:00:09] ⚠ no such column: type
+```
+
+**Expected:** Query stacks table successfully  
+**Actual:** SQL error - `type` column doesn't exist in stacks table
+
+**Root cause:** Schema mismatch - `src/lib/setup/monitors.ts` line 42 queries `SELECT id, name, type FROM stacks` but stacks table doesn't have `type` column
+
+**Status:** Documented, not yet fixed
 
 ---
 
