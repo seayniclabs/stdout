@@ -282,8 +282,8 @@ function timeAgo(date: Date) {
             <div class="service-list">
               {monitorsData.map(m => {
                 const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
-                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : '—';
-                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : '—';
+                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : (m.lastCheckedAt ? '—' : 'Pending...');
+                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : (m.lastCheckedAt ? '—' : 'Pending...');
 
                 // Build SVG sparkline path from check history
                 const points = m.sparkline.map((c: any, i: number) => {
@@ -355,6 +355,8 @@ function timeAgo(date: Date) {
               <select id="monType" class="modal-input">
                 <option value="http">HTTP(S)</option>
                 <option value="tcp">TCP</option>
+                <option value="ping">Ping</option>
+                <option value="output-freshness">Output Freshness</option>
               </select>
             </label>
             <label style="flex:1;">
@@ -446,7 +448,18 @@ function timeAgo(date: Date) {
       });
       const data = await res.json();
       if (data.id) {
-        window.location.reload();
+        // Show success toast
+        const toast = document.createElement('div');
+        toast.className = 'success-toast';
+        toast.textContent = `Monitor "${name}" created successfully`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+
+        setTimeout(() => window.location.reload(), 500);
       } else {
         statusEl.textContent = data.error || 'Failed.';
         statusEl.className = 'backup-status error';
@@ -885,5 +898,27 @@ function timeAgo(date: Date) {
     height: 100%;
     border-radius: 2px;
     transition: width 0.5s ease;
+  }
+
+  /* Success Toast */
+  .success-toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--low);
+    color: white;
+    padding: 12px 20px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    opacity: 0;
+    transform: translateY(-20px);
+    transition: all 0.3s ease;
+    z-index: 10000;
+  }
+  .success-toast.show {
+    opacity: 1;
+    transform: translateY(0);
   }
 </style>
