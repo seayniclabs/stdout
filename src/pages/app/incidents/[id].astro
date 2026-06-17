@@ -128,37 +128,58 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
     <!-- AI Diagnosis -->
     <section class="section">
       <h2>AI Diagnosis</h2>
-      {latestDiagnosis ? (
-        <div class="diagnosis-result">
-          <h3>Root Causes</h3>
-          <ol class="root-causes">
-            {JSON.parse(latestDiagnosis.rootCauses).map((cause: string) => <li>{cause}</li>)}
-          </ol>
-          {latestDiagnosis.suggestedCommands && (
-            <>
-              <h3>Suggested Commands</h3>
-              <div class="commands">
-                {JSON.parse(latestDiagnosis.suggestedCommands).map((cmd: string) => (
-                  <code class="command-line">{cmd}</code>
-                ))}
+      <div id="diagnosisContainer">
+        {latestDiagnosis ? (
+          <div class="diagnosis-result">
+            {/* Tool execution proof (transactional evidence) */}
+            {latestDiagnosis.toolUsed ? (
+              <div class="tool-proof" style="background:var(--card-bg);border-left:3px solid var(--accent);padding:12px;margin-bottom:16px;border-radius:4px;">
+                <div style="font-weight:600;margin-bottom:4px;">✓ Diagnostic Tool Executed</div>
+                <div class="mono" style="font-size:12px;color:var(--text-muted);">
+                  Ran: <code>{JSON.parse(latestDiagnosis.toolUsed).tool}</code> {JSON.stringify(JSON.parse(latestDiagnosis.toolUsed).args || {})}
+                </div>
+                {JSON.parse(latestDiagnosis.toolUsed).output && (
+                  <details style="margin-top:8px;">
+                    <summary style="cursor:pointer;font-size:12px;color:var(--text-muted);">Show output</summary>
+                    <pre style="margin-top:8px;font-size:11px;background:var(--bg);padding:8px;border-radius:4px;overflow-x:auto;">{JSON.parse(latestDiagnosis.toolUsed).output}</pre>
+                  </details>
+                )}
               </div>
-            </>
-          )}
-          <div class="diagnosis-meta">
-            <span class="mono">{latestDiagnosis.model}</span>
-            <span>{latestDiagnosis.promptTokens} in / {latestDiagnosis.completionTokens} out</span>
+            ) : (
+              <div class="tool-proof" style="background:var(--card-bg);border-left:3px solid var(--text-muted);padding:12px;margin-bottom:16px;border-radius:4px;">
+                <div style="font-size:13px;color:var(--text-muted);">No diagnostic tools executed (diagnosis from description only)</div>
+              </div>
+            )}
+            <h3>Root Causes</h3>
+            <ol class="root-causes">
+              {JSON.parse(latestDiagnosis.rootCauses).map((cause: string) => <li>{cause}</li>)}
+            </ol>
+            {latestDiagnosis.suggestedCommands && (
+              <>
+                <h3>Suggested Commands</h3>
+                <div class="commands">
+                  {JSON.parse(latestDiagnosis.suggestedCommands).map((cmd: string) => (
+                    <code class="command-line">{cmd}</code>
+                  ))}
+                </div>
+              </>
+            )}
+            <div class="diagnosis-meta">
+              <span class="mono">{latestDiagnosis.model}</span>
+              <span>{latestDiagnosis.promptTokens} in / {latestDiagnosis.completionTokens} out</span>
+            </div>
           </div>
-        </div>
-      ) : (
-        <div class="diagnosis-empty">
-          <button id="diagnoseBtn" class="btn btn-primary" data-incident-id={current.id}>
-            Get AI Diagnosis
-          </button>
-          <div id="diagnoseLoading" style="display:none;">
-            <span class="mono" style="color:var(--accent);">Analyzing...</span>
+        ) : (
+          <div class="diagnosis-empty">
+            <button id="diagnoseBtn" class="btn btn-primary" data-incident-id={current.id}>
+              Get AI Diagnosis
+            </button>
+            <div id="diagnoseLoading" style="display:none;">
+              <span class="mono" style="color:var(--accent);">Analyzing...</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </section>
 
     <!-- Auto-Fix (BYOK user key required) -->
@@ -268,6 +289,7 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
 
   const btn = document.getElementById('diagnoseBtn');
   const loading = document.getElementById('diagnoseLoading');
+  const diagnosisContainer = document.getElementById('diagnosisContainer');
   if (btn) {
     btn.addEventListener('click', async () => {
       const incidentId = btn.getAttribute('data-incident-id');
@@ -281,7 +303,46 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
           body: JSON.stringify({ incidentId, _csrf: csrf }),
         });
         if (res.ok) {
-          window.location.reload();
+          const result = await res.json();
+          // Render diagnosis inline instead of page reload (preserves tool execution proof)
+          let html = '<div class="diagnosis-result">';
+
+          // Tool execution proof (transactional evidence)
+          if (result.toolUsed) {
+            const toolName = esc(result.toolUsed.tool || '');
+            const toolArgs = result.toolUsed.args ? JSON.stringify(result.toolUsed.args) : '';
+            html += '<div class="tool-proof" style="background:var(--card-bg);border-left:3px solid var(--accent);padding:12px;margin-bottom:16px;border-radius:4px;">';
+            html += '<div style="font-weight:600;margin-bottom:4px;">✓ Diagnostic Tool Executed</div>';
+            html += `<div class="mono" style="font-size:12px;color:var(--text-muted);">Ran: <code>${toolName}</code> ${toolArgs}</div>`;
+            html += '</div>';
+          } else {
+            html += '<div class="tool-proof" style="background:var(--card-bg);border-left:3px solid var(--text-muted);padding:12px;margin-bottom:16px;border-radius:4px;">';
+            html += '<div style="font-size:13px;color:var(--text-muted);">No diagnostic tools executed (diagnosis from description only)</div>';
+            html += '</div>';
+          }
+
+          html += '<h3>Root Causes</h3><ol class="root-causes">';
+          (result.rootCauses || []).forEach((cause: string) => {
+            html += `<li>${esc(cause)}</li>`;
+          });
+          html += '</ol>';
+
+          if (result.suggestedCommands && result.suggestedCommands.length > 0) {
+            html += '<h3>Suggested Commands</h3><div class="commands">';
+            result.suggestedCommands.forEach((cmd: string) => {
+              html += `<code class="command-line">${esc(cmd)}</code>`;
+            });
+            html += '</div>';
+          }
+
+          html += '<div class="diagnosis-meta">';
+          html += `<span class="mono">${esc(result.model || '')}</span>`;
+          html += `<span>${result.promptTokens || 0} in / ${result.completionTokens || 0} out</span>`;
+          html += '</div></div>';
+
+          if (diagnosisContainer) {
+            diagnosisContainer.innerHTML = html;
+          }
         } else {
           const err = await res.text();
           window.showToast?.('Diagnosis failed: ' + err, 'error');

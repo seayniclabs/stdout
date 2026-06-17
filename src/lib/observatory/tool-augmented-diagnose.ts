@@ -22,6 +22,7 @@ export interface ToolAugmentation {
   tool?: string;
   args?: Record<string, unknown>;
   output?: string;
+  exitCode?: number;
   /** A compact text block to append to the diagnosis context (empty if nothing ran). */
   contextBlock: string;
 }
@@ -44,21 +45,37 @@ export async function augmentWithTool(opts: {
 }): Promise<ToolAugmentation> {
   const none: ToolAugmentation = { ran: false, contextBlock: '' };
 
+  console.log('[tool-augmented-diagnose] Starting tool augmentation for incident:', opts.incidentTitle.slice(0, 60));
+
   // Only offer read-only tools to the auto-selection path.
   const tools = listTools().filter((t) => t.safety === 'read-only');
-  if (tools.length === 0) return none;
+  console.log(`[tool-augmented-diagnose] Found ${tools.length} read-only tools:`, tools.map(t => t.name).join(', '));
+  if (tools.length === 0) {
+    console.log('[tool-augmented-diagnose] No tools available, returning none');
+    return none;
+  }
 
   let pick: ToolPick | null = null;
   try {
+    console.log('[tool-augmented-diagnose] Calling selectTool with credential:', opts.credential.provider, opts.credential.model);
     pick = await selectTool(opts.credential, opts.incidentTitle, opts.incidentDescription, tools);
-  } catch {
+    console.log('[tool-augmented-diagnose] selectTool returned:', pick);
+  } catch (err) {
+    console.error('[tool-augmented-diagnose] selectTool failed:', err);
     return none;
   }
-  if (!pick || !pick.tool) return none;
+  if (!pick || !pick.tool) {
+    console.log('[tool-augmented-diagnose] No tool selected, returning none');
+    return none;
+  }
 
   // The pick must be a known read-only tool.
-  if (!tools.some((t) => t.name === pick!.tool)) return none;
+  if (!tools.some((t) => t.name === pick!.tool)) {
+    console.warn(`[tool-augmented-diagnose] Selected tool "${pick.tool}" not in read-only list, rejecting`);
+    return none;
+  }
 
+  console.log(`[tool-augmented-diagnose] Running tool: ${pick.tool} with args:`, pick.args);
   const result = await runTool({
     tool: pick.tool,
     args: pick.args || {},
@@ -67,19 +84,26 @@ export async function augmentWithTool(opts: {
     // never allowGated from the diagnosis path
   });
 
+  console.log(`[tool-augmented-diagnose] Tool execution result: ok=${result.ok}, exitCode=${result.exitCode}, stdout length=${result.stdout?.length || 0}`);
+
   if (!result.ok) {
     // Tool failed — still record that we tried, but no useful context.
+    console.warn(`[tool-augmented-diagnose] Tool failed: ${result.error}`);
     return {
       ran: true,
       tool: pick.tool,
       args: pick.args,
       output: result.error,
+      exitCode: result.exitCode,
       contextBlock: '',
     };
   }
 
   const out = (result.stdout || '').trim().slice(0, 4000);
-  if (!out) return { ran: true, tool: pick.tool, args: pick.args, output: '', contextBlock: '' };
+  if (!out) {
+    console.log('[tool-augmented-diagnose] Tool succeeded but no output, returning empty context');
+    return { ran: true, tool: pick.tool, args: pick.args, output: '', exitCode: result.exitCode, contextBlock: '' };
+  }
 
   const contextBlock =
     `\n\nLIVE DIAGNOSTIC EVIDENCE — the brain ran the read-only tool \`${pick.tool}\`` +
@@ -87,7 +111,8 @@ export async function augmentWithTool(opts: {
     '```\n' + out + '\n```\n' +
     'Use this real output as primary evidence when ranking root causes.';
 
-  return { ran: true, tool: pick.tool, args: pick.args, output: out, contextBlock };
+  console.log(`[tool-augmented-diagnose] Success: tool ran, output length ${out.length}, context block created`);
+  return { ran: true, tool: pick.tool, args: pick.args, output: out, exitCode: result.exitCode, contextBlock };
 }
 
 const SELECT_SYSTEM = (toolList: string) =>

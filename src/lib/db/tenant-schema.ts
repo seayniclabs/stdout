@@ -78,6 +78,7 @@ export const diagnoses = sqliteTable('diagnoses', {
   model: text('model').notNull(), // "claude-haiku-4-5-20251001" etc.
   promptTokens: integer('prompt_tokens'),
   completionTokens: integer('completion_tokens'),
+  toolUsed: text('tool_used'), // JSON object: { tool: string, args: object, output?: string, exitCode?: number }
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 

@@ -166,7 +166,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   // Tool-augmented diagnosis (P7b): let the brain run ONE read-only diagnostic tool and feed the
   // real output into the diagnosis. Best-effort — never blocks diagnosis if it fails.
   let toolContextBlock = '';
-  let toolUsed: { tool?: string; args?: Record<string, unknown> } | null = null;
+  let toolUsed: { tool?: string; args?: Record<string, unknown>; output?: string; exitCode?: number } | null = null;
   try {
     const { augmentWithTool } = await import('../../../lib/observatory/tool-augmented-diagnose');
     const aug = await augmentWithTool({
@@ -179,7 +179,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         apiKey: credential.source === 'user_key' ? credential.apiKey : '',
       },
     });
-    if (aug.ran) toolUsed = { tool: aug.tool, args: aug.args };
+    if (aug.ran) toolUsed = { tool: aug.tool, args: aug.args, output: aug.output, exitCode: aug.exitCode };
     toolContextBlock = aug.contextBlock;
   } catch { /* augmentation is best-effort */ }
 
@@ -220,6 +220,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       model: result.model,
       promptTokens: result.promptTokens,
       completionTokens: result.completionTokens,
+      toolUsed: toolUsed ? JSON.stringify(toolUsed) : null,
       createdAt: new Date(),
     }).run();
 
