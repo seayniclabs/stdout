@@ -265,8 +265,11 @@ function timeAgo(date: Date) {
                 <span class="ww-title mono">WINDLASS</span>
               </div>
               <div class="ww-empty-state">
-                <p>Schedule-aware service management not configured</p>
-                <a href="/app/settings?tab=windlass" class="btn-sm btn-ghost">Configure Windlass</a>
+                <p>Windlass not connected. Install Windlass to enable schedule-aware service management.</p>
+                <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+                  <a href="/app/settings#integrations" class="btn-sm btn-ghost">Connect Windlass</a>
+                  <a href="/app/docs" class="btn-sm btn-ghost" style="opacity: 0.7;">Learn more</a>
+                </div>
               </div>
             </div>
           )}
@@ -285,8 +288,8 @@ function timeAgo(date: Date) {
             <div class="service-list">
               {monitorsData.map(m => {
                 const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
-                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : (m.lastCheckedAt ? '—' : 'Pending...');
-                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : (m.lastCheckedAt ? '—' : 'Pending...');
+                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : 'Pending first check...';
+                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : 'Pending first check...';
 
                 // Build SVG sparkline path from check history
                 const points = m.sparkline.map((c: any, i: number) => {
@@ -303,7 +306,7 @@ function timeAgo(date: Date) {
                 return (
                   <a href={`/app/hud/${m.id}`} class="service-row">
                     <span class={`svc-dot ${statusClass}`}></span>
-                    <span class="svc-name">{m.name}</span>
+                    <span class="svc-name" title={m.name}>{m.name}</span>
                     <div class="svc-sparkline">
                       {linePath && (
                         <svg viewBox="0 0 200 28" preserveAspectRatio="none">
@@ -350,7 +353,7 @@ function timeAgo(date: Date) {
         <div class="modal-form">
           <label>
             <span>Name</span>
-            <input type="text" id="monName" placeholder="e.g. n8n, Plex, Homepage" class="modal-input" />
+            <input type="text" id="monName" placeholder="e.g. n8n, Plex, Homepage" class="modal-input" required />
           </label>
           <div class="modal-row">
             <label style="flex:0 0 120px;">
@@ -364,7 +367,7 @@ function timeAgo(date: Date) {
             </label>
             <label style="flex:1;">
               <span>Target</span>
-              <input type="text" id="monTarget" placeholder="https://example.com or host:port" class="modal-input" />
+              <input type="text" id="monTarget" placeholder="https://example.com or host:port" class="modal-input" required />
             </label>
           </div>
           <div class="modal-row">
@@ -812,7 +815,7 @@ function timeAgo(date: Date) {
   .svc-dot.maintenance { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.3); }
   .svc-dot.unknown { background: var(--text-muted); }
 
-  .svc-name { font-size: 13px; font-weight: 700; width: 140px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .svc-name { font-size: 13px; font-weight: 700; width: 180px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
 
   .svc-sparkline { flex: 1; height: 28px; min-width: 80px; }
   .svc-sparkline svg { width: 100%; height: 100%; overflow: visible; }

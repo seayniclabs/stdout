@@ -85,7 +85,8 @@ const windlassCfg = db.select().from(schema.windlassConfig)
   .get();
 
 const autoCompleted = new Set(savedProgress);
-if (getStoredLicense()) autoCompleted.add('license');
+const hasLicense = !!getStoredLicense();
+if (hasLicense) autoCompleted.add('license');
 if (prefs?.workspaceName) autoCompleted.add('environment');
 if (hasToken) autoCompleted.add('token');
 if (stacksCount > 0 || pendingImports.length > 0) autoCompleted.add('scanner');
@@ -99,7 +100,8 @@ const allDone = completedSteps.length >= totalSteps || completedSteps.includes('
 // --- Add-ons banner state ---
 const addonsHidden = prefs?.addonsHidden ?? false;
 const addonsDismissed = prefs?.addonsDismissed ?? false;
-const showAddonsBanner = !addonsHidden && !addonsDismissed;
+// Only show add-ons banner if user has services (makes it contextual, not promotional)
+const showAddonsBanner = !addonsHidden && !addonsDismissed && (totalMonitors > 0 || stacksCount > 0);
 const completedCount = completedSteps.length;
 const progressPct = Math.round((completedCount / totalSteps) * 100);
 const isNewUser = !onboardingDismissed && !allDone && (stacksCount === 0 && allIncidents.length === 0 && totalMonitors === 0);
@@ -121,11 +123,11 @@ function timeAgo(date: Date) {
   const ms = Date.now() - date.getTime();
   const mins = Math.floor(ms / 60000);
   if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return mins === 1 ? '1 minute ago' : `${mins} minutes ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return hrs === 1 ? '1 hour ago' : `${hrs} hours ago`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return days === 1 ? '1 day ago' : `${days} days ago`;
 }
 ---
 <Layout title="Dashboard — StdOut">
@@ -193,7 +195,7 @@ function timeAgo(date: Date) {
             <div class="step-num">{completedSteps.includes('license') ? '\u2713' : '1'}</div>
             <div class="step-content">
               <h4>Activate your license</h4>
-              <p>Enter the key from your purchase email, or skip to evaluate for 14 days.</p>
+              <p>{hasLicense ? 'License activated successfully \u2014 Edition: Self-Hosted' : 'Enter the key from your purchase email, or skip to evaluate for 14 days.'}</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>

@@ -333,7 +333,10 @@ const licenseNotice = getLicenseNotice();
               <input type="checkbox" id="scanEnabled" checked />
               <span>Scanning enabled</span>
             </label>
-            <button id="saveScannerBtn" class="btn btn-primary btn-sm">Save schedule</button>
+            <div style="display: flex; gap: 0.5rem;">
+              <button id="runScanNowBtn" class="btn btn-secondary btn-sm">Run Scan Now</button>
+              <button id="saveScannerBtn" class="btn btn-primary btn-sm">Save schedule</button>
+            </div>
           </div>
           <div id="scannerStatus" class="backup-status"></div>
         </div>
@@ -1305,6 +1308,32 @@ const licenseNotice = getLicenseNotice();
       if (data.updated) { scannerStatusEl.textContent = 'Schedule saved.'; scannerStatusEl.className = 'backup-status success'; }
       else { scannerStatusEl.textContent = data.error || 'Failed.'; scannerStatusEl.className = 'backup-status error'; }
     } catch { scannerStatusEl.textContent = 'Network error.'; scannerStatusEl.className = 'backup-status error'; }
+  });
+
+  const runScanNowBtn = document.getElementById('runScanNowBtn')!;
+  runScanNowBtn?.addEventListener('click', async () => {
+    scannerStatusEl.textContent = 'Running scan...';
+    scannerStatusEl.className = 'backup-status';
+    runScanNowBtn.setAttribute('disabled', '');
+    try {
+      const res = await fetch('/app/api/scanner/run-now', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const data = await res.json();
+      if (data.success) {
+        scannerStatusEl.textContent = data.message || 'Scan started successfully.';
+        scannerStatusEl.className = 'backup-status success';
+      } else {
+        scannerStatusEl.textContent = data.error || 'Scan failed.';
+        scannerStatusEl.className = 'backup-status error';
+      }
+    } catch {
+      scannerStatusEl.textContent = 'Network error.';
+      scannerStatusEl.className = 'backup-status error';
+    } finally {
+      runScanNowBtn.removeAttribute('disabled');
+    }
   });
 
   loadScannerSchedule();

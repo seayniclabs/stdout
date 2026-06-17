@@ -92,8 +92,8 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
               <input type="checkbox" id="godModeToggle" />
               <span class="toggle-track toggle-danger"><span class="toggle-thumb"></span></span>
               <span class="toggle-text">
-                <strong>God mode <span class="danger-tag">destructive</span></strong>
-                <small>Lifts the non-destructive ceiling. Human-only — auto-pilot can never set this.</small>
+                <strong>God mode <span class="danger-tag">experimental</span></strong>
+                <small>Experimental mode - May generate unexpected results. Monitor costs carefully. Human approval required.</small>
               </span>
             </label>
 
@@ -1097,9 +1097,11 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
       if (ap) ap.checked = !!s.autopilotEnabled;
       const apState = document.getElementById('autopilotState');
       if (apState) {
-        apState.textContent = s.autopilotEnabled
-          ? `On — currently at "${s.autopilotLevel}" (effective: ${s.effectiveMode}). Ceiling: non-destructive.`
-          : 'Self-escalates discover → diagnose → auto-fix as it earns trust. Ceiling: non-destructive.';
+        if (s.autopilotEnabled) {
+          apState.innerHTML = `<span style="color: var(--success); font-weight: 600;">● Enabled</span> — currently at "${s.autopilotLevel}" (effective: ${s.effectiveMode}). Ceiling: non-destructive.`;
+        } else {
+          apState.innerHTML = `<span style="color: var(--text-muted); font-weight: 600;">○ Disabled</span> — Self-escalates discover → diagnose → auto-fix as it earns trust. Ceiling: non-destructive.`;
+        }
       }
       const gm = document.getElementById('godModeToggle') as HTMLInputElement | null;
       if (gm) gm.checked = !!s.godModeGranted;

@@ -68,11 +68,11 @@ function timeAgo(date: Date) {
   const ms = Date.now() - date.getTime();
   const mins = Math.floor(ms / 60000);
   if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 60) return mins === 1 ? '1 minute ago' : `${mins} minutes ago`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return hrs === 1 ? '1 hour ago' : `${hrs} hours ago`;
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return days === 1 ? '1 day ago' : `${days} days ago`;
 }
 
 function truncate(str: string, max: number) {
@@ -168,13 +168,22 @@ function truncate(str: string, max: number) {
                   </div>
                   <div class="active-card-title">{incident.title}</div>
                   <div class="active-card-meta">
+                    <span class="meta-item">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                      <span class="mono">{timeAgo(incident.createdAt)}</span>
+                    </span>
                     {incident.stackId && stackMap[incident.stackId] && (
-                      <span class="meta-service">
+                      <span class="meta-item">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
                         {stackMap[incident.stackId]}
                       </span>
                     )}
-                    <span class="meta-time mono">{timeAgo(incident.createdAt)}</span>
+                    {incident.source && (
+                      <span class="meta-item meta-source">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><polyline points="17 11 19 13 23 9"></polyline></svg>
+                        {incident.source === 'manual' ? 'Manual' : incident.source === 'auto' ? 'Auto-created' : incident.source}
+                      </span>
+                    )}
                     {diagnosedIncidentIds.has(incident.id) && (
                       <span class="ai-badge" title="AI diagnosed">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
@@ -491,18 +500,23 @@ function truncate(str: string, max: number) {
   .active-card-meta {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     font-size: 11px;
     color: var(--text-muted);
+    margin-top: 8px;
   }
-  .meta-service {
+  .meta-item {
     display: inline-flex;
     align-items: center;
     gap: 4px;
     color: var(--text-secondary);
   }
-  .meta-time {
-    font-size: 10px;
+  .meta-item svg {
+    opacity: 0.6;
+  }
+  .meta-source {
+    color: var(--text-muted);
+    font-style: italic;
   }
   .ai-badge {
     display: inline-flex;
