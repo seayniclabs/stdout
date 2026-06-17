@@ -560,8 +560,16 @@ export const windlassEvents = sqliteTable('windlass_events', {
 });
 
 export const windlassConfig = sqliteTable('windlass_config', {
-  key: text('key').primaryKey(),
-  value: text('value').notNull(),
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  endpointUrl: text('endpoint_url').notNull(), // e.g. http://localhost:8116
+  syncIntervalSeconds: integer('sync_interval_seconds').notNull().default(60),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+  lastSyncStatus: text('last_sync_status'),    // 'ok' | error message
+  lastWeeklyDigestAt: integer('last_weekly_digest_at', { mode: 'timestamp' }),
+  n8nWorkflowWindowsJson: text('n8n_workflow_windows_json'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
