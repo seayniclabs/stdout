@@ -243,25 +243,27 @@ cd ~/Projects/stdout
 
 ## Remaining Work ❌
 
-### 1. Monitor Creation Bug (~1 hour)
+### ~~1. Monitor Creation Bug~~ ✅ FIXED (2026-06-17)
 
 **Issue:** `syncHostMonitors()` not creating ping monitors for discovered hosts
 
-**Diagnosis Needed:**
-- Test discovery scan with authenticated user
-- Check discovered_hosts table population
-- Verify syncHostMonitors is being called
-- Check SQL logs for errors
-- Test function directly with known data
+**Root Cause:** Discovery scan was populating `entities` table but NOT `discovered_hosts` table. The `syncHostMonitors()` function reads from `discovered_hosts`, not `entities`.
 
-**Expected Behavior:** 42 discovered hosts → 42 ping monitors created
+**Fix Applied:** Modified `/app/api/discovery/scan.ts` (lines 167-210) to populate BOTH tables:
+1. Creates entity record in `entities` table (for network topology graph)
+2. Creates host record in `discovered_hosts` table (for monitor sync backward compatibility)
 
-**Current Behavior:** 0 ping monitors created
+**E2E Test Results (ThinkPad 192.168.0.244):**
+- ✅ Discovery scan: 42 devices found
+- ✅ Entity creation: 42 entities in database
+- ✅ Monitor creation: 42 ping monitors auto-created
+- ✅ Database state: entities=42, discovered_hosts=43, monitors=44
 
-**Files to Debug:**
-- `src/lib/observatory/sync-host-monitors.ts`
-- `src/pages/app/api/discovery/scan.ts`
-- `src/pages/app/api/observatory/auto-setup.ts`
+**Migrations Added:**
+- `0006_add_discovered_hosts_columns.sql` - Added `device_type TEXT` column
+- `0007_add_discovered_at_column.sql` - Added `discovered_at INTEGER` column
+
+**Commit:** ec3456e (2026-06-17)
 
 ### 2. Setup Animation + License Validation (~2 hours)
 
