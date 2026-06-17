@@ -59,16 +59,15 @@ const ROLE_PERMISSIONS: Record<TeamRole, RBACAction[]> = {
 /**
  * Get team members for a workspace. `ownerId` is the workspace owner’s user id
  * (same as `getWorkspaceOwnerId` for that workspace), not an arbitrary filter.
+ * NOTE: Multi-tenant features removed - returns empty for self-hosted.
  */
 export function getTeamMembers(ownerId: string) {
-  const db = getDb();
-  return db.select().from(schema.teamMembers)
-    .where(eq(schema.teamMembers.ownerId, ownerId))
-    .all();
+  return [];
 }
 
 /**
- * Get all workspaces a user has access to (their own + any teams they're on).
+ * Get all workspaces a user has access to (their own + any teams they’re on).
+ * NOTE: Multi-tenant features removed - self-hosted returns only own workspace.
  */
 export function getUserWorkspaces(userId: string) {
   const db = getDb();
@@ -82,27 +81,10 @@ export function getUserWorkspaces(userId: string) {
     .where(eq(schema.users.id, userId))
     .get();
 
-  // Team workspaces
-  const memberships = db.select({
-    ownerId: schema.teamMembers.ownerId,
-    role: schema.teamMembers.role,
-    ownerName: schema.users.displayName,
-    ownerEmail: schema.users.email,
-  }).from(schema.teamMembers)
-    .innerJoin(schema.users, eq(schema.teamMembers.ownerId, schema.users.id))
-    .where(and(
-      eq(schema.teamMembers.userId, userId),
-      eq(schema.teamMembers.status, 'accepted'),
-    ))
-    .all();
-
+  // Multi-tenant removed: no team workspaces in self-hosted
   return {
     own: own ? { id: own.id, name: own.displayName || own.email, role: 'owner' as const } : null,
-    teams: memberships.map(m => ({
-      id: m.ownerId,
-      name: m.ownerName || m.ownerEmail,
-      role: m.role as TeamRole,
-    })),
+    teams: [],
   };
 }
 
