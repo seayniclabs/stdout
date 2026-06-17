@@ -8,6 +8,13 @@
       "when": 1781669702885,
       "tag": "0000_white_spyke",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1781700621000,
+      "tag": "0001_fix_windlass_config",
+      "breakpoints": true
     }
   ]
 }
