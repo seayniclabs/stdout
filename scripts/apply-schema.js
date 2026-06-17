@@ -209,8 +209,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS check_results (
     id TEXT PRIMARY KEY,
     monitor_id TEXT NOT NULL,
-    status TEXT NOT NULL,
-    response_time_ms INTEGER,
+    user_id TEXT NOT NULL,
+    success INTEGER NOT NULL,
+    response_time INTEGER,
     status_code INTEGER,
     error TEXT,
     checked_at INTEGER NOT NULL

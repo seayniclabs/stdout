@@ -24,7 +24,7 @@ COPY --from=build /app/scripts ./scripts
 # Stdlib standard-pattern library — seeded into the DB on fresh boot by apply-schema.js.
 COPY --from=build /app/src/lib/observatory/standard-patterns.json ./scripts/standard-patterns.json
 RUN chmod +x scripts/start.sh
-ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production
+ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production DB_PATH=/data/stdout.db
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD wget -qO- http://127.0.0.1:3000/healthz || exit 1
