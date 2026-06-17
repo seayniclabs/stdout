@@ -267,7 +267,7 @@ import { eq } from 'drizzle-orm';
 
 | Section | Tests | Status | Issues |
 |---------|-------|--------|--------|
-| Installation | 6 | ✅ PASS | #9, #10 (non-blocking) |
+| Installation | 6 | ✅ PASS | All fixed (#9-#12) |
 | Authentication | 5 | ⏳ Pending | Ready to test |
 | Dashboard | 6 | ⏳ Pending | Ready to test |
 | HUD | 13 | ⏳ Pending | Ready to test |
@@ -275,13 +275,13 @@ import { eq } from 'drizzle-orm';
 | Infrastructure | 7 | ⏳ Pending | Ready to test |
 | Knowledge Base | 5 | ⏳ Pending | Ready to test |
 | Security | 7 | ⏳ Pending | Ready to test |
-| Settings | 10 | 🔍 Testing | #11 found |
+| Settings | 10 | ⏳ Pending | Ready to test |
 | Windlass | 7 | ⏳ Pending | Ready to test |
 | Observatory | 10 | ⏳ Pending | Ready to test |
 | Network Topology | 9 | ⏳ Pending | Ready to test |
 | Final Verification | 7 | ⏳ Pending | Ready to test |
 
-**Total:** 6/104 tests complete (Installation suite complete, 3 new issues found)
+**Total:** 6/104 tests complete (Installation suite PASS, 10 bugs fixed total)
 
 ---
 
@@ -450,3 +450,23 @@ import { eq } from 'drizzle-orm';
 6. Fix critical bugs as discovered
 7. Implement P1 missing features
 8. REPEAT loop until 100% complete
+
+#### ISSUE #12: Skins tables not created on fresh installation (P1) ✅ FIXED
+**Found:** 2026-06-17 (image 8fb1db0 E2E test)  
+**Fixed:** 2026-06-17 (commit fd59eca)
+
+**Error log:**
+```
+[00:00:07] ⚠ Failed to seed default skins: no such table: skins
+```
+
+**Root cause:** Drizzle ORM doesn't automatically create tables from schema.ts
+- Schema defined skins tables at line 690
+- No migration runner to apply SQL migrations  
+- Tables must be created manually on first init
+
+**Fix:** Added SQL to `initSqlite()` in `src/lib/db/index.ts` to create skins tables if they don't exist
+
+**Status:** Fixed and committed (fd59eca), building new image
+
+---
