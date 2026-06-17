@@ -127,10 +127,13 @@ function timeAgo(date: Date) {
       </div>
       <div class="hud-actions">
         <a href="/app/hud/map" class="btn btn-ghost btn-sm">Service Map</a>
-        <button id="populateBtn" class="btn btn-ghost btn-sm">Populate from scanner</button>
-        <button id="addMonitorBtn" class="btn btn-primary btn-sm">
+        <button id="aiSetupBtn" class="btn btn-primary btn-sm">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          🤖 AI Setup
+        </button>
+        <button id="addMonitorBtn" class="btn btn-ghost btn-sm">
           <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
-          Add monitor
+          Manual
         </button>
       </div>
     </div>
@@ -415,6 +418,75 @@ function timeAgo(date: Date) {
   addBtns.forEach(btn => btn?.addEventListener('click', () => { modal.style.display = 'flex'; }));
   cancelBtn?.addEventListener('click', () => { modal.style.display = 'none'; });
   backdrop?.addEventListener('click', () => { modal.style.display = 'none'; });
+
+  // AI Setup button - Observatory auto-creates monitors
+  document.getElementById('aiSetupBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('aiSetupBtn')!;
+    const originalText = btn.innerHTML;
+    btn.setAttribute('disabled', '');
+    btn.innerHTML = '🤖 Analyzing...';
+
+    try {
+      // Step 1: Analyze and get suggestions
+      const analyzeRes = await fetch('/app/api/observatory/auto-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'analyze' }),
+      });
+
+      const analyzeData = await analyzeRes.json();
+
+      if (!analyzeData.suggestions || analyzeData.suggestions.length === 0) {
+        btn.innerHTML = '❌ No services found';
+        setTimeout(() => { btn.innerHTML = originalText; btn.removeAttribute('disabled'); }, 3000);
+        return;
+      }
+
+      // Step 2: Show preview and ask for confirmation
+      const summary = `Observatory AI found ${analyzeData.count} services to monitor:\n\n` +
+        analyzeData.suggestions.slice(0, 10).map((s: any) =>
+          `• ${s.name} (${s.type}, ${s.intervalSeconds}s interval)`
+        ).join('\n') +
+        (analyzeData.count > 10 ? `\n...and ${analyzeData.count - 10} more` : '');
+
+      if (!confirm(summary + '\n\nCreate these monitors?')) {
+        btn.innerHTML = originalText;
+        btn.removeAttribute('disabled');
+        return;
+      }
+
+      // Step 3: Execute monitor creation
+      btn.innerHTML = '🤖 Creating monitors...';
+      const executeRes = await fetch('/app/api/observatory/auto-setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'execute', suggestions: analyzeData.suggestions }),
+      });
+
+      const executeData = await executeRes.json();
+
+      if (executeData.created > 0) {
+        // Show success toast
+        const toast = document.createElement('div');
+        toast.className = 'success-toast';
+        toast.textContent = `✨ Observatory created ${executeData.created} monitors`;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 300);
+        }, 3000);
+
+        setTimeout(() => window.location.reload(), 500);
+      } else {
+        btn.innerHTML = '❌ Failed to create monitors';
+        setTimeout(() => { btn.innerHTML = originalText; btn.removeAttribute('disabled'); }, 3000);
+      }
+    } catch (err) {
+      btn.innerHTML = '❌ Error';
+      setTimeout(() => { btn.innerHTML = originalText; btn.removeAttribute('disabled'); }, 3000);
+    }
+  });
 
   typeSelect?.addEventListener('change', () => {
     expectedLabel.style.display = typeSelect.value === 'http' ? '' : 'none';
