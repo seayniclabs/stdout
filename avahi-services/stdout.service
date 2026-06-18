@@ -1,0 +1,17 @@
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">StdOut on %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>8112</port>
+    <txt-record>path=/</txt-record>
+    <txt-record>product=StdOut</txt-record>
+    <txt-record>version=1.2.1</txt-record>
+  </service>
+  <service>
+    <type>_stdout._tcp</type>
+    <port>8112</port>
+    <txt-record>product=StdOut Incident Companion</txt-record>
+  </service>
+</service-group>

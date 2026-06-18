@@ -35,6 +35,18 @@ services:
     networks:
       - stdout-net
 
+  # Avahi mDNS - Broadcasts stdout.local on the network
+  avahi:
+    image: ydkn/avahi:latest
+    container_name: stdout-avahi
+    restart: unless-stopped
+    network_mode: "host"
+    environment:
+      - AVAHI_HOSTNAME=stdout
+      - AVAHI_SERVICES=http:8112:tcp
+    volumes:
+      - ./avahi-services:/etc/avahi/services
+
   # Windlass Scheduler
   windlass:
     image: charlieseay/windlass:latest
