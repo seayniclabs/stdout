@@ -30,10 +30,13 @@ if (Astro.request.method === 'POST') {
           id: resId, incidentId: id!, userId: user.id, content, createdAt: now,
         }).run();
 
-        // Sync to FTS
+        // Sync to FTS - get rowid AFTER insert
         const rawDb = (db as any).$client;
         if (rawDb?.prepare) {
-          rawDb.prepare('INSERT INTO resolutions_fts(rowid, content) SELECT rowid, content FROM resolutions WHERE id = ?').run(resId);
+          const row = rawDb.prepare('SELECT rowid, content FROM resolutions WHERE id = ?').get(resId);
+          if (row) {
+            rawDb.prepare('INSERT INTO resolutions_fts(rowid, content) VALUES (?, ?)').run(row.rowid, row.content);
+          }
         }
 
         db.update(schema.incidents).set({ status: 'resolved', resolvedAt: now, updatedAt: now }).where(eq(schema.incidents.id, id!)).run();

@@ -66,6 +66,29 @@ function initSqlite(dbPath: string): InstanceType<typeof Database> {
     console.log('[DB] Skins tables created');
   }
 
+  // Create resolutions FTS table if missing
+  const resFtsExists = sqlite.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type='table' AND name='resolutions_fts'
+  `).get();
+
+  if (!resFtsExists) {
+    console.log('[DB] Creating resolutions_fts table...');
+    sqlite.exec(`
+      -- Create FTS table for resolutions search
+      CREATE VIRTUAL TABLE IF NOT EXISTS resolutions_fts USING fts5(
+        content,
+        content='resolutions',
+        content_rowid='rowid'
+      );
+
+      -- Populate existing resolutions into FTS
+      INSERT INTO resolutions_fts(rowid, content)
+      SELECT rowid, content FROM resolutions;
+    `);
+    console.log('[DB] resolutions_fts table created');
+  }
+
   return sqlite;
 }
 
