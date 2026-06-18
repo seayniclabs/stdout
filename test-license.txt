@@ -1,7 +1,7 @@
 {
-  "key": "SL-eyJlIjoidGVzdEBleGFtcGxlLmNvbSIsImkiOjE3ODE3NDIyNDksIngiOjE4MTMyNzgyNDl9.Ua-l9RpsgkwOqzeMXWNip2ptuSoKArkHAEoLv8KDQSgN25H-Rvw4fVa5kPwI14CvMX5jWbCYuXOGjAH6ZzqfAw",
+  "key": "SL-eyJlIjoidGVzdEBleGFtcGxlLmNvbSIsImkiOjE3ODE3NDM2MzYsIngiOjE4MTMyNzk2MzZ9.dXRHuWWwlvPQ3iIPJDfM-UPALu233Tjemjv_kftWXY9FpABoKXZ8Tr2kU_XG4T0GPypI2OdZpiSuFp8IN8atAw",
   "email": "test@example.com",
   "product": "stdout-self-host",
-  "issuedAt": 1781742249000,
-  "expiresAt": 1813278249000
+  "issuedAt": 1781743636000,
+  "expiresAt": 1813279636000
 }
