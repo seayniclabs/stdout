@@ -976,11 +976,35 @@ import { eq } from 'drizzle-orm';
 CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', content_rowid='rowid');
 ```
 
+### INC-09: Export functionality ✅ PASS
+
+**Test:** Click export buttons → verify downloads trigger  
+**Result:** ✅ PASS
+- Clicked "Export .md" button - download triggered
+- Clicked "Export .json" button - download triggered
+- Both export formats working
+
+**Remaining Incidents tests:** INC-02, INC-10, INC-11, INC-12 (4 tests remaining)
+
 ---
 
-#### ISSUE #14: Missing resolutions_fts table (P1) ⏳ TO FIX
+## Summary Progress
+
+**Tests completed:** 29/104 (27.9%)
+- Installation: 6/6 ✅
+- Authentication: 5/5 ✅
+- Dashboard: 6/6 ✅
+- HUD: 9/13 (69%)
+- Incidents: 8/12 (67%)
+
+**Bugs fixed this session:** 11 (ISSUE #1-#14, excluding #2, #8, #13)
+
+---
+
+#### ISSUE #14: Missing resolutions_fts table (P1) ✅ FIXED
 
 **Found:** 2026-06-18 00:40 UTC  
+**Fixed:** 2026-06-18 00:50 UTC (commit a0a1876)  
 **Priority:** P1 (blocks core feature)
 
 **Impact:** Cannot record incident resolutions - HTTP 500 error
@@ -991,9 +1015,31 @@ CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', 
 - Code: `src/pages/app/incidents/[id].astro` lines 33-37
 - Database: missing table
 
-**Fix:**
-1. Add FTS table creation to initSqlite() in `src/lib/db/index.ts`
-2. Pattern: `CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', content_rowid='rowid');`
-3. Update FTS trigger to auto-sync on INSERT
+**Fix applied:**
+1. Added FTS table creation to initSqlite() in `src/lib/db/index.ts`
+2. Created table with pattern: `CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', content_rowid='rowid');`
+3. Fixed FTS sync code to query rowid AFTER insert (was trying to SELECT during insert)
+4. Auto-populates existing resolutions on first database init
+
+**Verification:** ✅ VERIFIED FIXED (2026-06-18 01:00 UTC)
+- Deployed charlieseay/stdout:a0a1876 to ThinkPad
+- Retested INC-08: Resolution recording now works
+- Resolution displayed in timeline with date
+- RESOLUTIONS count shows (1)
+- No HTTP 500 error
+
+---
+
+### INC-08: Resolution recording ✅ PASS (after fix)
+
+**Test:** Record resolution → verify appears in timeline  
+**Result:** ✅ PASS (after fixing ISSUE #14)
+- Filled resolution textarea with test content
+- Clicked "Record Resolution" button
+- Page reloaded successfully (no HTTP 500)
+- Resolution appears in RESOLUTIONS (1) section
+- Content displayed: "Restarted the TCP service on the target host. Connection now stable."
+- Date shown: "2026-06-17"
+- Status auto-updated to "Resolved"
 
 ---
