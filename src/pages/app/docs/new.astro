@@ -58,9 +58,10 @@ if (Astro.request.method === 'POST') {
       const id = nanoid();
       const now = new Date();
       const sizeBytes = new TextEncoder().encode(content).length;
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || id;
 
       db.insert(schema.docs).values({
-        id, userId: user.id, title, content, docType, stackId, incidentId, tags, sizeBytes,
+        id, userId: user.id, title, content, type: docType, slug, stackId, incidentId, tags, sizeBytes,
         createdAt: now, updatedAt: now,
       }).run();
 
