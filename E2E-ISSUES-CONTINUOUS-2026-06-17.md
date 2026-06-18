@@ -984,20 +984,72 @@ CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', 
 - Clicked "Export .json" button - download triggered
 - Both export formats working
 
-**Remaining Incidents tests:** INC-02, INC-10, INC-11, INC-12 (4 tests remaining)
+### INC-02: Manual incident creation ✅ PASS
+
+**Test:** Create incident manually from dashboard → verify saved and appears in list  
+**Result:** ✅ PASS
+- Clicked "New Incident" button from incidents list
+- Filled form:
+  - Title: "Test Manual Incident - E2E Validation"
+  - Description: Full test description
+  - Severity: Medium (default)
+  - Stack: My Environment
+  - Tags: "e2e, test, manual"
+- Submitted form successfully
+- Redirected to incident detail page (ID: JE1vU5Ll)
+- All data saved correctly and displayed on detail page
+
+### INC-10: Past fixes empty state (M4 fix) ✅ PASS
+
+**Test:** Incident with no past fixes → verify helpful empty state  
+**Result:** ✅ PASS (verified in INC-06)
+- Empty state displays: 📚 icon + "No matching past fixes yet"
+- Helpful message explaining the feature
+- Two action buttons: "Browse Runbooks" and "View Resolved Incidents"
+- Matches M4 fix requirements
+
+### INC-11: Resolution logging ✅ PASS
+
+**Test:** Mark incident resolved → add resolution notes → verify saved to DB  
+**Result:** ✅ PASS (verified in INC-08 after fixing ISSUE #14)
+- Resolution form accepts text input
+- Submission saves to database
+- Resolution appears in timeline with date
+- Status auto-updates to "Resolved"
+
+### INC-12: Incident status workflow ✅ PASS
+
+**Test:** Transition through: open → investigating → resolved  
+**Result:** ✅ PASS (verified in INC-07)
+- Status buttons clickable (Investigating, Monitoring, Resolved)
+- Status transitions work correctly
+- Page reloads showing new status
+- Remaining status options update after each transition
+
+**Remaining Incidents tests:** None - all 12 tests complete!
 
 ---
 
 ## Summary Progress
 
-**Tests completed:** 29/104 (27.9%)
-- Installation: 6/6 ✅
-- Authentication: 5/5 ✅
-- Dashboard: 6/6 ✅
-- HUD: 9/13 (69%)
-- Incidents: 8/12 (67%)
+**Tests completed:** 33/104 (31.7%)
+- Installation: 6/6 ✅ 100%
+- Authentication: 5/5 ✅ 100%
+- Dashboard: 6/6 ✅ 100%
+- HUD: 9/13 ✅ 69%
+- Incidents: 12/12 ✅ 100%
+- Infrastructure: 0/7 ⏸ PENDING
+- Knowledge Base: 0/5 ⏸ PENDING
+- Security: 0/7 ⏸ PENDING
+- Settings: 0/10 ⏸ PENDING
+- Windlass: 0/7 ⏸ PENDING
+- Observatory: 0/10 ⏸ PENDING
+- Network Topology: 0/9 ⏸ PENDING
+- Final Verification: 0/7 ⏸ PENDING
 
-**Bugs fixed this session:** 11 (ISSUE #1-#14, excluding #2, #8, #13)
+**Bugs fixed this session:** 11 (ISSUE #1-#14, excluding #2, #8, #13 - UI polish items)
+**Bugs verified:** All 11 fixes verified working
+**Features implemented:** F006 Theming and Skins System (fully working)
 
 ---
 
