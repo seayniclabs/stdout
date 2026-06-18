@@ -1030,15 +1030,81 @@ CREATE VIRTUAL TABLE resolutions_fts USING fts5(content, content='resolutions', 
 
 ---
 
+## Infrastructure Section E2E Testing
+
+**Started:** 2026-06-18 01:15 UTC  
+**Test Suite:** Infrastructure & Stacks (7 tests)
+
+### INFRA-01: Stacks list displays discovered stack ✅ PASS
+- Navigate to /app/stacks
+- "My Environment" stack displayed
+- Shows 35 devices, 8 services, 0% health, 9 active incidents
+
+### INFRA-02: Stack detail shows linked hosts ✅ PASS
+- Clicked stack detail
+- 35 discovered hosts displayed with IPs
+- "Last seen" timestamps shown (⚠️ Note: timestamp format bug - shows "1/10/58431, 9:10:00 AM" - ISSUE #15)
+- 9 incidents linked to stack
+- Pagination: "...and 23 more hosts"
+
+### INFRA-03: Manual stack creation ✅ PASS
+- Clicked "Add Stack" button
+- Filled form: name + description
+- Stack created successfully
+- Appeared in stacks list immediately
+
+### INFRA-04: Stack editing ✅ PASS
+- Clicked Edit on test stack
+- Changed name from "Test Stack - E2E Validation" → "Test Stack - EDITED"
+- Saved changes (confirmed 2 dialog prompts)
+- Edit persisted, "Undo" button appeared
+
+### INFRA-05: Stack deletion ✅ PASS
+- Clicked Delete button on test stack
+- Confirmed deletion dialog
+- Stack removed from UI and database
+- Only "My Environment" remains
+
+### INFRA-06: Host-to-stack linking ✅ PASS
+- Verified in stack detail view (INFRA-02)
+- 35 hosts correctly linked to "My Environment" stack
+- Each host shows IP address and last seen timestamp
+
+### INFRA-07: Service discovery within stack ✅ PASS
+- Verified in stack detail view (INFRA-02)
+- 8 services detected on stack
+- Service count displayed on stack card
+
+---
+
+#### ISSUE #15: Stack host timestamp formatting broken (P2 - UI bug)
+
+**Found:** 2026-06-18 01:20 UTC  
+**Priority:** P2 (visual bug, doesn't block functionality)
+
+**Symptoms:** Host "last seen" timestamps show invalid dates like "1/10/58431, 9:10:00 AM" instead of proper date format
+
+**Location:** /app/stacks/[id] - discovered hosts list
+
+**Impact:** Users cannot tell when hosts were last seen
+
+**Expected:** Timestamps like "2026-06-17 11:30 PM" or "2 hours ago"
+
+**Actual:** "1/10/58431, 9:10:00 AM" (year 58431 indicates timestamp conversion error)
+
+**Next step:** Investigate timestamp→date conversion in stack detail page template
+
+---
+
 ## Summary Progress
 
-**Tests completed:** 33/104 (31.7%)
+**Tests completed:** 40/104 (38.5%)
 - Installation: 6/6 ✅ 100%
 - Authentication: 5/5 ✅ 100%
 - Dashboard: 6/6 ✅ 100%
 - HUD: 9/13 ✅ 69%
 - Incidents: 12/12 ✅ 100%
-- Infrastructure: 0/7 ⏸ PENDING
+- Infrastructure: 7/7 ✅ 100%
 - Knowledge Base: 0/5 ⏸ PENDING
 - Security: 0/7 ⏸ PENDING
 - Settings: 0/10 ⏸ PENDING
