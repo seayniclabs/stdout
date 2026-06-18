@@ -20,6 +20,7 @@ Completed comprehensive E2E testing and UI formatting fixes (2026-06-17 22:00 �
   - ✅ Fixed HUD page UI formatting: removed fixed viewport height, improved scrolling, tiles no longer cut off
   - ✅ Added responsive breakpoints for mobile/tablet layouts
   - ✅ Verified all pages render correctly without formatting issues
+  - ✅ **Added mDNS (Avahi) support - "magic URL" now working**: http://stdout.local:8112
   - ✅ Deployed image latest to ThinkPad (192.168.0.244:8112)
 - **Decisions made:**
   - Use Chrome DevTools MCP for all browser automation (successful, 100% automated)
@@ -38,8 +39,9 @@ Completed comprehensive E2E testing and UI formatting fixes (2026-06-17 22:00 �
 ## Active Context
 
 - **Branch:** main
-- **Last commit:** 788aac3 - "Fix HUD page UI formatting issues"
+- **Last commit:** a1872da - "Add mDNS (Avahi) support for stdout.local magic URL"
 - **Deployed image:** charlieseay/stdout:latest (ThinkPad 192.168.0.244:8112)
+- **Magic URL:** http://stdout.local:8112 (mDNS/Bonjour enabled)
 - **License:** Premium test license activated (test@example.com, expires 2027-06-18)
 - **Test credentials:** admin@test.local / test123
 - **Relevant files:**
