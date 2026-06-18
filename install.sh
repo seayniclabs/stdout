@@ -18,6 +18,7 @@ REMOTE_TARGET=""   # e.g. charlie@192.168.0.244 — run the install ON that host
 SATELLITE_MODE=false
 SATELLITE_ROLE=""    # read-only | full-control
 SATELLITE_STDOUT_URL=""  # URL of the StdOut instance to report to
+CLEAN_INSTALL=false  # Remove existing containers and volumes before install
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -54,9 +55,13 @@ while [[ $# -gt 0 ]]; do
       SATELLITE_STDOUT_URL="$2"
       shift 2
       ;;
+    --clean)
+      CLEAN_INSTALL=true
+      shift
+      ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--offline] [--bundle <path>] [--license <path>] [--remote user@host] [--config deploy.yaml]"
+      echo "Usage: $0 [--offline] [--bundle <path>] [--license <path>] [--remote user@host] [--config deploy.yaml] [--clean]"
       echo "       $0 --satellite [--satellite-role read-only|full-control] [--satellite-url <stdout-url>]"
       exit 1
       ;;
@@ -346,6 +351,31 @@ else
     fi
   fi
   echo -e "${GREEN}✓ Setup server image ready${NC}"
+  echo ""
+fi
+
+# Clean install: remove existing containers and volumes
+if [ "$CLEAN_INSTALL" = true ]; then
+  echo -e "${YELLOW}🧹 Performing clean installation...${NC}"
+
+  # Stop and remove containers
+  for container in stdout windlass stdout-setup; do
+    if docker ps -a --format '{{.Names}}' | grep -qx "$container"; then
+      echo -e "${BLUE}  Removing container: $container${NC}"
+      docker stop "$container" >/dev/null 2>&1 || true
+      docker rm "$container" >/dev/null 2>&1 || true
+    fi
+  done
+
+  # Remove volumes
+  for volume in stdout-data stdout-install_stdout-data; do
+    if docker volume ls --format '{{.Name}}' | grep -qx "$volume"; then
+      echo -e "${BLUE}  Removing volume: $volume${NC}"
+      docker volume rm "$volume" >/dev/null 2>&1 || true
+    fi
+  done
+
+  echo -e "${GREEN}✓ Cleanup complete${NC}"
   echo ""
 fi
 
