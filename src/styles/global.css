@@ -1,3 +1,6 @@
+/* ── Fonts ────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
 /* ── Reset & Base ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -24,25 +27,35 @@
 }
 .skip-link:focus { top: 1rem; }
 
-/* ── StdOut Design Tokens ────────────────────── */
+/* ── StdOut Design Tokens (Awwwards Dark) ────────── */
 :root {
-  --bg:            #07070C;
-  --bg-surface:    #0E0E18;
-  --bg-elevated:   #151522;
-  --bg-hover:      #1A1A2A;
-  --border:        #1F1F35;
-  --border-hover:  #2D2D4A;
-  --text:          #F0F0F8;
+  --bg:            #0A0A0F;
+  --bg-surface:    #13131A;
+  --bg-elevated:   #1A1A24;
+  --bg-card:       #1A1A24;
+  --bg-hover:      #222230;
+  --border:        rgba(255, 255, 255, 0.08);
+  --border-hover:  rgba(249, 115, 22, 0.4);
+  --text:          #E8E8F0;
   --text-secondary:#A0A0B8;
-  --text-muted:    #8888A0;  /* WCAG AA: 5.8:1 on --bg, 5.5:1 on cards (was #5A5A72 @ 3.0:1) */
+  --text-muted:    #6E6E88;
 
-  /* Brand accent — Coral (pushed bolder) */
+  /* Brand accent — Coral */
   --accent:        #F97316;
   --accent-light:  #FB923C;
   --accent-bright: #FF8C3A;
   --accent-dim:    rgba(249, 115, 22, 0.12);
-  --accent-glow:   rgba(249, 115, 22, 0.25);
-  --accent-btn:    #C2410C;  /* Darker for text-on-button WCAG AA (~4.7:1 with white) */
+  --accent-glow:   rgba(249, 115, 22, 0.4);
+  --accent-btn:    #C2410C;
+
+  /* Secondary accents — Awwwards palette */
+  --cyan:          #40E5D1;
+  --cyan-glow:     rgba(64, 229, 209, 0.3);
+  --purple:        #9D4EDD;
+  --purple-glow:   rgba(157, 78, 221, 0.3);
+  --teal:          #2DD4BF;
+  --teal-dim:      rgba(45, 212, 191, 0.12);
+  --teal-glow:     rgba(45, 212, 191, 0.25);
 
   /* Severity — higher luminance for punch */
   --critical:      #F04848;
@@ -58,38 +71,34 @@
   --low-glow:      rgba(52, 212, 106, 0.30);
   --resolved:      #55556A;
 
-  /* Teal secondary accent */
-  --teal:          #2DD4BF;
-  --teal-dim:      rgba(45, 212, 191, 0.12);
-  --teal-glow:     rgba(45, 212, 191, 0.25);
-
-  /* Typography */
+  /* Typography — Space Grotesk headlines */
   --font-ui:       'Inter', -apple-system, system-ui, sans-serif;
+  --font-display:  'Space Grotesk', 'Inter', sans-serif;
   --font-mono:     'JetBrains Mono', 'Fira Code', monospace;
 
   /* Spacing & Radius */
-  --radius:        8px;
-  --radius-sm:     6px;
-  --radius-lg:     12px;
-  --transition:    all 0.2s ease;
+  --radius:        12px;
+  --radius-sm:     8px;
+  --radius-lg:     16px;
+  --transition:    all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
-  /* Shadows — enhanced depth system */
-  --shadow-sm:     0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
-  --shadow-md:     0 4px 12px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.25);
-  --shadow-lg:     0 8px 24px rgba(0,0,0,0.55), 0 4px 8px rgba(0,0,0,0.3);
-  --shadow-xl:     0 16px 48px rgba(0,0,0,0.6), 0 8px 16px rgba(0,0,0,0.35);
-  --shadow-glow:   0 0 24px var(--accent-glow);
+  /* Shadows — deeper, more dramatic */
+  --shadow-sm:     0 2px 4px rgba(0,0,0,0.4);
+  --shadow-md:     0 8px 20px rgba(0,0,0,0.5);
+  --shadow-lg:     0 16px 40px rgba(0,0,0,0.6);
+  --shadow-xl:     0 24px 60px rgba(0,0,0,0.7);
+  --shadow-glow:   0 0 40px var(--accent-glow);
   --shadow-inset:  inset 0 1px 0 rgba(255,255,255,0.03);
 
   /* Glass / frosted panel */
-  --glass-bg:      rgba(14, 14, 24, 0.6);
-  --glass-border:  rgba(255, 255, 255, 0.06);
+  --glass-bg:      rgba(26, 26, 36, 0.7);
+  --glass-border:  rgba(255, 255, 255, 0.08);
   --glass-blur:    blur(20px) saturate(180%);
 }
 
 html { scroll-behavior: smooth; }
 
-/* ── Grid background ─────────────────────────── */
+/* ── Animated gradient orbs background ─────────── */
 body::before {
   content: '';
   position: fixed;
@@ -97,9 +106,31 @@ body::before {
   z-index: -2;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(249, 115, 22, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(249, 115, 22, 0.015) 1px, transparent 1px);
+    linear-gradient(rgba(249, 115, 22, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(249, 115, 22, 0.03) 1px, transparent 1px);
   background-size: 60px 60px;
+}
+
+/* Animated orbs */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle 600px at 20% 10%, rgba(249, 115, 22, 0.15) 0%, transparent 50%),
+    radial-gradient(circle 500px at 80% 90%, rgba(64, 229, 209, 0.12) 0%, transparent 50%),
+    radial-gradient(circle 450px at 50% 50%, rgba(157, 78, 221, 0.1) 0%, transparent 50%);
+  filter: blur(80px);
+  animation: orbFloat 25s ease-in-out infinite alternate;
+}
+
+@keyframes orbFloat {
+  0% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+  100% { transform: translate(0, 0) scale(1); }
 }
 
 /* ── Contextual help links ───────────────────── */

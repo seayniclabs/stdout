@@ -103,8 +103,11 @@ if (user) {
   <main id="main-content">
   <!-- Hero -->
   <section class="hero">
-    <div class="hero-badge mono">INCIDENT MEMORY FOR YOUR INFRASTRUCTURE</div>
-    <h1>You've already solved this.<br /><span class="hero-dim">You just don't remember.</span></h1>
+    <div class="hero-badge">
+      <span class="status-dot-live" style="background: var(--green); width: 6px; height: 6px;"></span>
+      <span class="mono">INCIDENT MEMORY FOR YOUR INFRASTRUCTURE</span>
+    </div>
+    <h1>You've already <em>solved this.</em><br /><span class="hero-dim">You just don't remember.</span></h1>
     <p class="hero-sub">StdOut is your incident companion. When something breaks at 2am, it pulls up how you fixed it last time &mdash; your stack, your past resolutions, your runbooks. Stop solving the same problem twice.</p>
     <div class="hero-cta">
       <a href="/app/register" class="btn btn-primary btn-lg btn-glow">Self-Host for $149</a>
@@ -383,38 +386,59 @@ if (user) {
     transform: translateY(-1px);
   }
 
-  /* ── Hero ───────────────────────────────────── */
+  /* ── Hero (Awwwards Dark) ───────────────────── */
   .hero {
     text-align: center;
-    padding: 80px 24px 60px;
-    max-width: 860px;
+    padding: 120px 24px 80px;
+    max-width: 900px;
     margin: 0 auto;
     position: relative;
   }
   .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 20px;
+    background: rgba(249, 115, 22, 0.12);
+    border: 1px solid rgba(249, 115, 22, 0.3);
+    border-radius: 100px;
     font-size: 11px;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.08em;
     color: var(--accent-light);
-    margin-bottom: 20px;
-    font-weight: 700;
-    animation: fadeIn 0.5s ease-out both;
+    margin-bottom: 32px;
+    font-weight: 600;
+    animation: fadeIn 0.8s ease-out 0.2s both;
+    backdrop-filter: blur(10px);
   }
   .hero h1 {
-    font-size: clamp(32px, 5.5vw, 52px);
-    font-weight: 800;
-    line-height: 1.1;
+    font-family: var(--font-display);
+    font-size: clamp(48px, 7vw, 96px);
+    font-weight: 300;
+    line-height: 1.05;
     letter-spacing: -0.04em;
-    margin-bottom: 24px;
-    animation: fadeInUp 0.5s ease-out 0.1s both;
+    margin-bottom: 32px;
+    animation: fadeInUp 0.8s ease-out 0.3s both;
   }
-  .hero-dim { color: var(--text-muted); }
+  .hero h1 em {
+    font-style: normal;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--cyan) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .hero-dim {
+    color: var(--text-muted);
+    font-weight: 300;
+  }
   .hero-sub {
-    font-size: 16px;
-    line-height: 1.7;
+    font-size: 18px;
+    line-height: 1.8;
     color: var(--text-secondary);
-    max-width: 600px;
-    margin: 0 auto 32px;
-    animation: fadeInUp 0.5s ease-out 0.2s both;
+    font-weight: 300;
+    max-width: 640px;
+    margin: 0 auto 40px;
+    animation: fadeInUp 0.8s ease-out 0.4s both;
   }
   .hero-cta {
     display: flex;
@@ -432,17 +456,24 @@ if (user) {
     animation: fadeIn 0.5s ease-out 0.4s both;
   }
 
-  /* ── Scanner HUD ───────────────────────────── */
+  /* ── Scanner HUD (Awwwards Dark) ───────────── */
   .hud {
-    max-width: 600px;
+    max-width: 680px;
     margin: 0 auto;
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
     overflow: hidden;
     text-align: left;
-    background: var(--bg);
-    box-shadow: 0 0 80px rgba(249, 115, 22, 0.08), 0 0 160px rgba(249, 115, 22, 0.03), var(--shadow-xl);
-    animation: fadeInScale 0.6s ease-out 0.5s both;
+    background: var(--bg-card);
+    box-shadow: var(--shadow-xl);
+    animation: fadeInScale 0.8s ease-out 0.6s both;
+    position: relative;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .hud:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 0 60px rgba(249, 115, 22, 0.15), var(--shadow-xl);
+    border-color: rgba(249, 115, 22, 0.2);
   }
   .hud-bar {
     display: flex;
@@ -541,21 +572,37 @@ if (user) {
     transform: translateY(-4px);
   }
   .pipe-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    background: var(--accent-dim);
-    border: 1px solid rgba(249, 115, 22, 0.15);
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--accent-dim) 0%, rgba(64, 229, 209, 0.08) 100%);
+    border: 1px solid rgba(249, 115, 22, 0.2);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 12px;
-    transition: all 0.2s ease;
-    box-shadow: 0 0 16px rgba(249, 115, 22, 0.05);
+    margin: 0 auto 16px;
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+  }
+  .pipe-icon::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--cyan) 100%);
+    opacity: 0;
+    transition: opacity 0.4s ease;
   }
   .pipe-step:hover .pipe-icon {
-    box-shadow: 0 0 24px var(--accent-glow);
-    border-color: rgba(249, 115, 22, 0.3);
+    transform: translateY(-4px);
+    box-shadow: 0 0 40px var(--accent-glow);
+    border-color: var(--accent);
+  }
+  .pipe-step:hover .pipe-icon::before {
+    opacity: 1;
   }
   .pipe-num {
     font-size: 12px;
@@ -610,28 +657,55 @@ if (user) {
     overflow: hidden;
   }
   .feat {
-    padding: 28px;
-    background: var(--bg);
-    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    padding: 32px;
+    background: var(--bg-card);
+    transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    position: relative;
+    overflow: hidden;
+  }
+  .feat::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--cyan) 100%);
+    transform: translateY(-2px);
+    opacity: 0;
+    transition: all 0.4s ease;
   }
   .feat:hover {
-    background: var(--bg-surface);
-    transform: translateY(-2px);
+    background: var(--bg-elevated);
+    transform: translateY(-6px);
+    box-shadow: 0 0 40px var(--accent-glow);
+  }
+  .feat:hover::before {
+    transform: translateY(0);
+    opacity: 1;
   }
   .feat-head {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .feat-icon {
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .feat:hover .feat-icon {
+    transform: rotate(5deg) scale(1.1);
   }
   .feat h3 {
-    font-size: 15px;
+    font-family: var(--font-display);
+    font-size: 17px;
     font-weight: 600;
   }
   .feat p {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
-    line-height: 1.65;
+    line-height: 1.7;
+    font-weight: 300;
   }
   .feat-link {
     display: inline-block;
