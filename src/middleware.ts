@@ -54,8 +54,14 @@ setTimeout(async () => {
   }
 }, 5000); // Run after monitors start
 
-// --- Bearer Token Auth (for scanner API) ---
-const BEARER_PATHS = ['/app/api/stacks/import', '/app/api/windlass/event', '/app/api/scanner/autodiscover'];
+// --- Bearer Token Auth (for scanner API + Observatory) ---
+const BEARER_PATHS = [
+  '/app/api/stacks/import',
+  '/app/api/windlass/event',
+  '/app/api/scanner/autodiscover',
+  '/app/api/observatory/tool',
+  '/app/api/network/scan'
+];
 
 function validateBearerToken(request: Request): { userId: string } | null {
   const authHeader = request.headers.get('authorization');
