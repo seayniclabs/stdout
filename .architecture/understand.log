@@ -1,0 +1,12 @@
+Starting knowledge graph analysis for the StdOut project. I've collected the project context and now need to set up the exclusion patterns.
+
+## Phase 0.5 — Ignore Configuration
+
+I'm generating a starter `.understandignore` file with suggested exclusions based on your `.gitignore` and common test-file patterns. This will help focus the analysis on the most relevant code.
+
+The file includes:
+- Patterns from `.gitignore` (already excluded)
+- Common test file patterns (commented out for your review)
+- Documentation, build artifacts, config files (commented out for your review)
+
+Once generated, please review it and uncomment any patterns you'd like to exclude from analysis, then confirm to continue.

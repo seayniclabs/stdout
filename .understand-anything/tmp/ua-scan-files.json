@@ -1,0 +1,2616 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": ".dockerignore",
+      "language": "unknown",
+      "sizeLines": 16,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".DS_Store",
+      "language": "unknown",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".env.example",
+      "language": "config",
+      "sizeLines": 44,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/dependabot.yml",
+      "language": "yaml",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/DOCKER_HUB_SETUP.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".github/workflows/docker-publish.yml",
+      "language": "yaml",
+      "sizeLines": 69,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "language": "yaml",
+      "sizeLines": 117,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".mcp.json",
+      "language": "json",
+      "sizeLines": 11,
+      "fileCategory": "config"
+    },
+    {
+      "path": "astro.config.mjs",
+      "language": "javascript",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "AUTOMATION_PLAN.md",
+      "language": "markdown",
+      "sizeLines": 216,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "avahi-services/stdout.service",
+      "language": "service",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "BUILD.md",
+      "language": "markdown",
+      "sizeLines": 166,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "check-scanner-state.js",
+      "language": "javascript",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "community-seed/01-cloudflare-tunnel-setup.md",
+      "language": "markdown",
+      "sizeLines": 127,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/02-nginx-proxy-manager-new-service.md",
+      "language": "markdown",
+      "sizeLines": 122,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/03-docker-healthcheck-patterns.md",
+      "language": "markdown",
+      "sizeLines": 133,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/04-sqlite-backup-strategy.md",
+      "language": "markdown",
+      "sizeLines": 144,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/05-authentik-oidc-integration.md",
+      "language": "markdown",
+      "sizeLines": 139,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/06-telegraf-influxdb-grafana-monitoring.md",
+      "language": "markdown",
+      "sizeLines": 200,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/07-postmortem-dns-propagation-outage.md",
+      "language": "markdown",
+      "sizeLines": 72,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/08-postmortem-docker-compose-secrets.md",
+      "language": "markdown",
+      "sizeLines": 136,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/09-n8n-workflow-backup-restore.md",
+      "language": "markdown",
+      "sizeLines": 174,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "community-seed/10-runbook-new-subdomain-end-to-end.md",
+      "language": "markdown",
+      "sizeLines": 179,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "COMPLETE_AUTOMATION_SUMMARY.md",
+      "language": "markdown",
+      "sizeLines": 376,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "comprehensive-e2e-test.js",
+      "language": "javascript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "CRITICAL-FINDINGS.md",
+      "language": "markdown",
+      "sizeLines": 190,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "demo-license.json",
+      "language": "json",
+      "sizeLines": 6,
+      "fileCategory": "config"
+    },
+    {
+      "path": "demo.license",
+      "language": "license",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "deploy.example.yaml",
+      "language": "yaml",
+      "sizeLines": 35,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docker-compose.observatory.yml",
+      "language": "yaml",
+      "sizeLines": 243,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "docker-compose.yml",
+      "language": "yaml",
+      "sizeLines": 190,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 31,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "docs/monitoring-installation.md",
+      "language": "markdown",
+      "sizeLines": 270,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/QA-Setup-Walkthrough-Report.md",
+      "language": "markdown",
+      "sizeLines": 722,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "drizzle.config.ts",
+      "language": "typescript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "drizzle/0000_white_spyke.sql",
+      "language": "sql",
+      "sizeLines": 549,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0001_fix_windlass_config.sql",
+      "language": "sql",
+      "sizeLines": 14,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0002_add_fts_tables.sql",
+      "language": "sql",
+      "sizeLines": 20,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0003_fix_ai_execution_audit.sql",
+      "language": "sql",
+      "sizeLines": 18,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0004_add_entities.sql",
+      "language": "sql",
+      "sizeLines": 12,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0005_add_entity_relationships.sql",
+      "language": "sql",
+      "sizeLines": 13,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0006_add_discovered_hosts_columns.sql",
+      "language": "sql",
+      "sizeLines": 1,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/0007_add_discovered_at_column.sql",
+      "language": "sql",
+      "sizeLines": 1,
+      "fileCategory": "data"
+    },
+    {
+      "path": "drizzle/meta/_journal.json",
+      "language": "json",
+      "sizeLines": 61,
+      "fileCategory": "config"
+    },
+    {
+      "path": "drizzle/meta/0000_snapshot.json",
+      "language": "json",
+      "sizeLines": 3409,
+      "fileCategory": "config"
+    },
+    {
+      "path": "E2E-ISSUES-CONTINUOUS-2026-06-17.md",
+      "language": "markdown",
+      "sizeLines": 1908,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-QUICK-TEST-RESULTS.md",
+      "language": "markdown",
+      "sizeLines": 72,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-Session-Handoff-FIXES-2026-06-17.md",
+      "language": "markdown",
+      "sizeLines": 261,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-TEST-FINAL-REPORT-2026-06-17.md",
+      "language": "markdown",
+      "sizeLines": 217,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-TEST-RESULTS.md",
+      "language": "markdown",
+      "sizeLines": 65,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-TEST-SUMMARY-2026-06-17.md",
+      "language": "markdown",
+      "sizeLines": 465,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "E2E-TEST-VERIFICATION.md",
+      "language": "markdown",
+      "sizeLines": 303,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "FINAL-E2E-REPORT.md",
+      "language": "markdown",
+      "sizeLines": 232,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "HANDOFF.md",
+      "language": "markdown",
+      "sizeLines": 147,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "IMPLEMENTATION-STATUS.md",
+      "language": "markdown",
+      "sizeLines": 473,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "INSTALL.md",
+      "language": "markdown",
+      "sizeLines": 670,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "install.sh",
+      "language": "shell",
+      "sizeLines": 511,
+      "fileCategory": "script"
+    },
+    {
+      "path": "ISSUES-FOUND-E2E.md",
+      "language": "markdown",
+      "sizeLines": 429,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "keys/license-public.pem",
+      "language": "pem",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "KNOWN_ISSUES.md",
+      "language": "markdown",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "LICENSE-VALIDATION.md",
+      "language": "markdown",
+      "sizeLines": 743,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "migrations/0010_add_observatory_learning_layer.sql",
+      "language": "sql",
+      "sizeLines": 117,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/0011_add_data_sources_table.sql",
+      "language": "sql",
+      "sizeLines": 19,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/0011_seed_observatory_patterns.ts",
+      "language": "typescript",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "migrations/0012_add_output_freshness_monitor.sql",
+      "language": "sql",
+      "sizeLines": 10,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/0013_add_skins_tables.sql",
+      "language": "sql",
+      "sizeLines": 36,
+      "fileCategory": "data"
+    },
+    {
+      "path": "migrations/006_error_log.sql",
+      "language": "sql",
+      "sizeLines": 23,
+      "fileCategory": "data"
+    },
+    {
+      "path": "NETWORK-DISCOVERY-IMPLEMENTATION.md",
+      "language": "markdown",
+      "sizeLines": 308,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "NEXT-STEPS.md",
+      "language": "markdown",
+      "sizeLines": 240,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "observatory/config/loki-config.yml",
+      "language": "yaml",
+      "sizeLines": 40,
+      "fileCategory": "config"
+    },
+    {
+      "path": "observatory/config/prometheus.yml",
+      "language": "yaml",
+      "sizeLines": 78,
+      "fileCategory": "config"
+    },
+    {
+      "path": "observatory/config/tempo-config.yml",
+      "language": "yaml",
+      "sizeLines": 36,
+      "fileCategory": "config"
+    },
+    {
+      "path": "observatory/docker-compose.yml",
+      "language": "yaml",
+      "sizeLines": 92,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "observatory/sentinel/agents.py",
+      "language": "python",
+      "sizeLines": 254,
+      "fileCategory": "code"
+    },
+    {
+      "path": "observatory/sentinel/analyst.py",
+      "language": "python",
+      "sizeLines": 322,
+      "fileCategory": "code"
+    },
+    {
+      "path": "observatory/sentinel/Dockerfile",
+      "language": "dockerfile",
+      "sizeLines": 34,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "observatory/sentinel/main.py",
+      "language": "python",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "observatory/sentinel/requirements.txt",
+      "language": "txt",
+      "sizeLines": 6,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "observatory/sentinel/scripts/init-ollama.sh",
+      "language": "shell",
+      "sizeLines": 150,
+      "fileCategory": "script"
+    },
+    {
+      "path": "observatory/sentinel/watcher.py",
+      "language": "python",
+      "sizeLines": 277,
+      "fileCategory": "code"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 41,
+      "fileCategory": "config"
+    },
+    {
+      "path": "ph-gallery/01-hero.html",
+      "language": "html",
+      "sizeLines": 146,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/02-scanner.html",
+      "language": "html",
+      "sizeLines": 251,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/03-ai-diagnosis.html",
+      "language": "html",
+      "sizeLines": 305,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/04-knowledge-base.html",
+      "language": "html",
+      "sizeLines": 320,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/05-hud-dashboard.html",
+      "language": "html",
+      "sizeLines": 383,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/06-pricing.html",
+      "language": "html",
+      "sizeLines": 323,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "ph-gallery/video/script.txt",
+      "language": "txt",
+      "sizeLines": 13,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "ph-gallery/video/subtitles.srt",
+      "language": "srt",
+      "sizeLines": 68,
+      "fileCategory": "code"
+    },
+    {
+      "path": "preflight.sh",
+      "language": "shell",
+      "sizeLines": 137,
+      "fileCategory": "script"
+    },
+    {
+      "path": "PRODUCTION-QA-CYCLE.md",
+      "language": "markdown",
+      "sizeLines": 288,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "PROJECT_HEADER.md",
+      "language": "markdown",
+      "sizeLines": 202,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "public/install/binaries/stdout-satellite-linux-amd64",
+      "language": "unknown",
+      "sizeLines": 33294,
+      "fileCategory": "code"
+    },
+    {
+      "path": "public/install/binaries/stdout-satellite-linux-arm64",
+      "language": "unknown",
+      "sizeLines": 28351,
+      "fileCategory": "code"
+    },
+    {
+      "path": "public/install/satellite.sh",
+      "language": "shell",
+      "sizeLines": 180,
+      "fileCategory": "script"
+    },
+    {
+      "path": "public/manifest.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "public/offline.html",
+      "language": "html",
+      "sizeLines": 64,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "public/robots.txt",
+      "language": "txt",
+      "sizeLines": 16,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "public/sw.js",
+      "language": "javascript",
+      "sizeLines": 106,
+      "fileCategory": "code"
+    },
+    {
+      "path": "QA-CYCLE-1-FINAL-REPORT.md",
+      "language": "markdown",
+      "sizeLines": 373,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "QA-CYCLE-1-SUMMARY.md",
+      "language": "markdown",
+      "sizeLines": 177,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "QA-EXECUTIVE-SUMMARY.md",
+      "language": "markdown",
+      "sizeLines": 277,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "QA-FIXES-APPLIED.md",
+      "language": "markdown",
+      "sizeLines": 214,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "QA-ISSUES-FOUND.md",
+      "language": "markdown",
+      "sizeLines": 337,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 366,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "reports/windlass-phase5-gate-assessment-2026-04-15.md",
+      "language": "markdown",
+      "sizeLines": 70,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "save-images.sh",
+      "language": "shell",
+      "sizeLines": 100,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/apply-schema.js.old",
+      "language": "old",
+      "sizeLines": 796,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/bootstrap-unattended.js",
+      "language": "javascript",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/browser-frame.html",
+      "language": "html",
+      "sizeLines": 120,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "scripts/capture-mobile.sh",
+      "language": "shell",
+      "sizeLines": 221,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/create-admin-from-env.js",
+      "language": "javascript",
+      "sizeLines": 70,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/create-admin.js",
+      "language": "javascript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/create-windlass-config-from-env.js",
+      "language": "javascript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/creatomate-video.ts",
+      "language": "typescript",
+      "sizeLines": 415,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/fix-db-imports.js",
+      "language": "javascript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/generate-all-assets.sh",
+      "language": "shell",
+      "sizeLines": 87,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/generate-demo-license.js",
+      "language": "javascript",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/generate-license.js",
+      "language": "javascript",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/init-setup.sh",
+      "language": "shell",
+      "sizeLines": 87,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/mark-installation-complete.js",
+      "language": "javascript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/migrate-add-stack-id-to-hosts.ts",
+      "language": "typescript",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/migrate-windlass-service-type.js",
+      "language": "javascript",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/migrate.js",
+      "language": "javascript",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/screenshot-assets.ts",
+      "language": "typescript",
+      "sizeLines": 518,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/seed-patterns.js",
+      "language": "javascript",
+      "sizeLines": 85,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/set-env-name.js",
+      "language": "javascript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/set-license.js",
+      "language": "javascript",
+      "sizeLines": 59,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/start.sh",
+      "language": "shell",
+      "sizeLines": 36,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/validate-license.js",
+      "language": "javascript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/verify-windlass-engine-phase4.sh",
+      "language": "shell",
+      "sizeLines": 25,
+      "fileCategory": "script"
+    },
+    {
+      "path": "scripts/wipe-thinkpad-deployment.sh",
+      "language": "shell",
+      "sizeLines": 22,
+      "fileCategory": "script"
+    },
+    {
+      "path": "SESSION-PROGRESS-2026-06-17.md",
+      "language": "markdown",
+      "sizeLines": 476,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "SETUP_AUTOMATION.md",
+      "language": "markdown",
+      "sizeLines": 267,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/components/ErrorPanel.astro",
+      "language": "astro",
+      "sizeLines": 62,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/components/SetupProgress.astro",
+      "language": "astro",
+      "sizeLines": 84,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/data/use-cases.ts",
+      "language": "typescript",
+      "sizeLines": 493,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/env.d.ts",
+      "language": "typescript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/layouts/Layout.astro",
+      "language": "astro",
+      "sizeLines": 891,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/layouts/SetupLayout.astro",
+      "language": "astro",
+      "sizeLines": 106,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/addons.ts",
+      "language": "typescript",
+      "sizeLines": 169,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ai-providers.ts",
+      "language": "typescript",
+      "sizeLines": 359,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/alert-router.ts",
+      "language": "typescript",
+      "sizeLines": 435,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/audit.ts",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/auth.ts",
+      "language": "typescript",
+      "sizeLines": 107,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/auto-wire.ts",
+      "language": "typescript",
+      "sizeLines": 152,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/autofix-apply.ts",
+      "language": "typescript",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/autofix-exec-policy.ts",
+      "language": "typescript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/backup.ts",
+      "language": "typescript",
+      "sizeLines": 223,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/comms/queries.ts",
+      "language": "typescript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/community-kb.ts",
+      "language": "typescript",
+      "sizeLines": 128,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/crypto.ts",
+      "language": "typescript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/central-schema.ts",
+      "language": "typescript",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/index-new.ts",
+      "language": "typescript",
+      "sizeLines": 46,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/index.ts",
+      "language": "typescript",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/schema.ts",
+      "language": "typescript",
+      "sizeLines": 716,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/seed-community-docs.ts",
+      "language": "typescript",
+      "sizeLines": 1427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/skins-schema.ts",
+      "language": "typescript",
+      "sizeLines": 51,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/db/tenant-schema.ts",
+      "language": "typescript",
+      "sizeLines": 582,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/diagnose.ts",
+      "language": "typescript",
+      "sizeLines": 251,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/digest.ts",
+      "language": "typescript",
+      "sizeLines": 262,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/discovery/device-profiler.ts",
+      "language": "typescript",
+      "sizeLines": 254,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/discovery/mac-vendor.ts",
+      "language": "typescript",
+      "sizeLines": 226,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/discovery/mdns-scanner.ts",
+      "language": "typescript",
+      "sizeLines": 174,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/discovery/network-scanner.ts",
+      "language": "typescript",
+      "sizeLines": 182,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/discovery/ssdp-scanner.ts",
+      "language": "typescript",
+      "sizeLines": 228,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/docs-content.ts",
+      "language": "typescript",
+      "sizeLines": 594,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/email.ts",
+      "language": "typescript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/catalog.ts",
+      "language": "typescript",
+      "sizeLines": 474,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/error.ts",
+      "language": "typescript",
+      "sizeLines": 96,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/index.ts",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/logger.ts",
+      "language": "typescript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/retry.ts",
+      "language": "typescript",
+      "sizeLines": 74,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/errors/types.ts",
+      "language": "typescript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/events.ts",
+      "language": "typescript",
+      "sizeLines": 86,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/hud.ts",
+      "language": "typescript",
+      "sizeLines": 637,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/influx.ts",
+      "language": "typescript",
+      "sizeLines": 488,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/known-tools.ts",
+      "language": "typescript",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/license.ts",
+      "language": "typescript",
+      "sizeLines": 205,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/network-utils.ts",
+      "language": "typescript",
+      "sizeLines": 145,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/notify.ts",
+      "language": "typescript",
+      "sizeLines": 118,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/agents.ts",
+      "language": "typescript",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/auto-doc.ts",
+      "language": "typescript",
+      "sizeLines": 247,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/auto-monitor.ts",
+      "language": "typescript",
+      "sizeLines": 382,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/baseline-bootstrap.ts",
+      "language": "typescript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/data-source-config.ts",
+      "language": "typescript",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/degradation-mode.ts",
+      "language": "typescript",
+      "sizeLines": 206,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/initial-discovery.ts",
+      "language": "typescript",
+      "sizeLines": 261,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/initialization.ts",
+      "language": "typescript",
+      "sizeLines": 368,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/metrics-fetcher.ts",
+      "language": "typescript",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/metrics-guide.ts",
+      "language": "typescript",
+      "sizeLines": 286,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/ollama.ts",
+      "language": "typescript",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/operating-mode.ts",
+      "language": "typescript",
+      "sizeLines": 492,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/pattern-feedback.ts",
+      "language": "typescript",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/prompts.ts",
+      "language": "typescript",
+      "sizeLines": 430,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/README.md",
+      "language": "markdown",
+      "sizeLines": 252,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/lib/observatory/reflex.ts",
+      "language": "typescript",
+      "sizeLines": 187,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/retrieval.ts",
+      "language": "typescript",
+      "sizeLines": 546,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/scan-scheduler.ts",
+      "language": "typescript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/sentinel.ts",
+      "language": "typescript",
+      "sizeLines": 432,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/setup-watcher.ts",
+      "language": "typescript",
+      "sizeLines": 377,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/setup.ts",
+      "language": "typescript",
+      "sizeLines": 239,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/standard-patterns.json",
+      "language": "json",
+      "sizeLines": 1055,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/lib/observatory/startup.ts",
+      "language": "typescript",
+      "sizeLines": 235,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/sync-host-monitors.ts",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/tool-augmented-diagnose.ts",
+      "language": "typescript",
+      "sizeLines": 178,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/toolbox.ts",
+      "language": "typescript",
+      "sizeLines": 237,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/types.ts",
+      "language": "typescript",
+      "sizeLines": 133,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/observatory/watcher.ts",
+      "language": "typescript",
+      "sizeLines": 227,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/prometheus.ts",
+      "language": "typescript",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/rbac.ts",
+      "language": "typescript",
+      "sizeLines": 124,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/sanitize.ts",
+      "language": "typescript",
+      "sizeLines": 191,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/scanner-cve.ts",
+      "language": "typescript",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/scanner-docker-hub.ts",
+      "language": "typescript",
+      "sizeLines": 105,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/scanner-heartbeat.ts",
+      "language": "typescript",
+      "sizeLines": 189,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/scanner-shodan.ts",
+      "language": "typescript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/scanner/docker-local.ts",
+      "language": "typescript",
+      "sizeLines": 104,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/secret-scrub.ts",
+      "language": "typescript",
+      "sizeLines": 157,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup.ts",
+      "language": "typescript",
+      "sizeLines": 205,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup/data-sources.ts",
+      "language": "typescript",
+      "sizeLines": 210,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup/installer.ts",
+      "language": "typescript",
+      "sizeLines": 555,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup/monitors.ts",
+      "language": "typescript",
+      "sizeLines": 258,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup/seed-skins.ts",
+      "language": "typescript",
+      "sizeLines": 56,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/setup/watcher.ts",
+      "language": "typescript",
+      "sizeLines": 438,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/skins/apply-skin.ts",
+      "language": "typescript",
+      "sizeLines": 103,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/skins/default-skins.ts",
+      "language": "typescript",
+      "sizeLines": 317,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/skins/skin.schema.json",
+      "language": "json",
+      "sizeLines": 114,
+      "fileCategory": "config"
+    },
+    {
+      "path": "src/lib/source-detect.ts",
+      "language": "typescript",
+      "sizeLines": 146,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/source-test.ts",
+      "language": "typescript",
+      "sizeLines": 191,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/stack-templates.ts",
+      "language": "typescript",
+      "sizeLines": 110,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/base/ConnectorRegistry.ts",
+      "language": "typescript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/base/TicketingConnector.ts",
+      "language": "typescript",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/connectors/BuiltInConnector.ts",
+      "language": "typescript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/connectors/GitHubConnector.ts",
+      "language": "typescript",
+      "sizeLines": 335,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/connectors/WebhookConnector.ts",
+      "language": "typescript",
+      "sizeLines": 236,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/ticketing/sync/SyncEngine.ts",
+      "language": "typescript",
+      "sizeLines": 253,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/tier-gate.ts",
+      "language": "typescript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/tiers.ts",
+      "language": "typescript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/update-check.ts",
+      "language": "typescript",
+      "sizeLines": 168,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/value-score.ts",
+      "language": "typescript",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/windlass-schedule.ts",
+      "language": "typescript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/windlass-weekly-digest-math.ts",
+      "language": "typescript",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/lib/windlass.ts",
+      "language": "typescript",
+      "sizeLines": 681,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/middleware.ts",
+      "language": "typescript",
+      "sizeLines": 618,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/api/licenses/activate.ts",
+      "language": "typescript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/api/licenses/validate.ts",
+      "language": "typescript",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/account.astro",
+      "language": "astro",
+      "sizeLines": 4,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/addons.astro",
+      "language": "astro",
+      "sizeLines": 417,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/admin/submissions.astro",
+      "language": "astro",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/admin/tool-frequency.astro",
+      "language": "astro",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/account.ts",
+      "language": "typescript",
+      "sizeLines": 73,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/addons/dismiss.ts",
+      "language": "typescript",
+      "sizeLines": 20,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/addons/notify.ts",
+      "language": "typescript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/admin/submissions.ts",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/backups.ts",
+      "language": "typescript",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/comms/inbound/webhook.ts",
+      "language": "typescript",
+      "sizeLines": 322,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/community-sync.ts",
+      "language": "typescript",
+      "sizeLines": 70,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/contribute.ts",
+      "language": "typescript",
+      "sizeLines": 237,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/data-sources.ts",
+      "language": "typescript",
+      "sizeLines": 286,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/data-sources/recommendations.ts",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/diagnose.ts",
+      "language": "typescript",
+      "sizeLines": 268,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/digest.ts",
+      "language": "typescript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/discovery/scan.ts",
+      "language": "typescript",
+      "sizeLines": 270,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/docs/embeddings.ts",
+      "language": "typescript",
+      "sizeLines": 118,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/export.ts",
+      "language": "typescript",
+      "sizeLines": 66,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/feature-requests.ts",
+      "language": "typescript",
+      "sizeLines": 106,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/health.ts",
+      "language": "typescript",
+      "sizeLines": 58,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/incidents/autofix-exec.ts",
+      "language": "typescript",
+      "sizeLines": 154,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/incidents/autofix.ts",
+      "language": "typescript",
+      "sizeLines": 385,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/incidents/export.ts",
+      "language": "typescript",
+      "sizeLines": 149,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/incidents/index.ts",
+      "language": "typescript",
+      "sizeLines": 265,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/incidents/webhook.ts",
+      "language": "typescript",
+      "sizeLines": 102,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/license.ts",
+      "language": "typescript",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/me.ts",
+      "language": "typescript",
+      "sizeLines": 13,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/metrics.ts",
+      "language": "typescript",
+      "sizeLines": 70,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/monitors.ts",
+      "language": "typescript",
+      "sizeLines": 185,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/monitors/suggest.ts",
+      "language": "typescript",
+      "sizeLines": 148,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/network/import.ts",
+      "language": "typescript",
+      "sizeLines": 198,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/network/scan-services.ts",
+      "language": "typescript",
+      "sizeLines": 181,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/network/scan.ts",
+      "language": "typescript",
+      "sizeLines": 361,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/add-targets.ts",
+      "language": "typescript",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/auto-setup.ts",
+      "language": "typescript",
+      "sizeLines": 172,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/check.ts",
+      "language": "typescript",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/mode.ts",
+      "language": "typescript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/pending-fix.ts",
+      "language": "typescript",
+      "sizeLines": 94,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/runs.ts",
+      "language": "typescript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/setup-stream.ts",
+      "language": "typescript",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/status.ts",
+      "language": "typescript",
+      "sizeLines": 119,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/tool.ts",
+      "language": "typescript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/observatory/tools/[tool].ts",
+      "language": "typescript",
+      "sizeLines": 233,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/onboarding.ts",
+      "language": "typescript",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/preferences.ts",
+      "language": "typescript",
+      "sizeLines": 146,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/satellite/nodes.ts",
+      "language": "typescript",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/satellite/ping.ts",
+      "language": "typescript",
+      "sizeLines": 23,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/satellite/report.ts",
+      "language": "typescript",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/scanner/autodiscover.ts",
+      "language": "typescript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/scanner/run-now.ts",
+      "language": "typescript",
+      "sizeLines": 196,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/scanner/scan.ts",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/scanner/schedule.ts",
+      "language": "typescript",
+      "sizeLines": 104,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/search.ts",
+      "language": "typescript",
+      "sizeLines": 136,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/settings/ai-providers.ts",
+      "language": "typescript",
+      "sizeLines": 177,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/setup/auto-scan.ts",
+      "language": "typescript",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/setup/install-observatory.ts",
+      "language": "typescript",
+      "sizeLines": 183,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/setup/install-stream.ts",
+      "language": "typescript",
+      "sizeLines": 197,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/setup/install-windlass.ts",
+      "language": "typescript",
+      "sizeLines": 244,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/similar.ts",
+      "language": "typescript",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/skins/set-active.ts",
+      "language": "typescript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/stacks/import.ts",
+      "language": "typescript",
+      "sizeLines": 360,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/stacks/merge.ts",
+      "language": "typescript",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/status-page.ts",
+      "language": "typescript",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/test/wipe-data.ts",
+      "language": "typescript",
+      "sizeLines": 59,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/ticketing/sync.ts",
+      "language": "typescript",
+      "sizeLines": 55,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/tokens.ts",
+      "language": "typescript",
+      "sizeLines": 101,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/visualization/network-map.ts",
+      "language": "typescript",
+      "sizeLines": 269,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/alerts.ts",
+      "language": "typescript",
+      "sizeLines": 156,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/config.ts",
+      "language": "typescript",
+      "sizeLines": 85,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/event.ts",
+      "language": "typescript",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/events.ts",
+      "language": "typescript",
+      "sizeLines": 22,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/generate-schedule.ts",
+      "language": "typescript",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/n8n-schedules.ts",
+      "language": "typescript",
+      "sizeLines": 13,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/schedule.ts",
+      "language": "typescript",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/services.ts",
+      "language": "typescript",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/api/windlass/weekly-digest.ts",
+      "language": "typescript",
+      "sizeLines": 201,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/docs/[id].astro",
+      "language": "astro",
+      "sizeLines": 453,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/docs/guide/[slug].astro",
+      "language": "astro",
+      "sizeLines": 303,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/docs/index.astro",
+      "language": "astro",
+      "sizeLines": 924,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/docs/new.astro",
+      "language": "astro",
+      "sizeLines": 179,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/forgot-password.astro",
+      "language": "astro",
+      "sizeLines": 77,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/hud.astro",
+      "language": "astro",
+      "sizeLines": 1007,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/hud/[id].astro",
+      "language": "astro",
+      "sizeLines": 414,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/hud/map.astro",
+      "language": "astro",
+      "sizeLines": 143,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/incidents/[id].astro",
+      "language": "astro",
+      "sizeLines": 949,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/incidents/index.astro",
+      "language": "astro",
+      "sizeLines": 842,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/incidents/new.astro",
+      "language": "astro",
+      "sizeLines": 196,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/index.astro",
+      "language": "astro",
+      "sizeLines": 913,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/infrastructure.astro",
+      "language": "astro",
+      "sizeLines": 272,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/llm.txt.ts",
+      "language": "typescript",
+      "sizeLines": 175,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/login.astro",
+      "language": "astro",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/logout.astro",
+      "language": "astro",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/network-discovery.astro",
+      "language": "astro",
+      "sizeLines": 375,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/network-map.astro",
+      "language": "astro",
+      "sizeLines": 291,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory.astro",
+      "language": "astro",
+      "sizeLines": 1672,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory/network-test.astro",
+      "language": "astro",
+      "sizeLines": 739,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory/setup.astro",
+      "language": "astro",
+      "sizeLines": 413,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory/status.astro",
+      "language": "astro",
+      "sizeLines": 341,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory/tools.astro",
+      "language": "astro",
+      "sizeLines": 427,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/observatory/traffic.astro",
+      "language": "astro",
+      "sizeLines": 265,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/register.astro",
+      "language": "astro",
+      "sizeLines": 115,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/reset-password.astro",
+      "language": "astro",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/satellites.astro",
+      "language": "astro",
+      "sizeLines": 588,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/search.astro",
+      "language": "astro",
+      "sizeLines": 797,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/security/index.astro",
+      "language": "astro",
+      "sizeLines": 130,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/settings.astro",
+      "language": "astro",
+      "sizeLines": 1759,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/settings/skins.astro",
+      "language": "astro",
+      "sizeLines": 328,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/settings/ticketing.astro",
+      "language": "astro",
+      "sizeLines": 323,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/setup.astro",
+      "language": "astro",
+      "sizeLines": 598,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/stacks.astro",
+      "language": "astro",
+      "sizeLines": 1096,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/stacks/[id].astro",
+      "language": "astro",
+      "sizeLines": 238,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/stacks/import/[id].astro",
+      "language": "astro",
+      "sizeLines": 381,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/tools/windlass/alerts.astro",
+      "language": "astro",
+      "sizeLines": 373,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/tools/windlass/index.astro",
+      "language": "astro",
+      "sizeLines": 536,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/tools/windlass/services/[id].astro",
+      "language": "astro",
+      "sizeLines": 466,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/tools/windlass/timeline.astro",
+      "language": "astro",
+      "sizeLines": 202,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/app/verify-email.astro",
+      "language": "astro",
+      "sizeLines": 58,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/docs/api.astro",
+      "language": "astro",
+      "sizeLines": 306,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/docs/incidents.astro",
+      "language": "astro",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/docs/index.astro",
+      "language": "astro",
+      "sizeLines": 83,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/docs/scanner.astro",
+      "language": "astro",
+      "sizeLines": 291,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/docs/self-host.astro",
+      "language": "astro",
+      "sizeLines": 219,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/healthz.ts",
+      "language": "typescript",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/index.astro",
+      "language": "astro",
+      "sizeLines": 1155,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/privacy.astro",
+      "language": "astro",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/api/detect-subnet.ts",
+      "language": "typescript",
+      "sizeLines": 146,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/complete-scanner.ts",
+      "language": "typescript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/complete.astro",
+      "language": "astro",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/environment.astro",
+      "language": "astro",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/index.astro",
+      "language": "astro",
+      "sizeLines": 170,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/license.astro",
+      "language": "astro",
+      "sizeLines": 296,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/review.astro",
+      "language": "astro",
+      "sizeLines": 181,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/scanner.astro",
+      "language": "astro",
+      "sizeLines": 445,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/ticketing.astro",
+      "language": "astro",
+      "sizeLines": 353,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/setup/windlass.astro",
+      "language": "astro",
+      "sizeLines": 933,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/status/[slug].astro",
+      "language": "astro",
+      "sizeLines": 210,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/terms.astro",
+      "language": "astro",
+      "sizeLines": 166,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/use-cases/[slug].astro",
+      "language": "astro",
+      "sizeLines": 429,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/pages/use-cases/index.astro",
+      "language": "astro",
+      "sizeLines": 282,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/styles/fonts.css",
+      "language": "css",
+      "sizeLines": 11,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/styles/global.css",
+      "language": "css",
+      "sizeLines": 486,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "Test Plan - Complete Feature Validation.html",
+      "language": "html",
+      "sizeLines": 1299,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "TEST_EXECUTION_REPORT.md",
+      "language": "markdown",
+      "sizeLines": 279,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "TEST_PLAN.md",
+      "language": "markdown",
+      "sizeLines": 360,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "test-discovery-e2e.sh",
+      "language": "shell",
+      "sizeLines": 134,
+      "fileCategory": "script"
+    },
+    {
+      "path": "test-discovery.sh",
+      "language": "shell",
+      "sizeLines": 84,
+      "fileCategory": "script"
+    },
+    {
+      "path": "test-license.txt",
+      "language": "txt",
+      "sizeLines": 6,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tests/accessibility.spec.ts",
+      "language": "typescript",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/ai-providers.spec.ts",
+      "language": "typescript",
+      "sizeLines": 174,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/api-tokens.spec.ts",
+      "language": "typescript",
+      "sizeLines": 116,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/auth.spec.ts",
+      "language": "typescript",
+      "sizeLines": 212,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/backups.spec.ts",
+      "language": "typescript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/community-kb.spec.ts",
+      "language": "typescript",
+      "sizeLines": 180,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/cross-app.spec.ts",
+      "language": "typescript",
+      "sizeLines": 148,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/cross-service.spec.ts",
+      "language": "typescript",
+      "sizeLines": 204,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/data-sources.spec.ts",
+      "language": "typescript",
+      "sizeLines": 120,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/diagnosis.spec.ts",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/docs.spec.ts",
+      "language": "typescript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/export.spec.ts",
+      "language": "typescript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/global-setup.ts",
+      "language": "typescript",
+      "sizeLines": 108,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/helpers/auth.ts",
+      "language": "typescript",
+      "sizeLines": 225,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/helpers/fixtures.ts",
+      "language": "typescript",
+      "sizeLines": 132,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/hud.spec.ts",
+      "language": "typescript",
+      "sizeLines": 161,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/incidents.spec.ts",
+      "language": "typescript",
+      "sizeLines": 121,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/notifications.spec.ts",
+      "language": "typescript",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/performance.spec.ts",
+      "language": "typescript",
+      "sizeLines": 103,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/playwright.config.ts",
+      "language": "typescript",
+      "sizeLines": 49,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/preferences.spec.ts",
+      "language": "typescript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/qa-second-run.spec.ts",
+      "language": "typescript",
+      "sizeLines": 218,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/rbac.spec.ts",
+      "language": "typescript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/search.spec.ts",
+      "language": "typescript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/security.spec.ts",
+      "language": "typescript",
+      "sizeLines": 551,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/setup-wizard-qa.spec.ts",
+      "language": "typescript",
+      "sizeLines": 424,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/setup-wizard.spec.ts",
+      "language": "typescript",
+      "sizeLines": 133,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/smoke.spec.ts",
+      "language": "typescript",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/stacks.spec.ts",
+      "language": "typescript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/ticketing-connectors.spec.ts",
+      "language": "typescript",
+      "sizeLines": 310,
+      "fileCategory": "code"
+    },
+    {
+      "path": "tests/windlass.spec.ts",
+      "language": "typescript",
+      "sizeLines": 102,
+      "fileCategory": "code"
+    },
+    {
+      "path": "THINKPAD_DEPLOY.md",
+      "language": "markdown",
+      "sizeLines": 51,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "THINKPAD_UPDATE_INSTRUCTIONS.md",
+      "language": "markdown",
+      "sizeLines": 67,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "tsconfig.json",
+      "language": "json",
+      "sizeLines": 3,
+      "fileCategory": "config"
+    },
+    {
+      "path": "update-ollama-config.sh",
+      "language": "shell",
+      "sizeLines": 41,
+      "fileCategory": "script"
+    }
+  ],
+  "totalFiles": 429,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "large",
+  "stats": {
+    "filesScanned": 429,
+    "byCategory": {
+      "infra": 8,
+      "code": 315,
+      "config": 15,
+      "docs": 53,
+      "data": 13,
+      "script": 14,
+      "markup": 11
+    },
+    "byLanguage": {
+      "unknown": 4,
+      "config": 1,
+      "yaml": 10,
+      "markdown": 49,
+      "json": 9,
+      "javascript": 18,
+      "service": 1,
+      "license": 1,
+      "dockerfile": 2,
+      "typescript": 218,
+      "sql": 13,
+      "shell": 14,
+      "pem": 1,
+      "python": 4,
+      "txt": 4,
+      "html": 9,
+      "srt": 1,
+      "old": 1,
+      "astro": 67,
+      "css": 2
+    }
+  }
+}

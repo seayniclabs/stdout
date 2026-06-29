@@ -19,31 +19,72 @@ export const GET: APIRoute = async ({ locals }) => {
     const subnets: string[] = [];
 
     try {
-      // Inside Docker container - use default gateway to infer host network
-      const { stdout: routeInfo } = await execAsync('ip route show default');
-      const defaultMatch = routeInfo.match(/default via ([\d.]+)/);
+      // Inside Docker container: detect the HOST's network via Docker socket
+      // The container has /var/run/docker.sock mounted, so we can query the host's bridge
+      try {
+        // Query Docker's host bridge network to find the host's IP
+        const { stdout: dockerOutput } = await execAsync(
+          'docker network inspect bridge --format "{{range .IPAM.Config}}{{.Gateway}}{{end}}" 2>/dev/null || echo ""'
+        );
 
-      if (defaultMatch) {
-        const gateway = defaultMatch[1];
-        const gatewayParts = gateway.split('.').map(Number);
-
-        // Fast scan: add the gateway's network for quick initial results
-        // The gateway is reachable, so we can scan its network
-        if (gatewayParts[0] === 10 && gatewayParts[1] === 21) {
-          // Docker gateway - probe common home networks
-          // Most home networks are 192.168.0.x or 192.168.1.x
-          subnets.push('192.168.0.0/24');
-          subnets.push('192.168.1.0/24');
-        } else if (gatewayParts[0] === 192 && gatewayParts[1] === 168) {
-          // Home network gateway - scan its network
-          subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
-        } else if (gatewayParts[0] === 10) {
-          // Corporate 10.x network
-          subnets.push(`${gatewayParts[0]}.${gatewayParts[1]}.${gatewayParts[2]}.0/24`);
+        const hostGateway = dockerOutput.trim();
+        if (hostGateway && hostGateway !== '172.17.0.1') {
+          // Found a non-default gateway - extract its network
+          const parts = hostGateway.split('.').map(Number);
+          if (parts[0] === 192 && parts[1] === 168) {
+            subnets.push(`${parts[0]}.${parts[1]}.${parts[2]}.0/24`);
+          } else if (parts[0] === 10) {
+            subnets.push(`${parts[0]}.${parts[1]}.${parts[2]}.0/24`);
+          }
         }
+
+        // Also check custom network's gateway (stdout-net)
+        const { stdout: customOutput } = await execAsync(
+          'docker network inspect stdout-net --format "{{range .IPAM.Config}}{{.Gateway}}{{end}}" 2>/dev/null || echo ""'
+        );
+
+        const customGateway = customOutput.trim();
+        if (customGateway && !customGateway.startsWith('10.21.')) {
+          const parts = customGateway.split('.').map(Number);
+          const networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+          if (!subnets.includes(networkSubnet)) {
+            subnets.push(networkSubnet);
+          }
+        }
+
+        // Best approach: inspect the host's network interfaces via Docker exec on host
+        // This works because the socket gives us access to the host's Docker daemon
+        try {
+          const { stdout: hostIp } = await execAsync(
+            `docker run --rm --net=host alpine sh -c "ip addr show | grep 'inet ' | grep -v '127.0.0.1' | head -1" 2>/dev/null || echo ""`
+          );
+
+          const hostMatch = hostIp.match(/inet ([\d.]+)\/(\d+)/);
+          if (hostMatch) {
+            const [, ip, cidr] = hostMatch;
+            const parts = ip.split('.').map(Number);
+            const maskBits = parseInt(cidr);
+
+            // Skip Docker bridges
+            if (parts[0] === 172 && parts[1] >= 17 && parts[1] <= 32) {
+              // This is a bridge, try next interface
+            } else if (maskBits === 24) {
+              subnets.push(`${parts[0]}.${parts[1]}.${parts[2]}.0/24`);
+            } else if (maskBits === 22) {
+              const baseOctet = Math.floor(parts[2] / 4) * 4;
+              subnets.push(`${parts[0]}.${parts[1]}.${baseOctet}.0/22`);
+            } else if (maskBits === 16) {
+              subnets.push(`${parts[0]}.${parts[1]}.0.0/16`);
+            }
+          }
+        } catch (hostExecError) {
+          console.error('[detect-subnet] Host network check via Docker socket failed:', hostExecError);
+        }
+      } catch (dockerError) {
+        console.error('[detect-subnet] Docker socket query failed:', dockerError);
       }
 
-      // Also scan container's own networks
+      // Fallback: scan container's own interfaces (works for host network mode)
       const { stdout } = await execAsync('ip addr show');
       const lines = stdout.split('\n');
 
@@ -56,7 +97,7 @@ export const GET: APIRoute = async ({ locals }) => {
           // Skip loopback
           if (parts[0] === 127) continue;
 
-          // Skip Docker internal networks (10.21.x, 172.17-32.x)
+          // Skip Docker internal bridge networks (10.21.x, 172.17-32.x)
           if (parts[0] === 10 && parts[1] === 21) continue;
           if (parts[0] === 172 && parts[1] >= 17 && parts[1] <= 32) continue;
 
@@ -65,9 +106,16 @@ export const GET: APIRoute = async ({ locals }) => {
 
           if (maskBits === 24) {
             networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
+          } else if (maskBits === 22) {
+            // /22 network (e.g., 192.168.68.0/22 covers .68-.71)
+            const baseOctet = Math.floor(parts[2] / 4) * 4;
+            networkSubnet = `${parts[0]}.${parts[1]}.${baseOctet}.0/22`;
           } else if (maskBits === 16) {
             networkSubnet = `${parts[0]}.${parts[1]}.0.0/16`;
+          } else if (maskBits === 8) {
+            networkSubnet = `${parts[0]}.0.0.0/8`;
           } else {
+            // Default to /24 for uncommon masks
             networkSubnet = `${parts[0]}.${parts[1]}.${parts[2]}.0/24`;
           }
 
@@ -77,9 +125,10 @@ export const GET: APIRoute = async ({ locals }) => {
         }
       }
 
-      // Prioritize 192.168.x as default
+      // Prioritize most common network patterns for primary subnet
       subnet = subnets.find(s => s.startsWith('192.168.')) ||
                subnets.find(s => s.startsWith('10.')) ||
+               subnets.find(s => s.startsWith('172.')) ||
                subnets[0] || null;
 
     } catch (ipError) {

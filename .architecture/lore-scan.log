@@ -1,0 +1,10 @@
+
+  No ANTHROPIC_API_KEY set — using your Claude subscription.
+  (If Claude isn't logged in, run `claude /login` first.
+   To use an API key instead, set ANTHROPIC_API_KEY.)
+
+  Lore Map is running in scan mode
+  → http://localhost:3402
+
+
+  Shutting down Lore Map.

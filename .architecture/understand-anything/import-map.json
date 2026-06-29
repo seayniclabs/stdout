@@ -1,0 +1,875 @@
+{
+  "scriptCompleted": true,
+  "stats": {
+    "filesScanned": 437,
+    "filesWithImports": 153,
+    "totalEdges": 275
+  },
+  "importMap": {
+    ".architecture/ARCHITECTURE.md": [],
+    ".architecture/lore/api-response.json": [],
+    ".architecture/SUMMARY.md": [],
+    ".architecture/understand-anything/import-input.json": [],
+    ".architecture/understand-anything/import-map.json": [],
+    ".architecture/understand-anything/scan-files.json": [],
+    ".dockerignore": [],
+    ".DS_Store": [],
+    ".env.example": [],
+    ".github/dependabot.yml": [],
+    ".github/DOCKER_HUB_SETUP.md": [],
+    ".github/workflows/docker-publish.yml": [],
+    ".github/workflows/release.yml": [],
+    ".lore/map.md": [],
+    ".mcp.json": [],
+    ".understand-anything/tmp/ua-scan-files.json": [],
+    "astro.config.mjs": [],
+    "AUTOMATION_PLAN.md": [],
+    "avahi-services/stdout.service": [],
+    "BUILD.md": [],
+    "check-scanner-state.js": [],
+    "community-seed/01-cloudflare-tunnel-setup.md": [],
+    "community-seed/02-nginx-proxy-manager-new-service.md": [],
+    "community-seed/03-docker-healthcheck-patterns.md": [],
+    "community-seed/04-sqlite-backup-strategy.md": [],
+    "community-seed/05-authentik-oidc-integration.md": [],
+    "community-seed/06-telegraf-influxdb-grafana-monitoring.md": [],
+    "community-seed/07-postmortem-dns-propagation-outage.md": [],
+    "community-seed/08-postmortem-docker-compose-secrets.md": [],
+    "community-seed/09-n8n-workflow-backup-restore.md": [],
+    "community-seed/10-runbook-new-subdomain-end-to-end.md": [],
+    "COMPLETE_AUTOMATION_SUMMARY.md": [],
+    "comprehensive-e2e-test.js": [],
+    "CRITICAL-FINDINGS.md": [],
+    "demo-license.json": [],
+    "demo.license": [],
+    "deploy.example.yaml": [],
+    "docker-compose.observatory.yml": [],
+    "docker-compose.yml": [],
+    "Dockerfile": [],
+    "docs/monitoring-installation.md": [],
+    "docs/QA-Setup-Walkthrough-Report.md": [],
+    "drizzle.config.ts": [],
+    "drizzle/0000_white_spyke.sql": [],
+    "drizzle/0001_fix_windlass_config.sql": [],
+    "drizzle/0002_add_fts_tables.sql": [],
+    "drizzle/0003_fix_ai_execution_audit.sql": [],
+    "drizzle/0004_add_entities.sql": [],
+    "drizzle/0005_add_entity_relationships.sql": [],
+    "drizzle/0006_add_discovered_hosts_columns.sql": [],
+    "drizzle/0007_add_discovered_at_column.sql": [],
+    "drizzle/meta/_journal.json": [],
+    "drizzle/meta/0000_snapshot.json": [],
+    "E2E-ISSUES-CONTINUOUS-2026-06-17.md": [],
+    "E2E-QUICK-TEST-RESULTS.md": [],
+    "E2E-Session-Handoff-FIXES-2026-06-17.md": [],
+    "E2E-TEST-FINAL-REPORT-2026-06-17.md": [],
+    "E2E-TEST-RESULTS.md": [],
+    "E2E-TEST-SUMMARY-2026-06-17.md": [],
+    "E2E-TEST-VERIFICATION.md": [],
+    "FINAL-E2E-REPORT.md": [],
+    "HANDOFF.md": [],
+    "IMPLEMENTATION-STATUS.md": [],
+    "INSTALL.md": [],
+    "install.sh": [],
+    "ISSUES-FOUND-E2E.md": [],
+    "keys/license-public.pem": [],
+    "KNOWN_ISSUES.md": [],
+    "LICENSE-VALIDATION.md": [],
+    "migrations/0010_add_observatory_learning_layer.sql": [],
+    "migrations/0011_add_data_sources_table.sql": [],
+    "migrations/0011_seed_observatory_patterns.ts": [],
+    "migrations/0012_add_output_freshness_monitor.sql": [],
+    "migrations/0013_add_skins_tables.sql": [],
+    "migrations/006_error_log.sql": [],
+    "NETWORK-DISCOVERY-IMPLEMENTATION.md": [],
+    "NEXT-STEPS.md": [],
+    "observatory/config/loki-config.yml": [],
+    "observatory/config/prometheus.yml": [],
+    "observatory/config/tempo-config.yml": [],
+    "observatory/docker-compose.yml": [],
+    "observatory/sentinel/agents.py": [],
+    "observatory/sentinel/analyst.py": [],
+    "observatory/sentinel/Dockerfile": [],
+    "observatory/sentinel/main.py": [
+      "observatory/sentinel/analyst.py",
+      "observatory/sentinel/watcher.py"
+    ],
+    "observatory/sentinel/requirements.txt": [],
+    "observatory/sentinel/scripts/init-ollama.sh": [],
+    "observatory/sentinel/watcher.py": [],
+    "package.json": [],
+    "ph-gallery/01-hero.html": [],
+    "ph-gallery/02-scanner.html": [],
+    "ph-gallery/03-ai-diagnosis.html": [],
+    "ph-gallery/04-knowledge-base.html": [],
+    "ph-gallery/05-hud-dashboard.html": [],
+    "ph-gallery/06-pricing.html": [],
+    "ph-gallery/video/script.txt": [],
+    "ph-gallery/video/subtitles.srt": [],
+    "preflight.sh": [],
+    "PRODUCTION-QA-CYCLE.md": [],
+    "PROJECT_HEADER.md": [],
+    "public/install/binaries/stdout-satellite-linux-amd64": [],
+    "public/install/binaries/stdout-satellite-linux-arm64": [],
+    "public/install/satellite.sh": [],
+    "public/manifest.json": [],
+    "public/offline.html": [],
+    "public/robots.txt": [],
+    "public/sw.js": [],
+    "QA-CYCLE-1-FINAL-REPORT.md": [],
+    "QA-CYCLE-1-SUMMARY.md": [],
+    "QA-EXECUTIVE-SUMMARY.md": [],
+    "QA-FIXES-APPLIED.md": [],
+    "QA-ISSUES-FOUND.md": [],
+    "README.md": [],
+    "reports/windlass-phase5-gate-assessment-2026-04-15.md": [],
+    "save-images.sh": [],
+    "scripts/apply-schema.js.old": [],
+    "scripts/bootstrap-unattended.js": [],
+    "scripts/browser-frame.html": [],
+    "scripts/capture-mobile.sh": [],
+    "scripts/create-admin-from-env.js": [],
+    "scripts/create-admin.js": [],
+    "scripts/create-windlass-config-from-env.js": [],
+    "scripts/creatomate-video.ts": [],
+    "scripts/fix-db-imports.js": [],
+    "scripts/generate-all-assets.sh": [],
+    "scripts/generate-demo-license.js": [],
+    "scripts/generate-license.js": [],
+    "scripts/init-setup.sh": [],
+    "scripts/mark-installation-complete.js": [],
+    "scripts/migrate-add-stack-id-to-hosts.ts": [],
+    "scripts/migrate-windlass-service-type.js": [],
+    "scripts/migrate.js": [],
+    "scripts/screenshot-assets.ts": [],
+    "scripts/seed-patterns.js": [],
+    "scripts/set-env-name.js": [],
+    "scripts/set-license.js": [],
+    "scripts/start.sh": [],
+    "scripts/validate-license.js": [],
+    "scripts/verify-windlass-engine-phase4.sh": [],
+    "scripts/wipe-thinkpad-deployment.sh": [],
+    "SESSION-PROGRESS-2026-06-17.md": [],
+    "SETUP_AUTOMATION.md": [],
+    "src/components/ErrorPanel.astro": [],
+    "src/components/SetupProgress.astro": [],
+    "src/data/use-cases.ts": [],
+    "src/env.d.ts": [],
+    "src/layouts/Layout.astro": [],
+    "src/layouts/SetupLayout.astro": [],
+    "src/lib/addons.ts": [],
+    "src/lib/ai-providers.ts": [
+      "src/lib/crypto.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/alert-router.ts": [
+      "src/lib/crypto.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/audit.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/auth.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/auto-wire.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/events.ts"
+    ],
+    "src/lib/autofix-apply.ts": [
+      "src/lib/autofix-exec-policy.ts"
+    ],
+    "src/lib/autofix-exec-policy.ts": [],
+    "src/lib/backup.ts": [],
+    "src/lib/comms/queries.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/community-kb.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/crypto.ts": [],
+    "src/lib/db/central-schema.ts": [],
+    "src/lib/db/index-new.ts": [
+      "src/lib/db/schema.ts"
+    ],
+    "src/lib/db/index.ts": [
+      "src/lib/db/schema.ts"
+    ],
+    "src/lib/db/schema.ts": [],
+    "src/lib/db/seed-community-docs.ts": [],
+    "src/lib/db/skins-schema.ts": [],
+    "src/lib/db/tenant-schema.ts": [],
+    "src/lib/diagnose.ts": [],
+    "src/lib/digest.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/hud.ts"
+    ],
+    "src/lib/discovery/device-profiler.ts": [
+      "src/lib/discovery/mac-vendor.ts",
+      "src/lib/discovery/mdns-scanner.ts",
+      "src/lib/discovery/ssdp-scanner.ts"
+    ],
+    "src/lib/discovery/mac-vendor.ts": [],
+    "src/lib/discovery/mdns-scanner.ts": [],
+    "src/lib/discovery/network-scanner.ts": [
+      "src/lib/discovery/device-profiler.ts",
+      "src/lib/discovery/mac-vendor.ts",
+      "src/lib/discovery/mdns-scanner.ts",
+      "src/lib/discovery/ssdp-scanner.ts"
+    ],
+    "src/lib/discovery/ssdp-scanner.ts": [],
+    "src/lib/docs-content.ts": [],
+    "src/lib/email.ts": [],
+    "src/lib/errors/catalog.ts": [
+      "src/lib/errors/types.ts"
+    ],
+    "src/lib/errors/error.ts": [
+      "src/lib/errors/catalog.ts",
+      "src/lib/errors/types.ts"
+    ],
+    "src/lib/errors/index.ts": [],
+    "src/lib/errors/logger.ts": [
+      "src/lib/errors/error.ts",
+      "src/lib/errors/types.ts"
+    ],
+    "src/lib/errors/retry.ts": [
+      "src/lib/errors/catalog.ts",
+      "src/lib/errors/error.ts",
+      "src/lib/errors/types.ts"
+    ],
+    "src/lib/errors/types.ts": [],
+    "src/lib/events.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/hud.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/notify.ts"
+    ],
+    "src/lib/influx.ts": [
+      "src/lib/crypto.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/known-tools.ts": [],
+    "src/lib/license.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/network-utils.ts": [],
+    "src/lib/notify.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/hud.ts"
+    ],
+    "src/lib/observatory/agents.ts": [],
+    "src/lib/observatory/auto-doc.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/secret-scrub.ts"
+    ],
+    "src/lib/observatory/auto-monitor.ts": [],
+    "src/lib/observatory/baseline-bootstrap.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/data-source-config.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/degradation-mode.ts": [
+      "src/lib/observatory/ollama.ts"
+    ],
+    "src/lib/observatory/initial-discovery.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/db/tenant-schema.ts",
+      "src/lib/events.ts",
+      "src/lib/network-utils.ts",
+      "src/lib/setup.ts"
+    ],
+    "src/lib/observatory/initialization.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/events.ts",
+      "src/lib/observatory/agents.ts",
+      "src/lib/observatory/metrics-guide.ts",
+      "src/lib/observatory/setup.ts"
+    ],
+    "src/lib/observatory/metrics-fetcher.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/metrics-guide.ts": [],
+    "src/lib/observatory/ollama.ts": [
+      "src/lib/observatory/agents.ts"
+    ],
+    "src/lib/observatory/operating-mode.ts": [
+      "src/lib/autofix-apply.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/pattern-feedback.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/prompts.ts": [
+      "src/lib/observatory/agents.ts",
+      "src/lib/observatory/metrics-guide.ts",
+      "src/lib/observatory/retrieval.ts"
+    ],
+    "src/lib/observatory/README.md": [],
+    "src/lib/observatory/reflex.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/observatory/operating-mode.ts"
+    ],
+    "src/lib/observatory/retrieval.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/observatory/types.ts"
+    ],
+    "src/lib/observatory/scan-scheduler.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/sentinel.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/observatory/agents.ts",
+      "src/lib/observatory/ollama.ts",
+      "src/lib/observatory/prompts.ts",
+      "src/lib/observatory/retrieval.ts"
+    ],
+    "src/lib/observatory/setup-watcher.ts": [],
+    "src/lib/observatory/setup.ts": [
+      "src/lib/observatory/agents.ts",
+      "src/lib/observatory/ollama.ts"
+    ],
+    "src/lib/observatory/standard-patterns.json": [],
+    "src/lib/observatory/startup.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/observatory/initialization.ts"
+    ],
+    "src/lib/observatory/sync-host-monitors.ts": [],
+    "src/lib/observatory/tool-augmented-diagnose.ts": [
+      "src/lib/observatory/toolbox.ts"
+    ],
+    "src/lib/observatory/toolbox.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/observatory/types.ts": [],
+    "src/lib/observatory/watcher.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/events.ts",
+      "src/lib/observatory/sentinel.ts"
+    ],
+    "src/lib/prometheus.ts": [
+      "src/lib/crypto.ts",
+      "src/lib/db/index.ts",
+      "src/lib/influx.ts"
+    ],
+    "src/lib/rbac.ts": [
+      "src/lib/auth.ts",
+      "src/lib/db/index.ts",
+      "src/lib/tiers.ts"
+    ],
+    "src/lib/sanitize.ts": [
+      "src/lib/secret-scrub.ts"
+    ],
+    "src/lib/scanner-cve.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/scanner-docker-hub.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/scanner-heartbeat.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts",
+      "src/lib/events.ts"
+    ],
+    "src/lib/scanner-shodan.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/scanner/docker-local.ts": [],
+    "src/lib/secret-scrub.ts": [],
+    "src/lib/setup.ts": [
+      "src/lib/db/central-schema.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/setup/data-sources.ts": [
+      "src/lib/setup/installer.ts"
+    ],
+    "src/lib/setup/installer.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/lib/setup/monitors.ts": [
+      "src/lib/setup/installer.ts"
+    ],
+    "src/lib/setup/seed-skins.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/skins/default-skins.ts"
+    ],
+    "src/lib/setup/watcher.ts": [
+      "src/lib/setup/installer.ts"
+    ],
+    "src/lib/skins/apply-skin.ts": [
+      "src/lib/skins/default-skins.ts"
+    ],
+    "src/lib/skins/default-skins.ts": [],
+    "src/lib/skins/skin.schema.json": [],
+    "src/lib/source-detect.ts": [],
+    "src/lib/source-test.ts": [],
+    "src/lib/stack-templates.ts": [],
+    "src/lib/ticketing/base/ConnectorRegistry.ts": [
+      "src/lib/ticketing/base/TicketingConnector.ts",
+      "src/lib/ticketing/connectors/BuiltInConnector.ts",
+      "src/lib/ticketing/connectors/GitHubConnector.ts",
+      "src/lib/ticketing/connectors/WebhookConnector.ts"
+    ],
+    "src/lib/ticketing/base/TicketingConnector.ts": [],
+    "src/lib/ticketing/connectors/BuiltInConnector.ts": [
+      "src/lib/ticketing/base/TicketingConnector.ts"
+    ],
+    "src/lib/ticketing/connectors/GitHubConnector.ts": [
+      "src/lib/ticketing/base/TicketingConnector.ts"
+    ],
+    "src/lib/ticketing/connectors/WebhookConnector.ts": [
+      "src/lib/ticketing/base/TicketingConnector.ts"
+    ],
+    "src/lib/ticketing/sync/SyncEngine.ts": [
+      "src/lib/ticketing/base/ConnectorRegistry.ts",
+      "src/lib/ticketing/base/TicketingConnector.ts"
+    ],
+    "src/lib/tier-gate.ts": [
+      "src/lib/auth.ts",
+      "src/lib/tiers.ts"
+    ],
+    "src/lib/tiers.ts": [],
+    "src/lib/update-check.ts": [
+      "src/lib/license.ts"
+    ],
+    "src/lib/value-score.ts": [],
+    "src/lib/windlass-schedule.ts": [],
+    "src/lib/windlass-weekly-digest-math.ts": [],
+    "src/lib/windlass.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts",
+      "src/lib/windlass-weekly-digest-math.ts"
+    ],
+    "src/middleware.ts": [
+      "src/lib/auth.ts",
+      "src/lib/auto-wire.ts",
+      "src/lib/db/index.ts",
+      "src/lib/license.ts",
+      "src/lib/observatory/degradation-mode.ts",
+      "src/lib/observatory/watcher.ts",
+      "src/lib/scanner-cve.ts",
+      "src/lib/scanner-docker-hub.ts",
+      "src/lib/scanner-heartbeat.ts",
+      "src/lib/scanner-shodan.ts"
+    ],
+    "src/pages/api/licenses/activate.ts": [],
+    "src/pages/api/licenses/validate.ts": [],
+    "src/pages/app/account.astro": [],
+    "src/pages/app/addons.astro": [],
+    "src/pages/app/admin/submissions.astro": [],
+    "src/pages/app/admin/tool-frequency.astro": [],
+    "src/pages/app/api/account.ts": [
+      "src/lib/audit.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/addons/dismiss.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/addons/notify.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/admin/submissions.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/backups.ts": [
+      "src/lib/audit.ts",
+      "src/lib/backup.ts",
+      "src/lib/rbac.ts"
+    ],
+    "src/pages/app/api/comms/inbound/webhook.ts": [
+      "src/lib/comms/queries.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/community-sync.ts": [
+      "src/lib/community-kb.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/contribute.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/sanitize.ts",
+      "src/lib/value-score.ts"
+    ],
+    "src/pages/app/api/data-sources.ts": [
+      "src/lib/crypto.ts",
+      "src/lib/db/index.ts",
+      "src/lib/hud.ts",
+      "src/lib/influx.ts",
+      "src/lib/prometheus.ts",
+      "src/lib/rbac.ts",
+      "src/lib/source-test.ts"
+    ],
+    "src/pages/app/api/data-sources/recommendations.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/diagnose.ts": [
+      "src/lib/audit.ts",
+      "src/lib/db/index.ts",
+      "src/lib/diagnose.ts",
+      "src/lib/notify.ts"
+    ],
+    "src/pages/app/api/digest.ts": [
+      "src/lib/digest.ts"
+    ],
+    "src/pages/app/api/discovery/scan.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/discovery/network-scanner.ts"
+    ],
+    "src/pages/app/api/docs/embeddings.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/export.ts": [
+      "src/lib/audit.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/feature-requests.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/health.ts": [
+      "src/lib/observatory/degradation-mode.ts"
+    ],
+    "src/pages/app/api/incidents/autofix-exec.ts": [
+      "src/lib/autofix-exec-policy.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/incidents/autofix.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/incidents/export.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/incidents/index.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/incidents/webhook.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/notify.ts"
+    ],
+    "src/pages/app/api/license.ts": [
+      "src/lib/license.ts"
+    ],
+    "src/pages/app/api/me.ts": [],
+    "src/pages/app/api/metrics.ts": [
+      "src/lib/influx.ts",
+      "src/lib/prometheus.ts"
+    ],
+    "src/pages/app/api/monitors.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/hud.ts"
+    ],
+    "src/pages/app/api/monitors/suggest.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/hud.ts"
+    ],
+    "src/pages/app/api/network/import.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/events.ts",
+      "src/lib/setup.ts"
+    ],
+    "src/pages/app/api/network/scan-services.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/network/scan.ts": [],
+    "src/pages/app/api/observatory/add-targets.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/db/tenant-schema.ts"
+    ],
+    "src/pages/app/api/observatory/auto-setup.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/observatory/auto-monitor.ts"
+    ],
+    "src/pages/app/api/observatory/check.ts": [
+      "src/lib/observatory/sentinel.ts"
+    ],
+    "src/pages/app/api/observatory/mode.ts": [],
+    "src/pages/app/api/observatory/pending-fix.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/observatory/runs.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/observatory/setup-stream.ts": [],
+    "src/pages/app/api/observatory/status.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/observatory/tool.ts": [],
+    "src/pages/app/api/observatory/tools/[tool].ts": [],
+    "src/pages/app/api/onboarding.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/preferences.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/satellite/nodes.ts": [
+      "src/lib/audit.ts",
+      "src/lib/db/index.ts",
+      "src/lib/events.ts"
+    ],
+    "src/pages/app/api/satellite/ping.ts": [],
+    "src/pages/app/api/satellite/report.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts",
+      "src/lib/events.ts"
+    ],
+    "src/pages/app/api/scanner/autodiscover.ts": [
+      "src/lib/setup.ts"
+    ],
+    "src/pages/app/api/scanner/run-now.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/scanner/scan.ts": [],
+    "src/pages/app/api/scanner/schedule.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/search.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/settings/ai-providers.ts": [
+      "src/lib/ai-providers.ts"
+    ],
+    "src/pages/app/api/setup/auto-scan.ts": [
+      "src/lib/network-utils.ts",
+      "src/lib/setup.ts"
+    ],
+    "src/pages/app/api/setup/install-observatory.ts": [],
+    "src/pages/app/api/setup/install-stream.ts": [],
+    "src/pages/app/api/setup/install-windlass.ts": [],
+    "src/pages/app/api/similar.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/skins/set-active.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/stacks/import.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/license.ts",
+      "src/lib/rbac.ts",
+      "src/lib/tier-gate.ts"
+    ],
+    "src/pages/app/api/stacks/merge.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/rbac.ts"
+    ],
+    "src/pages/app/api/status-page.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/test/wipe-data.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/ticketing/sync.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/ticketing/sync/SyncEngine.ts"
+    ],
+    "src/pages/app/api/tokens.ts": [
+      "src/lib/audit.ts",
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/visualization/network-map.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/app/api/windlass/alerts.ts": [
+      "src/lib/alert-router.ts"
+    ],
+    "src/pages/app/api/windlass/config.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/windlass.ts"
+    ],
+    "src/pages/app/api/windlass/event.ts": [
+      "src/lib/alert-router.ts"
+    ],
+    "src/pages/app/api/windlass/events.ts": [
+      "src/lib/windlass.ts"
+    ],
+    "src/pages/app/api/windlass/generate-schedule.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/windlass-schedule.ts"
+    ],
+    "src/pages/app/api/windlass/n8n-schedules.ts": [
+      "src/lib/windlass.ts"
+    ],
+    "src/pages/app/api/windlass/schedule.ts": [],
+    "src/pages/app/api/windlass/services.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/windlass.ts"
+    ],
+    "src/pages/app/api/windlass/weekly-digest.ts": [
+      "src/lib/alert-router.ts",
+      "src/lib/db/index.ts",
+      "src/lib/windlass-weekly-digest-math.ts"
+    ],
+    "src/pages/app/docs/[id].astro": [],
+    "src/pages/app/docs/guide/[slug].astro": [],
+    "src/pages/app/docs/index.astro": [],
+    "src/pages/app/docs/new.astro": [],
+    "src/pages/app/forgot-password.astro": [],
+    "src/pages/app/hud.astro": [],
+    "src/pages/app/hud/[id].astro": [],
+    "src/pages/app/hud/map.astro": [],
+    "src/pages/app/incidents/[id].astro": [],
+    "src/pages/app/incidents/index.astro": [],
+    "src/pages/app/incidents/new.astro": [],
+    "src/pages/app/index.astro": [],
+    "src/pages/app/infrastructure.astro": [],
+    "src/pages/app/llm.txt.ts": [
+      "src/lib/db/index.ts",
+      "src/lib/db/tenant-schema.ts"
+    ],
+    "src/pages/app/login.astro": [],
+    "src/pages/app/logout.astro": [],
+    "src/pages/app/network-discovery.astro": [],
+    "src/pages/app/network-map.astro": [],
+    "src/pages/app/observatory.astro": [],
+    "src/pages/app/observatory/network-test.astro": [],
+    "src/pages/app/observatory/setup.astro": [],
+    "src/pages/app/observatory/status.astro": [],
+    "src/pages/app/observatory/tools.astro": [],
+    "src/pages/app/observatory/traffic.astro": [],
+    "src/pages/app/register.astro": [],
+    "src/pages/app/reset-password.astro": [],
+    "src/pages/app/satellites.astro": [],
+    "src/pages/app/search.astro": [],
+    "src/pages/app/security/index.astro": [],
+    "src/pages/app/settings.astro": [],
+    "src/pages/app/settings/skins.astro": [],
+    "src/pages/app/settings/ticketing.astro": [],
+    "src/pages/app/setup.astro": [],
+    "src/pages/app/stacks.astro": [],
+    "src/pages/app/stacks/[id].astro": [],
+    "src/pages/app/stacks/import/[id].astro": [],
+    "src/pages/app/tools/windlass/alerts.astro": [],
+    "src/pages/app/tools/windlass/index.astro": [],
+    "src/pages/app/tools/windlass/services/[id].astro": [],
+    "src/pages/app/tools/windlass/timeline.astro": [],
+    "src/pages/app/verify-email.astro": [],
+    "src/pages/docs/api.astro": [],
+    "src/pages/docs/incidents.astro": [],
+    "src/pages/docs/index.astro": [],
+    "src/pages/docs/scanner.astro": [],
+    "src/pages/docs/self-host.astro": [],
+    "src/pages/healthz.ts": [
+      "src/lib/db/index.ts"
+    ],
+    "src/pages/index.astro": [],
+    "src/pages/privacy.astro": [],
+    "src/pages/setup/api/detect-subnet.ts": [],
+    "src/pages/setup/complete-scanner.ts": [
+      "src/lib/setup.ts"
+    ],
+    "src/pages/setup/complete.astro": [],
+    "src/pages/setup/environment.astro": [],
+    "src/pages/setup/index.astro": [],
+    "src/pages/setup/license.astro": [],
+    "src/pages/setup/review.astro": [],
+    "src/pages/setup/scanner.astro": [],
+    "src/pages/setup/ticketing.astro": [],
+    "src/pages/setup/windlass.astro": [],
+    "src/pages/status/[slug].astro": [],
+    "src/pages/terms.astro": [],
+    "src/pages/use-cases/[slug].astro": [],
+    "src/pages/use-cases/index.astro": [],
+    "src/styles/fonts.css": [],
+    "src/styles/global.css": [],
+    "Test Plan - Complete Feature Validation.html": [],
+    "TEST_EXECUTION_REPORT.md": [],
+    "TEST_PLAN.md": [],
+    "test-discovery-e2e.sh": [],
+    "test-discovery.sh": [],
+    "test-license.txt": [],
+    "tests/accessibility.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/ai-providers.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/api-tokens.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/auth.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/backups.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/community-kb.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/cross-app.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/cross-service.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/data-sources.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/diagnosis.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/docs.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/export.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/global-setup.ts": [],
+    "tests/helpers/auth.ts": [],
+    "tests/helpers/fixtures.ts": [],
+    "tests/hud.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/incidents.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/notifications.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/performance.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/playwright.config.ts": [],
+    "tests/preferences.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/qa-second-run.spec.ts": [],
+    "tests/rbac.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "tests/search.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/security.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/setup-wizard-qa.spec.ts": [],
+    "tests/setup-wizard.spec.ts": [],
+    "tests/smoke.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/stacks.spec.ts": [
+      "tests/helpers/auth.ts",
+      "tests/helpers/fixtures.ts"
+    ],
+    "tests/ticketing-connectors.spec.ts": [],
+    "tests/windlass.spec.ts": [
+      "tests/helpers/auth.ts"
+    ],
+    "THINKPAD_DEPLOY.md": [],
+    "THINKPAD_UPDATE_INSTRUCTIONS.md": [],
+    "tsconfig.json": [],
+    "update-ollama-config.sh": []
+  }
+}

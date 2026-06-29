@@ -590,8 +590,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     ? [
         "default-src 'self'",
         "script-src 'self' 'unsafe-inline' https://analytics.seaynicroute.com",
-        "style-src 'self' 'unsafe-inline'",
-        "font-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
         "connect-src 'self' https://analytics.seaynicroute.com",
         "frame-ancestors 'none'",
@@ -599,8 +599,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
     : [
         "default-src 'self'",
         `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com`,
-        "style-src 'self' 'unsafe-inline'",
-        "font-src 'self'",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
         "connect-src 'self' https://analytics.seaynicroute.com",
         "frame-ancestors 'none'",

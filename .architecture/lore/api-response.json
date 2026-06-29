@@ -1,0 +1,108 @@
+{
+  "scanSummary": "File count: 476\nExtensions: {\".md\":48,\"(none)\":5,\".html\":9,\".png\":31,\".svg\":7,\".ico\":2,\".mjs\":1,\".service\":1,\".js\":17,\".json\":9,\".yaml\":1,\".yml\":6,\".ts\":217,\".sql\":13,\".sh\":14,\".pem\":1,\".py\":4,\".txt\":4,\".mp4\":1,\".srt\":1,\".mp3\":1,\".woff2\":12,\".old\":1,\".astro\":67,\".db\":1,\".css\":2}\n\nFile tree:\nAUTOMATION_PLAN.md\nBUILD.md\nCOMPLETE_AUTOMATION_SUMMARY.md\nCRITICAL-FINDINGS.md\nDockerfile\nE2E-ISSUES-CONTINUOUS-2026-06-17.md\nE2E-QUICK-TEST-RESULTS.md\nE2E-Session-Handoff-FIXES-2026-06-17.md\nE2E-TEST-FINAL-REPORT-2026-06-17.md\nE2E-TEST-RESULTS.md\nE2E-TEST-SUMMARY-2026-06-17.md\nE2E-TEST-VERIFICATION.md\nFINAL-E2E-REPORT.md\nHANDOFF.md\nIMPLEMENTATION-STATUS.md\nINSTALL.md\nISSUES-FOUND-E2E.md\nKNOWN_ISSUES.md\nLICENSE\nLICENSE-VALIDATION.md\nNETWORK-DISCOVERY-IMPLEMENTATION.md\nNEXT-STEPS.md\nPRODUCTION-QA-CYCLE.md\nPROJECT_HEADER.md\nQA-CYCLE-1-FINAL-REPORT.md\nQA-CYCLE-1-SUMMARY.md\nQA-EXECUTIVE-SUMMARY.md\nQA-FIXES-APPLIED.md\nQA-ISSUES-FOUND.md\nREADME.md\nSESSION-PROGRESS-2026-06-17.md\nSETUP_AUTOMATION.md\nTEST_EXECUTION_REPORT.md\nTEST_PLAN.md\nTHINKPAD_DEPLOY.md\nTHINKPAD_UPDATE_INSTRUCTIONS.md\nTest Plan - Complete Feature Validation.html\nassets\n  logo\n    stdout-icon-128.png\n    stdout-icon-16.png\n    stdout-icon-256.png\n    stdout-icon-32.png\n    stdout-icon-512.png\n    stdout-icon-64.png\n    stdout-icon-solid.svg\n    stdout-icon.svg\n    stdout-wordmark.svg\n  seaynic-labs\n    apple-touch-icon.png\n    bimi.svg\n    favicon-32x32.png\n    favicon.ico\n    icon-192.png\n    icon-512.png\n    seaynic-labs-icon-128.png\n    seaynic-labs-icon-16.png\n    seaynic-labs-icon-180.png\n    seaynic-labs-icon-192.png\n    seaynic-labs-icon-256.png\n    seaynic-labs-icon-32.png\n    seaynic-labs-icon-512.png\n    seaynic-labs-icon-64.png\n    seaynic-labs-icon.png\n    seaynic-labs-icon.svg\nastro.config.mjs\navahi-services\n  stdout.service\ncheck-scanner-state.js\ncommunity-seed\n  01-cloudflare-tunnel-setup.md\n  02-nginx-proxy-manager-new-service.md\n  03-docker-healthcheck-patterns.md\n  04-sqlite-backup-strategy.md\n  05-authentik-oidc-integration.md\n  06-telegraf-influxdb-grafana-monitoring.md\n  07-postmortem-dns-propagation-outage.md\n  08-postmortem-docker-compose-secrets.md\n  09-n8n-workflow-backup-restore.md\n  10-runbook-new-subdomain-end-to-end.md\ncomprehensive-e2e-test.js\ndemo-license.json\ndeploy.example.yaml\ndocker-compose.observatory.yml\ndocker-compose.yml\ndocs\n  QA-Setup-Walkthrough-Report.md\n  monitoring-installation.md\ndrizzle\n  0000_white_spyke.sql\n  0001_fix_windlass_config.sql\n  0002_add_fts_tables.sql\n  0003_fix_ai_execution_audit.sql\n  0004_add_entities.sql\n  0005_add_entity_relationships.sql\n  0006_add_discovered_hosts_columns.sql\n  0007_add_discovered_at_column.sql\n  meta\n    0000_snapshot.json\n    _journal.json\ndrizzle.config.ts\ninstall.sh\nkeys\n  license-public.pem\nmigrations\n  0010_add_observatory_learning_layer.sql\n  0011_add_data_sources_table.sql\n  0011_seed_observatory_patterns.ts\n  0012_add_output_freshness_monitor.sql\n  0013_add_skins_tables.sql\n  006_error_log.sql\nobservatory\n  config\n    loki-config.yml\n    prometheus.yml\n    tempo-config.yml\n  docker-compose.yml\n  sentinel\n    Dockerfile\n    agents.py\n    analyst.py\n    main.py\n    requirements.txt\n    scripts\n      init-ollama.sh\n    watcher.py\npackage-lock.json\npackage.json\nph-gallery\n  01-hero.html\n  02-scanner.html\n  03-ai-diagnosis.html\n  04-knowledge-base.html\n  05-hud-dashboard.html\n  06-pricing.html\n  screenshots\n    01-hero.png\n    02-scanner.png\n    03-ai-diagnosis.png\n    04-knowledge-base.png\n    05-hud-dashboard.png\n    06-pricing.png\n  video\n    script.txt\n    stdout-demo.mp4\n    subtitles.srt\n    voiceover.mp3\npreflight.sh\npublic\n  apple-touch-icon.png\n  favicon-32x32.png\n  favicon.ico\n  favicon.svg\n  fonts\n    inter-latin-400.woff2\n    inter-latin-500.woff2\n    inter-latin-600.woff2\n    inter-latin-700.woff2\n    jetbrains-mono-latin-400-v2.woff2\n    jetbrains-mono-latin-400.woff2\n    jetbrains-mono-latin-500-v2.woff2\n    jetbrains-mono-latin-500.woff2\n    jetbrains-mono-latin-600-v2.woff2\n    jetbrains-mono-latin-600.woff2\n    jetbrains-mono-latin-700-v2.woff2\n    jetbrains-mono-latin-700.woff2\n  icon-192.png\n  icon-512.png\n  install\n    binaries\n      stdout-satellite-linux-amd64\n      stdout-satellite-linux-arm64\n    satellite.sh\n  logo.svg\n  manifest.json\n  offline.html\n  og-image.png\n  robots.txt\n  seaynic-labs-icon.png\n  sw.js\nreports\n  windlass-phase5-gate-assessment-2026-04-15.md\nsave-images.sh\nscripts\n  apply-schema.js.old\n  bootstrap-unattended.js\n  browser-frame.html\n  capture-mobile.sh\n  create-admin-from-env.js\n  create-admin.js\n  create-windlass-config-from-env.js\n  creatomate-video.ts\n  fix-db-imports.js\n  generate-all-assets.sh\n  generate-demo-license.js\n  generate-license.js\n  init-setup.sh\n  mark-installation-complete.js\n  migrate-add-stack-id-to-hosts.ts\n  migrate-windlass-service-type.js\n  migrate.js\n  screenshot-assets.ts\n  seed-patterns.js\n  set-env-name.js\n  set-license.js\n  start.sh\n  validate-license.js\n  verify-windlass-engine-phase4.sh\n  wipe-thinkpad-deployment.sh\nsrc\n  components\n    ErrorPanel.astro\n    SetupProgress.astro\n  env.d.ts\n  layouts\n    Layout.astro\n    SetupLayout.astro\n  lib\n    addons.ts\n    ai-providers.ts\n    alert-router.ts\n    audit.ts\n    auth.ts\n    auto-wire.ts\n    autofix-apply.ts\n    autofix-exec-policy.ts\n    backup.ts\n    comms\n      queries.ts\n    community-kb.ts\n    crypto.ts\n    db\n      central-schema.ts\n      index-new.ts\n      index.ts\n      schema.ts\n      seed-community-docs.ts\n      skins-schema.ts\n      stdout.db\n      tenant-schema.ts\n    diagnose.ts\n    digest.ts\n    discovery\n      device-profiler.ts\n      mac-vendor.ts\n      mdns-scanner.ts\n      network-scanner.ts\n      ssdp-scanner.ts\n    docs-content.ts\n    email.ts\n    errors\n      catalog.ts\n      error.ts\n      index.ts\n      logger.ts\n      retry.ts\n      types.ts\n    events.ts\n    hud.ts\n    influx.ts\n    known-tools.ts\n    license.ts\n    network-utils.ts\n    notify.ts\n    observatory\n      README.md\n      agents.ts\n      auto-doc.ts\n      auto-monitor.ts\n      baseline-bootstrap.ts\n      data-source-config.ts\n      degradation-mode.ts\n      initial-discovery.ts\n      initialization.ts\n      metrics-fetcher.ts\n      metrics-guide.ts\n      ollama.ts\n      operating-mode.ts\n      pattern-feedback.ts\n      prompts.ts\n      reflex.ts\n      retrieval.ts\n      scan-scheduler.ts\n      sentinel.ts\n      setup-watcher.ts\n      setup.ts\n      standard-patterns.json\n      startup.ts\n      sync-host-monitors.ts\n      tool-augmented-diagnose.ts\n      toolbox.ts\n      types.ts\n      watcher.ts\n    prometheus.ts\n    rbac.ts\n    sanitize.ts\n    scanner\n      docker-local.ts\n    scanner-cve.ts\n    scanner-docker-hub.ts\n    scanner-heartbeat.ts\n    scanner-shodan.ts\n    secret-scrub.ts\n    setup\n      data-sources.ts\n      installer.ts\n      monitors.ts\n      seed-skins.ts\n      watcher.ts\n    setup.ts\n    skins\n      apply-skin.ts\n      default-skins.ts\n      skin.schema.json\n    source-detect.ts\n    source-test.ts\n    stack-templates.ts\n    ticketing\n      base\n        ConnectorRegistry.ts\n        TicketingConnector.ts\n      connectors\n        BuiltInConnector.ts\n        GitHubConnector.ts\n        WebhookConnector.ts\n      sync\n        SyncEngine.ts\n    tier-gate.ts\n    tiers.ts\n    update-check.ts\n    value-score.ts\n    windlass-schedule.ts\n    windlass-weekly-digest-math.ts\n    windlass.ts\n  middleware.ts\n  pages\n    api\n      licenses\n        activate.ts\n        validate.ts\n    app\n      account.astro\n      addons.astro\n      admin\n        submissions.astro\n        tool-frequency.astro\n      api\n        account.ts\n        addons\n        admin\n        backups.ts\n        comms\n        community-sync.ts\n        contribute.ts\n        data-sources\n        data-sources.ts\n        diagnose.ts\n        digest.ts\n        discovery\n        docs\n        export.ts\n        feature-requests.ts\n        health.ts\n        incidents\n        license.ts\n        me.ts\n        metrics.ts\n        monitors\n        monitors.ts\n        network\n        observatory\n        onboarding.ts\n        preferences.ts\n        satellite\n        scanner\n        search.ts\n        settings\n        setup\n        similar.ts\n        skins\n        stacks\n        status-page.ts\n        test\n        ticketing\n        tokens.ts\n        visualization\n        windlass\n      docs\n        [id].astro\n        guide\n        index.astro\n        new.astro\n      forgot-password.astro\n      hud\n        [id].astro\n        map.astro\n      hud.astro\n      incidents\n        [id].astro\n        index.astro\n        new.astro\n      index.astro\n      infrastructure.astro\n      llm.txt.ts\n      login.astro\n      logout.astro\n      network-discovery.astro\n      network-map.astro\n      observatory\n        network-test.astro\n        setup.astro\n        status.astro\n        tools.astro\n        traffic.astro\n      observatory.astro\n      register.astro\n      reset-password.astro\n      satellites.astro\n      search.astro\n      security\n        index.astro\n      settings\n        skins.astro\n        ticketing.astro\n      settings.astro\n      setup.astro\n      stacks\n        [id].astro\n        import\n      stacks.astro\n      tools\n        windlass\n      verify-email.astro\n    docs\n      api.astro\n      incidents.astro\n      index.astro\n      scanner.astro\n      self-host.astro\n    healthz.ts\n    index.astro\n    privacy.astro\n    setup\n      api\n        detect-subnet.ts\n      complete-scanner.ts\n      complete.astro\n      environment.astro\n      index.astro\n      license.astro\n      review.astro\n      scanner.astro\n      ticketing.astro\n      windlass.astro\n    status\n      [slug].astro\n    terms.astro\n    use-cases\n      [slug].astro\n      index.astro\n  styles\n    fonts.css\n    global.css\ntest-discovery-e2e.sh\ntest-discovery.sh\ntest-license.txt\ntests\n  accessibility.spec.ts\n  ai-providers.spec.ts\n  api-tokens.spec.ts\n  auth.spec.ts\n  backups.spec.ts\n  community-kb.spec.ts\n  cross-app.spec.ts\n  cross-service.spec.ts\n  data-sources.spec.ts\n  diagnosis.spec.ts\n  docs.spec.ts\n  export.spec.ts\n  global-setup.ts\n  helpers\n    auth.ts\n    fixtures.ts\n  hud.spec.ts\n  incidents.spec.ts\n  notifications.spec.ts\n  performance.spec.ts\n  playwright.config.ts\n  preferences.spec.ts\n  qa-second-run.spec.ts\n  rbac.spec.ts\n  search.spec.ts\n  security.spec.ts\n  setup-wizard-qa.spec.ts\n  setup-wizard.spec.ts\n  smoke.spec.ts\n  stacks.spec.ts\n  ticketing-connectors.spec.ts\n  windlass.spec.ts\ntsconfig.json\nupdate-ollama-config.sh\n\npackage.json name: stdout\nScripts: {\"dev\":\"astro dev\",\"build\":\"astro build\",\"preview\":\"astro preview\",\"start\":\"node dist/server/entry.mjs\",\"db:migrate\":\"node scripts/migrate.js\",\"migrate:windlass-service-type\":\"node scripts/migrate-windlass-service-type.js\",\"astro\":\"astro\",\"test\":\"STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit\",\"test:all\":\"STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts\",\"test:smoke\":\"npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts\",\"test:auth\":\"STDOUT_DISABLE_RATE_LIMIT=1 npx playwright test tests/auth.spec.ts --config=tests/playwright.config.ts\",\"test:security\":\"STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test tests/security.spec.ts --config=tests/playwright.config.ts\",\"test:no-ratelimit\":\"STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit\",\"test:ratelimit\":\"npx playwright test --config=tests/playwright.config.ts --grep @ratelimit\"}\nDependencies: @anthropic-ai/sdk, @astrojs/node, @astrojs/sitemap, @node-rs/argon2, astro, better-sqlite3, drizzle-orm, nanoid, resend\nDev dependencies: @playwright/test, @types/better-sqlite3, drizzle-kit, playwright\n\nDetected frameworks: Drizzle ORM, Docker\nSchema files: none\nEnv keys (names only): APP_URL, SECRET_KEY, RESEND_API_KEY, EMAIL_FROM, ANTHROPIC_API_KEY, WINDLASS_URL, DB_PATH, STDOUT_MODE, OLLAMA_HOST, WATCHER_MODEL, ANALYST_MODEL, SENTINEL_API_PORT, CRITICAL_CHECK_INTERVAL, PRODUCT_CHECK_INTERVAL, DEFAULT_CHECK_INTERVAL, SLACK_WEBHOOK_URL, SLACK_ALERTS_CHANNEL, SLACK_INFO_CHANNEL, HELMSMAN_API_URL\n\nMost-imported external packages: drizzle-orm(86), astro(80), nanoid(44), @playwright/test(31), better-sqlite3(18), node:fs(14), node:crypto(11), node:path(10), fs(9), child_process(8), node:child_process(8), node:util(7), path(6), util(6), node:http(5), node:url(4), crypto(4), node:https(4), @node-rs/argon2(2), url(2), @astrojs/node(1), @astrojs/sitemap(1), drizzle-kit(1), creatomate(1), playwright(1), @anthropic-ai/sdk(1), dgram(1), node:net(1), astro:middleware(1)",
+  "summary": "stdout is a self-hostable infrastructure observability and monitoring platform built with Astro, providing network discovery, AI-assisted diagnostics, incident management, and a community knowledge base. It scans hosts and Docker stacks, ingests metrics, and uses LLMs to surface and explain issues. Operators interact through a web HUD and configure monitoring via a setup wizard.",
+  "nodes": [
+    {
+      "title": "Frontend",
+      "type": "core",
+      "stack": [
+        "Astro",
+        "HTML",
+        "CSS"
+      ],
+      "notes": "Server-rendered Astro pages, layouts, and components for the HUD, dashboards, setup wizard, docs, and status pages"
+    },
+    {
+      "title": "Backend",
+      "type": "core",
+      "stack": [
+        "Astro",
+        "Node"
+      ],
+      "notes": "Astro Node server with API endpoints and lib services for scanning, discovery, diagnostics, observatory/sentinel logic, and business rules"
+    },
+    {
+      "title": "Database",
+      "type": "core",
+      "stack": [
+        "SQLite",
+        "Drizzle ORM",
+        "better-sqlite3"
+      ],
+      "notes": "Local SQLite store with Drizzle schema and migrations for hosts, incidents, entities, skins, and audit data"
+    },
+    {
+      "title": "Auth",
+      "type": "core",
+      "stack": [
+        "Argon2",
+        "nanoid"
+      ],
+      "notes": "Password hashing, session middleware, RBAC, license validation, and API token management"
+    },
+    {
+      "title": "Integrations",
+      "type": "core",
+      "stack": [
+        "Anthropic",
+        "Ollama",
+        "Resend",
+        "Slack",
+        "GitHub",
+        "InfluxDB",
+        "Prometheus",
+        "Shodan"
+      ],
+      "notes": "External connectors for AI diagnosis, email/Slack notifications, ticketing, metrics ingestion, and CVE/Docker scanning"
+    },
+    {
+      "title": "Infrastructure",
+      "type": "core",
+      "stack": [
+        "Docker",
+        "Loki",
+        "Tempo",
+        "Grafana",
+        "Python"
+      ],
+      "notes": "Containerized deployment with observatory monitoring stack and Python sentinel agents for watching and analysis"
+    }
+  ],
+  "edges": [
+    {
+      "from": "Frontend",
+      "to": "Backend",
+      "label": "calls API"
+    },
+    {
+      "from": "Backend",
+      "to": "Database",
+      "label": "reads/writes"
+    },
+    {
+      "from": "Backend",
+      "to": "Auth",
+      "label": "verifies sessions"
+    },
+    {
+      "from": "Auth",
+      "to": "Database",
+      "label": "stores credentials"
+    },
+    {
+      "from": "Backend",
+      "to": "Integrations",
+      "label": "invokes"
+    },
+    {
+      "from": "Backend",
+      "to": "Infrastructure",
+      "label": "monitors/deploys on"
+    },
+    {
+      "from": "Infrastructure",
+      "to": "Integrations",
+      "label": "exports metrics"
+    }
+  ]
+}
