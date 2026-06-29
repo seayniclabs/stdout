@@ -11,22 +11,19 @@ const db = getDb();
 
 // Fetch docs for sidebar
 const allDocs = db.select().from(schema.docs)
-  .where(or(
-    eq(schema.docs.userId, user.id),
-    eq(schema.docs.source, 'community')
-  ))
+  .where(eq(schema.docs.userId, user.id))
   .orderBy(desc(schema.docs.updatedAt))
   .all();
 
 // Category counts
 const categoryCounts: Record<string, number> = {};
 for (const doc of allDocs) {
-  const t = doc.docType || 'note';
+  const t = doc.type || 'note';
   categoryCounts[t] = (categoryCounts[t] || 0) + 1;
 }
 
-// Community docs (pinned section)
-const communityDocs = allDocs.filter(d => d.source === 'community').slice(0, 5);
+// Community docs (no longer a separate source - all docs are user-owned)
+const communityDocs: any[] = [];
 
 // Recent docs
 const recentDocs = allDocs.slice(0, 5);

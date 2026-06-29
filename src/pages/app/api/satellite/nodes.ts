@@ -22,7 +22,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const db = getDb();
   const rows = db.all(sql`
-    SELECT id, name, description, tags, last_seen, last_report, alert_state, created_at
+    SELECT id, name, hostname, ip_address, last_seen_at, created_at
     FROM satellite_agents
     WHERE user_id = ${locals.user.id}
     ORDER BY created_at DESC
@@ -31,11 +31,9 @@ export const GET: APIRoute = async ({ locals }) => {
   const nodes = rows.map(r => ({
     id: r.id,
     name: r.name,
-    description: r.description,
-    tags: JSON.parse(r.tags || '[]'),
-    lastSeen: r.last_seen,
-    lastReport: r.last_report ? JSON.parse(r.last_report) : null,
-    alertState: r.alert_state,
+    hostname: r.hostname,
+    ipAddress: r.ip_address,
+    lastSeen: r.last_seen_at,
     createdAt: r.created_at,
   }));
 
@@ -58,8 +56,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Node name is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
   }
 
-  const description = (body.description || '').trim() || null;
-  const tags = Array.isArray(body.tags) ? body.tags : [];
+  const hostname = (body.hostname || '').trim() || 'unknown';
+  const ipAddress = (body.ipAddress || body.ip_address || '').trim() || 'unknown';
 
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
@@ -68,8 +66,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   const db = getDb();
   db.run(sql`
-    INSERT INTO satellite_agents (id, user_id, name, description, tags, token_hash, alert_state, created_at)
-    VALUES (${id}, ${locals.user.id}, ${name}, ${description}, ${JSON.stringify(tags)}, ${tokenHash}, 'ok', ${now})
+    INSERT INTO satellite_agents (id, user_id, name, hostname, ip_address, api_key, created_at)
+    VALUES (${id}, ${locals.user.id}, ${name}, ${hostname}, ${ipAddress}, ${tokenHash}, ${now})
   `);
 
   logAudit('satellite_node_register', {
@@ -78,7 +76,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     details: { nodeId: id, name },
   });
 
-  emit({ type: 'satellite.registered', userId: locals.user.id, agentId: id, name, tags });
+  emit({ type: 'satellite.registered', userId: locals.user.id, agentId: id, name, hostname, ipAddress });
 
   return new Response(JSON.stringify({ node_id: id, api_token: rawToken, name }), {
     headers: { 'Content-Type': 'application/json' },
