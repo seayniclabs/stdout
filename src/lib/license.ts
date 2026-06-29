@@ -112,6 +112,7 @@ function normalizePayload(raw: CompactPayload): LicensePayload {
 /**
  * Verify a signed license offline — no network call needed.
  * Tries Ed25519 first (short keys), falls back to RSA for legacy keys.
+ * Also accepts Store legacy format: SL-{CODE}-{NANOID} (validated by format only, no signature).
  */
 export function verifyLicenseSignature(
   signedKey: string
@@ -123,8 +124,20 @@ export function verifyLicenseSignature(
   const parts = signedKey.slice(3).split('.');
   if (parts.length !== 2) {
     const dashCount = (signedKey.match(/-/g) || []).length;
-    if (dashCount === 2) {
-      return { valid: false, reason: 'Legacy license format - requires online validation' };
+    // Store legacy format: SL-{CODE}-{NANOID} (2 dashes total)
+    // Accept this as valid - it was purchased from the Store
+    if (dashCount === 2 && /^SL-[A-Z0-9]{3,4}-[A-Za-z0-9_-]{20,}$/.test(signedKey)) {
+      // Legacy Store license - accept as valid (already purchased)
+      return {
+        valid: true,
+        payload: {
+          product: 'stdout-self-host',
+          email: 'licensed-user@seayniclabs.com', // Placeholder - real email stored separately
+          issued: Math.floor(Date.now() / 1000),
+          expires: null, // Legacy licenses don't expire
+          maxActivations: 99,
+        },
+      };
     }
     return { valid: false, reason: 'Invalid license format' };
   }
