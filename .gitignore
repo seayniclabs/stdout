@@ -17,3 +17,7 @@ test-results/
 marketing-assets/
 playwright/.auth/
 tests/playwright/.auth/
+
+# SQLite runtime files (local state, never commit)
+*.db-wal
+*.db-shm

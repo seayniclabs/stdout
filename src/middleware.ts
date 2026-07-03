@@ -109,7 +109,7 @@ ALLOWED_ORIGINS.push(
   'http://localhost:3000',
   'http://localhost:8112',
   'http://localhost:9112',  // SSH tunnel port
-  'http://192.168.0.244:8112',
+  'http://192.168.68.84:8112',  // ThinkPad
   'http://stdout.local:8112'  // mDNS hostname
 );
 
@@ -589,20 +589,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const csp = isSetupPage
     ? [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' https://analytics.seaynicroute.com",
+        "script-src 'self' 'unsafe-inline' https://analytics.seaynicroute.com https://cdn.jsdelivr.net",
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://analytics.seaynicroute.com",
+        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.84:5683 ws://stdout.local:5683",
         "frame-ancestors 'none'",
       ].join('; ')
     : [
         "default-src 'self'",
-        `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com`,
+        `script-src 'self' 'nonce-${nonce}' https://analytics.seaynicroute.com https://cdn.jsdelivr.net`,
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://analytics.seaynicroute.com",
+        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.84:5683 ws://stdout.local:5683",
         "frame-ancestors 'none'",
       ].join('; ');
 

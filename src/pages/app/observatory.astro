@@ -1205,7 +1205,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     function connectWebSocket() {
       const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
       const host = window.location.hostname;
-      const port = '8081'; // Sentinel port
+      const port = '5683'; // Sentinel port
 
       try {
         ws = new WebSocket(`${protocol}//${host}:${port}/ws`);
