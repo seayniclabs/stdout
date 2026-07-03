@@ -77,7 +77,7 @@ export const docPages: DocPage[] = [
 <p>Run this on your Docker host (replace <code>YOUR_TOKEN</code> with your actual token):</p>
 <pre><code>docker run --rm \\
   -v /var/run/docker.sock:/var/run/docker.sock:ro \\
-  ghcr.io/charlieseay/stdout-scanner scan \\
+  charlieseay/stdout-scanner scan \\
   --token YOUR_TOKEN \\
   --url https://stdout.seayniclabs.com \\
   --output json</code></pre>

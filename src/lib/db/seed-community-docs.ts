@@ -244,7 +244,7 @@ The fastest way to get started is the interactive \`init\` command:
 docker run -it --rm \\
   -v /var/run/docker.sock:/var/run/docker.sock:ro \\
   -v ~/.stdout:/data \\
-  ghcr.io/charlieseay/stdout-scanner init
+  charlieseay/stdout-scanner init
 \`\`\`
 
 This walks you through module selection, token configuration, and creates a config file at \`~/.stdout/scanner.yaml\`.
@@ -257,7 +257,7 @@ After init, run a full scan:
 docker run --rm --net=host \\
   -v /var/run/docker.sock:/var/run/docker.sock:ro \\
   -v ~/.stdout:/data \\
-  ghcr.io/charlieseay/stdout-scanner scan --full
+  charlieseay/stdout-scanner scan --full
 \`\`\`
 
 The scanner discovers:
@@ -285,7 +285,7 @@ docker run -d --name stdout-scanner \\
   --net=host \\
   -v /var/run/docker.sock:/var/run/docker.sock:ro \\
   -v ~/.stdout:/data \\
-  ghcr.io/charlieseay/stdout-scanner scan \\
+  charlieseay/stdout-scanner scan \\
   --schedule daily --delta \\
   --token YOUR_TOKEN \\
   --url https://your-stdout-instance.com

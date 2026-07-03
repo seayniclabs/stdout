@@ -597,7 +597,7 @@ function timeAgo(date: Date) {
             <li>Run the scanner on your Docker host:
               <pre class="scanner-cmd"><code>{`docker run --rm \\
   -v /var/run/docker.sock:/var/run/docker.sock:ro \\
-  ghcr.io/charlieseay/stdout-scanner scan \\
+  charlieseay/stdout-scanner scan \\
   --url YOUR_STDOUT_URL \\
   --token YOUR_API_TOKEN`}</code></pre>
             </li>

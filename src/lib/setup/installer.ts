@@ -192,7 +192,7 @@ export async function runScannerSetup(
 
     // Scanner command for user to run
     const scannerCommand = `docker run --rm -v /var/run/docker.sock:/var/run/docker.sock:ro \\
-  ghcr.io/charlieseay/stdout-scanner \\
+  charlieseay/stdout-scanner \\
   --token ${token} \\
   --url http://localhost:8112`;
 

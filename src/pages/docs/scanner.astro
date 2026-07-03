@@ -64,13 +64,13 @@ import '../../styles/global.css';
 
     <p>The scanner is distributed as a Docker image. Pull it from GitHub Container Registry:</p>
 
-    <pre is:raw><code>docker pull ghcr.io/charlieseay/stdout-scanner:latest</code></pre>
+    <pre is:raw><code>docker pull charlieseay/stdout-scanner:latest</code></pre>
 
     <p>Or run it directly — Docker will pull the image automatically:</p>
 
     <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/charlieseay/stdout-scanner version</code></pre>
+  charlieseay/stdout-scanner version</code></pre>
 
     <h2>Quick start</h2>
 
@@ -83,7 +83,7 @@ import '../../styles/global.css';
     <pre is:raw><code>docker run -it --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner init</code></pre>
+  charlieseay/stdout-scanner init</code></pre>
 
     <p>The setup interview walks you through:</p>
     <ul>
@@ -100,7 +100,7 @@ import '../../styles/global.css';
     <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan</code></pre>
+  charlieseay/stdout-scanner scan</code></pre>
 
     <p>The scanner discovers your infrastructure and pushes the results to StdOut. Go to your dashboard to review and confirm the import.</p>
 
@@ -114,17 +114,17 @@ import '../../styles/global.css';
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan
+  charlieseay/stdout-scanner scan
 
 # Scan and print markdown locally (no push)
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/charlieseay/stdout-scanner scan --output markdown
+  charlieseay/stdout-scanner scan --output markdown
 
 # Scan and print JSON
 docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
-  ghcr.io/charlieseay/stdout-scanner scan --output json</code></pre>
+  charlieseay/stdout-scanner scan --output json</code></pre>
 
     <h3>Delta scan</h3>
 
@@ -133,7 +133,7 @@ docker run --rm \
     <pre is:raw><code>docker run --rm \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan --delta</code></pre>
+  charlieseay/stdout-scanner scan --delta</code></pre>
 
     <p>Delta scans report:</p>
     <ul>
@@ -152,7 +152,7 @@ docker run --rm \
     <pre is:raw><code>docker run -d --name stdout-scanner \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan \
+  charlieseay/stdout-scanner scan \
   --schedule daily --delta \
   --token YOUR_TOKEN --url https://your-stdout-instance.com</code></pre>
 
@@ -168,7 +168,7 @@ docker run --rm \
 docker run --rm --net=host \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan \
+  charlieseay/stdout-scanner scan \
   --scan-network --subnets 192.168.0.0/24
 
 # Option 2: Specify in config (set during init)
@@ -192,7 +192,7 @@ docker run --rm --net=host \
     <pre is:raw><code>docker run --rm --net=host \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   -v ~/.stdout:/data \
-  ghcr.io/charlieseay/stdout-scanner scan --full \
+  charlieseay/stdout-scanner scan --full \
   --subnets 192.168.0.0/24</code></pre>
 
     <h2>CLI reference</h2>

@@ -413,12 +413,12 @@ async function validateLicenseKey(key, email) {
 # save-images.sh
 docker pull ghcr.io/seayniclabs/stdout:latest
 docker pull ghcr.io/seayniclabs/windlass:latest  
-docker pull ghcr.io/charlieseay/stdout-setup:latest
+docker pull charlieseay/stdout-setup:latest
 
 docker save \
   ghcr.io/seayniclabs/stdout:latest \
   ghcr.io/seayniclabs/windlass:latest \
-  ghcr.io/charlieseay/stdout-setup:latest \
+  charlieseay/stdout-setup:latest \
   -o stdout-bundle.tar
 
 gzip stdout-bundle.tar
@@ -500,7 +500,7 @@ if [[ "$OFFLINE_MODE" == "true" ]]; then
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "$(pwd)/$LICENSE_FILE:/app/stdout.license:ro" \
     -e OFFLINE_MODE=true \
-    ghcr.io/charlieseay/stdout-setup:latest
+    charlieseay/stdout-setup:latest
 else
   # Normal online flow
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -508,14 +508,14 @@ else
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   
   # Pull setup server from GHCR
-  docker pull ghcr.io/charlieseay/stdout-setup:latest
+  docker pull charlieseay/stdout-setup:latest
   
   # Start setup server
   docker run -d \
     --name stdout-setup \
     -p 8888:8888 \
     -v /var/run/docker.sock:/var/run/docker.sock \
-    ghcr.io/charlieseay/stdout-setup:latest
+    charlieseay/stdout-setup:latest
 fi
 
 # Common flow from here

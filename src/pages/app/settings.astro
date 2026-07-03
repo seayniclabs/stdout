@@ -1497,7 +1497,7 @@ const licenseNotice = getLicenseNotice();
       if (data.token) {
         tokenValue.textContent = data.token;
         const cmdEl = document.getElementById('scannerCmdValue')!;
-        cmdEl.textContent = `docker run --rm \\\n  -v /var/run/docker.sock:/var/run/docker.sock:ro \\\n  ghcr.io/charlieseay/stdout-scanner scan \\\n  --token ${data.token} \\\n  --url ${window.location.origin}`;
+        cmdEl.textContent = `docker run --rm \\\n  -v /var/run/docker.sock:/var/run/docker.sock:ro \\\n  charlieseay/stdout-scanner scan \\\n  --token ${data.token} \\\n  --url ${window.location.origin}`;
         tokenReveal.style.display = 'block';
         tokenNameInput.value = '';
         loadTokens();

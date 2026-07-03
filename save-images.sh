@@ -17,7 +17,7 @@ echo ""
 # Image names
 STDOUT_IMAGE="ghcr.io/seayniclabs/stdout:latest"
 WINDLASS_IMAGE="ghcr.io/seayniclabs/windlass:latest"
-SETUP_IMAGE="ghcr.io/charlieseay/stdout-setup:latest"
+SETUP_IMAGE="charlieseay/stdout-setup:latest"
 OUTPUT_FILE="stdout-bundle.tar"
 
 echo -e "${BLUE}⏳ Pulling images from GHCR...${NC}"

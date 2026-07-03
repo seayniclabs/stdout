@@ -141,7 +141,7 @@ docker exec stdout cat /data/installation-complete
 **Current blocker:** Cannot push to `ghcr.io/seayniclabs/*`
 
 **Temporary solution:**
-- Use `ghcr.io/charlieseay/*` for testing
+- Use `charlieseay/*` for testing
 - Update templates to use charlieseay namespace
 
 **Permanent solution:**
@@ -160,14 +160,14 @@ docker buildx create --name multiarch --use
 # Build and push multi-arch
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
-  -t ghcr.io/charlieseay/stdout:latest \
+  -t charlieseay/stdout:latest \
   --push \
   .
 ```
 
 **Verify multi-arch:**
 ```bash
-docker buildx imagetools inspect ghcr.io/charlieseay/stdout:latest
+docker buildx imagetools inspect charlieseay/stdout:latest
 ```
 
 ## Documentation Updates Needed
