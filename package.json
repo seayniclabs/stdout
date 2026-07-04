@@ -2,6 +2,9 @@
   "name": "stdout",
   "type": "module",
   "version": "1.2.1",
+  "bin": {
+    "stdout-voice": "./cli/voice-incident.mjs"
+  },
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
@@ -10,6 +13,11 @@
     "db:migrate": "node scripts/migrate.js",
     "migrate:windlass-service-type": "node scripts/migrate-windlass-service-type.js",
     "astro": "astro",
+    "voice": "node cli/voice-incident.mjs",
+    "test:voice": "node --test cli/spoken-summary.test.mjs",
+    "test:zeek": "node --test src/lib/zeek-core.test.mjs",
+    "test:loki": "node --test src/lib/loki-core.test.mjs",
+    "test:suricata": "node --test src/lib/suricata-core.test.mjs",
     "test": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
     "test:all": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts",
     "test:smoke": "npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts",
@@ -30,7 +38,7 @@
     "resend": "^6.9.3"
   },
   "devDependencies": {
-    "@playwright/test": "^1.50.0",
+    "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.13",
     "drizzle-kit": "^0.31.9",
     "playwright": "^1.60.0"
