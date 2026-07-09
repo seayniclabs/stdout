@@ -285,6 +285,21 @@ function timeAgo(date: Date) {
               <div class="resource-cards" id="resourceCards"></div>
             </div>
 
+            <!-- Search and Filter Controls -->
+            <div class="hud-control-bar">
+              <div class="search-wrapper">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" id="hudSearch" placeholder="Search monitors..." />
+              </div>
+              <div class="filter-pills">
+                <button class="pill active" data-filter="all">All</button>
+                <button class="pill" data-filter="healthy">Healthy</button>
+                <button class="pill" data-filter="down">Down</button>
+                <button class="pill" data-filter="degraded">Degraded</button>
+                <button class="pill" data-filter="unknown">Pending</button>
+              </div>
+            </div>
+
             <div class="service-list">
               {monitorsData.map(m => {
                 const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
@@ -304,7 +319,7 @@ function timeAgo(date: Date) {
                 const sparkColor = m.currentStatus === 'degraded' ? 'yellow' : m.currentStatus === 'down' ? 'red' : 'green';
 
                 return (
-                  <a href={`/app/hud/${m.id}`} class="service-row">
+                  <a href={`/app/hud/${m.id}`} class="service-row" data-status={statusClass}>
                     <span class={`svc-dot ${statusClass}`}></span>
                     <span class="svc-name" title={m.name}>{m.name}</span>
                     <div class="svc-sparkline">
@@ -645,6 +660,36 @@ function timeAgo(date: Date) {
     return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
+  // Search and Filter functionality
+  const searchInput = document.getElementById('hudSearch') as HTMLInputElement;
+  const filterPills = document.querySelectorAll('.filter-pills .pill');
+  const serviceRows = document.querySelectorAll('.service-row');
+
+  function updateList() {
+    const query = (searchInput?.value || '').toLowerCase();
+    const activeFilter = document.querySelector('.filter-pills .pill.active')?.getAttribute('data-filter') || 'all';
+
+    serviceRows.forEach(row => {
+      const name = (row.querySelector('.svc-name')?.textContent || '').toLowerCase();
+      const status = row.getAttribute('data-status') || '';
+
+      const matchesSearch = !query || name.includes(query);
+      const matchesFilter = activeFilter === 'all' || status === activeFilter;
+
+      row.classList.toggle('hidden', !(matchesSearch && matchesFilter));
+    });
+  }
+
+  searchInput?.addEventListener('input', updateList);
+
+  filterPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      filterPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      updateList();
+    });
+  });
+
   // Auto-refresh every 30 seconds
   setTimeout(() => window.location.reload(), 30000);
 </script>
@@ -779,31 +824,38 @@ function timeAgo(date: Date) {
   .ww-empty-state p { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; }
   .ww-empty-state .btn-sm { font-size: 11px; padding: 4px 10px; }
 
-  .service-list { display: flex; flex-direction: column; gap: 4px; }
+  .service-list { display: flex; flex-direction: column; gap: 8px; }
   .service-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: 12px minmax(180px, 1.5fr) 1fr 90px 90px;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-card) 100%);
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
     border: 1px solid var(--border);
+    border-left: 3px solid var(--border);
     border-radius: var(--radius-sm);
     text-decoration: none;
     color: inherit;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     cursor: pointer;
     animation: slideInLeft 0.3s ease-out both;
-    box-shadow: var(--shadow-inset);
   }
   .service-row:nth-child(2) { animation-delay: 0.03s; }
   .service-row:nth-child(3) { animation-delay: 0.06s; }
   .service-row:nth-child(4) { animation-delay: 0.09s; }
   .service-row:nth-child(5) { animation-delay: 0.12s; }
   .service-row:nth-child(n+6) { animation-delay: 0.15s; }
+
+  /* Left-border status indicators */
+  .service-row:has(.svc-dot.healthy) { border-left-color: var(--low); }
+  .service-row:has(.svc-dot.degraded) { border-left-color: var(--high); }
+  .service-row:has(.svc-dot.down) { border-left-color: var(--critical); }
+  .service-row:has(.svc-dot.maintenance) { border-left-color: #3b82f6; }
+  .service-row:has(.svc-dot.unknown) { border-left-color: var(--text-muted); }
+
   .service-row:hover {
     background: var(--bg-hover);
-    transform: translateX(4px);
-    box-shadow: var(--shadow-md);
     border-color: var(--border-hover);
   }
 
@@ -998,10 +1050,88 @@ function timeAgo(date: Date) {
     .right-panel { width: 100%; }
   }
 
+  /* Search and Filter Controls */
+  .hud-control-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 16px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+  }
+
+  .search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  #hudSearch {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+  }
+
+  #hudSearch:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 6px;
+  }
+
+  .pill {
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .pill:hover {
+    border-color: var(--accent);
+    color: var(--accent-light);
+  }
+
+  .pill.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .service-row.hidden {
+    display: none;
+  }
+
   @media (max-width: 600px) {
     .gauges { grid-template-columns: repeat(2, 1fr); }
-    .service-row { flex-wrap: wrap; }
+    .service-row { grid-template-columns: 12px 1fr 80px 80px; }
+    .svc-sparkline { display: none; }
     .svc-name { min-width: 120px; max-width: 200px; }
-    .svc-sparkline { min-width: 60px; }
+    .hud-control-bar { flex-direction: column; align-items: stretch; }
+    .search-wrapper { max-width: none; }
   }
 </style>
