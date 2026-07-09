@@ -368,6 +368,44 @@ Self-hosted: your configured domain and port.</p>
   </tbody>
 </table>
 
+<h3>Netdata Cloud</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST</code></td><td><code>/app/api/netdata/webhook</code></td><td>Ingest Netdata Cloud anomalies; routes fixes to Windlass</td></tr>
+  </tbody>
+</table>
+<p>Configure the webhook in Netdata Cloud with header <code>Authorization: Bearer stdout_scan_…</code> (token from Settings → API Tokens). Warning/critical alerts create incidents and call Windlass <code>POST /anomaly.json</code> (memory/disk shed or service restart). Use <code>?autoFix=0</code> to ingest only, or <code>?dryRun=1</code> to classify without side effects.</p>
+
+<h3>Suricata (keystone security signal)</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST</code></td><td><code>/app/api/suricata/webhook</code></td><td>Ingest Suricata EVE JSON alerts; correlate and route IP-block / service-restart to Windlass</td></tr>
+    <tr><td><code>GET</code></td><td><code>/app/api/suricata/status</code></td><td>Background ingest status (file-tail / Redis) and counters; <code>?format=prometheus</code> for scrape</td></tr>
+  </tbody>
+</table>
+<p>Keystone security path: Suricata EVE alerts → classify + correlate (same <code>src_ip</code> within 300s) → incident → Windlass <code>POST /anomaly.json</code> (<code>kind=ip_block</code> or <code>kind=service</code>; aliases <code>POST /v1/block-ip</code> and <code>POST /v1/restart-service</code>). Ingest via webhook (Bearer <code>stdout_scan_…</code>), file-tail (<code>SURICATA_EVE_PATH=/var/log/suricata/eve.json</code>), or Redis list/stream (<code>SURICATA_REDIS_URL</code>, <code>SURICATA_REDIS_MODE=list|stream</code>). Stream mode uses short <code>XREADGROUP</code> blocks (default 2s) and loops — avoids hung agent sessions from multi-minute blocks. Suricata severity is inverted (1=high → critical IP block; 2=medium → service restart, or IP block when correlated ≥3). Console logs never include IPs or full payloads. Query params: <code>?autoFix=0</code>, <code>?dryRun=1</code>. Observatory compose: <code>--profile suricata</code>. Metrics: <code>GET /app/api/suricata/status?format=prometheus</code>.</p>
+
+<h3>Zeek</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST</code></td><td><code>/app/api/zeek/ingest</code></td><td>Ingest Zeek protocol logs (conn/dns/http/ssl/notice) for correlation and anomaly baselines</td></tr>
+  </tbody>
+</table>
+<p>POST Zeek TSV or JSONL with header <code>Authorization: Bearer stdout_scan_…</code>. Body fields: <code>conn</code>, <code>dns</code>, <code>http</code>, <code>ssl</code>, <code>notice</code>. Metrics update Observatory baselines (<code>zeek_*</code>); notices are correlated with related flows by uid/IP; &gt;2σ spikes and high-severity notices create incidents. Query params: <code>?dryRun=1</code> (parse only), <code>?pull=1</code> (read local zeek sidecar logs), <code>?analyze=1</code> (run Zeek on latest pcap then pull), <code>?noIncidents=1</code> (baselines only).</p>
+
+<h3>Loki</h3>
+<table>
+  <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td><code>POST</code></td><td><code>/app/api/loki/ingest</code></td><td>Pull logs from Loki via LogQL query API; update baselines and open incidents on error bursts</td></tr>
+    <tr><td><code>GET</code></td><td><code>/app/api/loki/ingest</code></td><td>Status: configured URL and last metrics</td></tr>
+  </tbody>
+</table>
+<p>POST with header <code>Authorization: Bearer stdout_scan_…</code>. Body: <code>{ "query": "{job=\\"stdout\\"} |= \\"error\\"", "minutes": 15 }</code> or <code>{ "job": "stdout", "minutes": 5 }</code>. StdOut calls Loki <code>/loki/api/v1/query_range</code> with a time-bounded window (default 15m, max 24h; unbounded <code>start=0</code> is rejected), classifies lines (critical/error/warn), updates Observatory baselines (<code>loki_*</code>), and opens incidents for &gt;2σ spikes or ≥3 critical lines per service. Defaults to <code>job=stdout</code>. Pre-fetched <code>streams</code> / <code>logs</code> skip the live query. Requires a Loki data source (Settings) or <code>LOKI_URL</code>. Sentinel pulls every 5 minutes when configured. Query params: <code>?dryRun=1</code> (parse only), <code>?noIncidents=1</code> (baselines only).</p>
+
 <h3>Monitors</h3>
 <table>
   <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
@@ -421,6 +459,7 @@ Self-hosted: your configured domain and port.</p>
   <li><strong>Automatic start/stop</strong> — Bring Docker Compose stacks up and down on a cron schedule (e.g., start a social media scheduler at 11PM, stop it at 4AM).</li>
   <li><strong>Dashboard controls</strong> — Start, stop, and restart services from the StdOut UI without SSH.</li>
   <li><strong>Auto-fix execution</strong> — StdOut auto-fix plans can run commands directly on the host via Windlass.</li>
+  <li><strong>Suricata response</strong> — IP block (iptables DROP) and service restart for correlated EVE alerts via <code>POST /anomaly.json</code>.</li>
 </ul>
 
 <h3>Architecture</h3>

@@ -5,7 +5,11 @@ import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { assertAutofixCommandAllowed } from '../../../../lib/autofix-exec-policy';
 
-const execAsync = promisify(exec);
+// Add GitHub API integration for creating a PR
+import { Octokit } from "octokit";
+const octokit = new Octokit({
+  auth: process.env.GITHUB_TOKEN,
+});
 
 /**
  * POST /app/api/incidents/autofix-exec

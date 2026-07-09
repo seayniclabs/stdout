@@ -1,8 +1,23 @@
 # StdOut
 
-AI-assisted incident companion for self-hosters and solo developers. Turns your past fixes into future answers — a living runbook that knows your stack.
+**Autonomous IT for SMB ops teams.** Your infrastructure assistant that learns your stack, remembers every fix, and handles the repetitive work so your team can focus on what matters.
 
 **License**: Personal use only. Commercial use requires a license. See [LICENSE](LICENSE) for details.
+
+---
+
+## What StdOut Does
+
+StdOut is an autonomous IT assistant for small business operations teams. It:
+
+- **Learns your infrastructure** — Auto-discovers Docker containers, network devices, services, and dependencies
+- **Remembers every fix** — Builds a living knowledge base from your incident resolutions
+- **Handles routine work** — Monitors services, creates incidents automatically, suggests fixes based on your history
+- **Keeps your team aligned** — Shared runbooks, incident tracking, and operational documentation in one place
+
+Stop solving the same problem twice. Stop losing knowledge when team members leave. Stop paying enterprise prices for tools built for 500-person companies.
+
+---
 
 ## Quick Start
 
@@ -20,12 +35,12 @@ docker compose up -d
 Open `APP_URL` (default `http://localhost:8112`), create your admin account, name your environment, and you're done. Everything else is **fully automated**:
 
 - ✅ Network scanning runs in background
-- ✅ Windlass auto-connects if available
+- ✅ Service discovery auto-connects
 - ✅ Ticketing system auto-detected from env vars (or uses built-in)
 - ✅ License is optional (activate later in Settings)
 - ✅ No manual configuration required
 
-The setup wizard completes in **2 steps** instead of 8. No decisions, no "Skip for Now" buttons.
+Setup completes in **2 steps** instead of 8. No decisions, no "Skip for Now" buttons.
 
 ---
 
@@ -33,8 +48,8 @@ The setup wizard completes in **2 steps** instead of 8. No decisions, no "Skip f
 
 StdOut is one Docker container with three optional components:
 
-1. **StdOut Core** (port 8112) - Incident companion, dashboard, AI diagnostics, knowledge base
-2. **Windlass** (port 8116) - Schedule-aware Docker service manager *(optional)*
+1. **StdOut Core** (port 8112) - Incident management, dashboard, AI diagnostics, knowledge base
+2. **Windlass** (port 8116) - Schedule-aware service manager *(optional)*
 3. **Observatory** (port 8080) - Proactive monitoring with AI agents *(optional)*
 
 ```
@@ -46,7 +61,7 @@ StdOut is one Docker container with three optional components:
                   ▼
 ┌─────────────────────────────────────────┐
 │         Windlass Engine  (port 8116)     │
-│  Schedule-aware Docker service manager  │
+│  Schedule-aware service manager          │
 │  Runs on your host, manages containers  │
 └─────────────────────────────────────────┘
                   │  auto-creates incidents
@@ -60,143 +75,111 @@ StdOut is one Docker container with three optional components:
 
 ---
 
-## Windlass — Do You Need It?
+## Who This Is For
 
-Windlass is a schedule-aware Docker service manager. It reads a `schedule.yaml` and automatically starts, stops, and monitors your Docker Compose stacks. StdOut connects to it over HTTP and uses it to:
+**You're a good fit if:**
+- You're a 2-15 person ops/IT team at a small business
+- You manage 10-100+ services across Docker, VMs, or bare metal
+- You're tired of losing knowledge when team members leave
+- You want incident management without paying $50/user/month
+- You need shared runbooks that actually stay up to date
+- You want AI assistance trained on *your* infrastructure, not generic answers
 
-- Show schedule-aware service status (running vs. stopped vs. should-be-running)
-- Alert only when a service is unexpectedly down (not when it's scheduled to be off)
-- Send start/stop/restart commands from the StdOut dashboard
-- Execute auto-fix plan steps directly on the host
+**You're NOT a good fit if:**
+- You're a solo hobbyist (StdOut works, but it's built for teams)
+- You have 50+ person IT org (you need enterprise tooling)
+- You want a SaaS-only solution (we offer cloud, but self-hosted is the default)
+- You don't want to self-host anything
+
+---
+
+## Core Features
+
+### 1. Infrastructure Discovery
+Auto-discovers your entire stack in minutes:
+- Docker containers, compose projects, networks, volumes
+- Network devices via SNMP (switches, APs, routers)
+- TLS certificates with expiration tracking
+- Service dependencies and exposed ports
+
+One command maps everything. No manual inventory maintenance.
+
+### 2. Incident Management
+Built-in ticketing system that actually works for ops teams:
+- Create incidents in 30 seconds (paste error, tag severity, done)
+- AI matches against your resolution history automatically
+- Shared incident view — everyone sees the same context
+- Auto-creates incidents from monitoring alerts
+- Links to runbooks, past fixes, and related services
+
+### 3. AI Diagnosis
+Claude analyzes incidents against *your specific stack*:
+- Ranked root causes based on your infrastructure
+- Commands to run, logs to check, services to restart
+- Learns from your past resolutions
+- Not generic — trained on your environment
+
+### 4. Knowledge Base
+Turn every fix into documentation:
+- Runbook pages auto-generated from incident resolutions
+- Full-text search across all documentation
+- Markdown support with code blocks
+- Version history for all pages
+- Shared across your team
+
+### 5. Service Monitoring
+HUD dashboard shows real-time service health:
+- Uptime monitoring for every discovered service
+- Auto-creates incidents on downtime
+- Schedule-aware (doesn't alert when services are supposed to be down)
+- Public status page for your users
+
+### 6. Team Collaboration
+Built for teams, not individuals:
+- Role-based access control (admin, operator, viewer)
+- Shared incident queue
+- Weekly digest emails
+- Slack/Teams integration
+- Audit log for all changes
+
+---
+
+## Windlass — Schedule-Aware Service Management
+
+Windlass is an optional component that adds schedule-aware service management. It reads a `schedule.yaml` and automatically starts, stops, and monitors your Docker Compose stacks.
 
 **You want Windlass if you:**
-- Have Docker Compose stacks you want started/stopped on a schedule (e.g., a social scheduler that runs overnight, a dev environment that shouldn't run 24/7)
-- Want StdOut to alert you when a service is down *unexpectedly*, not just *down*
-- Want to control services from the StdOut dashboard instead of SSH
-- Use StdOut's auto-fix feature and want commands to actually run on the host
+- Have services that run on schedules (batch jobs, dev environments, etc.)
+- Want StdOut to alert only when services are *unexpectedly* down
+- Want to control services from the StdOut dashboard
+- Use StdOut's auto-fix feature and want commands to run on the host
 
 **You do NOT need Windlass if you:**
-- Just want incident tracking, AI diagnostics, and a knowledge base
-- Run all your services 24/7 and don't need schedule management
+- Run all services 24/7
+- Just want incident tracking and knowledge base
 - Are evaluating StdOut for the first time
 
----
-
-## Starting with Windlass
-
-### Step 1: Create your config directory
-
-```bash
-sudo mkdir -p /opt/windlass
-```
-
-### Step 2: Write your schedule
-
-```bash
-curl -o /opt/windlass/schedule.yaml \
-  https://raw.githubusercontent.com/seayniclabs/windlass/main/schedule.yaml.example
-```
-
-Edit `/opt/windlass/schedule.yaml` to match your actual services. See [Windlass docs](https://github.com/seayniclabs/windlass) for the full format.
-
-### Step 3: Mount your compose directories
-
-Open `docker-compose.yml` and uncomment the volume mount under the `windlass` service:
-
-```yaml
-volumes:
-  - /opt/windlass:/opt/windlass
-  - /var/run/docker.sock:/var/run/docker.sock
-  - /opt/containers:/opt/containers  # ← add your actual compose root
-```
-
-### Step 4: Start both services
-
-```bash
-docker compose --profile windlass up -d
-```
-
-This starts both `stdout` (port 8112) and `windlass` (port 8116).
-
-### Step 5: Connect StdOut to Windlass
-
-1. Open StdOut → **Windlass** in the nav
-2. Enter `http://host.docker.internal:8116` as the endpoint URL
-3. Click **Connect**
-4. Click **Sync** to pull in your service registry
-
-StdOut will now show your services, their schedule windows, and alert when something is down outside its expected window.
+See [Windlass docs](https://github.com/seayniclabs/windlass) for setup instructions.
 
 ---
 
-## Windlass Deployment Notes
+## Observatory — Proactive Monitoring
 
-Three things that trip up new Windlass deployments.
+Observatory adds AI-powered proactive monitoring with Prometheus, Loki, and Tempo.
 
-### schedule.yaml — compose_path and container names
+**You want Observatory if you:**
+- Monitor 10+ services and want proactive alerts
+- Need metrics/logs/traces in one place
+- Want AI to catch issues before users notice
+- Run critical services that can't have downtime
 
-`compose_path` must be the **absolute path to the directory containing `docker-compose.yml`** — not the file itself.
+**Skip Observatory if you:**
+- Just want incident tracking after problems happen
+- Have < 5 services and manual checks are fine
+- Don't want to run Ollama + LLM models locally
+- Prefer external monitoring (Datadog, New Relic, etc.)
 
-```yaml
-# Correct
-services:
-  my-service:
-    compose_path: /opt/containers/my-service
-
-# Wrong — points to the file
-    compose_path: /opt/containers/my-service/docker-compose.yml
-```
-
-The `containers` list takes **actual Docker container names** as shown in `docker ps`, not Compose service names. If you don't pin container names with `container_name:` in your compose file, Docker generates names like `my-service-app-1`. Run `docker ps --format '{{.Names}}'` to confirm names before filling in `schedule.yaml`.
-
-```yaml
-services:
-  postiz:
-    compose_path: /opt/containers/postiz
-    containers: [postiz-app, postiz-worker, postiz-postgres, postiz-redis]
-    type: schedule
-    cron_start: "0 4 * * *"   # UTC — see note below
-    cron_stop:  "0 10 * * *"
-```
-
-### Docker socket must be mounted :rw
-
-Windlass needs read-write access to the Docker socket to start and stop containers. The default mount (no mode flag) is read-write and is correct. The `:ro` flag breaks container control.
-
-```yaml
-# Correct — rw is the default
-- /var/run/docker.sock:/var/run/docker.sock
-
-# Wrong — breaks start/stop
-- /var/run/docker.sock:/var/run/docker.sock:ro
-```
-
-With `:ro`, Windlass will connect and report status correctly, but all start/stop/restart operations will fail silently. Services will appear managed but will not actually be controlled.
-
-### Cron times are always UTC
-
-`cron_start` and `cron_stop` are evaluated in UTC regardless of the `TZ` environment variable. Setting `TZ=America/Chicago` adjusts log timestamps only — it does not shift when schedule windows fire.
-
-Convert your intended local time to UTC before writing cron expressions:
-
-| Intent (America/Chicago) | cron value (UTC) |
-|--------------------------|------------------|
-| 11 PM CT in winter (CST, UTC−6) | `0 5 * * *` |
-| 11 PM CT in summer (CDT, UTC−5) | `0 4 * * *` |
-| 4 AM CT in winter | `0 10 * * *` |
-| 4 AM CT in summer | `0 9 * * *` |
-
-After deploying, verify by checking `/status.json` → `upcoming_events` — the next scheduled window should reflect your expected UTC time.
-
----
-
-## Starting without Windlass
-
-```bash
-docker compose up -d
-```
-
-Just StdOut. Windlass is not started. You can add it later at any time.
+See Observatory section below for setup instructions.
 
 ---
 
@@ -228,39 +211,49 @@ Back up the `./data/` directory. The SQLite database supports online backups —
 
 ---
 
+## Pricing
+
+### Self-Hosted (Recommended)
+**$149 one-time** — Deploy on your infrastructure, own it forever.
+- Everything included, no feature gates
+- Unlimited users, stacks, incidents
+- Your data stays on your network
+- No subscription, ever
+
+### Cloud Plans
+For teams who prefer managed hosting:
+
+**Solo** — $12/month
+- 1 user, 1 stack, 100 incidents/month
+- 1GB knowledge base storage
+- Good for individual ops engineers
+
+**Shop** — $24/month
+- 5 users, 3 stacks, unlimited incidents
+- 10GB knowledge base storage
+- RBAC, Slack integration, audit log
+- Good for small ops teams
+
+**Enterprise** — Custom pricing
+- Unlimited everything
+- SSO, custom integrations, SLA
+- Dedicated support
+
+[View pricing details →](https://store.seayniclabs.com/products/stdout)
+
+---
+
 ## Links
 
 - [Windlass engine](https://github.com/seayniclabs/windlass) — separate repo, full format reference
 - [StdOut docs](https://seayniclabs.com/stdout) — guides, API reference, self-host walkthrough
+- [Use cases](https://seayniclabs.com/stdout/use-cases) — see how teams use StdOut
 
 ---
 
-## Observatory — Proactive Monitoring (Optional)
+## Observatory Setup (Optional)
 
-Observatory adds **proactive monitoring** with AI-powered detection and diagnosis. While StdOut helps you fix incidents after they happen, Observatory tries to catch them before they become problems.
-
-### What Observatory Does
-
-- 🔍 **Active monitoring** - Continuously watches all your services
-- 🤖 **AI detection** - Llama 3.2 3B watches for anomalies every 5-60 minutes
-- 🧠 **AI diagnosis** - Qwen 2.5 14B analyzes root causes when issues are found
-- 📊 **Full observability** - Prometheus (metrics), Loki (logs), Tempo (traces)
-- 🎯 **Auto-incident creation** - Creates StdOut incidents automatically for critical issues
-
-### When You Want Observatory
-
-**Use Observatory if you:**
-- Monitor 10+ services and want proactive alerts
-- Need metrics/logs/traces in one place
-- Want AI to catch issues before users notice
-- Run critical services that can't have downtime
-- Like dashboards with graphs and real-time data
-
-**Skip Observatory if you:**
-- Just want incident tracking after problems happen
-- Have < 5 services and manual checks are fine
-- Don't want to run Ollama + LLM models locally
-- Prefer external monitoring (Datadog, New Relic, etc.)
+Observatory adds **proactive monitoring** with AI-powered detection and diagnosis.
 
 ### Requirements
 
@@ -268,7 +261,7 @@ Observatory adds **proactive monitoring** with AI-powered detection and diagnosi
 - **16GB+ RAM** recommended (models use ~6GB)
 - **GPU optional** but makes LLM inference much faster
 
-### Starting with Observatory
+### Setup
 
 #### Step 1: Install Ollama
 
@@ -315,52 +308,18 @@ docker compose --profile observatory up -d
    - Includes diagnosis, logs, and recommended fix
    - Links back to Observatory traces/metrics
 
-### Configuration
+---
 
-All Observatory settings are in `.env`:
+## Support
 
-```bash
-# Ollama host
-OLLAMA_HOST=http://host.docker.internal:11434
-
-# LLM models (change if you want different models)
-WATCHER_MODEL=llama3.2:3b-instruct-q4_K_M
-ANALYST_MODEL=qwen2.5:14b-instruct-q4_K_M
-
-# Check intervals (seconds)
-CRITICAL_CHECK_INTERVAL=300      # 5 min for critical services
-PRODUCT_CHECK_INTERVAL=600       # 10 min for product services
-DEFAULT_CHECK_INTERVAL=3600      # 60 min for everything else
-
-# Alert channels
-SLACK_WEBHOOK_URL=https://hooks.slack.com/...
-HELMSMAN_API_URL=http://your-helmsman-api
-```
-
-### Monitoring Your Services
-
-Observatory auto-discovers Docker containers. To monitor external services:
-
-1. Add them to `observatory/config/prometheus.yml`
-2. Restart Observatory: `docker compose --profile observatory restart prometheus`
-
-Example:
-
-```yaml
-scrape_configs:
-  - job_name: 'my-api'
-    static_configs:
-      - targets: ['api.example.com:9090']
-```
-
-### Stopping Observatory
-
-```bash
-# Stop Observatory only (keeps StdOut running)
-docker compose --profile observatory down
-
-# Or stop everything
-docker compose down
-```
+- **Documentation**: [seayniclabs.com/stdout](https://seayniclabs.com/stdout)
+- **Email**: hello@seayniclabs.com
+- **GitHub Issues**: [github.com/seayniclabs/stdout/issues](https://github.com/seayniclabs/stdout/issues)
 
 ---
+
+## License
+
+Personal use only. Commercial use requires a license. See [LICENSE](LICENSE) for details.
+
+Built by [Seaynic Labs LLC](https://seayniclabs.com).

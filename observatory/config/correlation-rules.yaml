@@ -1,0 +1,65 @@
+# Suricata → StdOut → Windlass correlation rules (TOOL1 keystone security signal).
+#
+# These patterns are implemented in src/lib/suricata-core.mjs and tuned via env:
+#   SURICATA_CORRELATE_WINDOW_SEC (default 300)
+#   SURICATA_CORRELATE_THRESHOLD  (default 3)
+#
+# Do NOT modify Suricata detection rules here — correlation layer only.
+# IP lists are never hardcoded; Windlass applies blocks dynamically via API.
+
+version: 1
+
+window_seconds: 300
+threshold: 3
+
+# Suricata severity is inverted: 1 = high, 2 = medium, 3 = low.
+actions:
+  - when:
+      event_type: alert
+      suricata_severity: 1
+      src_ip: present
+    then:
+      kind: ip_block
+      severity: critical
+      windlass: POST /v1/block-ip  # fallback: POST /anomaly.json
+
+  - when:
+      event_type: alert
+      suricata_severity: 2
+      correlated: true
+      src_ip: present
+    then:
+      kind: ip_block
+      severity: critical
+      windlass: POST /v1/block-ip
+
+  - when:
+      event_type: alert
+      suricata_severity: 2
+      correlated: false
+      service_hint: present
+    then:
+      kind: service
+      severity: warning
+      windlass: POST /v1/restart-service  # fallback: POST /anomaly.json
+
+  - when:
+      event_type: alert
+      suricata_severity: 3
+    then:
+      kind: none
+      severity: info
+
+ingest:
+  file_tail: /var/log/suricata/eve.json
+  redis_list_key: suricata
+  redis_stream: eve_alerts
+  redis_group: stream
+  # Short BLOCK + loop (prior lesson: 600–1200s XREADGROUP hangs agent sessions).
+  redis_block_ms: 2000
+
+security:
+  # Console / journal logs must never include full alert payloads or IP addresses.
+  log_ips: false
+  log_payloads: false
+  validation_marker: "Windlass action executed"

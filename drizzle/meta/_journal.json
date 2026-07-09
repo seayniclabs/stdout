@@ -57,6 +57,20 @@
       "when": 1781797380000,
       "tag": "0007_add_discovered_at_column",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781797440000,
+      "tag": "0008_windlass_events_nullable_service",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782670000000,
+      "tag": "0009_add_satellite_columns",
+      "breakpoints": true
     }
   ]
 }

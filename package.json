@@ -18,6 +18,9 @@
     "test:zeek": "node --test src/lib/zeek-core.test.mjs",
     "test:loki": "node --test src/lib/loki-core.test.mjs",
     "test:suricata": "node --test src/lib/suricata-core.test.mjs",
+    "test:suricata:functional": "node scripts/suricata-functional-test.mjs fixtures/sample_eve.json",
+    "deploy:suricata": "bash scripts/deploy-suricata-integration.sh",
+    "verify:suricata": "bash scripts/verify-suricata-integration.sh",
     "test": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
     "test:all": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts",
     "test:smoke": "npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts",
@@ -35,6 +38,7 @@
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
     "nanoid": "^5.1.6",
+    "octokit": "^5.0.5",
     "resend": "^6.9.3"
   },
   "devDependencies": {

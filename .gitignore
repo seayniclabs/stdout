@@ -21,3 +21,7 @@ tests/playwright/.auth/
 # SQLite runtime files (local state, never commit)
 *.db-wal
 *.db-shm
+
+# Local Suricata TOOL1 deploy (scripts/deploy-suricata-integration.sh when not root)
+.deploy-suricata/
+.aider*

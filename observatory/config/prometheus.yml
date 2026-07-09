@@ -39,6 +39,20 @@ scrape_configs:
           tier: 'critical'
     metrics_path: '/metrics'
 
+  # Suricata keystone counters (host-net StdOut on :8112; loopback-reachable from Prometheus host).
+  # Validation: curl -s 'http://127.0.0.1:8112/app/api/suricata/status?format=prometheus' | grep suricata_alerts_processed
+  - job_name: 'suricata-stdout'
+    static_configs:
+      - targets: ['host.docker.internal:8112']
+        labels:
+          environment: 'production'
+          service: 'suricata-stdout-integration'
+          tier: 'critical'
+    metrics_path: '/app/api/suricata/status'
+    params:
+      format: ['prometheus']
+    scrape_interval: 30s
+
   # Windlass scheduler metrics
   - job_name: 'windlass'
     static_configs:

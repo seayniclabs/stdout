@@ -129,9 +129,11 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ./observatory/config/loki-config.yml:/etc/loki/config.yaml
       - loki-data:/loki
-    command: -config.file=/etc/loki/config.yaml
+    # Use the image's baked-in local-config.yaml (avoids host file bind-mount
+    # issues on some Docker Desktop setups). Override with a custom image or
+    # config volume when a non-default schema is required.
+    command: -config.file=/etc/loki/local-config.yaml
     profiles:
       - observatory
     networks:

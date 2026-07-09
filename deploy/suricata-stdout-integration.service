@@ -1,0 +1,26 @@
+[Unit]
+Description=Suricata → StdOut → Windlass integration (TOOL1 keystone security signal)
+Documentation=https://github.com/std-out/stdout
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+WorkingDirectory=/opt/stdout
+EnvironmentFile=-/etc/stdout/suricata.env
+# Optional Bearer token (vault: stdout/windlass → /etc/stdout/windlass.token)
+Environment=WINDLASS_TOKEN_PATH=/etc/stdout/windlass.token
+# Idempotent Redis stream consumer group (BUSYGROUP = already exists).
+ExecStartPre=-/usr/bin/redis-cli --eval /opt/stdout/observatory/config/redis-stream-config.lua
+# Start StdOut + Windlass + Suricata (EVE JSON → file-tail / Redis → Windlass).
+ExecStartPre=/usr/bin/docker compose -f /opt/stdout/docker-compose.observatory.yml --profile suricata up -d
+# Stream container logs into the journal so validation markers are greppable:
+#   journalctl -u suricata-stdout-integration | grep "Windlass action executed"
+ExecStart=/usr/bin/docker logs -f --since 0s stdout
+ExecStop=/usr/bin/docker compose -f /opt/stdout/docker-compose.observatory.yml --profile suricata stop
+
+[Install]
+WantedBy=multi-user.target

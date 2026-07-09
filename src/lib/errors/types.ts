@@ -14,7 +14,8 @@ export type ErrorCategory =
   | 'config'
   | 'scheduler'
   | 'monitoring'
-  | 'backup';
+  | 'backup'
+  | 'github';
 
 export type Severity = 'critical' | 'error' | 'warning' | 'info';
 

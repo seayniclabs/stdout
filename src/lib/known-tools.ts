@@ -32,7 +32,7 @@ export const KNOWN_TOOLS = new Set([
   'prowlarr', 'bazarr', 'overseerr', 'tautulli',
 
   // Security
-  'crowdsec', 'fail2ban', 'trivy', 'vaultwarden',
+  'crowdsec', 'fail2ban', 'trivy', 'vaultwarden', 'zeek', 'suricata',
 
   // Storage
   'minio', 'nextcloud', 'syncthing', 'restic',

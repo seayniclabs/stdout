@@ -1,0 +1,5 @@
+# Tail eve.json → Redis stream (XADD) for SURICATA_REDIS_MODE=stream.
+FROM redis:7-alpine
+COPY eve-redis-bridge.sh /opt/stdout/eve-redis-bridge.sh
+RUN chmod +x /opt/stdout/eve-redis-bridge.sh
+ENTRYPOINT ["/bin/sh", "/opt/stdout/eve-redis-bridge.sh"]

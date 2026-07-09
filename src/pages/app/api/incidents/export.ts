@@ -57,6 +57,8 @@ export const GET: APIRoute = async ({ locals, url }) => {
   // Bulk export — all incidents
   const allIncidents = db.select().from(schema.incidents)
     .where(eq(schema.incidents.userId, locals.user.id)).all();
+  // Add GitHub API integration for exporting incidents
+  // ...
 
   if (format === 'json') {
     const data = allIncidents.map(i => {

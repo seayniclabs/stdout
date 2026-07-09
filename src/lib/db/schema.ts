@@ -517,6 +517,10 @@ export const satelliteAgents = sqliteTable('satellite_agents', {
   apiKey: text('api_key').notNull(),
   lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  lastSeen: integer('last_seen'),
+  lastReport: text('last_report'),
+  alertState: text('alert_state').notNull().default('ok'),
+  tags: text('tags').notNull().default('[]'),
 });
 
 export const satelliteReports = sqliteTable('satellite_reports', {
@@ -555,9 +559,9 @@ export const windlassServices = sqliteTable('windlass_services', {
 export const windlassEvents = sqliteTable('windlass_events', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
-  serviceId: text('service_id').notNull(),
+  serviceId: text('service_id'), // NULL = system-level event (Suricata, sync, etc.)
   eventType: text('event_type').notNull(),
-  details: text('details').notNull(), // JSON
+  details: text('details').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -713,4 +717,32 @@ export const userSkinPreferences = sqliteTable('user_skin_preferences', {
   activeSkinId: text('active_skin_id').references(() => skins.id, { onDelete: 'set null' }),
   customOverrides: text('custom_overrides'), // JSON
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// --- COLLECTOR FOUNDATION ---
+// Registry + event stream for the 4 canonical surface collectors:
+// prometheus (text scrape), syslog (UDP RFC5424), docker (socket API), rest (HTTP poll)
+
+export const collectorConfigs = sqliteTable('collector_configs', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull().unique(),
+  type: text('type', {
+    enum: ['prometheus', 'syslog', 'docker', 'rest'],
+  }).notNull(),
+  config: text('config').notNull().default('{}'), // JSON — collector-specific config
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  lastRun: integer('last_run', { mode: 'timestamp' }),
+  lastError: text('last_error'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const dataSourceEvents = sqliteTable('data_source_events', {
+  id: text('id').primaryKey(),
+  entity: text('entity').notNull(),
+  type: text('type').notNull(),
+  attributes: text('attributes').notNull(), // JSON
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+  sourceId: text('source_id'),
+  sourceType: text('source_type').notNull(),
 });

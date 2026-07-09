@@ -124,6 +124,25 @@ export function getLastLokiMetrics(userId: string): Partial<LokiMetrics> {
   return lastMetricsByUser.get(userId) ?? {};
 }
 
+/**
+ * Probe Loki readiness (GET /ready). Prefer this over /healthz — Grafana Loki
+ * exposes /ready; the brief's /healthz path is not standard.
+ */
+export async function checkLokiHealth(
+  config: LokiConfig,
+  timeoutMs = 5_000,
+): Promise<{ ok: boolean; status?: number; body?: string; error?: string }> {
+  try {
+    const url = new URL('/ready', config.url);
+    const json = await requestText(url, config.token, timeoutMs, config.insecureTls ?? false);
+    const body = json.body.trim();
+    const ok = json.status === 200 && (body.length === 0 || /ready/i.test(body));
+    return { ok, status: json.status, body: body.slice(0, 200) };
+  } catch (err: any) {
+    return { ok: false, error: err?.message || 'Loki health check failed' };
+  }
+}
+
 export function getLokiConfig(userId: string): LokiConfig | null {
   const db = getDb();
   const sources = db.select().from(schema.dataSources)
@@ -155,7 +174,12 @@ export function getLokiConfig(userId: string): LokiConfig | null {
   };
 }
 
-function requestJSON(url: URL, token: string, timeoutMs = 15_000, insecureTls = false): Promise<unknown> {
+function requestText(
+  url: URL,
+  token: string,
+  timeoutMs = 15_000,
+  insecureTls = false,
+): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const mod = url.protocol === 'https:' ? https : http;
     const req = mod.get(url, {
@@ -168,16 +192,10 @@ function requestJSON(url: URL, token: string, timeoutMs = 15_000, insecureTls = 
       const chunks: Buffer[] = [];
       res.on('data', (c: Buffer) => chunks.push(c));
       res.on('end', () => {
-        try {
-          const body = Buffer.concat(chunks).toString('utf8');
-          if (res.statusCode && res.statusCode >= 400) {
-            reject(new Error(`Loki ${res.statusCode}: ${body.slice(0, 200)}`));
-            return;
-          }
-          resolve(JSON.parse(body));
-        } catch (err) {
-          reject(err);
-        }
+        resolve({
+          status: res.statusCode || 0,
+          body: Buffer.concat(chunks).toString('utf8'),
+        });
       });
     });
     req.on('error', reject);
@@ -185,6 +203,15 @@ function requestJSON(url: URL, token: string, timeoutMs = 15_000, insecureTls = 
       req.destroy();
       reject(new Error('Loki query timed out'));
     });
+  });
+}
+
+function requestJSON(url: URL, token: string, timeoutMs = 15_000, insecureTls = false): Promise<unknown> {
+  return requestText(url, token, timeoutMs, insecureTls).then(({ status, body }) => {
+    if (status >= 400) {
+      throw new Error(`Loki ${status}: ${body.slice(0, 200)}`);
+    }
+    return JSON.parse(body);
   });
 }
 
@@ -526,8 +553,10 @@ export async function pullAndIngestLokiBaselines(userId: string): Promise<Partia
       return cached;
     }
 
+    // Labels job=stdout + __tmp_durable_executor=loki for TOOL5 query consistency.
     const { entries, query } = await queryLokiRange(config, {
       job: DEFAULT_JOB,
+      executor: true,
       minutes: 5,
       limit: 200,
     });

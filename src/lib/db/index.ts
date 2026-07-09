@@ -66,6 +66,43 @@ function initSqlite(dbPath: string): InstanceType<typeof Database> {
     console.log('[DB] Skins tables created');
   }
 
+  // Create collector_configs + data_source_events tables if missing (migration 0014)
+  const collectorConfigsExists = sqlite.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='collector_configs'
+  `).get();
+  if (!collectorConfigsExists) {
+    console.log('[DB] Creating collector tables...');
+    sqlite.exec(`
+      CREATE TABLE IF NOT EXISTS collector_configs (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL,
+        config TEXT NOT NULL DEFAULT '{}',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        last_run INTEGER,
+        last_error TEXT,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_cc_type ON collector_configs(type);
+      CREATE INDEX IF NOT EXISTS idx_cc_enabled ON collector_configs(enabled);
+
+      CREATE TABLE IF NOT EXISTS data_source_events (
+        id TEXT PRIMARY KEY,
+        entity TEXT NOT NULL,
+        type TEXT NOT NULL,
+        attributes TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        source_id TEXT,
+        source_type TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_dse_entity_type_ts ON data_source_events(entity, type, timestamp);
+      CREATE INDEX IF NOT EXISTS idx_dse_timestamp ON data_source_events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_dse_source_id ON data_source_events(source_id);
+    `);
+    console.log('[DB] Collector tables created');
+  }
+
   // Create resolutions FTS table if missing
   const resFtsExists = sqlite.prepare(`
     SELECT name FROM sqlite_master

@@ -135,7 +135,7 @@ export const POST: APIRoute = async ({ request }) => {
   const db = getDb();
 
   const agent = db.get(sql`
-    SELECT id, user_id, name, alert_state FROM satellite_agents WHERE token_hash = ${tokenHash}
+    SELECT id, user_id, name, alert_state FROM satellite_agents WHERE api_key = ${tokenHash}
   `) as { id: string; user_id: string; name: string; alert_state: string } | undefined;
 
   if (!agent) {
@@ -159,8 +159,8 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Persist report
   db.run(sql`
-    INSERT INTO satellite_reports (id, agent_id, user_id, reported_at, payload, alert_fired)
-    VALUES (${reportId}, ${agent.id}, ${agent.user_id}, ${now}, ${JSON.stringify(report)}, ${newAlertState !== 'ok' ? 1 : 0})
+    INSERT INTO satellite_reports (id, satellite_id, user_id, received_at, metrics)
+    VALUES (${reportId}, ${agent.id}, ${agent.user_id}, ${now}, ${JSON.stringify(report)})
   `);
 
   // Update agent last_seen, last_report summary, alert_state
@@ -196,7 +196,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Prune reports older than 7 days (async, don't block response)
   const sevenDaysAgo = now - 7 * 24 * 60 * 60;
-  db.run(sql`DELETE FROM satellite_reports WHERE agent_id = ${agent.id} AND reported_at < ${sevenDaysAgo}`);
+  db.run(sql`DELETE FROM satellite_reports WHERE satellite_id = ${agent.id} AND received_at < ${sevenDaysAgo}`);
 
   return new Response(JSON.stringify({ ok: true, next_interval: 60 }), {
     headers: { 'Content-Type': 'application/json' },

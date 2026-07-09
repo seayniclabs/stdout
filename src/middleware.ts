@@ -58,9 +58,15 @@ setTimeout(async () => {
 const BEARER_PATHS = [
   '/app/api/stacks/import',
   '/app/api/windlass/event',
+  '/app/api/netdata/webhook',
+  '/app/api/suricata/webhook',
+  '/app/api/zeek/ingest',
   '/app/api/scanner/autodiscover',
   '/app/api/observatory/tool',
-  '/app/api/network/scan'
+  '/app/api/network/scan',
+  '/app/api/comms/inbound/', // Voice incident CLI + Sonique (BB15)
+  '/app/api/discovery/schema/validate',
+  '/app/api/discovery/ingest',
 ];
 
 function validateBearerToken(request: Request): { userId: string } | null {
@@ -326,6 +332,11 @@ scheduleCveScanner();
 scheduleDockerHubScanner();
 scheduleShodanScanner();
 
+// Suricata EVE ingest (file-tail / Redis) — keystone security signal → Windlass IP-block
+import('./lib/suricata-ingest')
+  .then(({ startSuricataIngestors }) => startSuricataIngestors())
+  .catch((err) => console.error('[middleware] failed to start Suricata ingest:', err));
+
 // Recurring network discovery — honors each user's scanner_schedule (P2b)
 import('./lib/observatory/scan-scheduler')
   .then(({ startScanScheduler }) => startScanScheduler())
@@ -506,6 +517,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/test/',
     '/app/api/satellite/ping', // unauthenticated discovery endpoint — satellites probe this before setup
     '/app/api/comms/inbound/', // External channels (Sonique, SMS, webhooks) can query infrastructure status
+    '/app/api/suricata/status', // Prometheus scrape (?format=prometheus); JSON still requires session
   ];
   const isAppRoute = pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));

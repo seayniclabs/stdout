@@ -530,9 +530,9 @@ export function logEvent(
   db.insert(schema.windlassEvents).values({
     id: nanoid(),
     userId,
-    serviceId,
+    serviceId: serviceId ?? null,
     eventType: eventType as any,
-    detail,
+    details: detail,
     createdAt: new Date(),
   }).run();
 }

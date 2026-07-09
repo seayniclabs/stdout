@@ -47,7 +47,8 @@ export async function callOllama(
     const response = await fetch(`${ollamaUrl}/api/generate`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + request.githubToken
       },
       body: JSON.stringify({
         model: request.model,

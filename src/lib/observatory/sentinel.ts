@@ -365,8 +365,48 @@ export async function runScheduledCheck(userId: string): Promise<{
 
   // Live metric ingestion: pull real resource metrics from Prometheus (cAdvisor) so anomaly
   // detection runs on actual data. Host-aggregate metrics apply to every discovered stack.
+  // Zeek protocol metrics (conn/dns/http/ssl/notice) from the last ingest are merged in so
+  // the Watcher correlates network anomalies with resource pressure.
+  // Loki log-volume metrics (error/critical counts) are pulled via LogQL when configured.
+  // Suricata keystone counters (alerts processed / Windlass actions) from in-process ingest.
   const { fetchLiveMetrics } = await import('./metrics-fetcher');
+  const { getLastZeekMetrics, pullZeekLogsFromContainer, ingestZeekLogs } = await import('../zeek');
+  const { getLastLokiMetrics, pullAndIngestLokiBaselines } = await import('../loki');
+  const { getSuricataMetrics } = await import('../suricata');
   const liveMetrics = await fetchLiveMetrics(userId);
+
+  // Best-effort: if the zeek sidecar has fresh logs and we have no in-memory snapshot yet,
+  // pull and ingest (baselines only — incidents come from explicit ingest / notice path).
+  let zeekMetrics = getLastZeekMetrics(userId);
+  if (Object.keys(zeekMetrics).length === 0) {
+    try {
+      const bundle = await pullZeekLogsFromContainer();
+      if (bundle) {
+        await ingestZeekLogs(userId, bundle, { createIncidents: false });
+        zeekMetrics = getLastZeekMetrics(userId);
+      }
+    } catch {
+      // Zeek sidecar optional — never fail the sentinel tick.
+    }
+  }
+  Object.assign(liveMetrics, zeekMetrics);
+
+  // Best-effort: pull recent error logs from Loki via LogQL (baselines only).
+  // pullAndIngestLokiBaselines rate-limits to once per 5 minutes (TOOL5 schedule).
+  let lokiMetrics = getLastLokiMetrics(userId);
+  try {
+    lokiMetrics = await pullAndIngestLokiBaselines(userId);
+  } catch {
+    // Loki optional — never fail the sentinel tick.
+  }
+  Object.assign(liveMetrics, lokiMetrics);
+
+  // Suricata TOOL1 counters — always in-process (file-tail / Redis / webhook).
+  try {
+    Object.assign(liveMetrics, getSuricataMetrics());
+  } catch {
+    // Suricata module optional at startup — never fail the sentinel tick.
+  }
 
   for (const stack of stacks) {
     const metrics: MetricSnapshot = {

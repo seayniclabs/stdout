@@ -112,12 +112,18 @@ const TOOLS: Record<string, ToolDef> = {
   zeek_analyze: {
     name: 'zeek_analyze',
     safety: 'read-only',
-    description: 'Batch-analyze the captured pcap with Zeek and emit the connection summary (conn.log).',
+    description: 'Batch-analyze the captured pcap with Zeek and emit protocol logs (conn/dns/http/ssl/notice).',
     container: 'zeek',
     timeoutMs: 120_000,
-    // Reads the read-only pcap, writes Zeek logs to /logs, then prints the conn summary.
+    // Reads the read-only pcap, writes Zeek logs to /logs, then prints each protocol log.
     // Fixed command shape — no user-supplied tokens reach the shell.
-    build: () => ['sh', '-c', 'cd /logs && zeek -r /captures/capture.pcap 2>/dev/null; cat /logs/conn.log 2>/dev/null | head -50'],
+    build: () => ['sh', '-c', [
+      'cd /logs && zeek -r /captures/capture.pcap 2>/dev/null;',
+      'for f in conn dns http ssl notice; do',
+      '  echo "=== $f.log ===";',
+      '  cat /logs/$f.log 2>/dev/null | head -40;',
+      'done',
+    ].join(' ')],
   },
 };
 

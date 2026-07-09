@@ -26,6 +26,10 @@ export interface WatcherContext {
     category: string;
     symptoms: string[];
   }>;
+  githubIntegrations: {
+    endpoint: string;
+    token: string;
+  };
 }
 
 export interface AnalystContext {
@@ -62,6 +66,10 @@ export interface AnalystContext {
     title: string;
     content: string;
   }>;
+  githubIntegrations: {
+    endpoint: string;
+    token: string;
+  };
 }
 
 /**

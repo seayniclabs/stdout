@@ -121,7 +121,7 @@ const SELECT_SYSTEM = (toolList: string) =>
   `Respond JSON ONLY (no fences):\n` +
   `{"tool":"<tool name or null>","args":{...tool args...},"reason":"why this tool"}\n` +
   `Tool args by tool: dig→{"target":"<hostname>"}; ping_sweep→{"target":"<cidr or ip>"}; ` +
-  `packet_sample→{"target":"<host>","count":50}; trivy_image→{"image":"<name:tag>"}; zeek_analyze→{}.\n` +
+  `packet_sample→{"target":"<host>","count":50}; trivy_image→{"image":"<name:tag>"}; zeek_analyze→{} (conn/dns/http/ssl/notice).\n` +
   `If no tool clearly helps, return {"tool":null}. Never invent a tool not listed.`;
 
 async function selectTool(

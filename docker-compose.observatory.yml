@@ -30,6 +30,26 @@ services:
       - TEMPO_URL=http://localhost:3200
       - CADVISOR_URL=http://localhost:8181
       - TRIVY_URL=http://localhost:4954
+      # Suricata EVE ingest (keystone security signal → Windlass IP-block / service-restart).
+      # File-tail defaults to the shared suricata-logs volume (idle until --profile suricata writes eve.json).
+      # Redis list: SURICATA_REDIS_MODE=list (default) + SURICATA_REDIS_KEY.
+      # Redis stream: SURICATA_REDIS_MODE=stream + SURICATA_REDIS_STREAM/GROUP (XREADGROUP, short BLOCK).
+      # Prior lesson: keep SURICATA_REDIS_BLOCK_MS short (2s) and loop — long XREADGROUP hangs agents.
+      - SURICATA_EVE_PATH=${SURICATA_EVE_PATH:-/var/log/suricata/eve.json}
+      - SURICATA_REDIS_URL=${SURICATA_REDIS_URL:-}
+      - SURICATA_REDIS_MODE=${SURICATA_REDIS_MODE:-list}
+      - SURICATA_REDIS_KEY=${SURICATA_REDIS_KEY:-suricata}
+      - SURICATA_REDIS_STREAM=${SURICATA_REDIS_STREAM:-eve_alerts}
+      - SURICATA_REDIS_GROUP=${SURICATA_REDIS_GROUP:-stream}
+      - SURICATA_REDIS_CONSUMER=${SURICATA_REDIS_CONSUMER:-stdout-1}
+      - SURICATA_REDIS_BLOCK_MS=${SURICATA_REDIS_BLOCK_MS:-2000}
+      - SURICATA_AUTO_FIX=${SURICATA_AUTO_FIX:-true}
+      - SURICATA_CORRELATE_WINDOW_SEC=${SURICATA_CORRELATE_WINDOW_SEC:-300}
+      - SURICATA_CORRELATE_THRESHOLD=${SURICATA_CORRELATE_THRESHOLD:-3}
+      - SURICATA_WINDLASS_RETRIES=${SURICATA_WINDLASS_RETRIES:-3}
+      # Optional Windlass API token (vault: stdout/windlass → /etc/stdout/windlass.token).
+      - WINDLASS_TOKEN=${WINDLASS_TOKEN:-}
+      - WINDLASS_TOKEN_PATH=${WINDLASS_TOKEN_PATH:-/etc/stdout/windlass.token}
       # Surface the full Observatory init brief (incl. Phase 4.5 data-source/baseline config) in logs.
       - DEBUG_OBSERVATORY=${DEBUG_OBSERVATORY:-true}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-test@stdout.local}
@@ -37,6 +57,9 @@ services:
     volumes:
       - stdout-data:/data
       - /var/run/docker.sock:/var/run/docker.sock
+      - suricata-logs:/var/log/suricata:ro
+      # Optional token file: bind-mount host /etc/stdout/windlass.token (vault: stdout/windlass)
+      # - /etc/stdout/windlass.token:/etc/stdout/windlass.token:ro
     # Override the image's baked-in :3000 healthcheck — the app listens on PORT=8112 here.
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8112/healthz"]
@@ -50,12 +73,22 @@ services:
     image: charlieseay/windlass:latest
     container_name: windlass
     network_mode: host
+    # NET_ADMIN required for Suricata-driven IP blocks (iptables DROP).
+    cap_add:
+      - NET_ADMIN
     environment:
       - TZ=America/Chicago
       - STDOUT_URL=http://localhost:8112   # windlass watches stdout
+      - WINDLASS_IP_BLOCK_TTL=${WINDLASS_IP_BLOCK_TTL:-3600}
+      # Optional Bearer auth for /v1/block-ip, /v1/restart-service, /anomaly.json (vault: stdout/windlass).
+      - WINDLASS_TOKEN=${WINDLASS_TOKEN:-}
+      - WINDLASS_TOKEN_PATH=${WINDLASS_TOKEN_PATH:-/etc/stdout/windlass.token}
     volumes:
       - windlass-data:/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # RW socket required for Suricata-driven service restart (and schedule start/stop).
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Optional token file (same path StdOut reads):
+      # - /etc/stdout/windlass.token:/etc/stdout/windlass.token:ro
     restart: unless-stopped
 
   # ── Internal-only Observatory stack (no LAN exposure) ─────────────────────
@@ -65,6 +98,9 @@ services:
     restart: unless-stopped
     ports:
       - "127.0.0.1:9090:9090"   # loopback-only: stdout reaches it, LAN cannot
+    # Reach host-net StdOut (:8112) for suricata-stdout scrape (Linux needs host-gateway).
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
       - ./observatory/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
@@ -81,9 +117,11 @@ services:
     ports:
       - "127.0.0.1:3100:3100"
     volumes:
-      - ./observatory/config/loki-config.yml:/etc/loki/config.yaml:ro
       - loki-data:/loki
-    command: -config.file=/etc/loki/config.yaml
+    # Use the image's baked-in local-config.yaml (avoids host file bind-mount
+    # issues on some Docker Desktop setups). Override with a custom image or
+    # config volume when a non-default schema is required.
+    command: -config.file=/etc/loki/local-config.yaml
     networks:
       - stdout-egress
 
@@ -170,8 +208,10 @@ services:
 
   # ── P7b tier-2 tools ───────────────────────────────────────────────────────
   # Zeek — deep network analysis. Runs BATCH over the pcaps that observatory-pcap writes
-  # (read-only on captured traffic — no live-tap privilege needed), producing conn/dns/http
-  # logs the brain can read. Stays on the internal bridge; it only touches files, not the wire.
+  # (read-only on captured traffic — no live-tap privilege needed), producing
+  # conn/dns/http/ssl/notice logs. StdOut ingests those via POST /app/api/zeek/ingest
+  # (or ?pull=1 / ?analyze=1) for correlation + anomaly baselines. Stays on the internal
+  # bridge; it only touches files, not the wire.
   zeek:
     image: zeek/zeek:latest
     container_name: zeek
@@ -185,18 +225,74 @@ services:
     networks:
       - stdout-egress
 
-  # Suricata (IDS) — needs to see live LAN traffic, so HOST net + NET_RAW like pcap.
-  # Heavier (ruleset + CPU); enable when the brain needs signature-based intrusion detection.
-  # Uncomment to activate:
-  # suricata:
-  #   image: jasonish/suricata:latest
-  #   container_name: suricata
-  #   restart: unless-stopped
-  #   network_mode: host
-  #   cap_add: [NET_ADMIN, NET_RAW, SYS_NICE]
-  #   volumes:
-  #     - suricata-logs:/var/log/suricata
-  #   command: ["-i", "any"]
+  # Suricata (IDS) — keystone security signal. HOST net + NET_RAW to see LAN traffic.
+  # EVE JSON alerts are tailed by StdOut (SURICATA_EVE_PATH) and correlated into
+  # Windlass IP-block / service-restart actions via POST /anomaly.json
+  # (or POST /v1/block-ip and POST /v1/restart-service).
+  # Enable:
+  #   docker compose -f docker-compose.observatory.yml --profile suricata up -d
+  # Redis stream alternative:
+  #   SURICATA_REDIS_URL=redis://127.0.0.1:6379/0 SURICATA_REDIS_MODE=stream
+  #   (creates consumer group: XGROUP CREATE eve_alerts stream 0 MKSTREAM)
+  suricata:
+    build:
+      context: ./observatory/suricata-runtime
+      dockerfile: Dockerfile
+    image: stdout-suricata:local
+    container_name: suricata
+    profiles: ["suricata"]
+    restart: unless-stopped
+    network_mode: host
+    cap_add: [NET_ADMIN, NET_RAW, SYS_NICE]
+    volumes:
+      - suricata-logs:/var/log/suricata
+    environment:
+      - SURICATA_IFACE=${SURICATA_IFACE:-any}
+      # false on production Linux hosts with a real NIC (e.g. eth0).
+      - SURICATA_SIM_FALLBACK=${SURICATA_SIM_FALLBACK:-true}
+      - SURICATA_SIM_INTERVAL_SEC=${SURICATA_SIM_INTERVAL_SEC:-120}
+
+  # Redis 6.2+ for optional Suricata EVE stream ingest (XREADGROUP on eve_alerts/stream).
+  # StdOut file-tails eve.json by default; enable stream mode with:
+  #   SURICATA_REDIS_URL=redis://127.0.0.1:6379/0 SURICATA_REDIS_MODE=stream
+  # Bootstrap: redis-cli --eval observatory/config/redis-stream-config.lua
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    profiles: ["suricata"]
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - stdout-egress
+
+  # Optional: eve.json → Redis stream (XADD) when StdOut uses SURICATA_REDIS_MODE=stream.
+  # File-tail (SURICATA_EVE_PATH) remains the default ingest path.
+  eve-redis-bridge:
+    build:
+      context: ./observatory/suricata-runtime
+      dockerfile: Dockerfile.bridge
+    image: stdout-eve-redis-bridge:local
+    container_name: eve-redis-bridge
+    profiles: ["suricata"]
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - suricata-logs:/var/log/suricata:ro
+    environment:
+      - EVE_PATH=/var/log/suricata/eve.json
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_STREAM=${SURICATA_REDIS_STREAM:-eve_alerts}
+    networks:
+      - stdout-egress
 
   # ntopng — live traffic flow UI/metrics. Loopback-only if enabled (never on the LAN).
   # Uncomment to activate:
@@ -229,6 +325,7 @@ volumes:
   trivy-cache:
   pcap-captures:
   zeek-logs:
+  suricata-logs:
 
 networks:
   # Internal Observatory bridge. NOT a Docker `internal:true` network — that would block BOTH

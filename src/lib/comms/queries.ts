@@ -5,9 +5,8 @@
  * via the comms API (Sonique, Slack, SMS, etc.)
  */
 
-import { getDb } from '../db';
-import { tenantSchema } from '../db';
-import { eq, desc, and, sql, gte } from 'drizzle-orm';
+import { getDb, schema } from '../db';
+import { eq, desc, and } from 'drizzle-orm';
 
 export interface SystemHealthSummary {
   services_total: number;

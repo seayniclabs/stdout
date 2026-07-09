@@ -379,6 +379,76 @@ const licenseNotice = getLicenseNotice();
         </div>
       </section>
 
+      <!-- Netdata Cloud -->
+      <section class="section">
+        <h2>Netdata Cloud</h2>
+        <p class="section-desc">Ingest Netdata Cloud anomalies and route fixes through Windlass (memory/disk shed, service restart). Create an API token below, then add a webhook in Netdata Cloud with the Authorization header.</p>
+        <div class="scanner-form">
+          <label>
+            <span>Webhook URL</span>
+            <input type="text" id="netdataWebhookUrl" class="settings-input mono" readonly />
+          </label>
+          <label>
+            <span>Authorization header</span>
+            <input type="text" id="netdataAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+          </label>
+          <p class="section-desc" style="margin:0;">Warning/critical alerts create incidents and call Windlass <code>/anomaly.json</code>. Append <code>?autoFix=0</code> to ingest without acting, or <code>?dryRun=1</code> to classify only.</p>
+          <div id="netdataStatus" class="backup-status"></div>
+        </div>
+      </section>
+
+      <!-- Suricata (keystone security signal) -->
+      <section class="section">
+        <h2>Suricata</h2>
+        <p class="section-desc">Keystone security signal — ingest EVE JSON alerts (webhook, file-tail, or Redis list/stream), correlate by source IP within 300s, and enable Windlass IP-block / service-restart. Create an API token below, then POST alerts with the Authorization header. Background ingest: <code>SURICATA_EVE_PATH</code>, <code>SURICATA_REDIS_URL</code> + <code>SURICATA_REDIS_MODE=list|stream</code>.</p>
+        <div class="scanner-form">
+          <label>
+            <span>Webhook URL</span>
+            <input type="text" id="suricataWebhookUrl" class="settings-input mono" readonly />
+          </label>
+          <label>
+            <span>Authorization header</span>
+            <input type="text" id="suricataAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+          </label>
+          <p class="section-desc" style="margin:0;">Body: a Suricata EVE alert object, <code>{`{ "events": [...] }`}</code>, or NDJSON. Severity 1 (high) or correlated alerts (≥3 from the same IP in 5m) trigger IP block. Append <code>?autoFix=0</code> to ingest without acting, or <code>?dryRun=1</code> to classify only.</p>
+          <div id="suricataStatus" class="backup-status"></div>
+        </div>
+      </section>
+
+      <!-- Zeek -->
+      <section class="section">
+        <h2>Zeek</h2>
+        <p class="section-desc">Ingest Zeek protocol logs (conn, dns, http, ssl, notice) for correlation and anomaly baselines. Create an API token below, then POST log batches with the Authorization header. Observatory can also pull from the local <code>zeek</code> sidecar.</p>
+        <div class="scanner-form">
+          <label>
+            <span>Ingest URL</span>
+            <input type="text" id="zeekIngestUrl" class="settings-input mono" readonly />
+          </label>
+          <label>
+            <span>Authorization header</span>
+            <input type="text" id="zeekAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+          </label>
+          <p class="section-desc" style="margin:0;">Body: <code>{`{ "conn": "...", "dns": "...", "http": "...", "ssl": "...", "notice": "..." }`}</code> (TSV or JSONL). Use <code>?dryRun=1</code> to parse only, <code>?pull=1</code> to read local sidecar logs, or <code>?analyze=1</code> to run Zeek on the latest pcap first.</p>
+        </div>
+      </section>
+
+      <!-- Loki (LogQL query API) -->
+      <section class="section">
+        <h2>Loki</h2>
+        <p class="section-desc">Pull logs from Grafana Loki via the LogQL query API, update Observatory baselines (<code>loki_*</code>), and open incidents on error/critical bursts. Add a Loki data source below (or set <code>LOKI_URL</code>), create an API token, then POST a LogQL query with the Authorization header. Sentinel also pulls on each tick when configured.</p>
+        <div class="scanner-form">
+          <label>
+            <span>Ingest URL</span>
+            <input type="text" id="lokiIngestUrl" class="settings-input mono" readonly />
+          </label>
+          <label>
+            <span>Authorization header</span>
+            <input type="text" id="lokiAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+          </label>
+          <p class="section-desc" style="margin:0;">Body: <code>{`{ "query": "{job=\\"stdout\\"} |= \\"error\\"", "minutes": 15 }`}</code> or <code>{`{ "job": "stdout", "minutes": 5 }`}</code>. Lookback is capped at 24h (unbounded ranges are rejected). Pre-fetched streams/logs also accepted. Use <code>?dryRun=1</code> to parse only, or <code>?noIncidents=1</code> for baselines only. Sentinel pulls every 5 minutes when configured.</p>
+        </div>
+      </section>
+
       <!-- Data Sources -->
       <section class="section">
         <h2>Data Sources</h2>
@@ -1254,6 +1324,50 @@ const licenseNotice = getLicenseNotice();
   });
 
   loadWindlassConfig();
+
+  // ── Netdata Cloud ──
+  const netdataWebhookUrl = document.getElementById('netdataWebhookUrl') as HTMLInputElement | null;
+  if (netdataWebhookUrl) {
+    netdataWebhookUrl.value = `${window.location.origin}/app/api/netdata/webhook`;
+  }
+
+  // ── Suricata ──
+  const suricataWebhookUrl = document.getElementById('suricataWebhookUrl') as HTMLInputElement | null;
+  if (suricataWebhookUrl) {
+    suricataWebhookUrl.value = `${window.location.origin}/app/api/suricata/webhook`;
+  }
+  const suricataStatusEl = document.getElementById('suricataStatus');
+  if (suricataStatusEl) {
+    fetch('/app/api/suricata/status', { credentials: 'same-origin' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return;
+        const m = data.metrics || {};
+        const parts = [
+          data.running ? 'background ingest running' : 'background ingest idle (webhook only)',
+          data.fileTail?.enabled ? `file=${data.fileTail.path} lines=${data.fileTail.linesRead}` : 'file=off',
+          data.redis?.enabled
+            ? `redis ${data.redis.mode || 'list'} key=${data.redis.key} msgs=${data.redis.messagesRead}`
+            : 'redis=off',
+          m.suricata_alerts_processed != null ? `processed=${m.suricata_alerts_processed}` : '',
+          m.suricata_windlass_actions != null ? `windlass=${m.suricata_windlass_actions}` : '',
+        ].filter(Boolean);
+        suricataStatusEl.textContent = parts.join(' · ');
+      })
+      .catch(() => {});
+  }
+
+  // ── Zeek ──
+  const zeekIngestUrl = document.getElementById('zeekIngestUrl') as HTMLInputElement | null;
+  if (zeekIngestUrl) {
+    zeekIngestUrl.value = `${window.location.origin}/app/api/zeek/ingest`;
+  }
+
+  // ── Loki ──
+  const lokiIngestUrl = document.getElementById('lokiIngestUrl') as HTMLInputElement | null;
+  if (lokiIngestUrl) {
+    lokiIngestUrl.value = `${window.location.origin}/app/api/loki/ingest`;
+  }
 
   // ── Scanner Schedule ──
   const scanInterval = document.getElementById('scanInterval') as HTMLSelectElement;
