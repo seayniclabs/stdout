@@ -134,524 +134,71 @@ if (!user) return Astro.redirect('/app/login');
       margin-top: 1.5rem;
       font-family: 'Fira Code', monospace;
     }
-
-    .progress-card {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 1.5rem;
-    }
-
-    .progress-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .progress-header h2 {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #F8FAFC;
-      margin: 0;
-    }
-
-    .progress-percent {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #22C55E;
-      font-family: 'Fira Code', monospace;
-    }
-
-    .progress-bar {
-      height: 12px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 6px;
-      overflow: hidden;
-      margin-bottom: 1rem;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, #22C55E 0%, #16A34A 100%);
-      transition: width 0.3s ease;
-      border-radius: 6px;
-    }
-
-    .progress-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 0.875rem;
-    }
-
-    .status {
-      color: #94A3B8;
-    }
-
-    .eta {
-      color: #64748B;
-      font-family: 'Fira Code', monospace;
-    }
-
-    .steps-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .step-card {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 1rem;
-      transition: all 0.2s ease;
-    }
-
-    .step-card.running {
-      border-color: #22C55E;
-      box-shadow: 0 0 12px rgba(34, 197, 94, 0.2);
-    }
-
-    .step-card.complete {
-      opacity: 0.7;
-    }
-
-    .step-card.error {
-      border-color: #EF4444;
-      box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
-    }
-
-    .step-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.75rem;
-    }
-
-    .step-title {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-weight: 600;
-      color: #F8FAFC;
-    }
-
-    .step-icon {
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      font-size: 0.75rem;
-    }
-
-    .step-icon.pending {
-      background: rgba(100, 116, 139, 0.2);
-      color: #64748B;
-    }
-
-    .step-icon.running {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22C55E;
-      animation: pulse 2s ease-in-out infinite;
-    }
-
-    .step-icon.complete {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22C55E;
-    }
-
-    .step-icon.error {
-      background: rgba(239, 68, 68, 0.2);
-      color: #EF4444;
-    }
-
-    .step-icon.skipped {
-      background: rgba(245, 158, 11, 0.2);
-      color: #F59E0B;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .step-status {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      padding: 0.25rem 0.75rem;
-      border-radius: 12px;
-    }
-
-    .step-status.pending {
-      background: rgba(100, 116, 139, 0.2);
-      color: #94A3B8;
-    }
-
-    .step-status.running {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22C55E;
-    }
-
-    .step-status.complete {
-      background: rgba(34, 197, 94, 0.2);
-      color: #22C55E;
-    }
-
-    .step-status.error {
-      background: rgba(239, 68, 68, 0.2);
-      color: #EF4444;
-    }
-
-    .step-status.skipped {
-      background: rgba(245, 158, 11, 0.2);
-      color: #F59E0B;
-    }
-
-    .step-description {
-      font-size: 0.875rem;
-      color: #64748B;
-      margin-bottom: 0.5rem;
-    }
-
-    .step-progress {
-      height: 4px;
-      background: rgba(255, 255, 255, 0.05);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-
-    .step-progress-fill {
-      height: 100%;
-      background: #22C55E;
-      transition: width 0.3s ease;
-    }
-
-    .step-output {
-      font-size: 0.75rem;
-      color: #64748B;
-      font-family: 'Fira Code', monospace;
-    }
-
-    .console-card {
-      background: rgba(15, 23, 42, 0.6);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 16px;
-      padding: 1.5rem;
-      height: 400px;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .console-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .console-header h3 {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #F8FAFC;
-      margin: 0;
-    }
-
-    .btn-icon {
-      padding: 0.25rem 0.75rem;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #94A3B8;
-      border-radius: 6px;
-      font-size: 0.75rem;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-
-    .btn-icon:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: #22C55E;
-    }
-
-    .console-output {
-      flex: 1;
-      overflow-y: auto;
-      background: rgba(0, 0, 0, 0.3);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      border-radius: 8px;
-      padding: 1rem;
-      font-size: 0.75rem;
-      font-family: 'Fira Code', monospace;
-    }
-
-    .console-line {
-      margin-bottom: 0.25rem;
-      display: flex;
-      gap: 0.75rem;
-    }
-
-    .timestamp {
-      color: #64748B;
-      flex-shrink: 0;
-    }
-
-    .message {
-      color: #94A3B8;
-      flex: 1;
-    }
-
-    .message.error {
-      color: #EF4444;
-    }
-
-    .message.warning {
-      color: #F59E0B;
-    }
-
-    .message.success {
-      color: #22C55E;
-    }
-
-    .setup-actions {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      padding-top: 1rem;
-    }
-
-    .btn-primary, .btn-secondary {
-      padding: 0.75rem 1.5rem;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: none;
-      text-decoration: none;
-      display: inline-block;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #22C55E 0%, #16A34A 100%);
-      color: #020617;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
-    }
-
-    .btn-primary:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    .btn-secondary {
-      background: rgba(255, 255, 255, 0.1);
-      color: #F8FAFC;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-secondary:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
   </style>
 
   <script>
-    const startTime = Date.now();
+    function updateSplashProgress(progress: number, status: string, substatus: string) {
+      const progressFill = document.getElementById('splashProgressFill');
+      const percent = document.getElementById('splashPercent');
+      const statusEl = document.getElementById('splashStatus');
+      const substatusEl = document.getElementById('splashSubstatus');
 
-    function formatTimestamp(): string {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      const hours = Math.floor(elapsed / 3600);
-      const minutes = Math.floor((elapsed % 3600) / 60);
-      const seconds = elapsed % 60;
-      return `[${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}]`;
-    }
-
-    function addConsoleMessage(message: string, type: 'info' | 'success' | 'warning' | 'error' = 'info') {
-      const output = document.getElementById('consoleOutput');
-      if (!output) return;
-
-      const line = document.createElement('div');
-      line.className = 'console-line';
-
-      const timestamp = document.createElement('span');
-      timestamp.className = 'timestamp';
-      timestamp.textContent = formatTimestamp();
-
-      const msg = document.createElement('span');
-      msg.className = `message ${type}`;
-      msg.textContent = message;
-
-      line.appendChild(timestamp);
-      line.appendChild(msg);
-      output.appendChild(line);
-
-      // Auto-scroll
-      output.scrollTop = output.scrollHeight;
-    }
-
-    function updateOverallProgress(progress: number, status: string, eta: number | null) {
-      const progressBar = document.getElementById('overallProgress');
-      const percent = document.getElementById('overallPercent');
-      const statusEl = document.getElementById('setupStatus');
-      const etaEl = document.getElementById('setupEta');
-
-      if (progressBar) progressBar.style.width = `${progress}%`;
+      if (progressFill) progressFill.style.width = `${progress}%`;
       if (percent) percent.textContent = `${Math.round(progress)}%`;
       if (statusEl) statusEl.textContent = status;
-      if (etaEl) {
-        if (eta === null || eta === 0) {
-          etaEl.textContent = '';
-        } else {
-          const seconds = Math.ceil(eta / 1000);
-          const minutes = Math.floor(seconds / 60);
-          if (minutes > 0) {
-            etaEl.textContent = `~${minutes}m ${seconds % 60}s remaining`;
-          } else {
-            etaEl.textContent = `~${seconds}s remaining`;
-          }
-        }
-      }
+      if (substatusEl) substatusEl.textContent = substatus;
     }
-
-    function renderSteps(steps: any[]) {
-      const container = document.getElementById('stepsContainer');
-      if (!container) return;
-
-      container.innerHTML = '';
-
-      steps.forEach(step => {
-        const card = document.createElement('div');
-        card.className = `step-card ${step.status}`;
-        card.id = `step-${step.id}`;
-
-        const header = document.createElement('div');
-        header.className = 'step-header';
-
-        const title = document.createElement('div');
-        title.className = 'step-title';
-
-        const icon = document.createElement('div');
-        icon.className = `step-icon ${step.status}`;
-        icon.textContent = step.status === 'complete' ? '✓' :
-                          step.status === 'running' ? '◉' :
-                          step.status === 'error' ? '✗' :
-                          step.status === 'skipped' ? '○' : '○';
-
-        const name = document.createElement('span');
-        name.textContent = step.name;
-
-        title.appendChild(icon);
-        title.appendChild(name);
-
-        const badge = document.createElement('span');
-        badge.className = `step-status ${step.status}`;
-        badge.textContent = step.status;
-
-        header.appendChild(title);
-        header.appendChild(badge);
-        card.appendChild(header);
-
-        const description = document.createElement('div');
-        description.className = 'step-description';
-        description.textContent = step.description;
-        card.appendChild(description);
-
-        if (step.status === 'running' || step.progress > 0) {
-          const progressBar = document.createElement('div');
-          progressBar.className = 'step-progress';
-          const fill = document.createElement('div');
-          fill.className = 'step-progress-fill';
-          fill.style.width = `${step.progress}%`;
-          progressBar.appendChild(fill);
-          card.appendChild(progressBar);
-        }
-
-        if (step.output && step.output.length > 0) {
-          const output = document.createElement('div');
-          output.className = 'step-output';
-          output.textContent = step.output[step.output.length - 1];
-          card.appendChild(output);
-        }
-
-        container.appendChild(card);
-      });
-    }
-
-    document.getElementById('clearConsoleBtn')?.addEventListener('click', () => {
-      const output = document.getElementById('consoleOutput');
-      if (output) {
-        output.innerHTML = '';
-        addConsoleMessage('Console cleared');
-      }
-    });
 
     async function startInstallation() {
-      const btn = document.getElementById('startInstallBtn') as HTMLButtonElement;
-      btn.disabled = true;
-      btn.textContent = 'Installing...';
-
-      addConsoleMessage('Starting StdOut installation...', 'info');
+      updateSplashProgress(5, 'Starting installation...', 'Connecting to installation service');
 
       const eventSource = new EventSource('/app/api/setup/install-stream');
 
       eventSource.addEventListener('state', (e) => {
         const state = JSON.parse(e.data);
-        renderSteps(state.steps);
-        updateOverallProgress(state.overallProgress, state.status, state.totalEta);
+        const progress = state.overallProgress || 0;
+        const status = state.status || 'Installing...';
+
+        // Get the most recent step for substatus
+        const runningStep = state.steps?.find((s: any) => s.status === 'running');
+        const substatus = runningStep ? runningStep.description : 'Processing...';
+
+        updateSplashProgress(progress, status, substatus);
       });
 
       eventSource.addEventListener('event', (e) => {
         const event = JSON.parse(e.data);
 
-        if (event.type === 'step_start') {
-          addConsoleMessage(`▶ ${event.message}`, 'info');
-        } else if (event.type === 'step_complete') {
-          addConsoleMessage(`✓ ${event.message}`, 'success');
-        } else if (event.type === 'step_error') {
-          addConsoleMessage(`✗ ${event.message}`, 'error');
-        } else if (event.type === 'warning') {
-          addConsoleMessage(`⚠ ${event.message}`, 'warning');
-        } else if (event.type === 'output') {
-          addConsoleMessage(event.message || '', 'info');
+        if (event.type === 'step_start' || event.type === 'output') {
+          const substatus = event.message || 'Processing...';
+          const statusEl = document.getElementById('splashStatus');
+          updateSplashProgress(
+            parseFloat(document.getElementById('splashProgressFill')?.style.width || '0'),
+            statusEl?.textContent || 'Installing...',
+            substatus
+          );
         }
       });
 
       eventSource.addEventListener('complete', (e) => {
-        const data = JSON.parse(e.data);
-        addConsoleMessage('Installation complete!', 'success');
+        updateSplashProgress(100, 'Installation complete!', 'Redirecting to dashboard...');
         eventSource.close();
-        btn.textContent = 'Installation Complete';
-        updateOverallProgress(100, 'Complete', 0);
 
-        // Show success message and navigation
+        // Redirect to dashboard after brief delay
         setTimeout(() => {
-          if (confirm('Installation complete! Go to dashboard?')) {
-            window.location.href = '/app';
-          }
-        }, 2000);
+          window.location.href = '/app';
+        }, 1500);
       });
 
       eventSource.addEventListener('error', (e: any) => {
-        addConsoleMessage('Installation error - check console for details', 'error');
+        updateSplashProgress(0, 'Installation error', 'Please refresh and try again');
         eventSource.close();
-        btn.disabled = false;
-        btn.textContent = 'Retry Installation';
       });
     }
 
-    // Auto-start if coming from setup wizard
-    if (window.location.href.includes('/app/setup')) {
-      // Give the page a moment to render, then auto-start
-      setTimeout(() => {
-        startInstallation();
-      }, 500);
-    }
-
-    document.getElementById('startInstallBtn')?.addEventListener('click', startInstallation);
+    // Auto-start installation
+    setTimeout(() => {
+      startInstallation();
+    }, 500);
   </script>
 </Layout>
