@@ -84,6 +84,20 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
   .status-icon {
     font-size: 4rem;
     margin-bottom: 1rem;
+    display: inline-block;
+  }
+
+  .status-icon.scanning {
+    animation: radar-spin 2s linear infinite;
+  }
+
+  @keyframes radar-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .status-text {
@@ -275,7 +289,8 @@ console.log('[scanner] Retrieved scanner token from setup_config:', scannerToken
 
     // Show progress
     scanProgress.style.display = 'block';
-    statusIcon.textContent = '⏳';
+    statusIcon.textContent = '📡';
+    statusIcon.classList.add('scanning');
     statusText.textContent = 'Scanning network...';
 
     // Clear previous logs

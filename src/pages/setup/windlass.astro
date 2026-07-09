@@ -621,6 +621,20 @@ docker:
   .install-icon {
     font-size: 3rem;
     margin-bottom: 1rem;
+    display: inline-block;
+  }
+
+  .install-icon.installing {
+    animation: gear-spin 3s linear infinite;
+  }
+
+  @keyframes gear-spin {
+    0% {
+      transform: rotate(0deg);
+    }
+    100% {
+      transform: rotate(360deg);
+    }
   }
 
   .install-header h3 {
@@ -825,6 +839,12 @@ docker:
 
       installBtnText.textContent = 'Installing...';
       installBtn.setAttribute('disabled', 'true');
+
+      // Start gear animation
+      const installIcon = document.querySelector('.install-icon');
+      if (installIcon) {
+        installIcon.classList.add('installing');
+      }
 
       const steps = document.querySelectorAll('.install-step');
 

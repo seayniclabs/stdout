@@ -13,77 +13,126 @@ if (!user) return Astro.redirect('/app/login');
     </div>
 
     <div class="setup-container">
-      <!-- Overall Progress -->
-      <div class="progress-card">
-        <div class="progress-header">
-          <h2>Installation Progress</h2>
-          <span class="progress-percent" id="overallPercent">0%</span>
-        </div>
-        <div class="progress-bar">
-          <div class="progress-fill" id="overallProgress" style="width: 0%"></div>
-        </div>
-        <div class="progress-meta">
-          <span class="status" id="setupStatus">Ready to install</span>
-          <span class="eta" id="setupEta">~8 minutes estimated</span>
-        </div>
-      </div>
-
-      <!-- Installation Steps -->
-      <div class="steps-container" id="stepsContainer">
-        <!-- Steps will be populated by JavaScript -->
-      </div>
-
-      <!-- Console Output -->
-      <div class="console-card">
-        <div class="console-header">
-          <h3>Live Output</h3>
-          <button id="clearConsoleBtn" class="btn-icon">Clear</button>
-        </div>
-        <div class="console-output mono" id="consoleOutput">
-          <div class="console-line">
-            <span class="timestamp">[00:00:00]</span>
-            <span class="message">Click "Start Installation" to begin...</span>
+      <!-- Animated Splash Screen -->
+      <div class="splash-screen" id="splashScreen">
+        <div class="splash-icon">📡</div>
+        <div class="splash-status" id="splashStatus">Initializing StdOut...</div>
+        <div class="splash-progress">
+          <div class="splash-progress-bar">
+            <div class="splash-progress-fill" id="splashProgressFill"></div>
           </div>
+          <div class="splash-percent" id="splashPercent">0%</div>
         </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="setup-actions">
-        <button id="startInstallBtn" class="btn-primary">Start Installation</button>
-        <button id="skipOptionalBtn" class="btn-secondary" style="display: none;">Skip Optional Components</button>
+        <div class="splash-substatus" id="splashSubstatus">Preparing installation environment</div>
       </div>
     </div>
   </div>
 
   <style>
     .setup-page {
-      padding: 2rem;
-      max-width: 1200px;
-      margin: 0 auto;
+      padding: 0;
+      margin: 0;
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
     }
 
     .setup-header {
-      margin-bottom: 2rem;
+      text-align: center;
+      margin-bottom: 3rem;
     }
 
     .setup-header h1 {
-      font-size: 2rem;
+      font-size: 2.5rem;
       font-weight: 700;
       margin: 0 0 0.5rem 0;
       color: #F8FAFC;
     }
 
     .subtitle {
-      font-size: 1rem;
+      font-size: 1.125rem;
       color: #94A3B8;
       margin: 0;
     }
 
     .setup-container {
-      display: flex;
-      flex-direction: column;
-      gap: 1.5rem;
+      width: 100%;
+      max-width: 600px;
+      padding: 0 2rem;
+    }
+
+    /* Animated Splash Screen */
+    .splash-screen {
+      text-align: center;
+      padding: 3rem 2rem;
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.8) 0%, rgba(30, 41, 59, 0.6) 100%);
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .splash-icon {
+      font-size: 6rem;
+      margin-bottom: 2rem;
+      display: inline-block;
+      animation: radar-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes radar-pulse {
+      0%, 100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.1) rotate(180deg);
+        opacity: 0.8;
+      }
+    }
+
+    .splash-status {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #F8FAFC;
+      margin-bottom: 2rem;
+    }
+
+    .splash-progress {
+      margin: 2rem 0;
+    }
+
+    .splash-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 1rem;
+    }
+
+    .splash-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #F97316 0%, #FB923C 100%);
+      border-radius: 4px;
+      transition: width 0.5s ease;
+      width: 0%;
+      box-shadow: 0 0 20px rgba(249, 115, 22, 0.6);
+    }
+
+    .splash-percent {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: #F97316;
+      font-family: 'Fira Code', monospace;
+    }
+
+    .splash-substatus {
+      font-size: 0.875rem;
+      color: #94A3B8;
+      margin-top: 1.5rem;
+      font-family: 'Fira Code', monospace;
     }
 
     .progress-card {
