@@ -707,7 +707,7 @@ function timeAgo(date: Date) {
   /* Gauge dials — 2x2 grid, sticky, control room feel */
   .gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; flex-shrink: 0; width: 300px; align-content: start; position: sticky; top: 20px; max-height: calc(100vh - 140px); }
   .gauge-card {
-    background: var(--bg-surface);
+    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 18px 14px 14px;
@@ -785,7 +785,7 @@ function timeAgo(date: Date) {
     align-items: center;
     gap: 10px;
     padding: 10px 14px;
-    background: var(--bg-surface);
+    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-card) 100%);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     text-decoration: none;
