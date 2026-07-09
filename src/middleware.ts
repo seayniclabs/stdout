@@ -61,6 +61,10 @@ const BEARER_PATHS = [
   '/app/api/netdata/webhook',
   '/app/api/suricata/webhook',
   '/app/api/zeek/ingest',
+  '/app/api/wazuh/webhook',          // Phase 3: Wazuh Host IDS
+  '/app/api/cve/ingest',             // Phase 3: CVE scanners (Trivy/Grype)
+  '/app/api/velociraptor/instant-ir', // Phase 4: Velociraptor Instant IR
+  '/app/api/velociraptor/isolate',   // Phase 4: Emergency isolation
   '/app/api/scanner/autodiscover',
   '/app/api/observatory/tool',
   '/app/api/network/scan',
