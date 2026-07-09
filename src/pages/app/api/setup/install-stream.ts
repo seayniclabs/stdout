@@ -25,6 +25,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
       // Import installation modules
       const { InstallWatcher } = await import('../../../../lib/setup/watcher');
+      const { getDb } = await import('../../../../lib/db');
       const {
         runDatabaseInit,
         runScannerSetup,
@@ -92,6 +93,28 @@ export const GET: APIRoute = async ({ locals }) => {
 
           if (!windlassResult.success) {
             watcher.addWarning('windlass', windlassResult.errors[0] || 'Windlass install failed');
+          } else {
+            // Create windlass_config record if Windlass installation succeeded
+            try {
+              const { nanoid } = await import('nanoid');
+              const db = getDb();
+              const windlassUrl = process.env.WINDLASS_URL || 'http://localhost:8116';
+
+              // Check if config already exists
+              const existing = db.prepare('SELECT id FROM windlass_config WHERE user_id = ?').get(userId);
+
+              if (!existing) {
+                const now = new Date().toISOString();
+                db.prepare(`
+                  INSERT INTO windlass_config (id, user_id, endpoint_url, sync_interval_seconds, enabled, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?, ?)
+                `).run(nanoid(), userId, windlassUrl, 60, 1, now, now);
+
+                watcher.addEvent({ type: 'log', message: `✓ Windlass config created: ${windlassUrl}`, timestamp: Date.now() });
+              }
+            } catch (configError: any) {
+              watcher.addWarning('windlass', `Config creation failed: ${configError.message}`);
+            }
           }
         }
 
