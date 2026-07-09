@@ -17,7 +17,7 @@ services:
       - APP_URL=${APP_URL:-http://localhost:8112}
       - WINDLASS_URL=${WINDLASS_URL:-http://windlass:8116}
       - SENTINEL_API_URL=${SENTINEL_API_URL:-http://observatory-sentinel:8081}
-      - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
+      - OLLAMA_URL=${OLLAMA_URL:-http://172.17.0.1:11434}
       - OBSERVATORY_ANALYST_MODEL=${OBSERVATORY_ANALYST_MODEL:-qwen2.5:14b-instruct-q4_K_M}
       - OBSERVATORY_WATCHER_MODEL=${OBSERVATORY_WATCHER_MODEL:-llama3.2:3b-instruct-q4_K_M}
       - SECRET_KEY=${SECRET_KEY:-}
@@ -81,7 +81,7 @@ services:
     ports:
       - "${SENTINEL_API_PORT:-8081}:8081"
     environment:
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://172.17.0.1:11434}
       - PROMETHEUS_URL=http://prometheus:9090
       - LOKI_URL=http://loki:3100
       - TEMPO_URL=http://tempo:3200

@@ -541,7 +541,7 @@ if (!user) return Astro.redirect('/app/login');
       }
     });
 
-    document.getElementById('startInstallBtn')?.addEventListener('click', async () => {
+    async function startInstallation() {
       const btn = document.getElementById('startInstallBtn') as HTMLButtonElement;
       btn.disabled = true;
       btn.textContent = 'Installing...';
@@ -593,6 +593,16 @@ if (!user) return Astro.redirect('/app/login');
         btn.disabled = false;
         btn.textContent = 'Retry Installation';
       });
-    });
+    }
+
+    // Auto-start if coming from setup wizard
+    if (window.location.href.includes('/app/setup')) {
+      // Give the page a moment to render, then auto-start
+      setTimeout(() => {
+        startInstallation();
+      }, 500);
+    }
+
+    document.getElementById('startInstallBtn')?.addEventListener('click', startInstallation);
   </script>
 </Layout>

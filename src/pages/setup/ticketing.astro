@@ -11,7 +11,7 @@ if (!session) return Astro.redirect('/app/login');
 const progress = await getSetupProgress();
 if (progress.currentStep !== SetupStep.Ticketing) {
   if (progress.currentStep < SetupStep.Ticketing) return Astro.redirect('/setup');
-  return Astro.redirect('/setup/complete');
+  return Astro.redirect('/app/setup');
 }
 
 let detectedSystems: string[] = [];
@@ -36,7 +36,7 @@ if (Astro.request.method === 'POST') {
     });
     // Mark setup complete (final step)
     await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString() });
-    return Astro.redirect('/setup/complete');
+    return Astro.redirect('/app/setup');
   }
 
   if (choice === 'built-in') {
@@ -46,7 +46,7 @@ if (Astro.request.method === 'POST') {
     });
     // Mark setup complete (final step)
     await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString() });
-    return Astro.redirect('/setup/complete');
+    return Astro.redirect('/app/setup');
   }
 
   // External system selected
@@ -63,7 +63,7 @@ if (Astro.request.method === 'POST') {
     });
     // Mark setup complete (final step)
     await completeStep(SetupStep.Complete, { completedAt: new Date().toISOString() });
-    return Astro.redirect('/setup/complete');
+    return Astro.redirect('/app/setup');
   }
 }
 
