@@ -101,6 +101,10 @@ function truncate(str: string, max: number) {
 
     <!-- Filters Bar -->
     <div class="filters-bar">
+      <div class="search-wrapper-incidents">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="incidentSearch" placeholder="Search incidents..." />
+      </div>
       <div class="filter-group">
         <span class="filter-label">Status</span>
         <div class="toggle-group" data-filter="status">
@@ -191,13 +195,7 @@ function truncate(str: string, max: number) {
                       </span>
                     )}
                   </div>
-                  {incident.tags && (
-                    <div class="active-card-tags">
-                      {incident.tags.split(',').slice(0, 4).map(tag => (
-                        <span class="tag">{tag.trim()}</span>
-                      ))}
-                    </div>
-                  )}
+                  {/* Tags hidden per Gemini UX feedback - repetitive and non-actionable */}
                 </a>
               ))}
             </div>
@@ -315,6 +313,43 @@ function truncate(str: string, max: number) {
     margin-bottom: 24px;
     box-shadow: var(--shadow-sm), var(--shadow-inset);
     flex-wrap: wrap;
+  }
+
+  .search-wrapper-incidents {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+  }
+
+  .search-wrapper-incidents .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  #incidentSearch {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+  }
+
+  #incidentSearch:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+  }
+
+  .active-card.hidden {
+    display: none;
   }
   .filter-group {
     display: flex;
@@ -438,7 +473,6 @@ function truncate(str: string, max: number) {
   .active-card:hover {
     border-color: var(--border-hover);
     box-shadow: var(--shadow-lg);
-    transform: translateY(-4px);
   }
   .active-card.severity-critical {
     border-color: rgba(239, 68, 68, 0.2);
@@ -755,6 +789,14 @@ function truncate(str: string, max: number) {
     let statusFilter = 'all';
     let severityFilter = 'all';
     let sortOrder = 'newest';
+    let searchQuery = '';
+
+    // Search input
+    const searchInput = document.getElementById('incidentSearch') as HTMLInputElement;
+    searchInput?.addEventListener('input', () => {
+      searchQuery = searchInput.value.toLowerCase();
+      applyFilters();
+    });
 
     // Toggle button behavior
     document.querySelectorAll('.toggle-group').forEach(group => {
@@ -791,18 +833,26 @@ function truncate(str: string, max: number) {
         resolvedSection.style.display = '';
       }
 
-      // Severity filter: show/hide cards
+      // Severity filter + Search: show/hide cards
       const allCards = container.querySelectorAll('[data-severity]') as NodeListOf<HTMLElement>;
       allCards.forEach(card => {
         const sev = card.getAttribute('data-severity');
-        if (severityFilter === 'all') {
-          card.style.display = '';
-        } else if (severityFilter === 'high') {
-          // "Warning" maps to high + medium
-          card.style.display = (sev === 'high' || sev === 'medium') ? '' : 'none';
-        } else {
-          card.style.display = sev === severityFilter ? '' : 'none';
+        const title = (card.querySelector('.active-card-title')?.textContent || '').toLowerCase();
+
+        // Check severity match
+        let sevMatch = severityFilter === 'all';
+        if (!sevMatch) {
+          if (severityFilter === 'high') {
+            sevMatch = (sev === 'high' || sev === 'medium');
+          } else {
+            sevMatch = sev === severityFilter;
+          }
         }
+
+        // Check search match
+        const searchMatch = !searchQuery || title.includes(searchQuery);
+
+        card.classList.toggle('hidden', !(sevMatch && searchMatch));
       });
 
       // Sort: reverse card order in active section
