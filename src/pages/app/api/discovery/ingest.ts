@@ -58,15 +58,16 @@ export const POST: APIRoute = async ({ request, locals }) => {
       let hostId = '';
       const existingHost = db.prepare(`
         SELECT id FROM discovered_hosts
-        WHERE user_id = ? AND ip_address = ?
+        WHERE ip_address = ?
         LIMIT 1
-      `).get(userId, host.ip) as { id: string } | undefined;
+      `).get(host.ip) as { id: string } | undefined;
 
       if (existingHost) {
         hostId = existingHost.id;
         db.prepare(`
           UPDATE discovered_hosts
-          SET hostname = ?,
+          SET user_id = ?,
+              hostname = ?,
               mac_address = ?,
               vendor = ?,
               device_type = ?,
@@ -74,6 +75,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
               updated_at = ?
           WHERE id = ?
         `).run(
+          userId,
           host.hostname || null,
           host.mac || null,
           host.vendor || null,
@@ -118,9 +120,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
       // 2. Ingest host into entities (Device)
       const existingDeviceEntity = db.prepare(`
         SELECT id FROM entities
-        WHERE user_id = ? AND type = 'device' AND properties->>'$.ip' = ?
+        WHERE type = 'device' AND properties->>'$.ip' = ?
         LIMIT 1
-      `).get(userId, host.ip) as { id: string } | undefined;
+      `).get(host.ip) as { id: string } | undefined;
 
       const deviceProperties = {
         ip: host.ip,
@@ -143,12 +145,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         deviceEntityId = existingDeviceEntity.id;
         db.prepare(`
           UPDATE entities
-          SET name = ?,
+          SET user_id = ?,
+              name = ?,
               properties = ?,
               last_seen = ?,
               updated_at = ?
           WHERE id = ?
         `).run(
+          userId,
           host.hostname || host.ip,
           JSON.stringify(deviceProperties),
           now,
@@ -187,12 +191,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (existingService) {
           db.prepare(`
             UPDATE discovered_services
-            SET service_name = ?,
+            SET user_id = ?,
+                service_name = ?,
                 service_version = ?,
                 last_seen = ?,
                 updated_at = ?
             WHERE id = ?
           `).run(
+            userId,
             service.serviceName || null,
             service.serviceVersion || null,
             now,
@@ -223,9 +229,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // B. entities (Service entity type)
         const existingServiceEntity = db.prepare(`
           SELECT id FROM entities
-          WHERE user_id = ? AND type = 'service' AND properties->>'$.ip' = ? AND properties->>'$.port' = ?
+          WHERE type = 'service' AND properties->>'$.ip' = ? AND properties->>'$.port' = ?
           LIMIT 1
-        `).get(userId, host.ip, service.port) as { id: string } | undefined;
+        `).get(host.ip, service.port) as { id: string } | undefined;
 
         const serviceProperties = {
           ip: host.ip,
@@ -244,12 +250,14 @@ export const POST: APIRoute = async ({ request, locals }) => {
           serviceEntityId = existingServiceEntity.id;
           db.prepare(`
             UPDATE entities
-            SET name = ?,
+            SET user_id = ?,
+                name = ?,
                 properties = ?,
                 last_seen = ?,
                 updated_at = ?
             WHERE id = ?
           `).run(
+            userId,
             serviceEntityName,
             JSON.stringify(serviceProperties),
             now,
@@ -279,11 +287,24 @@ export const POST: APIRoute = async ({ request, locals }) => {
         // C. entity_relationships (runs_on relationship from Service to Device)
         const existingRelationship = db.prepare(`
           SELECT id FROM entity_relationships
-          WHERE user_id = ? AND source_id = ? AND target_id = ? AND type = 'runs_on'
+          WHERE source_id = ? AND target_id = ? AND type = 'runs_on'
           LIMIT 1
-        `).get(userId, serviceEntityId, deviceEntityId) as { id: string } | undefined;
+        `).get(serviceEntityId, deviceEntityId) as { id: string } | undefined;
 
-        if (!existingRelationship) {
+        if (existingRelationship) {
+          db.prepare(`
+            UPDATE entity_relationships
+            SET user_id = ?,
+                metadata = ?,
+                updated_at = ?
+            WHERE id = ?
+          `).run(
+            userId,
+            JSON.stringify({ port: service.port, protocol: service.protocol }),
+            now,
+            existingRelationship.id
+          );
+        } else {
           db.prepare(`
             INSERT INTO entity_relationships (
               id, user_id, source_id, target_id, type, metadata, created_at, updated_at

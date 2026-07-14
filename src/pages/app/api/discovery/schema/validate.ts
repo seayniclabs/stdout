@@ -31,6 +31,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   return new Response(JSON.stringify({
     valid: result.valid,
+    error: result.valid ? undefined : 'Schema validation failed',
     errors: result.errors,
     summary: {
       hostsCount: result.hosts.length,

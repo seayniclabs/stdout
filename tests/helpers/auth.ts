@@ -176,9 +176,11 @@ export async function apiRequest(
   path: string,
   body?: any
 ): Promise<{ status: number; json: any; headers: Record<string, string> }> {
+  const isXml = typeof body === 'string' && body.trim().startsWith('<');
+  const contentType = isXml ? 'application/xml' : 'application/json';
   const response = await page.request[method.toLowerCase() as 'get' | 'post' | 'put' | 'delete'](
     path,
-    body ? { data: body, headers: { 'Content-Type': 'application/json' } } : undefined
+    body !== undefined ? { data: body, headers: { 'Content-Type': contentType } } : undefined
   );
   const status = response.status();
   let json: any = null;
