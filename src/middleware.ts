@@ -544,6 +544,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
       return context.redirect('/setup');
     }
   } else if (getUserCount() === 0 && (isAppRoute || pathname === '/app') && !isPublicApp) {
+    if (pathname.startsWith('/app/api/')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized — setup required' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     return context.redirect('/setup');
   } else if (getUserCount() > 0 && !getStoredLicense() && (isAppRoute || pathname === '/app') && !isPublicApp) {
     // License required for all /app/* routes (except public paths)
@@ -551,6 +557,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const { isSetupComplete } = await import('./lib/setup');
     const setupComplete = await isSetupComplete();
     if (!setupComplete) {
+      if (pathname.startsWith('/app/api/')) {
+        return new Response(JSON.stringify({ error: 'Unauthorized — license required' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return context.redirect('/setup/license');
     }
   }
@@ -558,6 +570,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   let response: Response;
 
   if (isAppRoute && !isPublicApp && !context.locals.user) {
+    if (pathname.startsWith('/app/api/')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     console.log('[middleware] Redirecting to login:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
     response = context.redirect(`/app/login?redirect=${encodeURIComponent(pathname)}`);
   } else if (pathname.startsWith('/app/admin') && context.locals.user?.role !== 'superadmin') {

@@ -1,5 +1,22 @@
 import { test, expect } from '@playwright/test';
 import { createAuthenticatedUser, apiRequest } from './helpers/auth';
+import Database from 'better-sqlite3';
+
+function cleanupDb() {
+  const dbPath = process.env.DB_PATH || './data/stdout.db';
+  try {
+    const db = new Database(dbPath);
+    db.prepare("DELETE FROM discovered_hosts WHERE ip_address IN ('192.168.99.100', '192.168.99.101')").run();
+    db.prepare("DELETE FROM discovered_services WHERE host_id NOT IN (SELECT id FROM discovered_hosts)").run();
+    db.prepare("DELETE FROM entities WHERE type = 'device' AND (properties->>'$.ip' = '192.168.99.100' OR properties->>'$.ip' = '192.168.99.101')").run();
+    db.prepare("DELETE FROM entities WHERE type = 'service' AND (properties->>'$.ip' = '192.168.99.100' OR properties->>'$.ip' = '192.168.99.101')").run();
+    db.prepare("DELETE FROM entity_relationships WHERE source_id NOT IN (SELECT id FROM entities) OR target_id NOT IN (SELECT id FROM entities)").run();
+    db.prepare("DELETE FROM monitors WHERE target IN ('192.168.99.100', '192.168.99.101')").run();
+    db.close();
+  } catch (err) {
+    console.error('Failed to cleanup test DB:', err);
+  }
+}
 
 const NMAP_XML = `<?xml version="1.0" encoding="UTF-8"?>
 <nmaprun scanner="nmap" args="nmap -sV 192.168.99.100" start="1700000000" version="7.93">
@@ -44,6 +61,14 @@ const NMAP_JSON = JSON.stringify({
 });
 
 test.describe('Nmap Discovery Ingest (TOOL8)', () => {
+  test.beforeEach(() => {
+    cleanupDb();
+  });
+
+  test.afterAll(() => {
+    cleanupDb();
+  });
+
   test('N1 — rejects unauthenticated requests', async ({ browser }) => {
     const anon = await browser.newContext();
     
