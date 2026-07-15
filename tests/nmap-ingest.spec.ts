@@ -12,6 +12,7 @@ function cleanupDb() {
     db.prepare("DELETE FROM entities WHERE type = 'service' AND (properties->>'$.ip' = '192.168.99.100' OR properties->>'$.ip' = '192.168.99.101')").run();
     db.prepare("DELETE FROM entity_relationships WHERE source_id NOT IN (SELECT id FROM entities) OR target_id NOT IN (SELECT id FROM entities)").run();
     db.prepare("DELETE FROM monitors WHERE target IN ('192.168.99.100', '192.168.99.101')").run();
+    db.prepare("DELETE FROM users WHERE email LIKE 'test_playwright_%'").run();
     db.close();
   } catch (err) {
     console.error('Failed to cleanup test DB:', err);

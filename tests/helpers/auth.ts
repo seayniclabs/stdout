@@ -54,6 +54,19 @@ export async function registerUser(
   await page.locator('input[name="confirm"]').fill(password);
   await page.locator('button[type="submit"]').click();
 
+  try {
+    await page.waitForURL(/\/app(?!\/register)/, { timeout: 5000 });
+  } catch (err) {
+    const errorLocator = page.locator('.auth-error');
+    if (await errorLocator.isVisible().catch(() => false)) {
+      const errorMsg = await errorLocator.textContent();
+      console.error(`[registerUser] Registration failed for ${email} with error: ${errorMsg}`);
+    } else {
+      console.error(`[registerUser] Registration timed out for ${email} without visible error. Current URL: ${page.url()}`);
+    }
+    throw err;
+  }
+
   return { email, password };
 }
 
