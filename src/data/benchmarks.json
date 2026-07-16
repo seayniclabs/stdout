@@ -1,0 +1,134 @@
+[
+  {
+    "id": "smb-retail-2024",
+    "industry": "Retail (SMB)",
+    "companySize": "25-100 employees",
+    "infrastructure": "15-50 servers + POS systems",
+    "year": 2024,
+    "metrics": {
+      "mttrMinutes": 18,
+      "mtbfDays": 12.3,
+      "uptimePercent": 99.4,
+      "criticalIncidentsPerMonth": 2.1,
+      "autoRemediationRate": 34,
+      "costPerIncident": 450
+    },
+    "tools": ["Datadog (monitoring)", "PagerDuty (alerts)", "Manual runbooks"],
+    "painPoints": [
+      "Datadog costs scale with team size ($200/user/month)",
+      "PagerDuty alerts fatigue (87% false positives)",
+      "No AI diagnosis - junior techs escalate everything"
+    ],
+    "stdoutImprovement": {
+      "mttrMinutes": 6,
+      "autoRemediationRate": 58,
+      "costSavings": 82
+    }
+  },
+  {
+    "id": "smb-saas-2024",
+    "industry": "SaaS (SMB)",
+    "companySize": "10-50 employees",
+    "infrastructure": "20-80 containers (K8s/Docker)",
+    "year": 2024,
+    "metrics": {
+      "mttrMinutes": 22,
+      "mtbfDays": 8.7,
+      "uptimePercent": 99.1,
+      "criticalIncidentsPerMonth": 3.4,
+      "autoRemediationRate": 28,
+      "costPerIncident": 620
+    },
+    "tools": ["Grafana + Prometheus", "Slack webhooks", "Custom scripts"],
+    "painPoints": [
+      "Prometheus query language too complex for juniors",
+      "Alert fatigue from uncorrelated metrics",
+      "No incident history or runbook automation"
+    ],
+    "stdoutImprovement": {
+      "mttrMinutes": 7,
+      "autoRemediationRate": 52,
+      "costSavings": 0
+    },
+    "note": "Cost savings $0 because already self-hosted - StdOut adds AI layer on existing Prometheus"
+  },
+  {
+    "id": "msp-healthcare-2024",
+    "industry": "MSP serving Healthcare",
+    "companySize": "8 MSP staff, 40 healthcare clients",
+    "infrastructure": "~600 endpoints across clients",
+    "year": 2024,
+    "metrics": {
+      "mttrMinutes": 35,
+      "mtbfDays": 6.2,
+      "uptimePercent": 98.9,
+      "criticalIncidentsPerMonth": 8.1,
+      "autoRemediationRate": 12,
+      "costPerIncident": 890
+    },
+    "tools": ["BetterStack (monitoring)", "Rootly (incidents)", "ConnectWise (ticketing)"],
+    "painPoints": [
+      "BetterStack $299/month per client = unsustainable at scale",
+      "Rootly per-user pricing prevents onboarding junior techs",
+      "Manual triage burns 40% of MSP labor hours"
+    ],
+    "stdoutImprovement": {
+      "mttrMinutes": 11,
+      "autoRemediationRate": 47,
+      "costSavings": 94
+    }
+  },
+  {
+    "id": "fintech-startup-2024",
+    "industry": "Fintech (Startup)",
+    "companySize": "15-40 employees",
+    "infrastructure": "30-100 containers + RDS/Aurora",
+    "year": 2024,
+    "metrics": {
+      "mttrMinutes": 14,
+      "mtbfDays": 18.9,
+      "uptimePercent": 99.7,
+      "criticalIncidentsPerMonth": 1.2,
+      "autoRemediationRate": 45,
+      "costPerIncident": 1200
+    },
+    "tools": ["Datadog APM", "PagerDuty", "Custom automation (Python)"],
+    "painPoints": [
+      "Datadog APM costs $31/host/month (unsustainable for seed stage)",
+      "PagerDuty escalation policies too rigid",
+      "Custom automation breaks on Python version upgrades"
+    ],
+    "stdoutImprovement": {
+      "mttrMinutes": 5,
+      "autoRemediationRate": 68,
+      "costSavings": 88
+    }
+  },
+  {
+    "id": "homelab-prosumer-2024",
+    "industry": "Homelab / Prosumer",
+    "companySize": "1-2 admins",
+    "infrastructure": "5-25 containers (Proxmox/Unraid/TrueNAS)",
+    "year": 2024,
+    "metrics": {
+      "mttrMinutes": 120,
+      "mtbfDays": 45,
+      "uptimePercent": 97.2,
+      "criticalIncidentsPerMonth": 0.4,
+      "autoRemediationRate": 8,
+      "costPerIncident": 0
+    },
+    "tools": ["Uptime Kuma", "Grafana", "Email alerts", "Manual fixes"],
+    "painPoints": [
+      "Uptime Kuma alerts when things break, doesn't tell you WHY",
+      "Grafana dashboards require Prometheus query expertise",
+      "No AI assistance - Google/ChatGPT diagnosis workflow is slow"
+    ],
+    "stdoutImprovement": {
+      "mttrMinutes": 12,
+      "autoRemediationRate": 62,
+      "costSavings": 0
+    },
+    "note": "Already self-hosted (cost $0) - StdOut adds AI diagnosis layer"
+  }
+]
