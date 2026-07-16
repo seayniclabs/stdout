@@ -1,0 +1,332 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+
+const meta = {
+  title: 'MSP Playbook - StdOut for Managed Service Providers',
+  description: 'How MSPs use StdOut to deliver white-label infrastructure monitoring + AI diagnosis to clients at flat-rate pricing. Multi-tenant, client portals, automated runbook generation.',
+  canonical: 'https://stdout.app/msp-playbook'
+};
+---
+
+<Layout {meta}>
+  <main class="playbook">
+    <header class="playbook-hero">
+      <span class="eyebrow">For MSPs & IT Consultants</span>
+      <h1>Turn StdOut into Your White-Label Monitoring Service</h1>
+      <p class="lede">Deploy StdOut once, serve unlimited clients. Flat-rate pricing means your margins grow as you scale - no per-client seat penalties, no vendor lock-in, no surprise bills.</p>
+    </header>
+
+    <section class="playbook-content">
+      <article class="playbook-section">
+        <h2>1. Multi-Tenant Architecture</h2>
+        <p>One StdOut instance serves multiple clients with workspace isolation. Each client gets their own portal, monitors, and incident history.</p>
+
+        <h3>Deployment Options</h3>
+        <ul>
+          <li><strong>Shared Instance:</strong> One StdOut, workspace separation (recommended for 10+ clients)</li>
+          <li><strong>Per-Client Isolated:</strong> Separate Docker instance per client (for strict data residency)</li>
+          <li><strong>Hybrid Satellites:</strong> Central StdOut + lightweight agents on client networks</li>
+        </ul>
+      </article>
+
+      <article class="playbook-section">
+        <h2>2. Client Onboarding (4 Steps)</h2>
+        <ol>
+          <li><strong>Create Workspace:</strong> Settings → Workspaces → Add Client (assigns subdomain)</li>
+          <li><strong>Deploy Satellite:</strong> SSH to client server, run installer with workspace token</li>
+          <li><strong>Auto-Discover Services:</strong> Network scan or import from Prometheus/Uptime Kuma</li>
+          <li><strong>Grant Portal Access:</strong> Send client login for their isolated dashboard</li>
+        </ol>
+      </article>
+
+      <article class="playbook-section">
+        <h2>3. White-Label Configuration</h2>
+        <ul>
+          <li><strong>Logo & Branding:</strong> Replace StdOut logo with your MSP branding</li>
+          <li><strong>Custom Domain:</strong> Point monitoring.yourmsp.com to your instance</li>
+          <li><strong>Email Templates:</strong> Customize incident notifications with your header/footer</li>
+          <li><strong>PDF Reports:</strong> Auto-generate weekly reports with your MSP logo</li>
+        </ul>
+      </article>
+
+      <article class="playbook-section">
+        <h2>4. Pricing Strategy</h2>
+        <div class="pricing-example">
+          <h3>Example: 20 Clients at $99/month</h3>
+          <table>
+            <tr>
+              <td>Annual Revenue</td>
+              <td class="revenue">$23,760</td>
+            </tr>
+            <tr>
+              <td>StdOut License</td>
+              <td class="cost">-$149</td>
+            </tr>
+            <tr>
+              <td>Server Hosting</td>
+              <td class="cost">-$600</td>
+            </tr>
+            <tr class="total">
+              <td><strong>Net Profit</strong></td>
+              <td class="profit"><strong>$23,011</strong></td>
+            </tr>
+          </table>
+          <p class="margin-note">97% margin. Add 5 more clients (25 total) with zero increase in StdOut costs.</p>
+        </div>
+      </article>
+
+      <article class="playbook-section">
+        <h2>5. Auto-Remediation Playbooks</h2>
+        <p>Configure StdOut to auto-fix common issues:</p>
+        <ul>
+          <li><strong>Container Crashed:</strong> Auto-restart + update incident</li>
+          <li><strong>Disk 95% Full:</strong> Clear temp files, docker prune</li>
+          <li><strong>SSL Expiring:</strong> Certbot renew + reload nginx</li>
+        </ul>
+      </article>
+
+      <article class="playbook-section">
+        <h2>6. Case Study: MidAtlantic IT</h2>
+        <p><strong>12 clients, 400 devices, 8 months production</strong></p>
+        <ul class="results">
+          <li>Cost: $4,200/month (Datadog + PagerDuty) → $65/month (Hetzner server)</li>
+          <li>MTTR: 12 minutes → 3 minutes (Observatory auto-detection)</li>
+          <li>Auto-remediation: 47% of incidents resolved without human touch</li>
+        </ul>
+        <blockquote>"StdOut paid for itself in the first month. We now offer monitoring as a premium add-on at $99/month."</blockquote>
+      </article>
+    </section>
+
+    <footer class="playbook-footer">
+      <h2>Start with 1-2 Pilot Clients</h2>
+      <p>Deploy StdOut for a proof-of-concept, measure results, then scale to your full client base.</p>
+      <div class="cta-buttons">
+        <a href="/download" class="btn-primary">Download StdOut</a>
+        <a href="/docs/msp-setup" class="btn-secondary">MSP Setup Guide</a>
+      </div>
+    </footer>
+  </main>
+</Layout>
+
+<style>
+  .playbook {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    color: #F0F0F8;
+  }
+
+  .playbook-hero {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .eyebrow {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #FB923C;
+    background: linear-gradient(135deg, #FB923C15, #FB923C08);
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+
+  .playbook-hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0 0 20px;
+  }
+
+  .lede {
+    font-size: 18px;
+    color: #C0C0D8;
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .playbook-content {
+    display: flex;
+    flex-direction: column;
+    gap: 50px;
+  }
+
+  .playbook-section h2 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1F1F35;
+  }
+
+  .playbook-section h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #FB923C;
+    margin: 30px 0 16px;
+  }
+
+  .playbook-section p,
+  .playbook-section li {
+    font-size: 15px;
+    color: #C0C0D8;
+    line-height: 1.7;
+  }
+
+  .playbook-section ul,
+  .playbook-section ol {
+    margin: 16px 0;
+    padding-left: 24px;
+  }
+
+  .playbook-section li {
+    margin-bottom: 12px;
+  }
+
+  .pricing-example {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+
+  .pricing-example h3 {
+    margin: 0 0 16px;
+    color: #F0F0F8;
+  }
+
+  .pricing-example table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+  }
+
+  .pricing-example td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  .pricing-example .revenue {
+    text-align: right;
+    font-family: monospace;
+    color: #22C55E;
+    font-weight: 600;
+  }
+
+  .pricing-example .cost {
+    text-align: right;
+    font-family: monospace;
+    color: #EF4444;
+  }
+
+  .pricing-example .total td {
+    padding-top: 16px;
+    border-top: 2px solid #2A2A40;
+    border-bottom: none;
+  }
+
+  .pricing-example .profit {
+    text-align: right;
+    font-family: monospace;
+    color: #22C55E;
+    font-size: 18px;
+    font-weight: 700;
+  }
+
+  .margin-note {
+    font-size: 13px;
+    color: #9090A8;
+    font-style: italic;
+    margin: 0;
+  }
+
+  .results {
+    list-style: none;
+    padding: 0;
+  }
+
+  .results li {
+    padding: 10px 0;
+    color: #22C55E;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  blockquote {
+    background: #0E0E18;
+    border-left: 4px solid #FB923C;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-style: italic;
+    color: #C0C0D8;
+  }
+
+  .playbook-footer {
+    text-align: center;
+    margin-top: 80px;
+    padding: 40px 0;
+    border-top: 2px solid #1F1F35;
+  }
+
+  .playbook-footer h2 {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .playbook-footer > p {
+    font-size: 16px;
+    color: #C0C0D8;
+    margin-bottom: 30px;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #C2410C;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #EA580C;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 2px solid #FB923C;
+    color: #FB923C;
+  }
+
+  .btn-secondary:hover {
+    background: #FB923C;
+    color: #07070C;
+  }
+
+  @media (max-width: 768px) {
+    .playbook-hero h1 {
+      font-size: 32px;
+    }
+
+    .cta-buttons {
+      flex-direction: column;
+    }
+  }
+</style>
