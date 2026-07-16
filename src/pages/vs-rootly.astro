@@ -1,0 +1,262 @@
+---
+import '../styles/global.css';
+
+const user = Astro.locals.user;
+---
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="StdOut vs Rootly comparison: 50-100x cheaper, same autonomous incident response. Flat-rate pricing vs per-seat costs. Self-host for $149 one-time." />
+  <title>StdOut vs Rootly — 50-100x Cheaper Incident Response</title>
+  <link rel="canonical" href={new URL('/vs-rootly', Astro.site || 'https://stdout.seayniclabs.com').href} />
+  <meta property="og:title" content="StdOut vs Rootly — Cost Comparison" />
+  <meta property="og:description" content="Same autonomous incident response. 50-100x cheaper. Rootly: $10K+/year. StdOut: $149 one-time." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={new URL('/vs-rootly', Astro.site || 'https://stdout.seayniclabs.com').href} />
+  <meta name="theme-color" content="#F97316" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <style>@import '../styles/fonts.css';</style>
+</head>
+<body>
+  <!-- Nav -->
+  <nav class="ln">
+    <a href="/" class="ln-brand">
+      <img src="/logo.svg" alt="StdOut" width="28" height="28" />
+      <span>StdOut</span>
+    </a>
+    <div class="ln-links">
+      <a href="/#features" class="ln-link">Features</a>
+      <a href="/#pricing" class="ln-link">Pricing</a>
+      <a href="/use-cases" class="ln-link">Use Cases</a>
+      <a href="/docs/scanner" class="ln-link">Docs</a>
+      {user ? (
+        <a href="/app" class="btn btn-primary btn-sm">Dashboard</a>
+      ) : (
+        <>
+          <a href="/app/login" class="ln-link">Log in</a>
+          <a href="/app/register" class="btn btn-primary btn-sm">Self-Host $149</a>
+        </>
+      )}
+    </div>
+  </nav>
+
+  <main id="main-content" style="padding: 60px 24px;">
+    <div style="max-width: 900px; margin: 0 auto;">
+
+      <!-- Hero -->
+      <section style="text-align: center; margin-bottom: 60px;">
+        <div style="display: inline-block; padding: 6px 14px; background: var(--accent-dark); border-radius: 20px; font-size: 12px; font-weight: 600; color: var(--accent); margin-bottom: 20px; letter-spacing: 0.05em;">
+          COST COMPARISON
+        </div>
+        <h1 style="font-size: 42px; font-weight: 800; margin: 0 0 20px; line-height: 1.1;">
+          Same Autonomous Response.<br />
+          <span style="color: var(--accent);">50-100x Cheaper.</span>
+        </h1>
+        <p style="font-size: 18px; color: var(--text-muted); max-width: 600px; margin: 0 auto;">
+          Rootly pioneered autonomous incident response. StdOut brings it to SMB teams at a price that actually makes sense.
+        </p>
+      </section>
+
+      <!-- Pricing Table -->
+      <section style="margin-bottom: 80px;">
+        <table style="width: 100%; border-collapse: collapse; background: var(--bg-secondary); border-radius: 12px; overflow: hidden;">
+          <thead>
+            <tr style="background: var(--bg-tertiary); border-bottom: 1px solid var(--border);">
+              <th style="padding: 20px; text-align: left; font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em;">FEATURE</th>
+              <th style="padding: 20px; text-align: center; font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em;">ROOTLY</th>
+              <th style="padding: 20px; text-align: center; font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.05em;">STDOUT</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Annual Cost (5 users)</td>
+              <td style="padding: 20px; text-align: center;">$10,800+</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent); font-weight: 700;">$149 one-time</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Annual Cost (10 users)</td>
+              <td style="padding: 20px; text-align: center;">$21,600+</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent); font-weight: 700;">$149 one-time</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Pricing Model</td>
+              <td style="padding: 20px; text-align: center;">$180/user/month</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">Flat-rate forever</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Auto-detection</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">AI Diagnosis</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Auto-Remediation</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Incident Timeline</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Runbook Builder</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Post-Mortem Templates</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Status Page</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">MTTR Tracking</td>
+              <td style="padding: 20px; text-align: center;">✓</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">✓</td>
+            </tr>
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 20px; font-weight: 600;">Hosting</td>
+              <td style="padding: 20px; text-align: center;">Cloud only</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">Self-host (your data)</td>
+            </tr>
+            <tr>
+              <td style="padding: 20px; font-weight: 600;">Data Privacy</td>
+              <td style="padding: 20px; text-align: center;">Shared infrastructure</td>
+              <td style="padding: 20px; text-align: center; color: var(--accent);">100% on your network</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- ROI Calculator -->
+      <section style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 12px; padding: 40px; margin-bottom: 80px;">
+        <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px;">3-Year Cost Comparison</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 8px;">ROOTLY (10 users)</div>
+            <div style="font-size: 36px; font-weight: 800; color: var(--text);">$64,800</div>
+            <div style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">$21,600/year × 3 years</div>
+          </div>
+          <div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.05em; margin-bottom: 8px;">STDOUT (UNLIMITED USERS)</div>
+            <div style="font-size: 36px; font-weight: 800; color: var(--accent);">$149</div>
+            <div style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">One-time payment</div>
+          </div>
+        </div>
+        <div style="margin-top: 32px; padding-top: 32px; border-top: 1px solid var(--border);">
+          <div style="font-size: 18px; font-weight: 700; color: var(--accent);">Savings: $64,651 (434x cheaper)</div>
+          <div style="font-size: 14px; color: var(--text-muted); margin-top: 8px;">StdOut pays for itself in the first month.</div>
+        </div>
+      </section>
+
+      <!-- Why Rootly Costs More -->
+      <section style="margin-bottom: 80px;">
+        <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px;">Why Does Rootly Cost More?</h2>
+        <div style="display: grid; gap: 20px;">
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px;">1. Enterprise Sales Model</h3>
+            <p style="margin: 0; color: var(--text-muted);">Rootly targets Fortune 500 companies with dedicated sales teams, enterprise SLAs, and custom contracts. That overhead gets baked into per-seat pricing.</p>
+          </div>
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px;">2. Managed Cloud Infrastructure</h3>
+            <p style="margin: 0; color: var(--text-muted);">You're paying for Rootly's hosting, databases, uptime guarantees, and multi-region redundancy. StdOut runs on hardware you already own.</p>
+          </div>
+          <div style="background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; padding: 24px;">
+            <h3 style="font-size: 18px; font-weight: 600; margin: 0 0 12px;">3. Per-Seat Revenue Model</h3>
+            <p style="margin: 0; color: var(--text-muted);">Rootly's business model requires growing revenue as your team grows. StdOut's one-time payment scales infinitely without additional cost.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- When Rootly Makes Sense -->
+      <section style="margin-bottom: 80px;">
+        <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px;">When Rootly Makes Sense</h2>
+        <p style="font-size: 16px; color: var(--text-muted); margin-bottom: 20px;">Rootly is the right choice if you:</p>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Have 100+ person engineering teams</strong> — Enterprise-scale organizations with complex compliance requirements
+          </li>
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Need dedicated account management</strong> — White-glove support and quarterly business reviews
+          </li>
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Prefer fully-managed SaaS</strong> — Don't want to manage self-hosted infrastructure
+          </li>
+          <li style="padding: 12px 0;">
+            <strong>Have enterprise budget</strong> — $10K+/year software spend isn't a concern
+          </li>
+        </ul>
+      </section>
+
+      <!-- When StdOut Makes Sense -->
+      <section style="margin-bottom: 80px;">
+        <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 24px;">When StdOut Makes Sense</h2>
+        <p style="font-size: 16px; color: var(--text-muted); margin-bottom: 20px;">StdOut is the right choice if you:</p>
+        <ul style="list-style: none; padding: 0; margin: 0;">
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Are a 2-20 person ops team</strong> — SMB teams that need enterprise features without enterprise budgets
+          </li>
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Want to own your data</strong> — Self-host on your infrastructure, full data sovereignty
+          </li>
+          <li style="padding: 12px 0; border-bottom: 1px solid var(--border);">
+            <strong>Prefer one-time costs</strong> — No subscriptions, no per-seat pricing, no annual renewals
+          </li>
+          <li style="padding: 12px 0;">
+            <strong>Need the same autonomy, different price</strong> — Auto-detect + auto-remediate for $149, not $10K
+          </li>
+        </ul>
+      </section>
+
+      <!-- CTA -->
+      <section style="text-align: center; background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-secondary) 100%); border-radius: 16px; padding: 60px 40px;">
+        <h2 style="font-size: 32px; font-weight: 800; margin: 0 0 16px;">Try StdOut Risk-Free</h2>
+        <p style="font-size: 16px; color: var(--text-muted); margin: 0 0 32px; max-width: 500px; margin-left: auto; margin-right: auto;">
+          Self-host in 3 minutes. If it doesn't save you 50x what Rootly costs, we'll refund you.
+        </p>
+        <div style="display: flex; gap: 16px; justify-content: center;">
+          <a href="/app/register" class="btn btn-primary btn-lg btn-glow">Self-Host for $149</a>
+          <a href="/docs/scanner" class="btn btn-ghost btn-lg">Read the Docs</a>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="lf" style="margin-top: 80px;">
+    <div class="lf-links">
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+      <a href="/docs/scanner">Docs</a>
+      <a href="mailto:hello@seayniclabs.com">Contact</a>
+    </div>
+    <span class="mono" style="font-size: 11px; color: var(--text-muted);">StdOut by <a href="https://seayniclabs.com" style="color: var(--text-secondary);">Seaynic Labs</a></span>
+  </footer>
+</body>
+</html>
+
+<style>
+  /* Reuse nav styles from homepage */
+  .ln { display: flex; justify-content: space-between; align-items: center; padding: 14px 24px; max-width: 1100px; margin: 0 auto; }
+  .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
+  .ln-brand img { display: block; }
+  .ln-links { display: flex; align-items: center; gap: 24px; }
+  .ln-link { font-size: 14px; font-weight: 500; color: var(--text-secondary); text-decoration: none; transition: color 0.2s; }
+  .ln-link:hover { color: var(--text); }
+
+  .lf { padding: 32px 24px; text-align: center; border-top: 1px solid var(--border); }
+  .lf-links { display: flex; gap: 24px; justify-content: center; margin-bottom: 12px; }
+  .lf-links a { font-size: 13px; color: var(--text-muted); text-decoration: none; }
+  .lf-links a:hover { color: var(--text); }
+</style>
