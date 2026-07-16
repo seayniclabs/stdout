@@ -1,0 +1,458 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+
+const meta = {
+  title: 'Open-Core Model - StdOut Goes Open Source',
+  description: 'StdOut core monitoring + AI detection is now Apache 2.0. Premium features (multi-tenant, SSO, compliance) remain commercial. Free forever for self-hosters.',
+  canonical: 'https://stdout.app/open-core'
+};
+---
+
+<Layout {meta}>
+  <main class="open-core-page">
+    <header class="hero">
+      <h1>StdOut Goes Open-Core</h1>
+      <p class="lede">Core monitoring + AI detection is now <strong>Apache 2.0</strong>. Free forever for self-hosters. Premium features for enterprises remain commercial.</p>
+      <div class="hero-cta">
+        <a href="https://github.com/seayniclabs/stdout" class="btn-primary">View on GitHub</a>
+        <a href="/download" class="btn-secondary">Download Now</a>
+      </div>
+    </header>
+
+    <section class="what-is-free">
+      <h2>What is Free (Apache 2.0)</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <h3>Core Monitoring</h3>
+          <ul>
+            <li>HTTP/Docker/SSH monitors</li>
+            <li>Network discovery</li>
+            <li>Incident tracking</li>
+            <li>Uptime dashboards</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <h3>AI Detection</h3>
+          <ul>
+            <li>Observatory Watcher (Llama 3.2)</li>
+            <li>Analyst diagnosis (Qwen 2.5)</li>
+            <li>Local Ollama integration</li>
+            <li>Auto-generated runbooks</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <h3>Integrations</h3>
+          <ul>
+            <li>Prometheus + Grafana</li>
+            <li>InfluxDB + Loki</li>
+            <li>Slack notifications</li>
+            <li>Webhook triggers</li>
+          </ul>
+        </div>
+
+        <div class="feature-card">
+          <h3>Self-Hosted</h3>
+          <ul>
+            <li>Docker Compose deploy</li>
+            <li>SQLite database</li>
+            <li>No cloud dependencies</li>
+            <li>Unlimited users</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="what-is-premium">
+      <h2>Premium Features (Commercial License)</h2>
+      <div class="premium-grid">
+        <div class="premium-card">
+          <h3>Multi-Tenant (MSP)</h3>
+          <p>Serve multiple clients from one instance with workspace isolation, per-client billing, white-label portals.</p>
+          <span class="price">$499/year</span>
+        </div>
+
+        <div class="premium-card">
+          <h3>SSO + RBAC</h3>
+          <p>SAML/OIDC authentication, role-based access control, audit logs, compliance reporting.</p>
+          <span class="price">$299/year</span>
+        </div>
+
+        <div class="premium-card">
+          <h3>Managed Cloud</h3>
+          <p>We host StdOut for you. Automatic updates, backups, 99.9% SLA, 24/7 support.</p>
+          <span class="price">$99/month</span>
+        </div>
+
+        <div class="premium-card">
+          <h3>Enterprise Support</h3>
+          <p>Dedicated Slack channel, custom integrations, priority bug fixes, on-call escalation.</p>
+          <span class="price">$2,000/year</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="why-open-core">
+      <h2>Why Open-Core?</h2>
+      <div class="why-grid">
+        <div class="why-item">
+          <h3>Transparency</h3>
+          <p>You can audit the code, verify security claims, and contribute improvements. No black-box SaaS trust issues.</p>
+        </div>
+
+        <div class="why-item">
+          <h3>Longevity</h3>
+          <p>Even if Seaynic Labs disappears, the core codebase lives on. Your infrastructure monitoring does not die with a startup.</p>
+        </div>
+
+        <div class="why-item">
+          <h3>Community</h3>
+          <p>Contributions welcome. Bug fixes, integrations, and features from the community benefit everyone.</p>
+        </div>
+
+        <div class="why-item">
+          <h3>Sustainability</h3>
+          <p>Premium features fund continued development. Free users get core value, paying customers get enterprise polish.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="license-comparison">
+      <h2>License Comparison</h2>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>Apache 2.0 (Free)</th>
+            <th>Commercial</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Core monitoring</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>AI detection + diagnosis</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Slack/email notifications</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Prometheus/Grafana integration</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Unlimited users (single-tenant)</td>
+            <td class="yes">✓</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Multi-tenant workspaces</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>SSO (SAML/OIDC)</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>RBAC + audit logs</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Managed cloud hosting</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+          <tr>
+            <td>Priority support</td>
+            <td class="no">✗</td>
+            <td class="yes">✓</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <footer class="open-core-footer">
+      <h2>Get Started</h2>
+      <p>Clone the repo, run Docker Compose, and you have a working StdOut instance in 5 minutes.</p>
+      <div class="cta-buttons">
+        <a href="https://github.com/seayniclabs/stdout" class="btn-primary">GitHub Repository</a>
+        <a href="/docs/quick-start" class="btn-secondary">Quick Start Guide</a>
+        <a href="/pricing" class="btn-secondary">Premium Features</a>
+      </div>
+    </footer>
+  </main>
+</Layout>
+
+<style>
+  .open-core-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    color: #F0F0F8;
+  }
+
+  .hero {
+    text-align: center;
+    margin-bottom: 80px;
+  }
+
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    margin: 0 0 20px;
+  }
+
+  .lede {
+    font-size: 20px;
+    color: #C0C0D8;
+    max-width: 700px;
+    margin: 0 auto 30px;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .what-is-free,
+  .what-is-premium,
+  .why-open-core,
+  .license-comparison {
+    margin-bottom: 80px;
+  }
+
+  .what-is-free h2,
+  .what-is-premium h2,
+  .why-open-core h2,
+  .license-comparison h2 {
+    font-size: 32px;
+    font-weight: 700;
+    text-align: center;
+    margin: 0 0 40px;
+    padding-bottom: 16px;
+    border-bottom: 2px solid #1F1F35;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+  }
+
+  .feature-card {
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    padding: 24px;
+  }
+
+  .feature-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #22C55E;
+    margin: 0 0 16px;
+  }
+
+  .feature-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .feature-card li {
+    font-size: 14px;
+    color: #C0C0D8;
+    padding: 6px 0;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  .feature-card li:last-child {
+    border-bottom: none;
+  }
+
+  .premium-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+  }
+
+  .premium-card {
+    background: linear-gradient(135deg, #FB923C15, #FB923C08);
+    border: 1px solid #FB923C40;
+    border-radius: 8px;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .premium-card h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #FB923C;
+    margin: 0 0 12px;
+  }
+
+  .premium-card p {
+    font-size: 14px;
+    color: #C0C0D8;
+    flex: 1;
+    margin: 0 0 16px;
+  }
+
+  .price {
+    font-size: 20px;
+    font-weight: 700;
+    font-family: monospace;
+    color: #FB923C;
+  }
+
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 24px;
+  }
+
+  .why-item h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #F0F0F8;
+    margin: 0 0 12px;
+  }
+
+  .why-item p {
+    font-size: 14px;
+    color: #C0C0D8;
+    line-height: 1.6;
+  }
+
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #0E0E18;
+    border: 1px solid #1F1F35;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .comparison-table thead {
+    background: #1F1F35;
+  }
+
+  .comparison-table th,
+  .comparison-table td {
+    padding: 14px 20px;
+    text-align: left;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  .comparison-table th {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #9090A8;
+  }
+
+  .comparison-table td {
+    font-size: 14px;
+    color: #C0C0D8;
+  }
+
+  .comparison-table .yes {
+    text-align: center;
+    color: #22C55E;
+    font-size: 18px;
+  }
+
+  .comparison-table .no {
+    text-align: center;
+    color: #5A5A72;
+    font-size: 18px;
+  }
+
+  .open-core-footer {
+    text-align: center;
+    padding: 40px 0;
+    border-top: 2px solid #1F1F35;
+  }
+
+  .open-core-footer h2 {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .open-core-footer p {
+    font-size: 16px;
+    color: #C0C0D8;
+    margin-bottom: 30px;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #C2410C;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #EA580C;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 2px solid #FB923C;
+    color: #FB923C;
+  }
+
+  .btn-secondary:hover {
+    background: #FB923C;
+    color: #07070C;
+  }
+
+  @media (max-width: 768px) {
+    .hero h1 {
+      font-size: 32px;
+    }
+
+    .features-grid,
+    .premium-grid,
+    .why-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .cta-buttons,
+    .hero-cta {
+      flex-direction: column;
+    }
+  }
+</style>
