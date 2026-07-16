@@ -1,0 +1,310 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+const meta = {
+  title: 'Security Tools Scanner - StdOut',
+  description: 'Detect installed security tools (Suricata, Zeek, Prometheus, etc.) and enable auto-integration.',
+  canonical: 'https://stdout.app/app/tools'
+};
+---
+
+<Layout {meta}>
+  <main class="tools-scanner">
+    <header class="scanner-header">
+      <h1>Security Tools Scanner</h1>
+      <p>Detect installed security tools and enable auto-integration.</p>
+      <button id="scan-btn" class="btn-primary">Scan System</button>
+    </header>
+
+    <div id="scan-results" class="scan-results" style="display: none;">
+      <h2>Scan Results</h2>
+      <div id="detected-tools"></div>
+      <div id="missing-tools"></div>
+    </div>
+
+    <section class="supported-tools">
+      <h2>Supported Integrations</h2>
+      <div class="tools-grid">
+        <div class="tool-card">
+          <h3>Suricata</h3>
+          <p>IDS/IPS network monitoring - detects threats via signature-based rules.</p>
+          <span class="status" data-tool="Suricata">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Wireshark / tshark</h3>
+          <p>Packet analyzer - capture and inspect network traffic.</p>
+          <span class="status" data-tool="Wireshark/tshark">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Zeek (Bro)</h3>
+          <p>Network security monitor - logs connection metadata and protocol events.</p>
+          <span class="status" data-tool="Zeek">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Prometheus</h3>
+          <p>Time-series metrics DB - scrape and query system/app metrics.</p>
+          <span class="status" data-tool="Prometheus">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Loki</h3>
+          <p>Log aggregation system - centralized log storage and search.</p>
+          <span class="status" data-tool="Loki">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Wazuh</h3>
+          <p>SIEM/XDR platform - endpoint detection, file integrity, compliance.</p>
+          <span class="status" data-tool="Wazuh">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>CrowdSec</h3>
+          <p>Collaborative IPS - detect and block malicious IPs with community intelligence.</p>
+          <span class="status" data-tool="CrowdSec">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>ntopng</h3>
+          <p>Network traffic analyzer - real-time visibility into bandwidth and flows.</p>
+          <span class="status" data-tool="ntopng">Not Scanned</span>
+        </div>
+
+        <div class="tool-card">
+          <h3>Falco</h3>
+          <p>Runtime security - detect anomalous container and kernel behavior.</p>
+          <span class="status" data-tool="Falco">Not Scanned</span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <style>
+    .tools-scanner {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .scanner-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+
+    .scanner-header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 12px;
+    }
+
+    .scanner-header p {
+      font-size: 16px;
+      color: var(--text-secondary);
+      margin: 0 0 24px;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .scan-results {
+      margin-bottom: 60px;
+      padding: 24px;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .scan-results h2 {
+      font-size: 20px;
+      margin: 0 0 20px;
+    }
+
+    #detected-tools,
+    #missing-tools {
+      margin-bottom: 24px;
+    }
+
+    .tool-result {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      background: var(--surface);
+      border-left: 4px solid;
+      border-radius: 4px;
+    }
+
+    .tool-result.detected {
+      border-left-color: var(--success);
+    }
+
+    .tool-result.not-detected {
+      border-left-color: var(--warning);
+    }
+
+    .tool-result h4 {
+      margin: 0 0 4px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .tool-result p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .supported-tools h2 {
+      font-size: 24px;
+      font-weight: 700;
+      margin: 0 0 24px;
+    }
+
+    .tools-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .tool-card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .tool-card h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+
+    .tool-card p {
+      margin: 0;
+      font-size: 13px;
+      color: var(--text-secondary);
+      flex: 1;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .status.not-scanned {
+      background: var(--surface);
+      color: var(--text-secondary);
+    }
+
+    .status.detected {
+      background: #22C55E20;
+      color: #22C55E;
+    }
+
+    .status.not-detected {
+      background: #EF444420;
+      color: #EF4444;
+    }
+  </style>
+
+  <script>
+    const scanBtn = document.getElementById('scan-btn');
+    const scanResults = document.getElementById('scan-results');
+    const detectedTools = document.getElementById('detected-tools');
+    const missingTools = document.getElementById('missing-tools');
+
+    scanBtn?.addEventListener('click', async () => {
+      scanBtn.textContent = 'Scanning...';
+      scanBtn.disabled = true;
+
+      try {
+        const response = await fetch('/app/api/tools/detect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+          throw new Error('Scan failed');
+        }
+
+        const data = await response.json();
+
+        // Update status badges
+        data.detected.forEach((tool: any) => {
+          const badge = document.querySelector(`[data-tool="${tool.name}"]`);
+          if (badge) {
+            badge.textContent = `Detected: v${tool.version}`;
+            badge.classList.remove('not-scanned');
+            badge.classList.add('detected');
+          }
+        });
+
+        data.notFound.forEach((tool: any) => {
+          const badge = document.querySelector(`[data-tool="${tool.name}"]`);
+          if (badge) {
+            badge.textContent = 'Not Found';
+            badge.classList.remove('not-scanned');
+            badge.classList.add('not-detected');
+          }
+        });
+
+        // Show results panel
+        if (detectedTools && missingTools) {
+          if (data.detected.length > 0) {
+            detectedTools.innerHTML = `
+              <h3 style="color: var(--success); margin-bottom: 12px;">✓ Detected (${data.detected.length})</h3>
+              ${data.detected.map((t: any) => `
+                <div class="tool-result detected">
+                  <h4>${t.name}</h4>
+                  <p>Version: ${t.version} | ${t.raw}</p>
+                </div>
+              `).join('')}
+            `;
+          } else {
+            detectedTools.innerHTML = '<p>No tools detected.</p>';
+          }
+
+          if (data.notFound.length > 0) {
+            missingTools.innerHTML = `
+              <h3 style="color: var(--warning); margin-bottom: 12px;">⚠ Not Found (${data.notFound.length})</h3>
+              ${data.notFound.map((t: any) => `
+                <div class="tool-result not-detected">
+                  <h4>${t.name}</h4>
+                  <p>Not installed or not in PATH</p>
+                </div>
+              `).join('')}
+            `;
+          }
+        }
+
+        scanResults!.style.display = 'block';
+      } catch (error) {
+        alert('Scan failed: ' + (error instanceof Error ? error.message : String(error)));
+      } finally {
+        scanBtn.textContent = 'Scan System';
+        scanBtn.disabled = false;
+      }
+    });
+  </script>
+</Layout>
