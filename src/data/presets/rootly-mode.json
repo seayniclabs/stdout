@@ -1,0 +1,224 @@
+{
+  "id": "instant-rootly-mode",
+  "name": "Instant Rootly Mode",
+  "description": "Replicates Rootly's incident management workflow in StdOut — auto-detection, severity routing, Slack alerts, and retrospectives. One-click deployment of the Rootly experience without the Rootly price tag.",
+  "category": "incident-management",
+  "tags": ["rootly", "incident-response", "slack", "pagerduty-alternative"],
+  "author": "StdOut Team",
+  "version": "1.0.0",
+  "compatibleWith": "stdout@1.2.0+",
+  "estimatedSetupTime": "2 minutes",
+  "requirements": {
+    "slack": {
+      "required": true,
+      "description": "Slack workspace with bot token for incident alerts"
+    },
+    "prometheus": {
+      "required": false,
+      "description": "Optional: Prometheus metrics for anomaly detection"
+    },
+    "ollama": {
+      "required": false,
+      "description": "Optional: Local Ollama for AI diagnosis (falls back to rule-based detection)"
+    }
+  },
+  "configuration": {
+    "observatory": {
+      "enabled": true,
+      "watcherInterval": 300,
+      "autoDetection": true,
+      "autoRemediation": false,
+      "enableAI": true
+    },
+    "monitors": {
+      "templates": [
+        {
+          "name": "HTTP Service Monitor",
+          "type": "http",
+          "interval": 60,
+          "timeout": 10,
+          "retries": 3,
+          "alertThresholds": {
+            "responseTime": 2000,
+            "uptime": 99.0
+          }
+        },
+        {
+          "name": "Docker Container Monitor",
+          "type": "docker",
+          "interval": 30,
+          "alertOn": ["stopped", "unhealthy", "oom"]
+        }
+      ]
+    },
+    "incidents": {
+      "severityMapping": {
+        "critical": {
+          "condition": "service_down OR oom OR security_breach",
+          "slackChannel": "#incidents-critical",
+          "escalationPolicy": "immediate",
+          "autoCreateRunbook": true
+        },
+        "high": {
+          "condition": "high_latency OR high_error_rate OR disk_full",
+          "slackChannel": "#incidents-high",
+          "escalationPolicy": "15min",
+          "autoCreateRunbook": true
+        },
+        "medium": {
+          "condition": "degraded_performance OR high_memory",
+          "slackChannel": "#incidents",
+          "escalationPolicy": "30min",
+          "autoCreateRunbook": false
+        },
+        "low": {
+          "condition": "warning OR info",
+          "slackChannel": "#incidents",
+          "escalationPolicy": "none",
+          "autoCreateRunbook": false
+        }
+      },
+      "autoFields": {
+        "detectTime": true,
+        "firstAlertTime": true,
+        "ackTime": true,
+        "resolveTime": true,
+        "affectedServices": true,
+        "rootCauseTag": true
+      },
+      "retrospective": {
+        "enabled": true,
+        "autoGenerate": true,
+        "template": "5-whys",
+        "requiredFields": [
+          "What happened?",
+          "Root cause",
+          "Resolution steps",
+          "Preventative measures"
+        ]
+      }
+    },
+    "notifications": {
+      "slack": {
+        "enabled": true,
+        "channels": {
+          "critical": "#incidents-critical",
+          "high": "#incidents-high",
+          "default": "#incidents"
+        },
+        "messageFormat": {
+          "title": "[{severity}] {title}",
+          "body": "**Detected:** {detectTime}\\n**Affected:** {affectedServices}\\n**AI Diagnosis:** {aiSummary}\\n\\n<{incidentUrl}|View Incident>",
+          "color": {
+            "critical": "#EF4444",
+            "high": "#EAB308",
+            "medium": "#FACC15",
+            "low": "#22C55E"
+          }
+        },
+        "threadUpdates": true,
+        "resolveNotification": true
+      }
+    },
+    "integrations": {
+      "prometheus": {
+        "enabled": false,
+        "endpoint": "http://localhost:9090",
+        "queryInterval": 300,
+        "alertRules": [
+          {
+            "name": "High CPU",
+            "query": "avg(rate(container_cpu_usage_seconds_total[5m])) > 0.8",
+            "severity": "high"
+          },
+          {
+            "name": "High Memory",
+            "query": "container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9",
+            "severity": "high"
+          },
+          {
+            "name": "Service Down",
+            "query": "up{job=\"your-service\"} == 0",
+            "severity": "critical"
+          }
+        ]
+      },
+      "grafana": {
+        "enabled": false,
+        "dashboardLinks": true,
+        "snapshotOnIncident": true
+      }
+    }
+  },
+  "postSetupSteps": [
+    {
+      "title": "Configure Slack Integration",
+      "description": "Add your Slack bot token in Settings → Notifications → Slack. Create #incidents-critical and #incidents-high channels.",
+      "link": "/app/settings?tab=notifications"
+    },
+    {
+      "title": "Set Up Monitors",
+      "description": "Create HTTP/Docker monitors for your critical services. Each monitor inherits Rootly-style alerting rules.",
+      "link": "/app/monitors"
+    },
+    {
+      "title": "Enable Observatory AI",
+      "description": "Optional: Install Ollama and pull llama3.2:3b-instruct-q4_K_M for AI-powered incident diagnosis.",
+      "link": "/app/observatory"
+    },
+    {
+      "title": "Test Incident Workflow",
+      "description": "Trigger a test incident to verify Slack alerts → incident creation → retrospective generation.",
+      "link": "/app/incidents?test=true"
+    }
+  ],
+  "migration": {
+    "fromRootly": {
+      "supported": true,
+      "steps": [
+        "Export incidents from Rootly (CSV or API)",
+        "Import via StdOut → Settings → Import Data",
+        "Map Rootly severity levels to StdOut severities",
+        "Migrate Slack webhooks to StdOut bot",
+        "Archive old Rootly retrospectives to StdOut docs"
+      ],
+      "estimatedTime": "30 minutes for 100 incidents"
+    }
+  },
+  "comparison": {
+    "vsRootly": {
+      "pricing": {
+        "rootly": "$100/user/month minimum 3 users = $3,600/year",
+        "stdout": "$149/year unlimited users",
+        "savings": "$3,451/year (96% cheaper)"
+      },
+      "featureParity": {
+        "autoDetection": "✓ Same (rule-based + AI)",
+        "slackAlerts": "✓ Same (threaded updates, color-coded)",
+        "severityRouting": "✓ Same (4-tier severity)",
+        "retrospectives": "✓ Same (auto-generated templates)",
+        "aiDiagnosis": "✓ Better (local Ollama = no API costs)",
+        "timeline": "✓ Same (detect → ack → resolve)",
+        "runbooks": "✓ Same (auto-created on critical incidents)",
+        "integrations": "✓ Prometheus, Grafana, Loki (same as Rootly)"
+      },
+      "tradeoffs": {
+        "stdout": "Self-hosted (you manage infrastructure)",
+        "rootly": "Managed cloud (they manage infrastructure)"
+      }
+    }
+  },
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-07-16",
+      "changes": [
+        "Initial release",
+        "Rootly workflow replication",
+        "Slack threaded alerts",
+        "Auto-generated retrospectives",
+        "4-tier severity routing"
+      ]
+    }
+  ]
+}
