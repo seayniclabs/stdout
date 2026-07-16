@@ -1,0 +1,36 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+const meta = { title: 'Loki Integration - StdOut', description: 'Connect StdOut to Grafana Loki for centralized log aggregation and search.', canonical: 'https://stdout.app/app/integrations/loki' };
+---
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Loki Integration</h1>
+      <p>Centralized log aggregation and search.</p>
+      <span class="status-badge">Not Configured</span>
+    </header>
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form>
+        <div class="form-group">
+          <label for="loki-url">Loki URL</label>
+          <input type="text" id="loki-url" value="http://localhost:3100" />
+        </div>
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li><strong>Install Loki</strong><pre><code>docker run -d -p 3100:3100 grafana/loki:latest</code></pre></li>
+        <li><strong>Push StdOut logs to Loki</strong><p>StdOut auto-sends incident logs to Loki for long-term retention and search.</p></li>
+      </ol>
+      <h3>What Gets Logged</h3>
+      <ul>
+        <li><strong>Incident creation/resolution</strong> - Full incident timeline</li>
+        <li><strong>Monitor check results</strong> - Pass/fail + response times</li>
+        <li><strong>Observatory detections</strong> - AI anomaly findings</li>
+      </ul>
+    </section>
+  </main>
+</Layout>

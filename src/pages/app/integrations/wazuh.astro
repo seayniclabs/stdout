@@ -1,0 +1,42 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+const meta = { title: 'Wazuh Integration - StdOut', description: 'Connect StdOut to Wazuh SIEM for endpoint detection, FIM, and compliance monitoring.', canonical: 'https://stdout.app/app/integrations/wazuh' };
+---
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Wazuh Integration</h1>
+      <p>SIEM/XDR with endpoint detection and compliance.</p>
+      <span class="status-badge">Not Configured</span>
+    </header>
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form>
+        <div class="form-group">
+          <label for="wazuh-api">Wazuh API URL</label>
+          <input type="text" id="wazuh-api" placeholder="https://wazuh.local:55000" />
+        </div>
+        <div class="form-group">
+          <label for="wazuh-token">API Token</label>
+          <input type="password" id="wazuh-token" placeholder="Bearer token" />
+        </div>
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li><strong>Install Wazuh</strong><p>Follow official Wazuh installation docs for your platform.</p></li>
+        <li><strong>Generate API token</strong><pre><code>curl -u wazuh:wazuh -k -X POST "https://localhost:55000/security/user/authenticate"</code></pre></li>
+        <li><strong>Configure StdOut to pull alerts</strong><p>StdOut queries Wazuh API every 5 minutes for new security events.</p></li>
+      </ol>
+      <h3>What Gets Monitored</h3>
+      <ul>
+        <li><strong>File Integrity Monitoring (FIM)</strong> - Detect unauthorized file changes</li>
+        <li><strong>Rootkit detection</strong> - Kernel-level malware scans</li>
+        <li><strong>Compliance checks</strong> - CIS, PCI-DSS, GDPR baselines</li>
+        <li><strong>Vulnerability detection</strong> - CVE scans on installed packages</li>
+      </ul>
+    </section>
+  </main>
+</Layout>

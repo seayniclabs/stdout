@@ -1,0 +1,71 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+
+const meta = {
+  title: 'Wireshark / tshark Integration - StdOut',
+  description: 'Connect StdOut to Wireshark/tshark for deep packet analysis and network traffic inspection.',
+  canonical: 'https://stdout.app/app/integrations/wireshark'
+};
+---
+
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Wireshark / tshark Integration</h1>
+      <p>Deep packet analysis and network traffic inspection.</p>
+      <span class="status-badge" id="wireshark-status">Not Configured</span>
+    </header>
+
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form id="wireshark-config-form">
+        <div class="form-group">
+          <label for="capture-interface">Capture Interface</label>
+          <input type="text" id="capture-interface" name="captureInterface" placeholder="eth0" />
+          <p class="help-text">Network interface to monitor (e.g., eth0, wlan0)</p>
+        </div>
+
+        <div class="form-group">
+          <label for="capture-filter">Capture Filter (BPF)</label>
+          <input type="text" id="capture-filter" name="captureFilter" placeholder="port 443 or port 80" />
+          <p class="help-text">Berkeley Packet Filter expression to limit capture scope</p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="enableAI" checked />
+            Use AI to detect anomalous traffic patterns
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li>
+          <strong>Install tshark (Wireshark CLI)</strong>
+          <pre><code>sudo apt install tshark
+sudo usermod -a -G wireshark stdout</code></pre>
+        </li>
+        <li>
+          <strong>Grant capture permissions</strong>
+          <pre><code>sudo setcap cap_net_raw+eip /usr/bin/tshark</code></pre>
+        </li>
+        <li>
+          <strong>Configure capture interface and filter</strong>
+          <p>Specify which interface to monitor and optionally limit traffic with BPF filters.</p>
+        </li>
+      </ol>
+
+      <h3>What Gets Captured</h3>
+      <ul>
+        <li><strong>Protocol analysis:</strong> HTTP, DNS, TLS, SMB, etc.</li>
+        <li><strong>Packet metadata:</strong> Source/dest IP, ports, packet size, timestamps</li>
+        <li><strong>Payload inspection:</strong> Extract cleartext protocols for analysis</li>
+      </ul>
+    </section>
+  </main>
+</Layout>

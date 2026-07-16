@@ -1,0 +1,42 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+const meta = { title: 'ntopng Integration - StdOut', description: 'Connect StdOut to ntopng for network traffic analysis and bandwidth monitoring.', canonical: 'https://stdout.app/app/integrations/ntopng' };
+---
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>ntopng Integration</h1>
+      <p>Network traffic analyzer with real-time flow visibility.</p>
+      <span class="status-badge">Not Configured</span>
+    </header>
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form>
+        <div class="form-group">
+          <label for="ntopng-url">ntopng URL</label>
+          <input type="text" id="ntopng-url" value="http://localhost:3000" />
+        </div>
+        <div class="form-group">
+          <label for="ntopng-api-key">API Key</label>
+          <input type="password" id="ntopng-api-key" placeholder="ntopng API key" />
+        </div>
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li><strong>Install ntopng</strong><pre><code>sudo apt install ntopng
+sudo systemctl start ntopng</code></pre></li>
+        <li><strong>Generate API key</strong><p>Settings → Preferences → Generate API key</p></li>
+        <li><strong>Configure StdOut to pull flows</strong><p>StdOut queries ntopng REST API for top talkers and bandwidth usage.</p></li>
+      </ol>
+      <h3>What Gets Monitored</h3>
+      <ul>
+        <li><strong>Bandwidth usage</strong> - Top talkers by bytes sent/received</li>
+        <li><strong>Flow metadata</strong> - Active connections, protocols, ports</li>
+        <li><strong>Anomaly detection</strong> - Sudden traffic spikes, unusual ports</li>
+      </ul>
+    </section>
+  </main>
+</Layout>

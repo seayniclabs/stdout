@@ -1,0 +1,83 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+
+const meta = {
+  title: 'Zeek Integration - StdOut',
+  description: 'Connect StdOut to Zeek network security monitor for protocol analysis and connection metadata logging.',
+  canonical: 'https://stdout.app/app/integrations/zeek'
+};
+---
+
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Zeek (Bro) Integration</h1>
+      <p>Network security monitoring with protocol analysis and metadata logging.</p>
+      <span class="status-badge" id="zeek-status">Not Configured</span>
+    </header>
+
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form id="zeek-config-form">
+        <div class="form-group">
+          <label for="zeek-log-dir">Zeek Log Directory</label>
+          <input type="text" id="zeek-log-dir" name="zeekLogDir" value="/usr/local/zeek/logs/current" placeholder="/usr/local/zeek/logs/current" />
+          <p class="help-text">Path to Zeek's current log directory</p>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="monitorConn" checked />
+            Monitor connection logs (conn.log)
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="monitorDNS" checked />
+            Monitor DNS queries (dns.log)
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="monitorHTTP" checked />
+            Monitor HTTP traffic (http.log)
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li>
+          <strong>Install Zeek</strong>
+          <pre><code>sudo apt install zeek
+sudo zeekctl install
+sudo zeekctl start</code></pre>
+        </li>
+        <li>
+          <strong>Grant read access to logs</strong>
+          <pre><code>sudo usermod -a -G zeek stdout
+sudo chmod g+r /usr/local/zeek/logs/current/*.log</code></pre>
+        </li>
+        <li>
+          <strong>Configure log rotation</strong>
+          <p>Zeek rotates logs hourly by default - StdOut ingests from current/</p>
+        </li>
+      </ol>
+
+      <h3>What Gets Monitored</h3>
+      <ul>
+        <li><strong>Connection metadata:</strong> IP pairs, ports, bytes, duration (conn.log)</li>
+        <li><strong>DNS queries:</strong> All DNS lookups and responses (dns.log)</li>
+        <li><strong>HTTP requests:</strong> URLs, user agents, response codes (http.log)</li>
+        <li><strong>SSL/TLS:</strong> Certificate validation, cipher suites (ssl.log)</li>
+        <li><strong>Files transferred:</strong> File hashes, MIME types (files.log)</li>
+      </ul>
+    </section>
+  </main>
+</Layout>

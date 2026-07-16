@@ -1,0 +1,74 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+
+const meta = {
+  title: 'Prometheus Deep Integration - StdOut',
+  description: 'Enhanced Prometheus integration with custom metrics, alerting rules, and service discovery.',
+  canonical: 'https://stdout.app/app/integrations/prometheus'
+};
+---
+
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Prometheus Deep Integration</h1>
+      <p>Time-series metrics with custom alerting and service discovery.</p>
+      <span class="status-badge connected">Configured</span>
+    </header>
+
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form id="prometheus-config-form">
+        <div class="form-group">
+          <label for="prometheus-url">Prometheus URL</label>
+          <input type="text" id="prometheus-url" name="prometheusUrl" value="http://localhost:9090" placeholder="http://localhost:9090" />
+        </div>
+
+        <div class="form-group">
+          <label for="scrape-interval">Scrape Interval (seconds)</label>
+          <input type="number" id="scrape-interval" name="scrapeInterval" value="15" min="5" max="300" />
+        </div>
+
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="enableAlertManager" checked />
+            Send StdOut incidents to Prometheus AlertManager
+          </label>
+        </div>
+
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+
+    <section class="custom-metrics">
+      <h2>Custom Metrics</h2>
+      <p>StdOut exposes Prometheus-compatible metrics at <code>/metrics</code>:</p>
+      <ul>
+        <li><code>stdout_monitors_total</code> - Total active monitors</li>
+        <li><code>stdout_incidents_total</code> - Total incidents created</li>
+        <li><code>stdout_monitor_check_duration_seconds</code> - Monitor check latency histogram</li>
+        <li><code>stdout_observatory_detections_total</code> - AI anomaly detections</li>
+      </ul>
+      <pre><code># Sample query
+rate(stdout_incidents_total[5m])</code></pre>
+    </section>
+
+    <section class="integration-docs">
+      <h2>Alert Rules</h2>
+      <p>Example Prometheus alerting rules for StdOut integration:</p>
+      <pre><code>groups:
+  - name: stdout
+    rules:
+      - alert: HighIncidentRate
+        expr: rate(stdout_incidents_total[5m]) > 0.5
+        for: 10m
+        annotations:
+          summary: "High incident creation rate"
+
+      - alert: MonitorCheckSlow
+        expr: stdout_monitor_check_duration_seconds > 5
+        annotations:
+          summary: "Monitor checks taking >5s"</code></pre>
+    </section>
+  </main>
+</Layout>

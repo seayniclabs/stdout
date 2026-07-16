@@ -1,0 +1,48 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+const meta = { title: 'Falco Integration - StdOut', description: 'Connect StdOut to Falco for runtime security and container/kernel behavior monitoring.', canonical: 'https://stdout.app/app/integrations/falco' };
+---
+<Layout {meta}>
+  <main class="integration-page">
+    <header class="integration-header">
+      <h1>Falco Integration</h1>
+      <p>Runtime security for containers and kernel behavior.</p>
+      <span class="status-badge">Not Configured</span>
+    </header>
+    <section class="integration-config">
+      <h2>Configuration</h2>
+      <form>
+        <div class="form-group">
+          <label for="falco-socket">Falco gRPC Socket</label>
+          <input type="text" id="falco-socket" value="unix:///var/run/falco.sock" />
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" name="autoCreateIncidents" checked />
+            Auto-create incidents for critical Falco alerts
+          </label>
+        </div>
+        <button type="submit" class="btn-primary">Save Configuration</button>
+      </form>
+    </section>
+    <section class="integration-docs">
+      <h2>Setup Guide</h2>
+      <ol>
+        <li><strong>Install Falco</strong><pre><code>curl -s https://falco.org/repo/falcosecurity-3672BA8F.asc | sudo apt-key add -
+sudo apt install falco</code></pre></li>
+        <li><strong>Enable gRPC output</strong><pre><code># /etc/falco/falco.yaml
+grpc:
+  enabled: true
+  bind_address: "unix:///var/run/falco.sock"</code></pre></li>
+        <li><strong>Grant socket access</strong><pre><code>sudo chmod 666 /var/run/falco.sock</code></pre></li>
+      </ol>
+      <h3>What Gets Monitored</h3>
+      <ul>
+        <li><strong>Container escapes</strong> - Privileged container breakouts</li>
+        <li><strong>Suspicious processes</strong> - Shells spawned in containers, crypto miners</li>
+        <li><strong>File access</strong> - Unexpected reads/writes to sensitive paths</li>
+        <li><strong>Network activity</strong> - Outbound connections from non-networked containers</li>
+      </ul>
+    </section>
+  </main>
+</Layout>
