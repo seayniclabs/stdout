@@ -210,7 +210,7 @@ if (!session) return Astro.redirect('/app/login');
   const hostsList = document.getElementById('hostsList') as HTMLDivElement;
   const importBtn = document.getElementById('importHosts') as HTMLButtonElement;
 
-  let discoveredHosts: any[] = [];
+  let discoveredHosts: unknown[] = [];
 
   startScanBtn.addEventListener('click', async () => {
     const subnet = subnetInput.value.trim();
@@ -271,7 +271,7 @@ if (!session) return Astro.redirect('/app/login');
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       const logEntry = document.createElement('div');
       logEntry.className = 'log-entry log-error';
       logEntry.textContent = `Error: ${error.message}`;
@@ -364,7 +364,7 @@ if (!session) return Astro.redirect('/app/login');
       } else {
         alert(`Import failed: ${result.error}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       alert(`Import failed: ${error.message}`);
     } finally {
       importBtn.disabled = false;

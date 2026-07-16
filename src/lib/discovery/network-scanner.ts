@@ -59,8 +59,8 @@ export async function scanARP(): Promise<ARPEntry[]> {
         hosts.push({ ip, mac, interface: iface });
       }
     }
-  } catch (error: any) {
-    console.error('[network-scanner] ARP scan failed:', error.message);
+  } catch (error: unknown) {
+    console.error('[network-scanner] ARP scan failed:', error instanceof Error ? error.message : String(error));
   }
 
   return hosts;

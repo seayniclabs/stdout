@@ -101,7 +101,7 @@ export async function startupObservatory(): Promise<StartupResult> {
     };
   } catch (error) {
     const duration = Date.now() - startTime;
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error);
     log.push('');
     log.push(`❌ Startup FAILED: ${msg}`);
     issues.push(msg);

@@ -49,8 +49,8 @@ export async function lookupMACVendor(macAddress: string): Promise<VendorInfo | 
     ouiCache.set(oui, vendorInfo);
 
     return vendorInfo;
-  } catch (error: any) {
-    console.error('[mac-vendor] Lookup failed:', error.message);
+  } catch (error: unknown) {
+    console.error('[mac-vendor] Lookup failed:', error instanceof Error ? error.message : String(error));
     return null;
   }
 }

@@ -105,8 +105,8 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
       completionTokens: result.completionTokens,
       createdAt: new Date(),
     }).run();
-  } catch (err: any) {
-    return { ...base, skipped: `diagnosis failed: ${err?.message || 'unknown'}` };
+  } catch (error: unknown) {
+    return { ...base, skipped: `diagnosis failed: ${error instanceof Error ? error.message : String(error) || 'unknown'}` };
   }
 
   const out: ReflexOutcome = { ...base, diagnosed: true, toolUsed, skipped: '' };
@@ -129,7 +129,7 @@ export async function reflexForIncident(userId: string, incidentId: string): Pro
       body: JSON.stringify({ command: cmd }), signal: AbortSignal.timeout(120000),
     });
     if (!res.ok) throw new Error(`Windlass /exec HTTP ${res.status}`);
-    const data: any = await res.json();
+    const data: unknown = await res.json();
     return { exitCode: data.exitCode ?? 1, stdout: data.stdout ?? '', stderr: data.stderr ?? '' };
   };
 
@@ -179,8 +179,8 @@ export async function reflexForIncidents(userId: string, incidentIds: string[]):
   for (const id of incidentIds) {
     try {
       results.push(await reflexForIncident(userId, id));
-    } catch (err: any) {
-      results.push({ incidentId: id, diagnosed: false, applied: 0, parked: 0, skipped: `reflex error: ${err?.message || 'unknown'}` });
+    } catch (error: unknown) {
+      results.push({ incidentId: id, diagnosed: false, applied: 0, parked: 0, skipped: `reflex error: ${error instanceof Error ? error.message : String(error) || 'unknown'}` });
     }
   }
   return results;

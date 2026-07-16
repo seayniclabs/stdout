@@ -139,9 +139,9 @@ async function checkHTTP(url: string, timeoutMs: number, expectedStatus: number)
         }
       });
 
-      req.on('error', (err) => {
+      req.on('error', (error) => {
         clearTimeout(timeout);
-        resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+        resolve({ status: 'down', responseTimeMs: Date.now() - start, error: error instanceof Error ? error.message : String(error) });
       });
 
       req.on('timeout', () => {
@@ -149,9 +149,9 @@ async function checkHTTP(url: string, timeoutMs: number, expectedStatus: number)
         clearTimeout(timeout);
         resolve({ status: 'down', responseTimeMs: timeoutMs, error: 'Timeout' });
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
       clearTimeout(timeout);
-      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: error instanceof Error ? error.message : String(error) });
     }
   });
 }
@@ -177,10 +177,10 @@ async function checkTCP(target: string, timeoutMs: number): Promise<CheckResult>
       resolve({ status, responseTimeMs: elapsed });
     });
 
-    socket.on('error', (err) => {
+    socket.on('error', (error) => {
       clearTimeout(timeout);
       socket.destroy();
-      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: error instanceof Error ? error.message : String(error) });
     });
   });
 }
@@ -299,15 +299,15 @@ async function checkOutputFreshness(
             } else {
               resolve({ status: 'healthy', responseTimeMs: elapsed });
             }
-          } catch (err: any) {
-            resolve({ status: 'degraded', responseTimeMs: elapsed, error: `JSON parse error: ${err.message}` });
+          } catch (error: unknown) {
+            resolve({ status: 'degraded', responseTimeMs: elapsed, error: `JSON parse error: ${error instanceof Error ? error.message : String(error)}` });
           }
         });
       });
 
-      req.on('error', (err) => {
+      req.on('error', (error) => {
         clearTimeout(timeout);
-        resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+        resolve({ status: 'down', responseTimeMs: Date.now() - start, error: error instanceof Error ? error.message : String(error) });
       });
 
       req.on('timeout', () => {
@@ -315,9 +315,9 @@ async function checkOutputFreshness(
         clearTimeout(timeout);
         resolve({ status: 'down', responseTimeMs: timeoutMs, error: 'Timeout' });
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
       clearTimeout(timeout);
-      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: err.message });
+      resolve({ status: 'down', responseTimeMs: Date.now() - start, error: error instanceof Error ? error.message : String(error) });
     }
   });
 }
@@ -326,7 +326,7 @@ async function checkOutputFreshness(
  * Simple JSONPath extractor — handles basic paths like "$[0].field" or "$.data[0].timestamp".
  * For production use, consider jsonpath-plus for full spec support.
  */
-function extractJSONPath(data: any, path: string): any {
+function extractJSONPath(data: unknown, path: string): unknown {
   // Remove leading "$" if present
   const normalized = path.startsWith('$') ? path.slice(1) : path;
 
@@ -391,23 +391,22 @@ export function stopAllMonitors() {
 }
 
 export function startAllMonitors() {
-  // Import dynamically to avoid circular dependency issues
-  const users = getDb().select({ id: schema.users.id })
-    .from(schema.users).all();
+  // Fixed N+1: Load all active monitors in single query instead of per-user
+  const db = getDb();
+  const monitors = db.select().from(schema.monitors)
+    .where(
+      and(
+        eq(schema.monitors.paused, false),
+        eq(schema.monitors.maintenance, false)
+      )
+    )
+    .all();
 
-  for (const user of users) {
-    const db = getDb();
-    const monitors = db.select().from(schema.monitors)
-      .where(eq(schema.monitors.userId, user.id))
-      .all();
-
-    for (const monitor of monitors) {
-      if (!monitor.paused && !monitor.maintenance) {
-        startMonitor(user.id, monitor.id);
-      }
-    }
+  for (const monitor of monitors) {
+    startMonitor(monitor.userId, monitor.id);
   }
-  console.log('[HUD] Auto-started all active monitors');
+
+  console.log(`[HUD] Auto-started ${monitors.length} active monitors`);
 }
 
 async function runCheck(userId: string, monitorId: string) {

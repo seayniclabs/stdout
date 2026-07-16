@@ -20,7 +20,7 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response(JSON.stringify({ suggestions: [] }), { headers: { 'Content-Type': 'application/json' } });
   }
 
-  let scanData: any;
+  let scanData: unknown;
   try { scanData = JSON.parse(lastImport.rawJson); } catch {
     return new Response(JSON.stringify({ suggestions: [] }), { headers: { 'Content-Type': 'application/json' } });
   }

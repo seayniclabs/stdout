@@ -226,7 +226,7 @@ async function sendAnomalyToWindlass(
       action: String(data.action || 'none'),
       detail: data,
     };
-  } catch (err: any) {
+  } catch (error: unknown) {
     // Fallback: if Windlass is an older build without /anomaly.json, restart a matched service.
     if (serviceId && anomaly.kind === 'service' && anomaly.severity !== 'clear') {
       try {
@@ -236,12 +236,12 @@ async function sendAnomalyToWindlass(
           action: 'restart',
           detail: { fallback: 'commands.json', serviceId },
         };
-      } catch (fallbackErr: any) {
+      } catch (fallbackError: unknown) {
         return {
           ok: false,
           action: 'none',
           detail: null,
-          error: fallbackErr?.message || err?.message || 'Windlass unreachable',
+          error: fallbackErr?.message || error instanceof Error ? error.message : String(error) || 'Windlass unreachable',
         };
       }
     }
@@ -249,7 +249,7 @@ async function sendAnomalyToWindlass(
       ok: false,
       action: 'none',
       detail: null,
-      error: err?.message || 'Windlass unreachable',
+      error: error instanceof Error ? error.message : String(error) || 'Windlass unreachable',
     };
   }
 }

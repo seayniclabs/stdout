@@ -134,8 +134,8 @@ schedules: []
           });
           console.log('[install-windlass] Removed existing container');
         }
-      } catch (err) {
-        console.log('[install-windlass] No existing container found (or error checking):', err);
+      } catch (error) {
+        console.log('[install-windlass] No existing container found (or error checking):', error);
       }
 
       // Start the windlass service in the same compose project
@@ -186,8 +186,8 @@ schedules: []
             healthy = true;
             break;
           }
-        } catch (err) {
-          console.log(`[install-windlass] Health check attempt ${i + 1}/${maxAttempts} failed:`, err);
+        } catch (error) {
+          console.log(`[install-windlass] Health check attempt ${i + 1}/${maxAttempts} failed:`, error);
         }
 
         // Wait 2 seconds before next attempt
@@ -230,12 +230,12 @@ schedules: []
       });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[install-windlass] Unexpected error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Unexpected error during installation',
-      message: error.message || String(error),
+      message: error instanceof Error ? error.message : String(error) || String(error),
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

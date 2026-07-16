@@ -132,7 +132,7 @@ export async function applyRemediation(
       stdout: res.stdout?.slice(0, 8192),
       stderr: res.stderr?.slice(0, 8192),
     };
-  } catch (err: any) {
-    return { applied: false, decision: cls.decision, reason: cls.reason, error: err.message };
+  } catch (error: unknown) {
+    return { applied: false, decision: cls.decision, reason: cls.reason, error: error instanceof Error ? error.message : String(error) };
   }
 }

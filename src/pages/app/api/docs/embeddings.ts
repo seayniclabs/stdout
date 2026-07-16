@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[docs/embeddings] Error:', error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to process request',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Failed to process request',
       }),
       {
         status: 500,

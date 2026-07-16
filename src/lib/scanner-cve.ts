@@ -56,7 +56,7 @@ async function queryNvd(imageName: string): Promise<CveResult[]> {
         severity,
         score,
         published: cve.published,
-        description: (cve.descriptions ?? []).find((d: any) => d.lang === 'en')?.value?.slice(0, 120) ?? '',
+        description: (cve.descriptions ?? []).find((d: Record<string, unknown>) => d.lang === 'en')?.value?.slice(0, 120) ?? '',
       });
     }
     return results;

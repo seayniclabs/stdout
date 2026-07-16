@@ -137,9 +137,9 @@ export const POST: APIRoute = async ({ locals, request, url }) => {
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (err: any) {
+    } catch (error: unknown) {
       return new Response(JSON.stringify({
-        error: err?.message || 'Loki query failed',
+        error: error instanceof Error ? error.message : String(error) || 'Loki query failed',
       }), {
         status: 502,
         headers: { 'Content-Type': 'application/json' },
@@ -181,9 +181,9 @@ export const POST: APIRoute = async ({ locals, request, url }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    console.error('[loki/ingest]', err);
-    const msg = err?.message || 'Ingest failed';
+  } catch (error: unknown) {
+    console.error('[loki/ingest]', error);
+    const msg = error instanceof Error ? error.message : String(error) || 'Ingest failed';
     const status = /No Loki data source/i.test(msg) ? 400
       : /Loki \d{3}/.test(msg) || /timed out/i.test(msg) ? 502
         : 500;

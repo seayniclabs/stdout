@@ -280,9 +280,9 @@ setInterval(async () => {
         if (now - lastSync >= intervalMs) {
           syncFromEndpoint(u.id).catch(() => {});
         }
-      } catch {}
+      } catch (error: unknown) { /* Intentionally ignored */ }
     }
-  } catch {}
+  } catch (error: unknown) { /* Intentionally ignored */ }
 }, 60 * 1000);
 
 // Weekly digest timer — runs every Monday at 8 AM CT (14:00 UTC)
@@ -650,7 +650,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   });
 });
 
-export function validateCsrf(formToken: string | null, cookies: any): boolean {
+export function validateCsrf(formToken: string | null, cookies: Record<string, string>): boolean {
   const cookieToken = cookies.get(CSRF_COOKIE)?.value;
   if (!cookieToken || !formToken) return false;
   if (cookieToken.length !== formToken.length) return false;

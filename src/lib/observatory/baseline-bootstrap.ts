@@ -97,8 +97,8 @@ export async function establishProvisionalBaselines(userId: string): Promise<Bas
         `);
         baselinesWritten++;
         wroteForStack = true;
-      } catch (err: any) {
-        log.push(`  ⚠ ${stack.name}/${m.metric}: ${err.message}`);
+      } catch (error: unknown) {
+        log.push(`  ⚠ ${stack.name}/${m.metric}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     if (wroteForStack) {

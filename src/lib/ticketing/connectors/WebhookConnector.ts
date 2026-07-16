@@ -68,7 +68,7 @@ export class WebhookConnector extends TicketingConnector {
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Connection failed',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Connection failed',
       };
     }
   }
@@ -102,7 +102,7 @@ export class WebhookConnector extends TicketingConnector {
       };
     } catch (error) {
       throw new Error(
-        `Failed to create ticket via webhook: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to create ticket via webhook: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }
@@ -126,7 +126,7 @@ export class WebhookConnector extends TicketingConnector {
       }
     } catch (error) {
       throw new Error(
-        `Failed to update ticket via webhook: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to update ticket via webhook: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }
@@ -194,7 +194,7 @@ export class WebhookConnector extends TicketingConnector {
     };
   }
 
-  private async postWebhook(payload: any): Promise<Response> {
+  private async postWebhook(payload: Record<string, unknown>): Promise<Response> {
     const body = JSON.stringify(payload);
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -220,7 +220,7 @@ export class WebhookConnector extends TicketingConnector {
       });
     } catch (error) {
       throw new Error(
-        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Network error: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }

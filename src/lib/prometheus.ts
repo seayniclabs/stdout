@@ -61,8 +61,8 @@ function requestJSON(url: URL, token: string, timeoutMs = 10000): Promise<Promet
             return;
           }
           resolve(JSON.parse(body));
-        } catch (err) {
-          reject(err);
+        } catch (error) {
+          reject(error);
         }
       });
     });
@@ -154,8 +154,8 @@ export async function testPrometheusConnection(config: PrometheusConfig): Promis
     const probe = await requestJSON(probeUrl, config.token, 5000);
     if (probe.status === 'success') return { ok: true };
     return { ok: false, error: probe.error || 'Prometheus query failed' };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 

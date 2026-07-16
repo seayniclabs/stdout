@@ -101,7 +101,7 @@ export async function fetchAddons(cachedJson?: string | null, cachedAt?: Date | 
     if (age < CACHE_TTL_MS) {
       try {
         return JSON.parse(cachedJson) as Addon[];
-      } catch {}
+      } catch (error: unknown) { /* Intentionally ignored */ }
     }
   }
 

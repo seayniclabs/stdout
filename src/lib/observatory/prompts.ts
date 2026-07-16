@@ -403,7 +403,7 @@ export function formatAgentOutput(
   agentType: 'watcher' | 'analyst',
   rawOutput: string
 ): {
-  parsed: any;
+  parsed: Record<string, unknown>;
   displaySummary: string;
 } {
   try {
@@ -432,7 +432,7 @@ export function formatAgentOutput(
   } catch (error) {
     return {
       parsed: null,
-      displaySummary: `Error parsing agent output: ${error instanceof Error ? error.message : String(error)}`
+      displaySummary: `Error parsing agent output: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)}`
     };
   }
 }

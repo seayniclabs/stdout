@@ -24,8 +24,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.text();
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: `Failed to read request body: ${err.message}` }), {
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: `Failed to read request body: ${error instanceof Error ? error.message : String(error)}` }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -340,13 +340,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       for (const monitor of newMonitors) {
         try {
           startMonitor(userId, monitor.id);
-        } catch (err) {
+        } catch (error) {
           // Ignore starting failures
         }
       }
     }
-  } catch (err) {
-    console.error('[discovery/ingest] Monitor sync failed:', err);
+  } catch (error) {
+    console.error('[discovery/ingest] Monitor sync failed:', error);
   }
 
   // Emit scanner.complete event for overall discovery pipeline integration
@@ -357,8 +357,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
       hostsFound: validation.hosts.length,
       subnet: 'Nmap Ingestion'
     });
-  } catch (err) {
-    console.error('[discovery/ingest] Failed to emit scanner.complete:', err);
+  } catch (error) {
+    console.error('[discovery/ingest] Failed to emit scanner.complete:', error);
   }
 
   return new Response(JSON.stringify({

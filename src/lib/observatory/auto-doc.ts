@@ -99,10 +99,10 @@ export async function maybeAutoDocument(userId: string, incidentId: string): Pro
     `);
 
     return { documented: true, reason: 'novel incident documented', patternId: id, patternName: scrubbed.title };
-  } catch (err: any) {
+  } catch (error: unknown) {
     // Never let auto-doc break the resolution flow.
-    console.warn('[auto-doc] skipped:', err?.message || err);
-    return { documented: false, reason: `error: ${err?.message || 'unknown'}` };
+    console.warn('[auto-doc] skipped:', error instanceof Error ? error.message : String(error) || error);
+    return { documented: false, reason: `error: ${error instanceof Error ? error.message : String(error) || 'unknown'}` };
   }
 }
 

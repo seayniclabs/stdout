@@ -35,7 +35,7 @@ export interface SetupState {
     name: string;
     completed: boolean;
     completedAt?: Date;
-    data?: any;
+    data?: unknown;
   }>;
 }
 
@@ -113,7 +113,7 @@ export async function getSetupProgress(): Promise<SetupState> {
 /**
  * Complete a setup step
  */
-export async function completeStep(step: SetupStep, data?: any): Promise<void> {
+export async function completeStep(step: SetupStep, data?: unknown): Promise<void> {
   const db = getDb();
   const now = new Date();
 

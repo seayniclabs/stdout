@@ -36,7 +36,7 @@ export interface ResourceSnapshot {
 // --- Query Cache ---
 
 interface CacheEntry {
-  data: any;
+  data: unknown;
   expiresAt: number;
 }
 
@@ -53,7 +53,7 @@ function getCached<T>(key: string): T | null {
   return entry.data as T;
 }
 
-function setCache(key: string, data: any): void {
+function setCache(key: string, data: unknown): void {
   // Evict expired entries if cache is large
   if (queryCache.size > 200) {
     const now = Date.now();

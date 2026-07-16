@@ -147,7 +147,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     const rawAnalytics = status.service_analytics?.[svc.name] || null;
     const samples = rawAnalytics?.samples || 0;
     const runningSamples = Object.values(rawAnalytics?.hourly || {})
-      .reduce((sum, bucket: any) => sum + (bucket.running || 0), 0);
+      .reduce((sum, bucket: unknown) => sum + (bucket.running || 0), 0);
     const utilizationPct = samples > 0 ? Math.round((runningSamples / samples) * 100) : null;
     const idleMinutesTotal = rawAnalytics?.idle_minutes_total || 0;
     const intervalSec = status.summary.scheduler_interval_sec || 300;
@@ -433,13 +433,13 @@ export async function getN8nWorkflowWindows(_userId: string): Promise<N8nWorkflo
     });
     if (!res.ok) return [];
 
-    const payload = await res.json() as { data?: any[] };
+    const payload = await res.json() as { data?: unknown[] };
     const workflows = payload?.data || [];
 
     const now = new Date();
     return workflows
-      .filter((wf: any) => wf?.active)
-      .map((wf: any) => {
+      .filter((wf: unknown) => wf?.active)
+      .map((wf: unknown) => {
         const cronNode = (wf?.nodes || []).find((node: any) =>
           node?.type === 'n8n-nodes-base.cron' || node?.type?.includes('.cron'),
         );
@@ -537,7 +537,7 @@ export function logEvent(
   }).run();
 }
 
-export function getRecentEvents(userId: string, limit = 50): any[] {
+export function getRecentEvents(userId: string, limit = 50): unknown[] {
   const db = getDb();
   return db.select().from(schema.windlassEvents)
     .where(eq(schema.windlassEvents.userId, userId))
@@ -546,7 +546,7 @@ export function getRecentEvents(userId: string, limit = 50): any[] {
     .all();
 }
 
-export function getServiceEvents(userId: string, serviceId: string, limit = 20): any[] {
+export function getServiceEvents(userId: string, serviceId: string, limit = 20): unknown[] {
   const db = getDb();
   return db.select().from(schema.windlassEvents)
     .where(and(

@@ -70,10 +70,10 @@ export const POST: APIRoute = async ({ locals, params, request }) => {
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return new Response(JSON.stringify({
       success: false,
-      error: error.message,
+      error: error instanceof Error ? error.message : String(error),
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
@@ -131,9 +131,9 @@ async function runPortScan(params: any): Promise<string> {
   try {
     const { stdout } = await execAsync(command, { timeout: 60000 });
     return stdout;
-  } catch (error: any) {
+  } catch (error: unknown) {
     // nmap might fail without root permissions for SYN scan
-    if (scanType === 'syn' && error.message.includes('permission')) {
+    if (scanType === 'syn' && error instanceof Error ? error.message : String(error).includes('permission')) {
       // Retry with connect scan
       const fallbackCommand = `nmap -sT -p ${ports} ${target} 2>&1`;
       const { stdout } = await execAsync(fallbackCommand, { timeout: 60000 });

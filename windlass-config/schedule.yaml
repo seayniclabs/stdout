@@ -1,0 +1,30 @@
+# Windlass - Container lifecycle manager for Talos Sandbox
+# Manages automatic restarts and health monitoring
+
+stdout:
+  restart_policy: always
+  health_check:
+    interval: 300
+    timeout: 10
+    retries: 3
+
+sentinel:
+  restart_policy: always
+  health_check:
+    interval: 300
+    timeout: 10
+    retries: 3
+
+redis:
+  restart_policy: always
+  health_check:
+    interval: 300
+    timeout: 10
+    retries: 3
+
+helmsman-postgres:
+  restart_policy: always
+  health_check:
+    interval: 300
+    timeout: 10
+    retries: 3

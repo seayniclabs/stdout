@@ -19,7 +19,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const results: any[] = [];
+  const results: unknown[] = [];
 
   // Search incidents
   try {

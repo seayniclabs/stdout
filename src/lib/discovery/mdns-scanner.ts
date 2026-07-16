@@ -117,13 +117,13 @@ export async function scanMDNS(timeoutSeconds: number = 10): Promise<MDNSService
               }
             }
           }
-        } catch (err) {
+        } catch (error) {
           // Service type not found, continue
         }
       }
     }
-  } catch (error: any) {
-    console.error('[mdns-scanner] Error scanning mDNS:', error.message);
+  } catch (error: unknown) {
+    console.error('[mdns-scanner] Error scanning mDNS:', error instanceof Error ? error.message : String(error));
   }
 
   return services;

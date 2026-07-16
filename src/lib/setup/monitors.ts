@@ -152,8 +152,8 @@ export async function configureMonitors(
           monitorsCreated++;
           output.push(`✓ Created: ${stack.name} - ${template.name}`);
 
-        } catch (err: any) {
-          warnings.push(`Failed to create monitor for ${stack.name} - ${template.name}: ${err.message}`);
+        } catch (error: unknown) {
+          warnings.push(`Failed to create monitor for ${stack.name} - ${template.name}: ${error instanceof Error ? error.message : String(error)}`);
         }
       }
 
@@ -171,8 +171,8 @@ export async function configureMonitors(
       errors
     };
 
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,

@@ -71,7 +71,7 @@ export async function scanSDP(timeoutSeconds: number = 10): Promise<SSDPDevice[]
         try {
           const deviceInfo = await fetchDeviceDescription(device.location);
           Object.assign(device, deviceInfo);
-        } catch (err) {
+        } catch (error) {
           // Failed to fetch description, keep basic info
         }
       }
@@ -79,8 +79,8 @@ export async function scanSDP(timeoutSeconds: number = 10): Promise<SSDPDevice[]
       devices.push(device);
     });
 
-    socket.on('error', (err) => {
-      console.error('[ssdp-scanner] Socket error:', err.message);
+    socket.on('error', (error) => {
+      console.error('[ssdp-scanner] Socket error:', error instanceof Error ? error.message : String(error));
       socket.close();
       resolve(devices);
     });
@@ -98,9 +98,9 @@ export async function scanSDP(timeoutSeconds: number = 10): Promise<SSDPDevice[]
           '',
         ].join('\r\n');
 
-        socket.send(message, 1900, '239.255.255.250', (err) => {
-          if (err) {
-            console.error('[ssdp-scanner] Failed to send M-SEARCH:', err.message);
+        socket.send(message, 1900, '239.255.255.250', (error) => {
+          if (error) {
+            console.error('[ssdp-scanner] Failed to send M-SEARCH:', error instanceof Error ? error.message : String(error));
           }
 
           completedSearches++;
@@ -167,7 +167,7 @@ async function fetchDeviceDescription(location: string): Promise<Partial<SSDPDev
       modelNumber,
       serialNumber,
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     // Failed to fetch or parse, return empty
     return {};
   }

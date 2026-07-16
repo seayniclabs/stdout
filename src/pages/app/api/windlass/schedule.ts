@@ -62,8 +62,8 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ ok: true, ...data }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: `Windlass unreachable: ${err.message}` }), {
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: `Windlass unreachable: ${error instanceof Error ? error.message : String(error)}` }), {
       status: 502,
       headers: { 'Content-Type': 'application/json' },
     });

@@ -146,8 +146,8 @@ export async function runDatabaseInit(
       warnings,
       errors
     };
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,
@@ -220,8 +220,8 @@ export async function runScannerSetup(
       warnings,
       errors
     };
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,
@@ -271,8 +271,8 @@ export async function runWindlassInstall(
       ], { encoding: 'utf-8', timeout: 120000 });
 
       output.push('✓ Windlass image pulled');
-    } catch (error: any) {
-      warnings.push(`Image pull warning: ${error.message}`);
+    } catch (error: unknown) {
+      warnings.push(`Image pull warning: ${error instanceof Error ? error.message : String(error)}`);
     }
 
     onProgress(60, 'Checking for existing Windlass container...');
@@ -318,8 +318,8 @@ export async function runWindlassInstall(
       warnings,
       errors
     };
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,
@@ -379,8 +379,8 @@ export async function runObservatorySetup(
     if (!modelStatus.watcher) {
       onProgress(70, 'Downloading Watcher model (Llama 3.2 3B)...');
       // Download in background, don't block
-      pullModel('llama3.2:3b').catch(err => {
-        warnings.push(`Watcher model download failed: ${err.message}`);
+      pullModel('llama3.2:3b').catch(error => {
+        warnings.push(`Watcher model download failed: ${error instanceof Error ? error.message : String(error)}`);
       });
       warnings.push('Watcher model downloading in background');
     }
@@ -388,8 +388,8 @@ export async function runObservatorySetup(
     if (!modelStatus.analyst) {
       warnings.push('Analyst model will download in background (large, ~9GB)');
       // Download in background
-      pullModel('qwen2.5:14b').catch(err => {
-        warnings.push(`Analyst model download failed: ${err.message}`);
+      pullModel('qwen2.5:14b').catch(error => {
+        warnings.push(`Analyst model download failed: ${error instanceof Error ? error.message : String(error)}`);
       });
     }
 
@@ -404,8 +404,8 @@ export async function runObservatorySetup(
       warnings,
       errors
     };
-  } catch (error: any) {
-    warnings.push(error.message);
+  } catch (error: unknown) {
+    warnings.push(error instanceof Error ? error.message : String(error));
     return {
       success: true, // Not fatal
       duration: Date.now() - startTime,
@@ -437,8 +437,8 @@ export async function runDataSourceDiscovery(
 
     return result;
 
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,
@@ -471,8 +471,8 @@ export async function runMonitorConfiguration(
 
     return result;
 
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,
@@ -542,8 +542,8 @@ export async function runHealthCheck(
       warnings,
       errors
     };
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,

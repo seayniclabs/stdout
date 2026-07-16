@@ -66,8 +66,8 @@ async function arpTableHosts(): Promise<Array<{ ip: string; hostname?: string }>
         hosts.push({ ip });
       }
     }
-  } catch (err: any) {
-    console.error('[initial-discovery] ARP table read failed:', err.message);
+  } catch (error: unknown) {
+    console.error('[initial-discovery] ARP table read failed:', error instanceof Error ? error.message : String(error));
   }
   return hosts;
 }
@@ -85,8 +85,8 @@ async function pingSweep(subnet: string): Promise<Array<{ ip: string; hostname?:
         hosts.push({ ip, hostname });
       }
     }
-  } catch (err: any) {
-    console.error('[initial-discovery] ping sweep failed for', subnet, err.message);
+  } catch (error: unknown) {
+    console.error('[initial-discovery] ping sweep failed for', subnet, error instanceof Error ? error.message : String(error));
   }
   return hosts;
 }
@@ -206,13 +206,13 @@ export async function runInitialDiscovery(userId: string): Promise<number> {
 
     // ── DEEP TIER: rich service/port enumeration in the BACKGROUND so we're never in the way. ──
     // Fire-and-forget; does not block the caller or the UI. Detail fills in over time.
-    runDeepScan(userId, Array.from(seenIps)).catch((err) =>
-      console.error('[initial-discovery] deep scan error:', err.message)
+    runDeepScan(userId, Array.from(seenIps)).catch((error) =>
+      console.error('[initial-discovery] deep scan error:', error instanceof Error ? error.message : String(error))
     );
 
     return total;
-  } catch (err: any) {
-    console.error('[initial-discovery] error:', err.message);
+  } catch (error: unknown) {
+    console.error('[initial-discovery] error:', error instanceof Error ? error.message : String(error));
     await setState(STATE_PROGRESS, 'error');
     return 0;
   }

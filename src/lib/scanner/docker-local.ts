@@ -97,8 +97,8 @@ export async function scanLocalDocker(): Promise<ScanResult> {
       containers,
       host,
     };
-  } catch (error: any) {
-    console.error('[docker-local-scanner] scan failed:', error.message);
-    throw new Error(`Docker scan failed: ${error.message}`);
+  } catch (error: unknown) {
+    console.error('[docker-local-scanner] scan failed:', error instanceof Error ? error.message : String(error));
+    throw new Error(`Docker scan failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }

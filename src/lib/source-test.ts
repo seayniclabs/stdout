@@ -47,9 +47,9 @@ function httpGet(
       });
     });
 
-    req.on('error', (err) => {
+    req.on('error', (error) => {
       clearTimeout(timer);
-      reject(err);
+      reject(error);
     });
   });
 }
@@ -60,8 +60,8 @@ export async function testTrivyConnection(config: TestConfig): Promise<TestResul
     const { status } = await httpGet(`${config.url}/healthz`);
     if (status === 200) return { ok: true };
     return { ok: false, error: `Trivy returned HTTP ${status}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 
@@ -80,8 +80,8 @@ export async function testUptimeKumaConnection(config: TestConfig): Promise<Test
     const { status } = await httpGet(config.url);
     if (status === 200 || status === 302 || status === 301) return { ok: true };
     return { ok: false, error: `Uptime Kuma returned HTTP ${status}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 
@@ -95,8 +95,8 @@ export async function testLokiConnection(config: TestConfig): Promise<TestResult
     if (status === 200 && body.toLowerCase().includes('ready')) return { ok: true };
     if (status === 200) return { ok: true }; // Some Loki versions just return 200
     return { ok: false, error: `Loki returned HTTP ${status}: ${body.slice(0, 100)}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 
@@ -127,8 +127,8 @@ export async function testGraylogConnection(config: TestConfig): Promise<TestRes
     }
     if (status === 401) return { ok: false, error: 'Authentication failed — check username/password' };
     return { ok: false, error: `Graylog returned HTTP ${status}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 
@@ -143,8 +143,8 @@ export async function testCrowdSecConnection(config: TestConfig): Promise<TestRe
     if (status === 200) return { ok: true };
     if (status === 403) return { ok: false, error: 'Authentication failed — check API key' };
     return { ok: false, error: `CrowdSec returned HTTP ${status}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 
@@ -162,8 +162,8 @@ export async function testPiholeConnection(config: TestConfig): Promise<TestResu
       }
     }
     return { ok: false, error: `Pi-hole returned HTTP ${status}` };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Connection failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 

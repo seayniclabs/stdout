@@ -51,7 +51,7 @@ export async function initializeDegradationMode(): Promise<DegradationModeStatus
     }
   } catch (error) {
     degradationModeEnabled = true;
-    degradationReason = `Failed to check Ollama availability: ${error instanceof Error ? error.message : 'Unknown error'}`;
+    degradationReason = `Failed to check Ollama availability: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`;
     console.error('[Observatory]', degradationReason);
   } finally {
     ollamaCheckComplete = true;

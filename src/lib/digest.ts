@@ -214,23 +214,32 @@ export async function sendWeeklyDigests(): Promise<number> {
   }
 
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
-  const allUsers = getDb().select().from(schema.users).all();
+  const db = getDb();
+
+  // Fixed N+1: Load all users and their email preferences in single queries
+  const allUsers = db.select().from(schema.users).all();
+  const allNotifs = db.select().from(schema.notificationPreferences)
+    .where(and(
+      eq(schema.notificationPreferences.enabled, true),
+      eq(schema.notificationPreferences.channel, 'email')
+    ))
+    .all();
+
+  const notifsByUser = new Map<string, typeof allNotifs>();
+  for (const notif of allNotifs) {
+    if (!notifsByUser.has(notif.userId)) {
+      notifsByUser.set(notif.userId, []);
+    }
+    notifsByUser.get(notif.userId)!.push(notif);
+  }
+
   let sent = 0;
 
   for (const user of allUsers) {
-    // Check if user has email notifications enabled
-    const db = getDb();
-    const notifs = db.select().from(schema.notificationPreferences)
-      .where(and(
-        eq(schema.notificationPreferences.userId, user.id),
-        eq(schema.notificationPreferences.enabled, true),
-      ))
-      .all();
+    const userNotifs = notifsByUser.get(user.id);
+    if (!userNotifs || userNotifs.length === 0) continue;
 
-    const hasEmail = notifs.some(n => n.channel === 'email');
-    if (!hasEmail) continue;
-
-    const emailDest = notifs.find(n => n.channel === 'email')?.destination;
+    const emailDest = userNotifs[0]?.destination;
     if (!emailDest) continue;
 
     const data = generateDigest(user.id);

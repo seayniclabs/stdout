@@ -138,8 +138,8 @@ export async function checkLokiHealth(
     const body = json.body.trim();
     const ok = json.status === 200 && (body.length === 0 || /ready/i.test(body));
     return { ok, status: json.status, body: body.slice(0, 200) };
-  } catch (err: any) {
-    return { ok: false, error: err?.message || 'Loki health check failed' };
+  } catch (error: unknown) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) || 'Loki health check failed' };
   }
 }
 

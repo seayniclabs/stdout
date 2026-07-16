@@ -50,7 +50,7 @@ async function detectSubnets(): Promise<string[]> {
 }
 
 async function runBackgroundScan(subnets: string[]) {
-  const results: any[] = [];
+  const results: unknown[] = [];
 
   for (const subnet of subnets) {
     try {

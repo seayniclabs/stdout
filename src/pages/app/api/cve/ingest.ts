@@ -40,7 +40,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let body: any;
   try {
     body = await request.json();
-  } catch (err) {
+  } catch (error) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
@@ -64,9 +64,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-  } catch (err: any) {
-    console.error('CVE parse error:', err);
-    return new Response(JSON.stringify({ error: `Parse error: ${err.message}` }), {
+  } catch (error: unknown) {
+    console.error('CVE parse error:', error);
+    return new Response(JSON.stringify({ error: `Parse error: ${error instanceof Error ? error.message : String(error)}` }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -86,9 +86,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    console.error('CVE ingest error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
+  } catch (error: unknown) {
+    console.error('CVE ingest error:', error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) || 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

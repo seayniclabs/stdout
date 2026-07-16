@@ -27,7 +27,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let body: { clientId?: string; reason?: string; duration?: number };
   try {
     body = await request.json();
-  } catch (err) {
+  } catch (error) {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
@@ -67,9 +67,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    console.error('Velociraptor isolation error:', err);
-    return new Response(JSON.stringify({ error: err.message || 'Internal server error' }), {
+  } catch (error: unknown) {
+    console.error('Velociraptor isolation error:', error);
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) || 'Internal server error' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

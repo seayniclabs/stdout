@@ -110,8 +110,8 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
       `);
       configured++;
       log.push(`  ✓ ${t.name} configured (${t.type} @ ${t.url})`);
-    } catch (err: any) {
-      log.push(`  ⚠ ${t.name} reachable but DB upsert failed: ${err.message}`);
+    } catch (error: unknown) {
+      log.push(`  ⚠ ${t.name} reachable but DB upsert failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

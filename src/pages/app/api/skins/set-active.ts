@@ -64,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[skins/set-active] Error:', error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Failed to save skin preference',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Failed to save skin preference',
       }),
       {
         status: 500,

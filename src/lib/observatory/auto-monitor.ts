@@ -175,7 +175,7 @@ function inferPortFromService(name: string, image: string): { port: number; prot
 export function createMonitorsFromScan(
   db: Database,
   userId: string,
-  scanData: any,
+  scanData: unknown,
   stackId?: string
 ): MonitorSuggestion[] {
   const suggestions: MonitorSuggestion[] = [];
@@ -373,8 +373,8 @@ export function executeMonitorCreation(
 
         created++;
       }
-    } catch (error: any) {
-      errors.push(`${suggestion.name}: ${error.message}`);
+    } catch (error: unknown) {
+      errors.push(`${suggestion.name}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

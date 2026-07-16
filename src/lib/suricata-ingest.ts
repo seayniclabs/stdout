@@ -102,9 +102,9 @@ function resolveOwnerUserId(): string | null {
 async function handleEveObject(userId: string, obj: Record<string, unknown>): Promise<void> {
   try {
     await ingestSuricataEve(userId, obj, { autoFix: autoFixEnabled() });
-  } catch (err: any) {
+  } catch (error: unknown) {
     // Do not log alert payloads or IPs (security review).
-    console.error('[suricata-ingest] ingest failed:', err?.message || 'unknown');
+    console.error('[suricata-ingest] ingest failed:', error instanceof Error ? error.message : String(error) || 'unknown');
   }
 }
 
@@ -161,8 +161,8 @@ async function tickFileTail(userId: string): Promise<void> {
     }
 
     status.fileTail.lastError = null;
-  } catch (err: any) {
-    status.fileTail.lastError = err?.message || String(err);
+  } catch (error: unknown) {
+    status.fileTail.lastError = error instanceof Error ? error.message : String(error) || String(error);
     if (fileHandle) {
       await fileHandle.close().catch(() => {});
       fileHandle = null;
@@ -274,12 +274,12 @@ async function redisCommand(
       }
     }, waitMs);
 
-    const finish = (err: Error | null) => {
+    const finish = (error: Error | null) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       socket.destroy();
-      if (err) reject(err);
+      if (error) reject(error);
       else resolve(replies);
     };
 
@@ -299,12 +299,12 @@ async function redisCommand(
           buf = Buffer.from(buf.subarray(parsed[1]));
         }
         if (replies.length >= commands.length) finish(null);
-      } catch (err: any) {
-        finish(err instanceof Error ? err : new Error(String(err)));
+      } catch (error: unknown) {
+        finish(error instanceof Error ? error : new Error(String(error)));
       }
     });
 
-    socket.on('error', (err) => finish(err));
+    socket.on('error', (error) => finish(error));
     socket.on('close', () => {
       if (!settled) {
         if (replies.length >= commands.length) finish(null);
@@ -330,14 +330,14 @@ async function ensureStreamGroup(url: string, stream: string, group: string): Pr
   try {
     await redisCommand(url, [['XGROUP', 'CREATE', stream, group, '0', 'MKSTREAM']], 5000);
     streamGroupReady = true;
-  } catch (err: any) {
-    const msg = err?.message || String(err);
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error) || String(error);
     // BUSYGROUP = already exists — fine.
     if (/BUSYGROUP/i.test(msg)) {
       streamGroupReady = true;
       return;
     }
-    throw err;
+    throw error;
   }
 }
 
@@ -396,8 +396,8 @@ async function tickRedisList(userId: string): Promise<void> {
     status.redis.messagesRead += 1;
     const obj = parseEveLine(payload);
     if (obj) await handleEveObject(userId, obj);
-  } catch (err: any) {
-    status.redis.lastError = err?.message || String(err);
+  } catch (error: unknown) {
+    status.redis.lastError = error instanceof Error ? error.message : String(error) || String(error);
     await new Promise(r => setTimeout(r, 2000));
   }
 }
@@ -428,8 +428,8 @@ async function tickRedisStream(userId: string): Promise<void> {
         // Best-effort ACK; message may be redelivered.
       }
     }
-  } catch (err: any) {
-    status.redis.lastError = err?.message || String(err);
+  } catch (error: unknown) {
+    status.redis.lastError = error instanceof Error ? error.message : String(error) || String(error);
     streamGroupReady = false;
     await new Promise(r => setTimeout(r, 2000));
   }
@@ -496,7 +496,7 @@ export function startSuricataIngestors(): void {
         if (userId) await tickFileTail(userId);
         await new Promise(r => setTimeout(r, 1000));
       }
-    })().catch(err => console.error('[suricata-ingest] file-tail loop crashed:', err?.message || err));
+    })().catch(error => console.error('[suricata-ingest] file-tail loop crashed:', error instanceof Error ? error.message : String(error) || error));
   }
 
   if (status.redis.enabled) {
@@ -511,7 +511,7 @@ export function startSuricataIngestors(): void {
           await new Promise(r => setTimeout(r, 2000));
         }
       }
-    })().catch(err => console.error('[suricata-ingest] redis loop crashed:', err?.message || err));
+    })().catch(error => console.error('[suricata-ingest] redis loop crashed:', error instanceof Error ? error.message : String(error) || error));
   }
 }
 

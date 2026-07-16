@@ -10,7 +10,7 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
 
   // Require confirmation word in request body
   let body: any = {};
-  try { body = await request.json(); } catch {}
+  try { body = await request.json(); } catch (error: unknown) { /* Intentionally ignored */ }
 
   if (body.confirmation !== 'DELETE') {
     return new Response(JSON.stringify({ error: 'Type DELETE to confirm account deletion.' }), {

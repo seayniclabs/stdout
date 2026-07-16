@@ -18,7 +18,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const stream = new ReadableStream({
     async start(controller) {
       console.log('[autodiscover] Stream started');
-      const send = (data: any) => {
+      const send = (data: unknown) => {
         console.log('[autodiscover] Sending:', data.type, data.message || '');
         controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
       };
@@ -56,8 +56,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
           });
 
           send({ type: 'complete' });
-        } catch (error: any) {
-          send({ type: 'log', level: 'error', message: `Docker API error: ${error.message}` });
+        } catch (error: unknown) {
+          send({ type: 'log', level: 'error', message: `Docker API error: ${error instanceof Error ? error.message : String(error)}` });
           send({ type: 'log', level: 'info', message: 'You can add infrastructure manually after setup' });
           send({ type: 'progress', percent: 100 });
 
@@ -65,7 +65,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           await completeStep(SetupStep.Scanner, {
             scannedAt: new Date().toISOString(),
             automated: false,
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
           });
 
           send({ type: 'complete' });
@@ -73,8 +73,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
         controller.close();
 
-      } catch (error: any) {
-        send({ type: 'error', message: error.message });
+      } catch (error: unknown) {
+        send({ type: 'error', message: error instanceof Error ? error.message : String(error) });
         controller.close();
       }
     }
@@ -111,14 +111,14 @@ async function listDockerContainers(socketPath: string): Promise<any[]> {
         try {
           const containers = JSON.parse(data);
           resolve(containers);
-        } catch (err) {
+        } catch (error) {
           reject(new Error('Failed to parse Docker API response'));
         }
       });
     });
 
-    req.on('error', (err) => {
-      reject(new Error(`Docker socket connection failed: ${err.message}`));
+    req.on('error', (error) => {
+      reject(new Error(`Docker socket connection failed: ${error instanceof Error ? error.message : String(error)}`));
     });
 
     req.setTimeout(5000, () => {

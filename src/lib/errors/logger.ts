@@ -7,16 +7,16 @@
 import { StdOutError } from './error';
 import type { ErrorLogEntry } from './types';
 
-export function logError(error: StdOutError, additionalContext?: any): void {
+export function logError(error: StdOutError, additionalContext?: Record<string, unknown>): void {
   const logEntry: ErrorLogEntry = {
     timestamp: error.timestamp,
     correlationId: error.correlationId,
     code: error.code,
     category: error.category,
     severity: error.severity,
-    message: error.message,
+    message: error instanceof Error ? error.message : String(error),
     context: { ...error.context, ...additionalContext },
-    stack: error.stack,
+    stack: getErrorStack(error),
   };
 
   // Console log (JSON for structured logging)

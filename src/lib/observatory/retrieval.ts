@@ -205,7 +205,7 @@ async function retrieveStandardPatterns(
 
   // Build query conditions
   const conditions: string[] = [];
-  const params: any[] = [];
+  const params: unknown[] = [];
 
   // Match by symptoms if provided
   if (context.symptoms && context.symptoms.length > 0) {
@@ -254,7 +254,7 @@ async function retrieveStandardPatterns(
   `;
 
   // Parameterized via the raw better-sqlite3 client (`sql.raw` can't bind params).
-  let rows: any[] = [];
+  let rows: unknown[] = [];
   try {
     const raw = (db as any).$client;
     rows = raw?.prepare ? raw.prepare(query).all(...params) : [];
@@ -336,7 +336,7 @@ async function retrieveCustomPatterns(
 
   // Build query conditions (same logic as standard patterns)
   const conditions: string[] = ['user_id = ?'];
-  const params: any[] = [userId];
+  const params: unknown[] = [userId];
 
   if (context.symptoms && context.symptoms.length > 0) {
     const symptomConditions = context.symptoms.map(() =>
@@ -382,7 +382,7 @@ async function retrieveCustomPatterns(
 
   // Parameterized via the underlying better-sqlite3 client (the `?` placeholders above bind to
   // `params`). `sql.raw` does not accept bind params, so use the raw prepared statement.
-  let rows: any[] = [];
+  let rows: unknown[] = [];
   try {
     const raw = (db as any).$client;
     rows = raw?.prepare ? raw.prepare(query).all(...params) : [];

@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[ticketing/sync] Error:', error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Sync failed',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Sync failed',
       }),
       {
         status: 500,

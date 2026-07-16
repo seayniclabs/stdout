@@ -187,7 +187,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     console.error('[network/import] Error:', error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : 'Import failed',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Import failed',
       }),
       {
         status: 500,

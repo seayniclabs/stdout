@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const agentName = url.searchParams.get('agent'); // Filter by agent
 
     const conditions = ['user_id = ?'];
-    const params: any[] = [userId];
+    const params: unknown[] = [userId];
 
     if (agentName) {
       conditions.push('agent_name = ?');
@@ -75,11 +75,11 @@ export const GET: APIRoute = async ({ locals, url }) => {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Observatory Runs API] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to fetch runs',
-      message: error.message
+      message: error instanceof Error ? error.message : String(error)
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }

@@ -80,10 +80,10 @@ export const POST: APIRoute = async ({ locals, request, url }) => {
       status: 201,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    console.error('[netdata/webhook]', err);
+  } catch (error: unknown) {
+    console.error('[netdata/webhook]', error);
     return new Response(JSON.stringify({
-      error: err?.message || 'Ingest failed',
+      error: error instanceof Error ? error.message : String(error) || 'Ingest failed',
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

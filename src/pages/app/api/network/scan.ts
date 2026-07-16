@@ -38,7 +38,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // Create SSE stream
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (data: any) => {
+      const send = (data: unknown) => {
         controller.enqueue(new TextEncoder().encode(JSON.stringify(data) + '\n'));
       };
 
@@ -129,9 +129,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
                   `Ping ${ip}`
                 )
                   .then(() => ({ ip }))
-                  .catch((err) => {
+                  .catch((error) => {
                     // Log timeout errors for debugging but don't crash
-                    if (err instanceof Error && err.message.includes('timed out')) {
+                    if (error instanceof Error && error instanceof Error ? error.message : String(error).includes('timed out')) {
                       // Expected timeout, skip this host
                     }
                     return null;
@@ -216,12 +216,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
         streamClosed = true;
         console.log('[scan] Stream closed normally');
 
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[scan] Error during scan:', error);
         if (!streamClosed) {
-          send({ type: 'log', level: 'error', message: `Scan error: ${error.message}` });
+          send({ type: 'log', level: 'error', message: `Scan error: ${error instanceof Error ? error.message : String(error)}` });
           send({ type: 'progress', percent: 100 });
-          send({ type: 'complete', hosts: [], error: error.message });
+          send({ type: 'complete', hosts: [], error: error instanceof Error ? error.message : String(error) });
           controller.close();
           streamClosed = true;
         }
@@ -288,7 +288,7 @@ function parseNmapOutput(output: string): Array<{ ip: string; hostname?: string 
  */
 async function scanHostsForServices(
   hosts: Array<{ ip: string; hostname?: string }>,
-  send: (data: any) => void
+  send: (data: unknown) => void
 ): Promise<Array<{ ip: string; hostname?: string; services: Array<{ port: number; service: string; banner?: string }> }>> {
   const COMMON_PORTS = [
     { port: 22, service: 'SSH' },

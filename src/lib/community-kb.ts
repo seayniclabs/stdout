@@ -1,4 +1,4 @@
-import { and, desc, eq, max } from 'drizzle-orm';
+import { and, desc, eq, inArray, max } from 'drizzle-orm';
 import { getDb, schema } from './db';
 import { nanoid } from 'nanoid';
 
@@ -72,26 +72,33 @@ export async function syncCommunityLibrary(workspaceUserId: string): Promise<Syn
   const db = getDb();
   const now = new Date();
 
-  for (const doc of payload.docs) {
-    const existing = db.select().from(schema.docs)
-      .where(and(
-        eq(schema.docs.communityDocId, doc.id),
-        eq(schema.docs.source, 'community'),
-      )).get();
+  // Fixed N+1: Load all existing community docs once instead of per-doc
+  const existingDocs = db.select().from(schema.docs)
+    .where(eq(schema.docs.source, 'community'))
+    .all();
 
-    if (existing) {
-      if ((existing.communityVersion ?? 0) < doc.version) {
-        db.update(schema.docs).set({
-          title: doc.title,
-          content: doc.content,
-          docType: doc.docType,
-          tags: doc.tags,
-          sizeBytes: doc.content.length,
-          communityVersion: doc.version,
-          updatedAt: now,
-        }).where(eq(schema.docs.id, existing.id)).run();
-        updated++;
-      }
+  const existingMap = new Map(
+    existingDocs.map(d => [d.communityDocId, d])
+  );
+
+  // Process in transaction for atomicity
+  db.transaction(() => {
+    for (const doc of payload.docs) {
+      const existing = existingMap.get(doc.id);
+
+      if (existing) {
+        if ((existing.communityVersion ?? 0) < doc.version) {
+          db.update(schema.docs).set({
+            title: doc.title,
+            content: doc.content,
+            docType: doc.docType,
+            tags: doc.tags,
+            sizeBytes: doc.content.length,
+            communityVersion: doc.version,
+            updatedAt: now,
+          }).where(eq(schema.docs.id, existing.id)).run();
+          updated++;
+        }
     } else {
       db.insert(schema.docs).values({
         id: nanoid(),
@@ -109,12 +116,14 @@ export async function syncCommunityLibrary(workspaceUserId: string): Promise<Syn
       }).run();
       added++;
     }
-  }
+    }
+  });
 
-  for (const id of payload.withdrawn) {
+  // Fixed N+1: Batch delete withdrawn docs instead of one-by-one
+  if (payload.withdrawn.length > 0) {
     const r = db.delete(schema.docs)
       .where(and(
-        eq(schema.docs.communityDocId, id),
+        inArray(schema.docs.communityDocId, payload.withdrawn),
         eq(schema.docs.source, 'community'),
       )).run();
     removed += r.changes ?? 0;

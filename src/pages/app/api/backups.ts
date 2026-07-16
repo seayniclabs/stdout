@@ -17,8 +17,8 @@ export const GET: APIRoute = async ({ locals }) => {
     return new Response(JSON.stringify({ backups }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), {
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -55,8 +55,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return new Response(JSON.stringify({ backup }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (err: any) {
-      return new Response(JSON.stringify({ error: err.message }), {
+    } catch (error: unknown) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });
@@ -84,8 +84,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       return new Response(JSON.stringify({ restored: true, filename }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (err: any) {
-      return new Response(JSON.stringify({ error: err.message }), {
+    } catch (error: unknown) {
+      return new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error) }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' },
       });

@@ -72,14 +72,14 @@ export async function callOllama(
 
     const data = await response.json();
     return data as OllamaResponse;
-  } catch (error: any) {
+  } catch (error: unknown) {
     clearTimeout(timeout);
 
     if (error.name === 'AbortError') {
       throw new Error(`Ollama timeout after ${timeoutMs}ms`);
     }
 
-    throw new Error(`Ollama API call failed: ${error.message}`);
+    throw new Error(`Ollama API call failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 
@@ -159,7 +159,7 @@ export async function listOllamaModels(): Promise<string[]> {
     }
 
     const data = await response.json();
-    return data.models?.map((m: any) => m.name) || [];
+    return data.models?.map((m: Record<string, unknown>) => m.name) || [];
   } catch (error) {
     console.error('[Ollama] Failed to list models:', error);
     return [];

@@ -101,14 +101,14 @@ export async function sanitizeDocument(opts: {
       foundSecrets: scrubbed.foundSecrets,
       llmScreened: true,
     };
-  } catch (err: any) {
+  } catch (error: unknown) {
     // LLM failed — the doc is still secret-safe (layer 1 ran); flag for human review.
     return {
       sanitizedTitle: scrubbed.title,
       sanitizedContent: scrubbed.content,
       replacements: baseReplacements,
       flagged: true,
-      flagReason: `Sanitization screening failed (${err?.message || 'unknown'}) — needs human review.`,
+      flagReason: `Sanitization screening failed (${error instanceof Error ? error.message : String(error) || 'unknown'}) — needs human review.`,
       foundSecrets: scrubbed.foundSecrets,
       llmScreened: false,
     };

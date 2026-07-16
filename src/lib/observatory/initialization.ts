@@ -52,9 +52,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     log.push(`Loaded ${analyst.name} persona — ${analyst.model}, standby`);
     agentsActivated.push('watcher', 'analyst');
     log.push('');
-  } catch (err: any) {
-    errors.push(`Failed to load agent personas: ${err.message}`);
-    log.push(`Error loading personas: ${err.message}`);
+  } catch (error: unknown) {
+    errors.push(`Failed to load agent personas: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error loading personas: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // ── Phase 2: Knowledge Base ───────────────────────────────────────────────
@@ -108,9 +108,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       }
     }
     log.push('');
-  } catch (err: any) {
-    errors.push(`Failed to connect knowledge bases: ${err.message}`);
-    log.push(`Error connecting knowledge bases: ${err.message}`);
+  } catch (error: unknown) {
+    errors.push(`Failed to connect knowledge bases: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error connecting knowledge bases: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // ── Phase 3: Infrastructure Discovery ────────────────────────────────────
@@ -132,8 +132,8 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       if (totalHosts === 0) {
         log.push('No hosts discovered yet — triggering initial network scan...');
         // Trigger scan asynchronously (don't block startup)
-        triggerInitialNetworkScan(firstUser.id).catch((err) => {
-          console.error('[Observatory Init] Failed to trigger initial scan:', err);
+        triggerInitialNetworkScan(firstUser.id).catch((error) => {
+          console.error('[Observatory Init] Failed to trigger initial scan:', error);
         });
         log.push('  ⏳ Initial network scan started in background');
       }
@@ -167,9 +167,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       log.push('No users registered yet');
     }
     log.push('');
-  } catch (err: any) {
-    errors.push(`Failed to discover infrastructure: ${err.message}`);
-    log.push(`Error discovering infrastructure: ${err.message}`);
+  } catch (error: unknown) {
+    errors.push(`Failed to discover infrastructure: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error discovering infrastructure: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // ── Phase 4: Monitors ─────────────────────────────────────────────────────
@@ -197,9 +197,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       }
     }
     log.push('');
-  } catch (err: any) {
-    errors.push(`Failed to check monitors: ${err.message}`);
-    log.push(`Error checking monitors: ${err.message}`);
+  } catch (error: unknown) {
+    errors.push(`Failed to check monitors: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error checking monitors: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // ── Phase 4.5: Data Sources + Provisional Baseline (P3 auto-config) ────────
@@ -236,9 +236,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       log.push('No users yet — data sources + baselines will configure on first user');
     }
     log.push('');
-  } catch (err: any) {
+  } catch (error: unknown) {
     // Non-fatal: discovery/detection still works without auto-config; log and continue.
-    log.push(`Data-source/baseline auto-config issue (non-fatal): ${err.message}`);
+    log.push(`Data-source/baseline auto-config issue (non-fatal): ${error instanceof Error ? error.message : String(error)}`);
     log.push('');
   }
 
@@ -267,9 +267,9 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     }
 
     log.push('');
-  } catch (err: any) {
-    errors.push(`Failed to activate agents: ${err.message}`);
-    log.push(`Error activating agents: ${err.message}`);
+  } catch (error: unknown) {
+    errors.push(`Failed to activate agents: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error activating agents: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   // ── Summary ───────────────────────────────────────────────────────────────
@@ -284,7 +284,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     log.push(`  Baselines: ${baselinesEstablished > 0 ? `${baselinesEstablished} established` : 'establishing (7 days)'}`);
   } else {
     log.push('Observatory started with errors:');
-    errors.forEach(err => log.push(`  - ${err}`));
+    errors.forEach(error => log.push(`  - ${error}`));
   }
 
   log.push(`Completed at ${new Date().toISOString()}`);
@@ -358,8 +358,8 @@ async function triggerInitialNetworkScan(userId: string): Promise<void> {
     // on their own, not wait for a human to click. runInitialDiscovery persists hosts and emits
     // host.discovered (→ auto-wire creates monitors). Fire-and-forget so startup isn't blocked.
     const { runInitialDiscovery } = await import('./initial-discovery');
-    runInitialDiscovery(userId).catch((err) => {
-      console.error('[Observatory Init] initial discovery failed:', err);
+    runInitialDiscovery(userId).catch((error) => {
+      console.error('[Observatory Init] initial discovery failed:', error);
     });
 
   } catch (error) {

@@ -132,7 +132,7 @@ function renderIncidentMarkdown(
         const causes = JSON.parse(d.rootCauses);
         lines.push('**Root Causes:**');
         causes.forEach((c: string, i: number) => lines.push(`${i + 1}. ${c}`));
-      } catch {}
+      } catch (error: unknown) { /* Intentionally ignored */ }
       try {
         const cmds = JSON.parse(d.suggestedCommands);
         if (cmds.length > 0) {
@@ -142,7 +142,7 @@ function renderIncidentMarkdown(
           cmds.forEach((c: string) => lines.push(c));
           lines.push('```');
         }
-      } catch {}
+      } catch (error: unknown) { /* Intentionally ignored */ }
       lines.push('');
     }
   }

@@ -50,7 +50,7 @@ export const POST: APIRoute = async ({ request }) => {
     console.error('[wipe-data] Error:', error);
     return new Response(JSON.stringify({
       error: 'Failed to wipe data',
-      details: error instanceof Error ? error.message : String(error)
+      details: error instanceof Error ? error instanceof Error ? error.message : String(error) : String(error)
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

@@ -102,6 +102,6 @@ export function sessionCookieOptions(maxAge: number) {
   };
 }
 
-export function getSessionFromCookies(cookies: any): string | undefined {
+export function getSessionFromCookies(cookies: Record<string, string>): string | undefined {
   return cookies.get(SESSION_COOKIE)?.value;
 }

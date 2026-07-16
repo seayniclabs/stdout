@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       signal: AbortSignal.timeout(120000),
     });
     if (!res.ok) throw new Error(`Windlass /exec HTTP ${res.status}`);
-    const data: any = await res.json();
+    const data: unknown = await res.json();
     return { exitCode: data.exitCode ?? 1, stdout: data.stdout ?? '', stderr: data.stderr ?? '' };
   };
 

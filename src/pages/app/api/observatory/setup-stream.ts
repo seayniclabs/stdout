@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ locals }) => {
     async start(controller) {
       const encoder = new TextEncoder();
 
-      const sendEvent = (event: string, data: any) => {
+      const sendEvent = (event: string, data: unknown) => {
         const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(message));
       };
@@ -104,8 +104,8 @@ export const GET: APIRoute = async ({ locals }) => {
             watcher.updateStepProgress('pull_watcher', 100, 0);
             watcher.addOutput('pull_watcher', '✓ Llama 3.2 3B ready');
             watcher.completeStep('pull_watcher');
-          } catch (error: any) {
-            watcher.errorStep('pull_watcher', error.message);
+          } catch (error: unknown) {
+            watcher.errorStep('pull_watcher', error instanceof Error ? error.message : String(error));
           }
         } else {
           watcher.skipStep('pull_watcher', 'Already installed');
@@ -137,8 +137,8 @@ export const GET: APIRoute = async ({ locals }) => {
         // Send final state
         sendEvent('complete', watcher.getState());
 
-      } catch (error: any) {
-        sendEvent('error', { message: error.message });
+      } catch (error: unknown) {
+        sendEvent('error', { message: error instanceof Error ? error.message : String(error) });
       } finally {
         unsubscribe();
         controller.close();

@@ -20,8 +20,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   try {
     payload = await request.text();
-  } catch (err: any) {
-    return new Response(JSON.stringify({ error: `Failed to read request body: ${err.message}` }), {
+  } catch (error: unknown) {
+    return new Response(JSON.stringify({ error: `Failed to read request body: ${error instanceof Error ? error.message : String(error)}` }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

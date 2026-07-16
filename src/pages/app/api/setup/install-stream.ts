@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ locals }) => {
     async start(controller) {
       const encoder = new TextEncoder();
 
-      const sendEvent = (event: string, data: any) => {
+      const sendEvent = (event: string, data: unknown) => {
         const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
         controller.enqueue(encoder.encode(message));
       };
@@ -201,8 +201,8 @@ export const GET: APIRoute = async ({ locals }) => {
           summary: watcher.getSummary()
         });
 
-      } catch (error: any) {
-        sendEvent('error', { message: error.message });
+      } catch (error: unknown) {
+        sendEvent('error', { message: error instanceof Error ? error.message : String(error) });
       } finally {
         unsubscribe();
         controller.close();

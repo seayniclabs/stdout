@@ -111,7 +111,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         autoDetectedSources.push({ type: source.type, name: source.name, url: source.url });
       }
     }
-  } catch {}
+  } catch (error: unknown) { /* Intentionally ignored */ }
 
   // Render markdown from scan data
   const markdown = renderMarkdown(body);
@@ -152,7 +152,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         }).run();
       }
     }
-  } catch {}
+  } catch (error: unknown) { /* Intentionally ignored */ }
 
   // Observatory AI: Auto-create monitors from scan results
   let monitorsCreated = 0;
@@ -193,7 +193,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
       for (const monitor of monitors) {
         try {
           startMonitor(locals.user.id, monitor.id);
-        } catch {}
+        } catch (error: unknown) { /* Intentionally ignored */ }
       }
     }
   } catch (err) {

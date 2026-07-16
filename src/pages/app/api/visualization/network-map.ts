@@ -60,7 +60,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     let props: any = {};
     try {
       props = JSON.parse(e.properties || '{}');
-    } catch {}
+    } catch (error: unknown) { /* Intentionally ignored */ }
 
     return {
       id: e.id,
@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     let meta: any = {};
     try {
       meta = JSON.parse(r.metadata || '{}');
-    } catch {}
+    } catch (error: unknown) { /* Intentionally ignored */ }
 
     return {
       source: r.source_id,

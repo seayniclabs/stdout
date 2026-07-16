@@ -259,8 +259,8 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
       try {
         await dispatchToChannel(channel, input);
         channelsNotified.push(channel.id);
-      } catch (err) {
-        console.error(`Alert dispatch failed for channel ${channel.name}:`, err);
+      } catch (error) {
+        console.error(`Alert dispatch failed for channel ${channel.name}:`, error);
       }
     }
   }
@@ -286,7 +286,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
 // --- Channel Dispatch ---
 
 async function dispatchToChannel(
-  channel: any,
+  channel: unknown,
   alert: AlertInput,
 ): Promise<void> {
   const config = JSON.parse(channel.config);
@@ -379,8 +379,8 @@ export async function testChannel(userId: string, channelId: string): Promise<{ 
       detail: 'This is a test notification to verify your alert channel is working.',
     });
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+  } catch (error: unknown) {
+    return { success: false, error: error instanceof Error ? error.message : String(error) };
   }
 }
 
@@ -426,8 +426,8 @@ export async function sendWindlassWeeklyDigest(
         title,
         detail,
       });
-    } catch (err) {
-      console.error('Weekly digest dispatch failed:', err);
+    } catch (error) {
+      console.error('Weekly digest dispatch failed:', error);
     }
   }
 

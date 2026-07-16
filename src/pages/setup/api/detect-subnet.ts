@@ -184,7 +184,7 @@ export const GET: APIRoute = async ({ locals }) => {
       JSON.stringify({
         subnet: null,
         detected: false,
-        error: error instanceof Error ? error.message : 'Detection failed',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Detection failed',
       }),
       {
         status: 200,

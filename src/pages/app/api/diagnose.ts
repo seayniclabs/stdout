@@ -241,8 +241,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ ...result, toolUsed: toolUsed || undefined }), {
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (err: any) {
-    console.error('Diagnosis error:', err);
+  } catch (error: unknown) {
+    console.error('Diagnosis error:', error);
 
     // Log BYOK audit on failure
     logProviderAudit(
@@ -253,10 +253,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
       credential?.model || 'unknown',
       credential?.source || 'ollama',
       'failed',
-      err?.message?.slice(0, 200),
+      error instanceof Error ? error.message : String(error)?.slice(0, 200),
     );
 
-    const status = err?.status === 429 ? 429 : 500;
+    const status = error?.status === 429 ? 429 : 500;
     const message = status === 429
       ? 'AI service is busy. Please try again in a moment.'
       : 'Diagnosis failed. Please try again later.';

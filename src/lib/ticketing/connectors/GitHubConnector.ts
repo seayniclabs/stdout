@@ -63,7 +63,7 @@ export class GitHubConnector extends TicketingConnector {
     } catch (error) {
       return {
         ok: false,
-        error: error instanceof Error ? error.message : 'Connection failed',
+        error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Connection failed',
       };
     }
   }
@@ -98,7 +98,7 @@ export class GitHubConnector extends TicketingConnector {
         .map((issue: any) => this.mapGitHubToExternal(issue));
     } catch (error) {
       throw new Error(
-        `Failed to fetch GitHub issues: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to fetch GitHub issues: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }
@@ -155,7 +155,7 @@ export class GitHubConnector extends TicketingConnector {
       };
     } catch (error) {
       throw new Error(
-        `Failed to create GitHub issue: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to create GitHub issue: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }
@@ -206,7 +206,7 @@ export class GitHubConnector extends TicketingConnector {
       }
     } catch (error) {
       throw new Error(
-        `Failed to update GitHub issue: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to update GitHub issue: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }
@@ -298,7 +298,7 @@ export class GitHubConnector extends TicketingConnector {
       return await fetch(url, options);
     } catch (error) {
       throw new Error(
-        `Network error: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Network error: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
       );
     }
   }

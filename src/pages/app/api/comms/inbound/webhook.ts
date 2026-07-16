@@ -103,12 +103,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ response, metadata }),
       { status: 200, headers: corsHeaders }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[comms/webhook] Error:', error);
     return new Response(
       JSON.stringify({
         error: 'Internal server error',
-        message: error.message,
+        message: error instanceof Error ? error.message : String(error),
       }),
       { status: 500, headers: corsHeaders }
     );

@@ -187,7 +187,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     console.error('[run-now] Error:', error);
     return new Response(JSON.stringify({
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start scanner'
+      error: error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Failed to start scanner'
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

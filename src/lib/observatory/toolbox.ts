@@ -143,9 +143,9 @@ const MAX_OUTPUT = 64 * 1024; // cap captured output so a chatty tool can't blow
 function execDockerExec(container: string, argv: string[], timeoutMs: number): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const full = ['exec', container, ...argv];
-    execFile('docker', full, { timeout: timeoutMs, maxBuffer: MAX_OUTPUT }, (err: any, stdout, stderr) => {
+    execFile('docker', full, { timeout: timeoutMs, maxBuffer: MAX_OUTPUT }, (error: any, stdout, stderr) => {
       resolve({
-        code: err && typeof err.code === 'number' ? err.code : (err ? 1 : 0),
+        code: error && typeof error.code === 'number' ? error.code : (error ? 1 : 0),
         stdout: String(stdout || '').slice(0, MAX_OUTPUT),
         stderr: String(stderr || '').slice(0, MAX_OUTPUT),
       });
@@ -185,9 +185,9 @@ export async function runTool(req: {
   let argv: string[];
   try {
     argv = def.build(req.args ?? {});
-  } catch (err: any) {
-    await auditTool(req.userId, def, [], 'rejected', req.reason, err.message);
-    return failure(def.name, def.safety, start, `arg validation failed: ${err.message}`);
+  } catch (error: unknown) {
+    await auditTool(req.userId, def, [], 'rejected', req.reason, error instanceof Error ? error.message : String(error));
+    return failure(def.name, def.safety, start, `arg validation failed: ${error instanceof Error ? error.message : String(error)}`);
   }
 
   const { code, stdout, stderr } = await execDockerExec(def.container, argv, def.timeoutMs);

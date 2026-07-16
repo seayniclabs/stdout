@@ -73,7 +73,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       { status: 200, headers },
     );
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
+    const message = error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Internal server error';
     console.error('[comms/voice-incident] Error:', error);
     return new Response(JSON.stringify({ error: message }), { status: 500, headers });
   }

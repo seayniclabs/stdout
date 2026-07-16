@@ -63,15 +63,15 @@ export const POST: APIRoute = async ({ request }) => {
         // Pull model in background - don't wait for completion
         execFile('ollama', ['pull', model], (error, stdout, stderr) => {
           if (error) {
-            console.error(`[install-observatory] Failed to pull ${model}:`, error.message);
+            console.error(`[install-observatory] Failed to pull ${model}:`, error instanceof Error ? error.message : String(error));
           } else {
             console.log(`[install-observatory] Successfully pulled ${model}`);
           }
         });
         return { model, status: 'pulling' };
-      } catch (error: any) {
-        console.error(`[install-observatory] Error pulling ${model}:`, error.message);
-        return { model, status: 'failed', error: error.message };
+      } catch (error: unknown) {
+        console.error(`[install-observatory] Error pulling ${model}:`, error instanceof Error ? error.message : String(error));
+        return { model, status: 'failed', error: error instanceof Error ? error.message : String(error) };
       }
     });
 
@@ -133,8 +133,8 @@ export const POST: APIRoute = async ({ request }) => {
         if (inspectOutput !== 'true') {
           console.warn('[install-observatory] Observatory services started but sentinel not running yet');
         }
-      } catch (err) {
-        console.warn('[install-observatory] Could not verify sentinel status:', err);
+      } catch (error) {
+        console.warn('[install-observatory] Could not verify sentinel status:', error);
       }
 
       console.log('[install-observatory] Observatory installation complete!');
@@ -169,12 +169,12 @@ export const POST: APIRoute = async ({ request }) => {
       });
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[install-observatory] Unexpected error:', error);
     return new Response(JSON.stringify({
       success: false,
       error: 'Unexpected error during installation',
-      message: error.message || String(error),
+      message: error instanceof Error ? error.message : String(error) || String(error),
     }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },

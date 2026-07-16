@@ -69,8 +69,8 @@ async function tick(): Promise<void> {
       FROM scanner_schedule
       WHERE enabled = 1
     `) as ScheduleRow[];
-  } catch (err: any) {
-    console.error('[scan-scheduler] failed to read schedules:', err.message);
+  } catch (error: unknown) {
+    console.error('[scan-scheduler] failed to read schedules:', error instanceof Error ? error.message : String(error));
     return;
   }
 
@@ -91,8 +91,8 @@ async function tick(): Promise<void> {
       runInitialDiscovery(row.user_id).catch((e) =>
         console.error(`[scan-scheduler] discovery failed for ${row.user_id}:`, e),
       );
-    } catch (err: any) {
-      console.error('[scan-scheduler] could not start discovery:', err.message);
+    } catch (error: unknown) {
+      console.error('[scan-scheduler] could not start discovery:', error instanceof Error ? error.message : String(error));
     }
   }
 }
@@ -114,8 +114,8 @@ export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
       ON CONFLICT(id) DO NOTHING
     `);
     return true;
-  } catch (err: any) {
-    console.error('[scan-scheduler] failed to seed default schedule:', err.message);
+  } catch (error: unknown) {
+    console.error('[scan-scheduler] failed to seed default schedule:', error instanceof Error ? error.message : String(error));
     return false;
   }
 }
@@ -125,7 +125,7 @@ export function startScanScheduler(): void {
   if (_started) return;
   _started = true;
   setInterval(() => {
-    tick().catch((err) => console.error('[scan-scheduler] tick error:', err));
+    tick().catch((error) => console.error('[scan-scheduler] tick error:', error));
   }, CHECK_INTERVAL_MS);
   console.log('[scan-scheduler] started — checking scanner_schedule every 5 min');
 }

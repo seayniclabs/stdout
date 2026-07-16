@@ -40,7 +40,7 @@ export class SyncEngine {
           imported: 0,
           exported: 0,
           conflicts: 0,
-          errors: [error instanceof Error ? error.message : 'Unknown error'],
+          errors: [error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'],
         });
       }
     }
@@ -163,7 +163,7 @@ export class SyncEngine {
             result.imported++;
           } catch (error) {
             result.errors.push(
-              `Failed to import ticket ${externalTicket.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+              `Failed to import ticket ${externalTicket.id}: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
             );
           }
         }
@@ -217,7 +217,7 @@ export class SyncEngine {
             }
           } catch (error) {
             result.errors.push(
-              `Failed to export ticket ${localTicket.id}: ${error instanceof Error ? error.message : 'Unknown error'}`
+              `Failed to export ticket ${localTicket.id}: ${error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Unknown error'}`
             );
           }
         }
@@ -243,7 +243,7 @@ export class SyncEngine {
            SET last_sync_status = ?
            WHERE id = ?`
         )
-        .run(error instanceof Error ? error.message : 'Sync failed', connectorId);
+        .run(error instanceof Error ? error instanceof Error ? error.message : String(error) : 'Sync failed', connectorId);
 
       throw error;
     }

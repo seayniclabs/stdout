@@ -117,7 +117,7 @@ const RULES: Rule[] = [
 
 function applyRule(text: string, rule: Rule): { text: string; count: number } {
   let count = 0;
-  const out = text.replace(rule.re, (...args: any[]) => {
+  const out = text.replace(rule.re, (...args: unknown[]) => {
     count++;
     return typeof rule.replace === 'function'
       ? (rule.replace as any)(...args)

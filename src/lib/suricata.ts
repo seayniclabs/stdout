@@ -274,8 +274,8 @@ async function sendToWindlass(
         };
       }
       lastError = `Windlass HTTP ${status}`;
-    } catch (err: any) {
-      lastError = err?.message || 'Windlass unreachable';
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error.message : String(error) || 'Windlass unreachable';
     }
 
     if (attempt < WINDLASS_MAX_ATTEMPTS - 1) {
@@ -292,7 +292,7 @@ async function sendToWindlass(
         action: 'restart',
         detail: { fallback: 'commands.json', serviceId },
       };
-    } catch (fallbackErr: any) {
+    } catch (fallbackError: unknown) {
       return {
         ok: false,
         action: 'none',
@@ -318,8 +318,8 @@ function safeLogEvent(
 ): void {
   try {
     logEvent(userId, serviceId, eventType, detail);
-  } catch (err: any) {
-    console.warn('[suricata] event log skipped:', err?.message || 'unknown');
+  } catch (error: unknown) {
+    console.warn('[suricata] event log skipped:', error instanceof Error ? error.message : String(error) || 'unknown');
   }
 }
 
@@ -459,7 +459,7 @@ export async function ingestSuricataEve(
       console.log(`[suricata] ${safeActionLabel(alert, result.action, true)}`);
     } else {
       incMetric('suricata_windlass_failures');
-      console.warn(`[suricata] ${safeActionLabel(alert, result.action || 'none', false)} err=${result.error || 'unknown'}`);
+      console.warn(`[suricata] ${safeActionLabel(alert, result.action || 'none', false)} error=${result.error || 'unknown'}`);
     }
 
     safeLogEvent(

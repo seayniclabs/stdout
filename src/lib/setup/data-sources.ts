@@ -163,8 +163,8 @@ export async function discoverDataSources(
             discovered_via = ${source.discovered_via},
             updated_at = ${Date.now()}
         `);
-      } catch (err: any) {
-        warnings.push(`Failed to save ${source.name}: ${err.message}`);
+      } catch (error: unknown) {
+        warnings.push(`Failed to save ${source.name}: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 
@@ -182,8 +182,8 @@ export async function discoverDataSources(
       errors
     };
 
-  } catch (error: any) {
-    errors.push(error.message);
+  } catch (error: unknown) {
+    errors.push(error instanceof Error ? error.message : String(error));
     return {
       success: false,
       duration: Date.now() - startTime,

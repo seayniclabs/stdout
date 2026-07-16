@@ -45,7 +45,7 @@ async function checkImage(img: DockerImage): Promise<UpdatedImage | null> {
     const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
     if (!res.ok) return null;
     const data = await res.json() as any;
-    const results: any[] = data.results ?? [];
+    const results: unknown[] = data.results ?? [];
     if (!results.length) return null;
     const latest = results[0];
     const lastUpdated = new Date(latest.last_updated);

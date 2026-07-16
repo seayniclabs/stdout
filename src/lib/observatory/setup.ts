@@ -79,8 +79,8 @@ export async function setupObservatory(): Promise<SetupResult> {
       await pullModel(watcherModel);
       log.push(`  ✓ ${watcherModel} ready`);
       watcherReady = true;
-    } catch (error: any) {
-      errors.push(`Failed to pull ${watcherModel}: ${error.message}`);
+    } catch (error: unknown) {
+      errors.push(`Failed to pull ${watcherModel}: ${error instanceof Error ? error.message : String(error)}`);
       log.push(`  ✗ Failed to pull ${watcherModel}`);
       warnings.push(`Watcher agent will use rule-based detection until ${watcherModel} is available`);
     }
@@ -184,7 +184,7 @@ export async function installOllama(): Promise<{ success: boolean; method: strin
           method: 'install.sh',
           output
         };
-      } catch (installError: any) {
+      } catch (installError: unknown) {
         return {
           success: false,
           method: 'linux',

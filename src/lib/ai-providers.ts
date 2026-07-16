@@ -262,7 +262,7 @@ export async function validateKey(userId: string, providerId: string): Promise<{
       .run();
 
     return { valid, error: valid ? undefined : 'API key validation failed' };
-  } catch (err: any) {
+  } catch (error: unknown) {
     db.update(schema.aiProviderKeys)
       .set({ status: 'invalid', lastValidatedAt: now, updatedAt: now })
       .where(and(
@@ -271,7 +271,7 @@ export async function validateKey(userId: string, providerId: string): Promise<{
       ))
       .run();
 
-    return { valid: false, error: err.message || 'Connection failed' };
+    return { valid: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
   }
 }
 

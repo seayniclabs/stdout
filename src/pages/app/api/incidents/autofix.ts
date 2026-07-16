@@ -120,9 +120,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (err: any) {
-      logProviderAudit(userId, incidentId, 'autofix_plan', credential.provider, credential.model, 'user_key', 'failed', err.message?.slice(0, 200));
-      return new Response(JSON.stringify({ error: `Plan generation failed: ${err.message}` }), {
+    } catch (error: unknown) {
+      logProviderAudit(userId, incidentId, 'autofix_plan', credential.provider, credential.model, 'user_key', 'failed', error instanceof Error ? error.message : String(error)?.slice(0, 200));
+      return new Response(JSON.stringify({ error: `Plan generation failed: ${error instanceof Error ? error.message : String(error)}` }), {
         status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -158,8 +158,8 @@ export const POST: APIRoute = async ({ locals, request }) => {
       }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    } catch (err: any) {
-      return new Response(JSON.stringify({ error: `Patch generation failed: ${err.message}` }), {
+    } catch (error: unknown) {
+      return new Response(JSON.stringify({ error: `Patch generation failed: ${error instanceof Error ? error.message : String(error)}` }), {
         status: 500, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -236,7 +236,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
         signal: AbortSignal.timeout(120000),
       });
       if (!res.ok) throw new Error(`Windlass /exec HTTP ${res.status}`);
-      const data: any = await res.json();
+      const data: unknown = await res.json();
       return { exitCode: data.exitCode ?? 1, stdout: data.stdout ?? '', stderr: data.stderr ?? '' };
     };
 

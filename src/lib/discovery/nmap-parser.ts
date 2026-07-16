@@ -185,15 +185,15 @@ export function parseNmapJson(jsonContent: string): { hosts: DiscoveredHost[]; e
   const errors: string[] = [];
   const hosts: DiscoveredHost[] = [];
 
-  let data: any;
+  let data: unknown;
   try {
     data = JSON.parse(jsonContent);
-  } catch (err: any) {
-    return { hosts: [], errors: [`Invalid JSON syntax: ${err.message}`] };
+  } catch (error: unknown) {
+    return { hosts: [], errors: [`Invalid JSON syntax: ${error instanceof Error ? error.message : String(error)}`] };
   }
 
   // Handle various potential JSON shapes
-  let rawHosts: any[] = [];
+  let rawHosts: unknown[] = [];
   if (Array.isArray(data)) {
     rawHosts = data;
   } else if (data.hosts && Array.isArray(data.hosts)) {
@@ -224,7 +224,7 @@ export function parseNmapJson(jsonContent: string): { hosts: DiscoveredHost[]; e
     let vendor: string | undefined = undefined;
     let hostname: string | undefined = undefined;
     let status: string = 'up';
-    let rawPorts: any[] = [];
+    let rawPorts: unknown[] = [];
 
     // Extract status (handle converted XML / raw state)
     if (rawHost.status) {
