@@ -1,0 +1,444 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+// Load all presets from src/data/presets/
+const presets = await Astro.glob('../data/presets/*.json');
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/app/login');
+}
+---
+
+<Layout title="Presets" user={user}>
+  <div class="presets-page">
+    <header class="presets-header">
+      <h1>Configuration Presets</h1>
+      <p class="subtitle">One-click setups for common incident management workflows. Deploy Rootly-style, PagerDuty-style, or custom patterns in minutes.</p>
+    </header>
+
+    <div class="presets-grid">
+      {presets.map((preset) => {
+        const data = preset.default || preset;
+        return (
+          <article class="preset-card" data-preset-id={data.id}>
+            <div class="preset-header">
+              <h2>{data.name}</h2>
+              <span class="preset-version">v{data.version}</span>
+            </div>
+            <p class="preset-description">{data.description}</p>
+
+            <div class="preset-meta">
+              <div class="meta-item">
+                <span class="meta-label">Setup Time:</span>
+                <span class="meta-value">{data.estimatedSetupTime}</span>
+              </div>
+              <div class="meta-item">
+                <span class="meta-label">Category:</span>
+                <span class="meta-value">{data.category}</span>
+              </div>
+            </div>
+
+            {data.comparison?.vsRootly && (
+              <div class="comparison-badge">
+                <strong>vs Rootly:</strong> {data.comparison.vsRootly.pricing.savings} savings/year
+              </div>
+            )}
+
+            <div class="preset-actions">
+              <button class="btn-primary" data-action="apply" data-preset={data.id}>
+                Apply Preset
+              </button>
+              <button class="btn-secondary" data-action="preview" data-preset={data.id}>
+                Preview Config
+              </button>
+            </div>
+          </article>
+        );
+      })}
+    </div>
+
+    <!-- Modal for preset preview -->
+    <div id="preset-modal" class="modal" style="display:none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Preset Details</h2>
+          <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <pre id="modal-config"></pre>
+          <div id="modal-steps"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary modal-close">Cancel</button>
+          <button class="btn-primary" id="modal-apply">Apply Preset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Preset application logic
+    const applyButtons = document.querySelectorAll('[data-action="apply"]');
+    const previewButtons = document.querySelectorAll('[data-action="preview"]');
+    const modal = document.getElementById('preset-modal');
+    const modalClose = document.querySelectorAll('.modal-close');
+    const modalApply = document.getElementById('modal-apply');
+    let currentPresetId = null;
+
+    applyButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const presetId = btn.dataset.preset;
+        if (!confirm(`Apply "${presetId}" preset? This will update your StdOut configuration.`)) {
+          return;
+        }
+
+        btn.textContent = 'Applying...';
+        btn.disabled = true;
+
+        try {
+          const response = await fetch('/app/api/presets/apply', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ presetId })
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to apply preset');
+          }
+
+          const result = await response.json();
+          alert(`Preset applied successfully! ${result.message || ''}`);
+          window.location.reload();
+        } catch (error) {
+          console.error('Preset application failed:', error);
+          alert('Failed to apply preset. Check console for details.');
+          btn.textContent = 'Apply Preset';
+          btn.disabled = false;
+        }
+      });
+    });
+
+    previewButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const presetId = btn.dataset.preset;
+        currentPresetId = presetId;
+
+        try {
+          const response = await fetch(`/app/api/presets/${presetId}`);
+          if (!response.ok) throw new Error('Failed to load preset');
+
+          const preset = await response.json();
+
+          document.getElementById('modal-title').textContent = preset.name;
+          document.getElementById('modal-config').textContent = JSON.stringify(preset.configuration, null, 2);
+
+          const stepsHtml = preset.postSetupSteps.map((step: any) => `
+            <div class="setup-step">
+              <h4>${step.title}</h4>
+              <p>${step.description}</p>
+              ${step.link ? `<a href="${step.link}" class="step-link">Configure →</a>` : ''}
+            </div>
+          `).join('');
+
+          document.getElementById('modal-steps').innerHTML = `<h3>Setup Steps</h3>${stepsHtml}`;
+          modal.style.display = 'flex';
+        } catch (error) {
+          console.error('Failed to load preset:', error);
+          alert('Failed to load preset details.');
+        }
+      });
+    });
+
+    modalClose.forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.style.display = 'none';
+      });
+    });
+
+    modalApply.addEventListener('click', async () => {
+      if (!currentPresetId) return;
+
+      modal.style.display = 'none';
+      const applyBtn = document.querySelector(`[data-action="apply"][data-preset="${currentPresetId}"]`);
+      if (applyBtn) {
+        (applyBtn as HTMLButtonElement).click();
+      }
+    });
+
+    // Close modal on outside click
+    modal?.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+      }
+    });
+  </script>
+
+  <style>
+    .presets-page {
+      padding: 24px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .presets-header {
+      margin-bottom: 32px;
+    }
+
+    .presets-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #F0F0F8;
+      margin: 0 0 8px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #9090A8;
+      margin: 0;
+    }
+
+    .presets-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 20px;
+    }
+
+    .preset-card {
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      transition: border-color 0.2s;
+    }
+
+    .preset-card:hover {
+      border-color: #FB923C;
+    }
+
+    .preset-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .preset-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #F0F0F8;
+      margin: 0;
+    }
+
+    .preset-version {
+      font-size: 11px;
+      color: #5A5A72;
+      font-family: monospace;
+      background: #1F1F35;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+
+    .preset-description {
+      font-size: 13px;
+      color: #C0C0D8;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .preset-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .meta-item {
+      display: flex;
+      gap: 8px;
+    }
+
+    .meta-label {
+      color: #5A5A72;
+      font-weight: 600;
+    }
+
+    .meta-value {
+      color: #9090A8;
+    }
+
+    .comparison-badge {
+      background: linear-gradient(135deg, #22C55E15, #22C55E08);
+      border: 1px solid #22C55E40;
+      border-radius: 4px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #22C55E;
+    }
+
+    .preset-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      flex: 1;
+      padding: 10px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #C2410C;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #EA580C;
+    }
+
+    .btn-primary:disabled {
+      background: #5A5A72;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #5A5A72;
+      color: #9090A8;
+    }
+
+    .btn-secondary:hover {
+      border-color: #FB923C;
+      color: #FB923C;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(7, 7, 12, 0.9);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-content {
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      max-width: 700px;
+      width: 100%;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #1F1F35;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      font-size: 20px;
+      color: #F0F0F8;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #9090A8;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+    }
+
+    .modal-close:hover {
+      background: #1F1F35;
+      color: #FB923C;
+    }
+
+    .modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .modal-body pre {
+      background: #07070C;
+      border: 1px solid #1F1F35;
+      border-radius: 4px;
+      padding: 16px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: #C0C0D8;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .modal-body h3 {
+      font-size: 16px;
+      color: #F0F0F8;
+      margin: 24px 0 12px;
+    }
+
+    .setup-step {
+      background: #07070C;
+      border: 1px solid #1F1F35;
+      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .setup-step h4 {
+      font-size: 14px;
+      color: #FB923C;
+      margin: 0 0 6px;
+    }
+
+    .setup-step p {
+      font-size: 13px;
+      color: #C0C0D8;
+      margin: 0 0 8px;
+    }
+
+    .step-link {
+      font-size: 12px;
+      color: #60a5fa;
+      text-decoration: none;
+    }
+
+    .step-link:hover {
+      text-decoration: underline;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #1F1F35;
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+  </style>
+</Layout>
