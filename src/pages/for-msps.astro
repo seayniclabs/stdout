@@ -1,0 +1,629 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+
+const meta = {
+  title: 'For MSPs - StdOut Monitoring Platform',
+  description: 'White-label infrastructure monitoring for MSPs. Serve unlimited clients with flat-rate pricing, multi-tenant workspaces, and AI-powered incident response.',
+  canonical: 'https://stdout.app/for-msps'
+};
+---
+
+<Layout {meta}>
+  <main class="msp-landing">
+    <header class="hero">
+      <h1>Your Monitoring Stack.<br />Your Client's Dashboard.<br />Your Margins.</h1>
+      <p class="lede">White-label StdOut under your MSP brand. Flat-rate pricing means your margins grow as you scale — no per-client seat penalties.</p>
+      <div class="hero-cta">
+        <a href="/download" class="btn-primary">Download Now</a>
+        <a href="/msp-playbook" class="btn-secondary">MSP Playbook</a>
+      </div>
+    </header>
+
+    <section class="value-props">
+      <div class="value-card">
+        <h3>Flat-Rate Pricing</h3>
+        <p>$149/year unlimited. Add 50 clients, pay the same price. Not $149 per client — $149 total.</p>
+      </div>
+
+      <div class="value-card">
+        <h3>White-Label Portals</h3>
+        <p>Each client gets their own branded dashboard. Your logo, your domain, your rules.</p>
+      </div>
+
+      <div class="value-card">
+        <h3>Multi-Tenant Workspaces</h3>
+        <p>One StdOut instance, complete data isolation per client. No cross-tenant leaks.</p>
+      </div>
+
+      <div class="value-card">
+        <h3>AI Incident Response</h3>
+        <p>Observatory AI diagnoses issues and generates runbooks — even at 2am.</p>
+      </div>
+    </section>
+
+    <section class="margins-calculator">
+      <h2>Margin Calculator</h2>
+      <form id="margin-form">
+        <div class="form-row">
+          <label>
+            Number of clients:
+            <input type="number" id="client-count" value="10" min="1" max="1000" />
+          </label>
+
+          <label>
+            Monthly charge per client:
+            <input type="number" id="monthly-rate" value="99" min="10" max="10000" />
+          </label>
+        </div>
+
+        <div class="results">
+          <div class="result-row">
+            <span>Annual revenue:</span>
+            <span id="annual-revenue" class="result-value">$11,880</span>
+          </div>
+
+          <div class="result-row">
+            <span>StdOut license:</span>
+            <span class="result-cost">-$149</span>
+          </div>
+
+          <div class="result-row">
+            <span>Server hosting (est.):</span>
+            <span class="result-cost">-$600</span>
+          </div>
+
+          <div class="result-row total">
+            <span><strong>Net profit:</strong></span>
+            <span id="net-profit" class="result-profit"><strong>$11,131</strong></span>
+          </div>
+
+          <p class="margin-note">Gross margin: <strong id="margin-percent">93.7%</strong></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="case-study">
+      <h2>Case Study: MidAtlantic IT</h2>
+      <div class="case-study-content">
+        <div class="case-study-stat">
+          <span class="stat-value">12</span>
+          <span class="stat-label">Clients</span>
+        </div>
+
+        <div class="case-study-stat">
+          <span class="stat-value">400</span>
+          <span class="stat-label">Devices</span>
+        </div>
+
+        <div class="case-study-stat">
+          <span class="stat-value">8</span>
+          <span class="stat-label">Months in Production</span>
+        </div>
+
+        <blockquote>
+          <p>"We went from $4,200/month (Datadog + PagerDuty) to $65/month (Hetzner server). StdOut paid for itself in the first month. We now offer monitoring as a premium add-on at $99/month per client."</p>
+          <cite>— Sarah M., Operations Director</cite>
+        </blockquote>
+
+        <div class="case-study-metrics">
+          <div class="metric">
+            <strong>MTTR:</strong> 12 minutes → 3 minutes
+          </div>
+          <div class="metric">
+            <strong>Auto-remediation:</strong> 47% of incidents resolved without human touch
+          </div>
+          <div class="metric">
+            <strong>Cost savings:</strong> $4,135/month
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="comparison">
+      <h2>vs. Traditional Monitoring SaaS</h2>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>Feature</th>
+            <th>StdOut (MSP)</th>
+            <th>Datadog</th>
+            <th>Rootly</th>
+            <th>BetterStack</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Pricing model</td>
+            <td class="yes">$149/year unlimited</td>
+            <td class="no">$200/user/month</td>
+            <td class="no">$100/user/month</td>
+            <td class="no">$299/month per client</td>
+          </tr>
+          <tr>
+            <td>White-label portals</td>
+            <td class="yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>Multi-tenant</td>
+            <td class="yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>AI incident response</td>
+            <td class="yes">✓ (local Ollama)</td>
+            <td class="yes">✓ (proprietary)</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+          <tr>
+            <td>Self-hosted</td>
+            <td class="yes">✓</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+            <td class="no">✗</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="next-steps">
+      <h2>Get Started in 3 Steps</h2>
+      <ol class="steps">
+        <li>
+          <h3>1. Download & Deploy</h3>
+          <p>Docker Compose deploy on your infrastructure. 5-minute setup.</p>
+          <a href="/download" class="btn-link">Download StdOut</a>
+        </li>
+
+        <li>
+          <h3>2. Configure White-Label</h3>
+          <p>Upload your logo, set your domain, customize branding.</p>
+          <a href="/msp-playbook#white-label" class="btn-link">White-Label Guide</a>
+        </li>
+
+        <li>
+          <h3>3. Onboard First Client</h3>
+          <p>Create workspace, deploy satellite agent, grant portal access.</p>
+          <a href="/msp-playbook#onboarding" class="btn-link">Onboarding Guide</a>
+        </li>
+      </ol>
+    </section>
+
+    <footer class="msp-footer">
+      <h2>Questions?</h2>
+      <p>Join the StdOut MSP community or reach out directly.</p>
+      <div class="footer-links">
+        <a href="/docs/msp-setup">MSP Setup Docs</a>
+        <a href="https://github.com/seayniclabs/stdout/discussions" target="_blank">Community Forum</a>
+        <a href="mailto:support@seayniclabs.com">Email Support</a>
+      </div>
+    </footer>
+  </main>
+
+  <style>
+    .msp-landing {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+      color: #F0F0F8;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 80px;
+    }
+
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 700;
+      line-height: 1.2;
+      margin: 0 0 20px;
+    }
+
+    .lede {
+      font-size: 20px;
+      color: #C0C0D8;
+      max-width: 700px;
+      margin: 0 auto 30px;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .value-props {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 24px;
+      margin-bottom: 80px;
+    }
+
+    .value-card {
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .value-card h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #22C55E;
+      margin: 0 0 12px;
+    }
+
+    .value-card p {
+      font-size: 14px;
+      color: #C0C0D8;
+      margin: 0;
+    }
+
+    .margins-calculator {
+      margin-bottom: 80px;
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      padding: 32px;
+    }
+
+    .margins-calculator h2 {
+      font-size: 28px;
+      margin: 0 0 24px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    .form-row label {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .form-row input {
+      padding: 10px 12px;
+      border: 1px solid #1F1F35;
+      border-radius: 6px;
+      background: #07070C;
+      color: #F0F0F8;
+      font-size: 16px;
+    }
+
+    .results {
+      background: #1F1F35;
+      border-radius: 6px;
+      padding: 24px;
+    }
+
+    .result-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid #2A2A40;
+    }
+
+    .result-row.total {
+      border-top: 2px solid #2A2A40;
+      border-bottom: none;
+      padding-top: 16px;
+      margin-top: 8px;
+    }
+
+    .result-value {
+      font-family: monospace;
+      color: #22C55E;
+      font-weight: 600;
+    }
+
+    .result-cost {
+      font-family: monospace;
+      color: #EF4444;
+    }
+
+    .result-profit {
+      font-family: monospace;
+      color: #22C55E;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .margin-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: #9090A8;
+    }
+
+    .case-study {
+      margin-bottom: 80px;
+    }
+
+    .case-study h2 {
+      font-size: 28px;
+      margin: 0 0 24px;
+      text-align: center;
+    }
+
+    .case-study-content {
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      padding: 32px;
+    }
+
+    .case-study-stat {
+      display: inline-block;
+      margin: 0 32px 24px 0;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 42px;
+      font-weight: 700;
+      font-family: monospace;
+      color: #FB923C;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9090A8;
+    }
+
+    blockquote {
+      background: #1F1F35;
+      border-left: 4px solid #FB923C;
+      padding: 20px 24px;
+      margin: 24px 0;
+      font-style: italic;
+    }
+
+    cite {
+      display: block;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #9090A8;
+      font-style: normal;
+    }
+
+    .case-study-metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .metric {
+      background: #1F1F35;
+      padding: 16px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .comparison {
+      margin-bottom: 80px;
+    }
+
+    .comparison h2 {
+      font-size: 28px;
+      margin: 0 0 24px;
+      text-align: center;
+    }
+
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .comparison-table thead {
+      background: #1F1F35;
+    }
+
+    .comparison-table th,
+    .comparison-table td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid #1F1F35;
+    }
+
+    .comparison-table th {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #9090A8;
+    }
+
+    .comparison-table td {
+      font-size: 14px;
+      color: #C0C0D8;
+    }
+
+    .comparison-table .yes {
+      color: #22C55E;
+    }
+
+    .comparison-table .no {
+      color: #5A5A72;
+    }
+
+    .next-steps {
+      margin-bottom: 80px;
+    }
+
+    .next-steps h2 {
+      font-size: 28px;
+      margin: 0 0 24px;
+      text-align: center;
+    }
+
+    .steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .steps li {
+      background: #0E0E18;
+      border: 1px solid #1F1F35;
+      border-radius: 8px;
+      padding: 24px;
+    }
+
+    .steps h3 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #FB923C;
+      margin: 0 0 12px;
+    }
+
+    .steps p {
+      font-size: 14px;
+      color: #C0C0D8;
+      margin: 0 0 16px;
+    }
+
+    .btn-link {
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .btn-link:hover {
+      text-decoration: underline;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 6px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #C2410C;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #EA580C;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      border: 2px solid #FB923C;
+      color: #FB923C;
+    }
+
+    .btn-secondary:hover {
+      background: #FB923C;
+      color: #07070C;
+    }
+
+    .msp-footer {
+      text-align: center;
+      padding: 40px 0;
+      border-top: 2px solid #1F1F35;
+    }
+
+    .msp-footer h2 {
+      font-size: 28px;
+      margin: 0 0 12px;
+    }
+
+    .msp-footer p {
+      font-size: 16px;
+      color: #C0C0D8;
+      margin: 0 0 24px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .footer-links a {
+      color: #60a5fa;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 32px;
+      }
+
+      .value-props,
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .case-study-stat {
+        display: block;
+        margin: 0 0 24px;
+      }
+    }
+  </style>
+
+  <script>
+    const clientCount = document.getElementById('client-count') as HTMLInputElement;
+    const monthlyRate = document.getElementById('monthly-rate') as HTMLInputElement;
+    const annualRevenue = document.getElementById('annual-revenue');
+    const netProfit = document.getElementById('net-profit');
+    const marginPercent = document.getElementById('margin-percent');
+
+    function calculateMargins() {
+      const clients = parseInt(clientCount?.value || '0');
+      const rate = parseInt(monthlyRate?.value || '0');
+
+      const revenue = clients * rate * 12;
+      const costs = 149 + 600; // StdOut license + hosting
+      const profit = revenue - costs;
+      const margin = ((profit / revenue) * 100).toFixed(1);
+
+      if (annualRevenue) annualRevenue.textContent = `$${revenue.toLocaleString()}`;
+      if (netProfit) netProfit.innerHTML = `<strong>$${profit.toLocaleString()}</strong>`;
+      if (marginPercent) marginPercent.textContent = `${margin}%`;
+    }
+
+    clientCount?.addEventListener('input', calculateMargins);
+    monthlyRate?.addEventListener('input', calculateMargins);
+
+    calculateMargins(); // Initial calculation
+  </script>
+</Layout>
