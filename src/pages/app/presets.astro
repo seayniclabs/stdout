@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 
 // Load all presets from src/data/presets/
-const presets = await Astro.glob('../data/presets/*.json');
+const presets = await Astro.glob('../../data/presets/*.json');
 
 const user = Astro.locals.user;
 if (!user) {
