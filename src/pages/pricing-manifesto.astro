@@ -1,0 +1,361 @@
+---
+import Layout from '../layouts/Layout.astro';
+import '../styles/global.css';
+
+const meta = {
+  title: 'Why We Don\'t Charge Per-User — StdOut',
+  description: 'The per-user pricing model is a relic of enterprise sales, not infrastructure automation. StdOut charges flat-rate because AI-powered ops should scale with your infrastructure, not your headcount.',
+  canonical: 'https://stdout.app/pricing-manifesto'
+};
+---
+
+<Layout {meta}>
+  <main class="manifesto">
+    <header class="manifesto-hero">
+      <h1>Why We Don't Charge <span class="strike">Per-User</span></h1>
+      <p class="lede">The per-user pricing model is a relic of enterprise sales, not infrastructure automation. StdOut charges flat-rate because AI-powered ops should scale with your infrastructure, not your headcount.</p>
+    </header>
+
+    <section class="manifesto-body">
+      <article class="manifesto-section">
+        <h2>The Per-User Tax is a Sales Artifact, Not a Technical Constraint</h2>
+        <p>Per-user pricing exists because SaaS companies need predictable revenue and enterprise sales teams need a line item that scales with organization size. It has nothing to do with the actual cost of running the software.</p>
+
+        <p>For infrastructure monitoring, this creates a perverse incentive: <strong>the more people you have helping keep systems up, the more you pay.</strong></p>
+
+        <div class="callout">
+          <p><strong>Example:</strong> A 3-person ops team managing 50 servers pays the same Rootly price as a 3-person team managing 500 servers — but add one intern to help during incident response, and suddenly your bill jumps 25%.</p>
+        </div>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>AI-Powered Ops Eliminates the "User" Variable</h2>
+        <p>StdOut's Observatory AI handles detection, diagnosis, and remediation autonomously. The number of humans reviewing incidents is irrelevant to the cost of running the system.</p>
+
+        <ul class="benefit-list">
+          <li><strong>Detection runs on a schedule</strong> — Watcher scans your stack every 5 minutes whether 1 person or 10 people are logged in</li>
+          <li><strong>AI inference cost is fixed</strong> — Llama 3.2 and Qwen 2.5 run locally; no per-query pricing</li>
+          <li><strong>Storage scales with infrastructure, not users</strong> — Your incident history grows with server count, not team size</li>
+          <li><strong>Auto-remediation doesn't care who's watching</strong> — Automated fixes execute regardless of who's subscribed to alerts</li>
+        </ul>
+
+        <p>Charging per-user for this would be like charging per-viewer for a security camera feed. The camera runs whether 1 person or 100 people are watching.</p>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>Flat-Rate Aligns Incentives</h2>
+        <p>Per-user pricing creates friction:</p>
+        <ul class="friction-list">
+          <li>Teams ration access to stay under seat limits</li>
+          <li>New hires wait for budget approval before getting monitoring access</li>
+          <li>Contractors and consultants get locked out to avoid overage charges</li>
+          <li>Junior engineers can't learn incident response because "we only have 5 seats"</li>
+        </ul>
+
+        <p>StdOut's flat-rate model means:</p>
+        <ul class="benefit-list">
+          <li><strong>No access rationing</strong> — Everyone on the ops team gets full access, always</li>
+          <li><strong>No surprise bills</strong> — Hire 5 people mid-quarter? Your StdOut price stays the same</li>
+          <li><strong>No vendor lock-in games</strong> — We can't hold your org size hostage during renewal negotiations</li>
+          <li><strong>Junior engineers can learn</strong> — Read-only observers don't inflate your bill</li>
+        </ul>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>What You Actually Pay For</h2>
+        <p>StdOut charges $149/year flat. That covers:</p>
+
+        <table class="pricing-breakdown">
+          <tbody>
+            <tr>
+              <td>Self-hosted infrastructure</td>
+              <td class="cost">$0/mo</td>
+              <td class="note">Runs on hardware you already own</td>
+            </tr>
+            <tr>
+              <td>AI inference (local Ollama)</td>
+              <td class="cost">$0/mo</td>
+              <td class="note">Llama 3.2 + Qwen 2.5, no cloud API costs</td>
+            </tr>
+            <tr>
+              <td>StdOut license + updates</td>
+              <td class="cost">$12.42/mo</td>
+              <td class="note">One-time annual payment, billed yearly</td>
+            </tr>
+            <tr class="total-row">
+              <td><strong>Total (unlimited users)</strong></td>
+              <td class="cost"><strong>$12.42/mo</strong></td>
+              <td class="note"><strong>$149/year, flat-rate</strong></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p class="footnote">Compare: Rootly starts at $1,800/year for 3 users. StdOut is $149/year for <em>unlimited</em> users.</p>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>When Per-User Pricing Makes Sense</h2>
+        <p>We're not saying per-user pricing is always wrong. It works when:</p>
+        <ul>
+          <li>The software's cost genuinely scales with user count (e.g., email inboxes, CRM seats)</li>
+          <li>Each user consumes distinct cloud resources (e.g., file storage, compute credits)</li>
+          <li>Value delivered is proportional to active users (e.g., collaboration tools)</li>
+        </ul>
+
+        <p><strong>Infrastructure monitoring is none of these.</strong> The servers you're monitoring don't care how many people are watching the dashboard.</p>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>The SMB Reality</h2>
+        <p>Small ops teams (1-5 people) don't have the budget flexibility to absorb per-user pricing shocks. When you hire your second ops engineer, you shouldn't have to explain to finance why the monitoring tool now costs 2x more.</p>
+
+        <div class="callout">
+          <p><strong>Real scenario:</strong> A 2-person DevOps team at a SaaS company was using Rootly at $100/user/month = $200/month. They hired a third engineer. Rootly bill jumped to $300/month. CFO asked "why did our monitoring costs increase 50%?" The answer: "We hired someone to help keep the site up." That's broken.</p>
+        </div>
+
+        <p>StdOut's flat-rate model means hiring more ops engineers <em>reduces</em> your per-person cost, not increases it. If you have 1 person, it's $149/year. If you have 5 people, it's still $149/year — effectively $29.80/person/year.</p>
+      </article>
+
+      <article class="manifesto-section">
+        <h2>Open-Core Future</h2>
+        <p>StdOut is moving toward an open-core model where the core monitoring + AI detection is free (Apache 2.0), and premium features (multi-tenant, SSO, compliance reporting) are paid add-ons — still <strong>not per-user.</strong></p>
+
+        <p>We'll charge for capabilities that create real operational cost (e.g., managed cloud hosting, white-label customization), not for the number of people using the software.</p>
+      </article>
+    </section>
+
+    <footer class="manifesto-footer">
+      <h2>Try It Yourself</h2>
+      <p>Download StdOut, deploy it on your infrastructure, and invite your entire ops team. No seat limits, no per-user upsells, no surprise bills.</p>
+      <div class="cta-buttons">
+        <a href="/download" class="btn-primary">Download StdOut</a>
+        <a href="/docs/quick-start" class="btn-secondary">Quick Start Guide</a>
+      </div>
+      <p class="footnote">Questions? <a href="mailto:support@seayniclabs.com">support@seayniclabs.com</a></p>
+    </footer>
+  </main>
+</Layout>
+
+<style>
+  .manifesto {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px 20px 80px;
+    color: #F0F0F8;
+    font-family: -apple-system, system-ui, sans-serif;
+    line-height: 1.7;
+  }
+
+  .manifesto-hero {
+    text-align: center;
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 2px solid #1F1F35;
+  }
+
+  .manifesto-hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    margin: 0 0 20px;
+    color: #FB923C;
+  }
+
+  .strike {
+    text-decoration: line-through;
+    color: #EF4444;
+    opacity: 0.7;
+  }
+
+  .lede {
+    font-size: 20px;
+    color: #C0C0D8;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .manifesto-body {
+    display: flex;
+    flex-direction: column;
+    gap: 60px;
+  }
+
+  .manifesto-section h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #F0F0F8;
+    margin: 0 0 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #2A2A40;
+  }
+
+  .manifesto-section p {
+    margin: 0 0 20px;
+    color: #C0C0D8;
+  }
+
+  .callout {
+    background: #0E0E18;
+    border-left: 4px solid #FB923C;
+    padding: 20px 24px;
+    margin: 30px 0;
+    border-radius: 4px;
+  }
+
+  .callout p {
+    margin: 0;
+    color: #F0F0F8;
+  }
+
+  .benefit-list,
+  .friction-list {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0;
+  }
+
+  .benefit-list li,
+  .friction-list li {
+    padding: 12px 0;
+    border-bottom: 1px solid #1F1F35;
+    color: #C0C0D8;
+  }
+
+  .benefit-list li:last-child,
+  .friction-list li:last-child {
+    border-bottom: none;
+  }
+
+  .benefit-list strong {
+    color: #22C55E;
+  }
+
+  .friction-list {
+    color: #EF4444;
+  }
+
+  .pricing-breakdown {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 30px 0;
+    font-size: 15px;
+  }
+
+  .pricing-breakdown td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #1F1F35;
+  }
+
+  .pricing-breakdown .cost {
+    text-align: right;
+    font-family: monospace;
+    font-weight: 600;
+    color: #FB923C;
+    white-space: nowrap;
+  }
+
+  .pricing-breakdown .note {
+    color: #9090A8;
+    font-size: 13px;
+  }
+
+  .total-row td {
+    padding-top: 20px;
+    border-top: 2px solid #2A2A40;
+    border-bottom: none;
+    font-size: 16px;
+  }
+
+  .footnote {
+    font-size: 13px;
+    color: #9090A8;
+    font-style: italic;
+  }
+
+  .manifesto-footer {
+    text-align: center;
+    margin-top: 80px;
+    padding: 40px 0;
+    border-top: 2px solid #1F1F35;
+  }
+
+  .manifesto-footer h2 {
+    font-size: 32px;
+    margin-bottom: 16px;
+    color: #F0F0F8;
+  }
+
+  .manifesto-footer > p {
+    font-size: 18px;
+    color: #C0C0D8;
+    margin-bottom: 30px;
+  }
+
+  .cta-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    display: inline-block;
+    padding: 14px 32px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+
+  .btn-primary {
+    background: #C2410C;
+    color: #fff;
+  }
+
+  .btn-primary:hover {
+    background: #EA580C;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 2px solid #FB923C;
+    color: #FB923C;
+  }
+
+  .btn-secondary:hover {
+    background: #FB923C;
+    color: #07070C;
+  }
+
+  @media (max-width: 768px) {
+    .manifesto {
+      padding: 20px 16px 60px;
+    }
+
+    .manifesto-hero h1 {
+      font-size: 32px;
+    }
+
+    .lede {
+      font-size: 16px;
+    }
+
+    .manifesto-section h2 {
+      font-size: 22px;
+    }
+
+    .pricing-breakdown {
+      font-size: 13px;
+    }
+
+    .pricing-breakdown .note {
+      font-size: 11px;
+    }
+
+    .cta-buttons {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+</style>
