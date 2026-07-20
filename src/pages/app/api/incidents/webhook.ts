@@ -1,14 +1,18 @@
 import type { APIRoute } from 'astro';
-import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { notify } from '../../../../lib/notify';
+import { createOrDeduplicateIncident } from '../../../../lib/incident-dedup';
 
 /**
  * POST /app/api/incidents/webhook
  *
  * Create an incident from an external source (monitoring tool, n8n workflow,
  * CI pipeline, etc). Requires Bearer token auth (same tokens as scanner).
+ *
+ * **Deduplication:** Incidents with the same fingerprint (title + description
+ * + severity + stack) within a 60-minute window are deduplicated automatically.
+ * Duplicate arrivals increment the occurrence count instead of creating new incidents.
  *
  * Request body:
  * {
@@ -19,7 +23,7 @@ import { notify } from '../../../../lib/notify';
  *   "tags": "nginx,production,502"                // optional: comma-separated
  * }
  *
- * Response: { incidentId, url }
+ * Response: { incidentId, url, isDuplicate, occurrenceCount }
  */
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) {
@@ -61,42 +65,53 @@ export const POST: APIRoute = async ({ locals, request }) => {
     }
   }
 
-  const id = nanoid();
-  const now = new Date();
-  const db = getDb();
-
-  db.insert(schema.incidents).values({
-    id,
-    userId: locals.user.id,
-    stackId,
+  // Create or deduplicate incident
+  const dedupResult = createOrDeduplicateIncident(locals.user.id, {
     title,
     description,
     severity,
-    status: 'active',
+    stackId,
     tags: tags || null,
-    createdAt: now,
-    updatedAt: now,
-  }).run();
+  });
 
-  // Fire notifications
-  notify(locals.user.id, {
-    event: 'incident_created',
-    title: `[${severity.toUpperCase()}] ${title}`,
-    body: description.slice(0, 200),
-    url: `/app/incidents/${id}`,
-  }).catch(() => {});
+  const { incidentId, isDuplicate, occurrenceCount } = dedupResult;
 
-  if (severity === 'critical') {
+  // Fire notifications only for NEW incidents (not duplicates)
+  if (!isDuplicate) {
     notify(locals.user.id, {
-      event: 'severity_critical',
-      title: `CRITICAL: ${title}`,
+      event: 'incident_created',
+      title: `[${severity.toUpperCase()}] ${title}`,
       body: description.slice(0, 200),
-      url: `/app/incidents/${id}`,
+      url: `/app/incidents/${incidentId}`,
     }).catch(() => {});
+
+    if (severity === 'critical') {
+      notify(locals.user.id, {
+        event: 'severity_critical',
+        title: `CRITICAL: ${title}`,
+        body: description.slice(0, 200),
+        url: `/app/incidents/${incidentId}`,
+      }).catch(() => {});
+    }
+  } else {
+    // Optional: notify on high occurrence count
+    if (occurrenceCount && occurrenceCount >= 5 && occurrenceCount % 5 === 0) {
+      notify(locals.user.id, {
+        event: 'incident_recurring',
+        title: `${title} (${occurrenceCount} occurrences)`,
+        body: 'This incident is recurring frequently. Consider investigating the root cause.',
+        url: `/app/incidents/${incidentId}`,
+      }).catch(() => {});
+    }
   }
 
   return new Response(JSON.stringify({
-    incidentId: id,
-    url: `/app/incidents/${id}`,
-  }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    incidentId,
+    url: `/app/incidents/${incidentId}`,
+    isDuplicate,
+    occurrenceCount: occurrenceCount || 1,
+  }), {
+    status: isDuplicate ? 200 : 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
 };

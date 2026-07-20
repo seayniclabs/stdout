@@ -196,6 +196,16 @@ export const incidents = sqliteTable('incidents', {
   resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  // Deduplication columns
+  fingerprint: text('fingerprint'),
+  duplicateOf: text('duplicate_of'),
+  occurrenceCount: integer('occurrence_count').notNull().default(1),
+});
+
+export const incidentOccurrences = sqliteTable('incident_occurrences', {
+  id: text('id').primaryKey(),
+  incidentId: text('incident_id').notNull(),
+  occurredAt: integer('occurred_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const resolutions = sqliteTable('resolutions', {
