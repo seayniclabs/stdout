@@ -100,6 +100,24 @@ export const POST: APIRoute = async ({ locals, request }) => {
         'user_key', 'failed', verification.message);
     }
 
+    // If fix verified, check for bulk resolution opportunity
+    let bulkResult = null;
+    if (verification.verified) {
+      const { checkAndApplyBulkFix } = await import('../../../../lib/bulk-resolution');
+      bulkResult = await checkAndApplyBulkFix(
+        incidentId,
+        command,
+        verification.evidence || 'Fix verified successfully',
+        userId
+      );
+
+      if (bulkResult.bulkResolvedIds.length > 0) {
+        logAudit(userId, incidentId, 'bulk_resolve', 'system', 'autofix',
+          'user_key', 'success',
+          `Bulk-resolved ${bulkResult.bulkResolvedIds.length} matching incidents: ${bulkResult.bulkResolvedIds.join(', ')}`);
+      }
+    }
+
     return new Response(JSON.stringify({
       ok: result.exitCode === 0,
       exitCode: result.exitCode,
@@ -112,6 +130,10 @@ export const POST: APIRoute = async ({ locals, request }) => {
         message: verification.message,
         evidence: verification.evidence,
       },
+      bulkResolution: bulkResult ? {
+        totalResolved: bulkResult.totalResolved,
+        bulkResolvedIds: bulkResult.bulkResolvedIds,
+      } : null,
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
