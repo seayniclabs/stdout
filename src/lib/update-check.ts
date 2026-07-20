@@ -59,6 +59,25 @@ export async function checkForUpdate(): Promise<UpdateCheckResult | null> {
     return null;
   }
 
+  // Dev licenses (SL-DEV-*) bypass store check - they're for development/testing only
+  if (licenseKey.startsWith('SL-DEV-')) {
+    licenseNotice = null;
+    const devResult: UpdateCheckResult = {
+      hasUpdate: false,
+      currentVersion: CURRENT_VERSION,
+      latestVersion: CURRENT_VERSION,
+      releaseUrl: STORE_PRODUCT_URL,
+      licenseValid: true,
+      subscriptionActive: true,
+      entitledVersion: CURRENT_VERSION,
+      lifetime: true,
+      fileHash: null,
+    };
+    cachedResult = devResult;
+    cachedAt = Date.now();
+    return devResult;
+  }
+
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
