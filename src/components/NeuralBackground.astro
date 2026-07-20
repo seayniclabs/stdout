@@ -24,7 +24,7 @@
 <script>
   // Generate neural network nodes and connections
   const svg = document.querySelector('.neural-svg');
-  if (!svg) return;
+  if (svg) {
 
   const width = window.innerWidth;
   const height = window.innerHeight;
@@ -120,6 +120,7 @@
       svg.setAttribute('viewBox', `0 0 ${newWidth} ${newHeight}`);
     }, 250);
   });
+  } // End if(svg)
 </script>
 
 <style>
