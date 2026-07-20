@@ -49,9 +49,9 @@ const recommended = rankAddons(allAddons, detectedServices, 3);
 // Get user's existing interest flags
 const interests = db.select()
   .from(schema.addonInterest)
-  .where(eq(schema.addonInterest.userId, user.id))
+  .where(eq(schema.addonInterest.email, user.email))
   .all();
-const interestedIds = new Set(interests.map(i => i.toolId));
+const interestedIds = new Set(interests.map(i => i.productName));
 ---
 <Layout title="Add-ons — StdOut">
   <div class="addons-page">
@@ -123,11 +123,11 @@ const interestedIds = new Set(interests.map(i => i.toolId));
               <p class="coming-soon-teaser">{item.teaser}</p>
             </div>
             <button
-              class={`coming-soon-notify ${interestedIds.has(item.id) ? 'notified' : ''}`}
-              data-tool-id={item.id}
-              disabled={interestedIds.has(item.id)}
+              class={`coming-soon-notify ${interestedIds.has(item.name) ? 'notified' : ''}`}
+              data-product-name={item.name}
+              disabled={interestedIds.has(item.name)}
             >
-              {interestedIds.has(item.id) ? 'Noted \u2713' : 'Notify me'}
+              {interestedIds.has(item.name) ? 'Noted \u2713' : 'Notify me'}
             </button>
           </div>
         ))}
@@ -155,8 +155,8 @@ const interestedIds = new Set(interests.map(i => i.toolId));
     // Notify me buttons
     document.querySelectorAll('.coming-soon-notify:not(.notified)').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const toolId = (btn as HTMLElement).dataset.toolId;
-        if (!toolId) return;
+        const productName = (btn as HTMLElement).dataset.productName;
+        if (!productName) return;
         (btn as HTMLButtonElement).disabled = true;
         btn.textContent = '...';
 
@@ -164,7 +164,7 @@ const interestedIds = new Set(interests.map(i => i.toolId));
           const res = await fetch('/app/api/addons/notify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ toolId }),
+            body: JSON.stringify({ productName }),
           });
           if (res.ok) {
             btn.textContent = 'Noted \u2713';
