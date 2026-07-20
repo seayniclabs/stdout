@@ -75,11 +75,30 @@ export const POST: APIRoute = async ({ locals, request }) => {
   try {
     const result = await executeCommand(command);
 
+    // Verify the fix worked
+    const { verifyFix } = await import('../../../../lib/fix-verification');
+    const verification = await verifyFix(
+      incident.title,
+      incident.description,
+      command,
+      result.stdout,
+      result.exitCode
+    );
+
     // Log the execution as an audit event
     const { logAudit } = await import('../../../../lib/ai-providers');
     logAudit(userId, incidentId, 'autofix_apply', 'system', 'exec',
       'user_key', result.exitCode === 0 ? 'success' : 'failed',
       result.exitCode !== 0 ? result.stderr?.slice(0, 200) : undefined);
+
+    // Log verification result
+    if (verification.verified) {
+      logAudit(userId, incidentId, 'autofix_verify', 'system', 'verify',
+        'user_key', 'verified', verification.evidence);
+    } else {
+      logAudit(userId, incidentId, 'autofix_verify', 'system', 'verify',
+        'user_key', 'failed', verification.message);
+    }
 
     return new Response(JSON.stringify({
       ok: result.exitCode === 0,
@@ -88,6 +107,11 @@ export const POST: APIRoute = async ({ locals, request }) => {
       stderr: result.stderr,
       command,
       stepIndex,
+      verification: {
+        verified: verification.verified,
+        message: verification.message,
+        evidence: verification.evidence,
+      },
     }), {
       headers: { 'Content-Type': 'application/json' },
     });
