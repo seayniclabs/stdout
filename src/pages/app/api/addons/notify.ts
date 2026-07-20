@@ -8,28 +8,28 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return Response.json({ error: 'unauthorized' }, { status: 401 });
   }
 
-  let body: { toolId?: string };
+  let body: { productName?: string };
   try {
     body = await request.json();
   } catch {
     return Response.json({ error: 'invalid_json' }, { status: 400 });
   }
 
-  const { toolId } = body;
-  if (!toolId || typeof toolId !== 'string' || toolId.length > 100) {
-    return Response.json({ error: 'invalid_tool_id' }, { status: 400 });
+  const { productName } = body;
+  if (!productName || typeof productName !== 'string' || productName.length > 200) {
+    return Response.json({ error: 'invalid_product_name' }, { status: 400 });
   }
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
+  const userEmail = locals.user.email;
 
   // Check for existing interest (no duplicates)
   const existing = db.select()
     .from(schema.addonInterest)
     .where(
       and(
-        eq(schema.addonInterest.toolId, toolId),
-        eq(schema.addonInterest.userId, locals.user.id),
+        eq(schema.addonInterest.productName, productName),
+        eq(schema.addonInterest.email, userEmail),
       )
     )
     .get();
@@ -39,8 +39,9 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 
   db.insert(schema.addonInterest).values({
-    toolId,
-    userId: locals.user.id,
+    id: `interest-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+    email: userEmail,
+    productName,
     createdAt: new Date(),
   }).run();
 
