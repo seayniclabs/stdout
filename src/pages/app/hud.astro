@@ -303,8 +303,14 @@ function timeAgo(date: Date) {
             <div class="service-list">
               {monitorsData.map(m => {
                 const statusClass = m.maintenance ? 'maintenance' : m.currentStatus;
-                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : 'Pending first check...';
-                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : 'Pending first check...';
+                const hasData = m.sparkline && m.sparkline.length > 0;
+                const uptimeText = m.uptimePercent > 0 ? `${m.uptimePercent.toFixed(1)}%` : '—';
+                const respText = m.lastResponseMs ? `${m.lastResponseMs}ms` : '—';
+                const statusLabel = m.maintenance ? 'Maintenance' :
+                                   m.currentStatus === 'healthy' ? 'Healthy' :
+                                   m.currentStatus === 'degraded' ? 'Degraded' :
+                                   m.currentStatus === 'down' ? 'Down' :
+                                   'Awaiting first check';
 
                 // Build SVG sparkline path from check history
                 const points = m.sparkline.map((c: any, i: number) => {
@@ -320,18 +326,36 @@ function timeAgo(date: Date) {
 
                 return (
                   <a href={`/app/hud/${m.id}`} class="service-row" data-status={statusClass}>
-                    <span class={`svc-dot ${statusClass}`}></span>
-                    <span class="svc-name" title={m.name}>{m.name}</span>
-                    <div class="svc-sparkline">
-                      {linePath && (
-                        <svg viewBox="0 0 200 28" preserveAspectRatio="none">
-                          <path class={`spark-area ${sparkColor}`} d={areaPath} />
-                          <path class={`spark-line ${sparkColor}`} d={linePath} />
-                        </svg>
-                      )}
+                    <div class="svc-header">
+                      <div class="svc-title-row">
+                        <span class={`svc-dot ${statusClass}`}></span>
+                        <span class="svc-name">{m.name}</span>
+                        <span class={`svc-status-badge ${statusClass}`}>{statusLabel}</span>
+                      </div>
+                      <div class="svc-target mono">{m.target}</div>
                     </div>
-                    <span class={`svc-uptime mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>{uptimeText}</span>
-                    <span class="svc-latency mono">{respText}</span>
+                    <div class="svc-metrics">
+                      <div class="svc-sparkline">
+                        {linePath ? (
+                          <svg viewBox="0 0 200 28" preserveAspectRatio="none">
+                            <path class={`spark-area ${sparkColor}`} d={areaPath} />
+                            <path class={`spark-line ${sparkColor}`} d={linePath} />
+                          </svg>
+                        ) : (
+                          <div class="spark-placeholder">No data yet</div>
+                        )}
+                      </div>
+                      <div class="svc-stats">
+                        <div class="stat-item">
+                          <span class="stat-label">Uptime (30d)</span>
+                          <span class={`stat-value mono ${m.uptimePercent >= 99.9 ? 'uptime-great' : m.uptimePercent >= 99 ? 'uptime-ok' : 'uptime-bad'}`}>{uptimeText}</span>
+                        </div>
+                        <div class="stat-item">
+                          <span class="stat-label">Response</span>
+                          <span class="stat-value mono">{respText}</span>
+                        </div>
+                      </div>
+                    </div>
                   </a>
                 );
               })}
@@ -826,11 +850,10 @@ function timeAgo(date: Date) {
 
   .service-list { display: flex; flex-direction: column; gap: 8px; }
   .service-row {
-    display: grid;
-    grid-template-columns: 12px minmax(180px, 1.5fr) 1fr 90px 90px;
-    align-items: center;
-    gap: 16px;
-    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-left: 3px solid var(--border);
@@ -867,10 +890,40 @@ function timeAgo(date: Date) {
   .svc-dot.maintenance { background: #3b82f6; box-shadow: 0 0 6px rgba(59,130,246,0.3); }
   .svc-dot.unknown { background: var(--text-muted); }
 
-  .svc-name { font-size: 13px; font-weight: 700; min-width: 180px; max-width: 300px; flex-shrink: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: help; }
+  /* New monitor card layout */
+  .svc-header { display: flex; flex-direction: column; gap: 6px; }
+  .svc-title-row { display: flex; align-items: center; gap: 10px; }
+  .svc-name { font-size: 14px; font-weight: 700; flex: 1; }
+  .svc-status-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
+  .svc-status-badge.healthy { background: rgba(34, 197, 94, 0.15); color: var(--low); }
+  .svc-status-badge.degraded { background: rgba(234, 179, 8, 0.15); color: var(--high); }
+  .svc-status-badge.down { background: rgba(239, 68, 68, 0.15); color: var(--critical); }
+  .svc-status-badge.maintenance { background: rgba(59, 130, 246, 0.15); color: #60A5FA; }
+  .svc-status-badge.unknown { background: rgba(107, 114, 128, 0.15); color: var(--text-muted); }
 
-  .svc-sparkline { flex: 1; height: 28px; min-width: 80px; }
+  .svc-target { font-size: 11px; color: var(--text-muted); margin-left: 19px; }
+
+  .svc-metrics { display: flex; gap: 16px; align-items: center; }
+  .svc-sparkline { flex: 1; height: 40px; min-width: 120px; position: relative; }
   .svc-sparkline svg { width: 100%; height: 100%; overflow: visible; }
+  .spark-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
   /* Sparklines — draw-on-load + glow */
   .spark-line { fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 500; stroke-dashoffset: 500; animation: sparkDraw 0.8s ease-out 0.3s forwards; }
   .spark-line.green { stroke: var(--low); filter: drop-shadow(0 0 6px var(--low-glow)); }
@@ -881,8 +934,10 @@ function timeAgo(date: Date) {
   .spark-area.yellow { fill: var(--high); }
   .spark-area.red { fill: var(--critical); }
 
-  .svc-uptime { font-size: 13px; font-weight: 700; width: 55px; text-align: right; flex-shrink: 0; }
-  .svc-latency { font-size: 11px; color: var(--text-muted); width: 55px; text-align: right; flex-shrink: 0; font-weight: 500; }
+  .svc-stats { display: flex; gap: 20px; flex-shrink: 0; }
+  .stat-item { display: flex; flex-direction: column; gap: 2px; min-width: 90px; }
+  .stat-label { font-size: 9px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .stat-value { font-size: 14px; font-weight: 700; }
 
   .uptime-great { color: var(--low); text-shadow: 0 0 8px var(--low-glow); }
   .uptime-ok { color: var(--text-secondary); }

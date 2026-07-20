@@ -120,7 +120,9 @@ const showAddonsBanner = !addonsHidden && !addonsDismissed && (totalMonitors > 0
 const completedCount = completedSteps.length;
 const progressPct = Math.round((completedCount / totalSteps) * 100);
 const isNewUser = !onboardingDismissed && !allDone && (stacksCount === 0 && allIncidents.length === 0 && totalMonitors === 0);
-const showOnboarding = !onboardingDismissed && !allDone;
+// Hide onboarding if dismissed OR all steps complete OR has active infrastructure (monitors/stacks/incidents)
+const hasActiveInfra = totalMonitors > 0 || stacksCount > 0 || allIncidents.length > 0;
+const showOnboarding = !onboardingDismissed && !allDone && !hasActiveInfra;
 
 // --- Recent activity (last 5 incidents created/resolved) ---
 const activityItems: { text: string; time: Date; type: string }[] = [];
