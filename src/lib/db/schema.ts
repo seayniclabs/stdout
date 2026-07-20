@@ -318,7 +318,7 @@ export const observatoryBaselines = sqliteTable('observatory_baselines', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull(),
   monitorId: text('monitor_id').notNull(),
-  metric: text('metric').notNull(),
+  metric: text('metric_name').notNull(),
   baselineValue: text('baseline_value').notNull(),
   unit: text('unit'),
   confidenceScore: integer('confidence_score').notNull().default(50),
