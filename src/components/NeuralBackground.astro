@@ -1,0 +1,155 @@
+---
+// Neural network animated background for Observatory page
+// Creates floating nodes with connecting lines that pulse
+---
+
+<div class="neural-bg">
+  <svg class="neural-svg" xmlns="http://www.w3.org/2000/svg">
+    <!-- Animated gradient definitions -->
+    <defs>
+      <radialGradient id="nodeGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" style="stop-color:var(--accent);stop-opacity:0.8" />
+        <stop offset="50%" style="stop-color:var(--accent);stop-opacity:0.3" />
+        <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0" />
+      </radialGradient>
+      <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" style="stop-color:var(--accent);stop-opacity:0.2" />
+        <stop offset="50%" style="stop-color:var(--accent);stop-opacity:0.5" />
+        <stop offset="100%" style="stop-color:var(--accent);stop-opacity:0.2" />
+      </linearGradient>
+    </defs>
+  </svg>
+</div>
+
+<script>
+  // Generate neural network nodes and connections
+  const svg = document.querySelector('.neural-svg');
+  if (!svg) return;
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+
+  // Generate random nodes
+  const nodeCount = 25;
+  const nodes = [];
+
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({
+      x: Math.random() * width,
+      y: Math.random() * height,
+      vx: (Math.random() - 0.5) * 0.3,
+      vy: (Math.random() - 0.5) * 0.3,
+      r: Math.random() * 3 + 2
+    });
+  }
+
+  // Create node elements
+  nodes.forEach((node, i) => {
+    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    circle.setAttribute('cx', node.x);
+    circle.setAttribute('cy', node.y);
+    circle.setAttribute('r', node.r);
+    circle.setAttribute('fill', 'url(#nodeGlow)');
+    circle.setAttribute('class', 'neural-node');
+    circle.setAttribute('data-index', i);
+    svg.appendChild(circle);
+  });
+
+  // Create connections between nearby nodes
+  function updateConnections() {
+    const existingLines = svg.querySelectorAll('.neural-line');
+    existingLines.forEach(line => line.remove());
+
+    const maxDistance = 200;
+
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+
+        if (distance < maxDistance) {
+          const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+          line.setAttribute('x1', nodes[i].x);
+          line.setAttribute('y1', nodes[i].y);
+          line.setAttribute('x2', nodes[j].x);
+          line.setAttribute('y2', nodes[j].y);
+          line.setAttribute('stroke', 'url(#lineGradient)');
+          line.setAttribute('stroke-width', '1');
+          line.setAttribute('class', 'neural-line');
+          line.style.opacity = (1 - distance / maxDistance) * 0.6;
+          svg.insertBefore(line, svg.firstChild);
+        }
+      }
+    }
+  }
+
+  // Animate nodes
+  function animate() {
+    nodes.forEach((node, i) => {
+      node.x += node.vx;
+      node.y += node.vy;
+
+      // Bounce off edges
+      if (node.x < 0 || node.x > width) node.vx *= -1;
+      if (node.y < 0 || node.y > height) node.vy *= -1;
+
+      // Update circle position
+      const circle = svg.querySelector(`[data-index="${i}"]`);
+      if (circle) {
+        circle.setAttribute('cx', node.x);
+        circle.setAttribute('cy', node.y);
+      }
+    });
+
+    updateConnections();
+    requestAnimationFrame(animate);
+  }
+
+  updateConnections();
+  animate();
+
+  // Update on resize
+  let resizeTimeout;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      const newWidth = window.innerWidth;
+      const newHeight = window.innerHeight;
+      svg.setAttribute('viewBox', `0 0 ${newWidth} ${newHeight}`);
+    }, 250);
+  });
+</script>
+
+<style>
+  .neural-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.4;
+  }
+
+  .neural-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .neural-node {
+    filter: blur(1px);
+    animation: pulse 3s ease-in-out infinite;
+  }
+
+  .neural-line {
+    transition: opacity 0.3s ease;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+</style>
