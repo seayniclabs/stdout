@@ -1,0 +1,182 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getDb, schema } from '../../../lib/db';
+import { eq } from 'drizzle-orm';
+
+// Get user and execution ID
+const userId = (Astro.request as any).userId;
+const { id } = Astro.params;
+
+if (!userId || !id) {
+  return Astro.redirect('/app/remediations');
+}
+
+const db = getDb();
+
+// Get execution
+const execution = db.select()
+  .from(schema.remediationExecutions)
+  .where(eq(schema.remediationExecutions.id, id))
+  .get();
+
+if (!execution || execution.userId !== userId) {
+  return Astro.redirect('/app/remediations');
+}
+
+// Parse logs
+const logs = JSON.parse(execution.logs as string);
+
+// Get playbook
+let playbookName = 'Unknown Playbook';
+const playbook = db.select()
+  .from(schema.remediationPlaybooks)
+  .where(eq(schema.remediationPlaybooks.id, execution.playbookId))
+  .get();
+
+if (playbook) {
+  playbookName = playbook.name;
+} else {
+  // Check built-in
+  const builtInNames: Record<string, string> = {
+    'k8s-pod-restart': 'Kubernetes Pod Restart',
+    'docker-container-restart': 'Docker Container Restart',
+    'clear-cache': 'Clear Application Cache',
+    'scale-up-resources': 'Scale Up Resources',
+    'restart-web-server': 'Restart Web Server',
+  };
+  playbookName = builtInNames[execution.playbookId] || 'Unknown Playbook';
+}
+
+// Get incident
+const incident = db.select()
+  .from(schema.incidents)
+  .where(eq(schema.incidents.id, execution.incidentId))
+  .get();
+
+const startTime = new Date(execution.startedAt as number);
+const endTime = execution.completedAt ? new Date(execution.completedAt as number) : null;
+const duration = endTime ? Math.round((endTime.getTime() - startTime.getTime()) / 1000) : 0;
+
+// Color mapping for log levels
+const logColors: Record<string, string> = {
+  success: 'text-green-600 dark:text-green-400',
+  error: 'text-red-600 dark:text-red-400',
+  warn: 'text-yellow-600 dark:text-yellow-400',
+  info: 'text-blue-600 dark:text-blue-400',
+};
+
+const bgColors: Record<string, string> = {
+  success: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800',
+  error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
+  warn: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800',
+  info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+};
+---
+
+<Layout title={`Remediation: ${playbookName}`}>
+  <div class="p-8 max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h1 class="text-3xl font-bold text-slate-900 dark:text-white">{playbookName}</h1>
+          <p class="text-slate-600 dark:text-slate-400 text-sm mt-1">Execution ID: {id}</p>
+        </div>
+        <span class={`inline-flex items-center px-3 py-1.5 rounded-lg text-sm font-semibold ${
+          execution.status === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+          execution.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+          execution.status === 'running' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+          execution.status === 'rolled_back' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+          'bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400'
+        }`}>
+          {execution.status.replace('_', ' ')}
+        </span>
+      </div>
+
+      <!-- Metadata -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div>
+          <p class="text-xs text-slate-500 dark:text-slate-500 uppercase">Started</p>
+          <p class="text-sm text-slate-900 dark:text-white font-medium">{startTime.toLocaleString()}</p>
+        </div>
+        {duration > 0 && (
+          <div>
+            <p class="text-xs text-slate-500 dark:text-slate-500 uppercase">Duration</p>
+            <p class="text-sm text-slate-900 dark:text-white font-medium">{duration}s</p>
+          </div>
+        )}
+        {execution.dryRun && (
+          <div>
+            <p class="text-xs text-slate-500 dark:text-slate-500 uppercase">Mode</p>
+            <p class="text-sm text-slate-900 dark:text-white font-medium">🔍 Dry Run</p>
+          </div>
+        )}
+        {execution.rollbackAttempted && (
+          <div>
+            <p class="text-xs text-slate-500 dark:text-slate-500 uppercase">Rollback</p>
+            <p class="text-sm font-medium">{execution.rollbackSuccess ? '✓ Success' : '✗ Failed'}</p>
+          </div>
+        )}
+      </div>
+    </div>
+
+    <!-- Incident Link -->
+    {incident && (
+      <div class="mb-8 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 p-4">
+        <p class="text-xs text-slate-600 dark:text-slate-400 uppercase mb-1">Related Incident</p>
+        <a href={`/app/incidents/${incident.id}`} class="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+          {incident.title}
+        </a>
+      </div>
+    )}
+
+    <!-- Execution Logs -->
+    <div class="mb-8">
+      <h2 class="text-xl font-semibold text-slate-900 dark:text-white mb-4">Execution Logs</h2>
+      <div class="space-y-2 font-mono text-sm">
+        {logs.length > 0 ? (
+          logs.map((log: any) => (
+            <div class={`border-l-4 p-3 rounded ${bgColors[log.level] || bgColors.info}`}>
+              <div class="flex items-start gap-3">
+                <span class={`font-bold ${logColors[log.level] || logColors.info} flex-shrink-0 w-8`}>
+                  {log.level.toUpperCase().substring(0, 3)}
+                </span>
+                <div class="flex-1 min-w-0">
+                  <p class="text-slate-900 dark:text-white break-words">{log.message}</p>
+                  {log.stepId && log.stepId !== 'system' && (
+                    <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">[{log.stepId}]</p>
+                  )}
+                  {log.data && (
+                    <pre class="text-xs text-slate-600 dark:text-slate-400 mt-2 overflow-auto bg-slate-100 dark:bg-slate-900/50 p-2 rounded">
+{JSON.stringify(log.data, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <p class="text-slate-500 dark:text-slate-400">No logs available</p>
+        )}
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-4">
+      <a
+        href={`/app/remediations`}
+        class="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-800"
+      >
+        Back to Remediations
+      </a>
+      {incident && (
+        <a
+          href={`/app/incidents/${incident.id}`}
+          class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          View Incident
+        </a>
+      )}
+    </div>
+  </div>
+</Layout>

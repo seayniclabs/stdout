@@ -1,0 +1,236 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getDb, schema } from '../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+
+// Get user from session (assumes auth middleware sets userId)
+const userId = (Astro.request as any).userId;
+
+if (!userId) {
+  return Astro.redirect('/login');
+}
+
+const db = getDb();
+
+// Get cost summary
+const now = new Date();
+const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+// Get recent incidents with cost data
+const incidents = db.select({
+  id: schema.incidents.id,
+  title: schema.incidents.title,
+  severity: schema.incidents.severity,
+  aiCostUsd: schema.incidents.aiCostUsd,
+  aiTokensUsed: schema.incidents.aiTokensUsed,
+  aiProvider: schema.incidents.aiProvider,
+  createdAt: schema.incidents.createdAt,
+})
+  .from(schema.incidents)
+  .where(eq(schema.incidents.userId, userId))
+  .orderBy(desc(schema.incidents.createdAt))
+  .limit(50)
+  .all();
+
+// Calculate statistics
+const totalCost = incidents.reduce((sum, i) => sum + (i.aiCostUsd || 0), 0);
+const totalTokens = incidents.reduce((sum, i) => sum + (i.aiTokensUsed || 0), 0);
+const avgCostPerIncident = incidents.length > 0 ? totalCost / incidents.length : 0;
+
+// Group by provider
+const providerCosts: Record<string, { cost: number; count: number; tokens: number }> = {};
+for (const incident of incidents) {
+  const provider = incident.aiProvider || 'unknown';
+  if (!providerCosts[provider]) {
+    providerCosts[provider] = { cost: 0, count: 0, tokens: 0 };
+  }
+  providerCosts[provider].cost += incident.aiCostUsd || 0;
+  providerCosts[provider].count += 1;
+  providerCosts[provider].tokens += incident.aiTokensUsed || 0;
+}
+
+// Calculate highest cost incidents
+const highestCostIncidents = [...incidents].sort((a, b) => (b.aiCostUsd || 0) - (a.aiCostUsd || 0)).slice(0, 5);
+---
+
+<Layout title="AI Cost Tracking">
+  <div class="p-8 max-w-7xl mx-auto">
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">AI Diagnosis Costs</h1>
+      <p class="text-slate-600 dark:text-slate-400">Track AI usage and costs across all incidents</p>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Total AI Costs</h3>
+        <p class="text-3xl font-bold text-slate-900 dark:text-white">
+          ${totalCost.toFixed(4)}
+        </p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">{incidents.length} incidents this period</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Avg Cost per Incident</h3>
+        <p class="text-3xl font-bold text-slate-900 dark:text-white">
+          ${avgCostPerIncident.toFixed(4)}
+        </p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Tokens: {totalTokens.toLocaleString()}</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Providers Used</h3>
+        <p class="text-3xl font-bold text-slate-900 dark:text-white">
+          {Object.keys(providerCosts).length}
+        </p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">
+          {Object.keys(providerCosts).join(', ')}
+        </p>
+      </div>
+    </div>
+
+    <!-- Provider Breakdown -->
+    {Object.keys(providerCosts).length > 0 && (
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm mb-8">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Cost by Provider</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Provider</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Total Cost</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Incidents</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Avg Cost</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Tokens</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              {Object.entries(providerCosts).map(([provider, data]) => (
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td class="py-3 px-4 text-slate-900 dark:text-white capitalize">{provider}</td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-900 dark:text-white">${data.cost.toFixed(4)}</td>
+                  <td class="text-right py-3 px-4 text-slate-600 dark:text-slate-400">{data.count}</td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
+                    ${(data.cost / data.count).toFixed(4)}
+                  </td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
+                    {data.tokens.toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    <!-- Highest Cost Incidents -->
+    {highestCostIncidents.length > 0 && (
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm mb-8">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Most Expensive Incidents</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Incident</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Severity</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Cost</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Tokens</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Provider</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              {highestCostIncidents.map((incident) => (
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td class="py-3 px-4">
+                    <a
+                      href={`/app/incidents/${incident.id}`}
+                      class="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {incident.title}
+                    </a>
+                  </td>
+                  <td class="py-3 px-4">
+                    <span class={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                      incident.severity === 'critical' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                      incident.severity === 'high' ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400' :
+                      incident.severity === 'medium' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                      'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                    }`}>
+                      {incident.severity}
+                    </span>
+                  </td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-900 dark:text-white">
+                    ${(incident.aiCostUsd || 0).toFixed(4)}
+                  </td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
+                    {(incident.aiTokensUsed || 0).toLocaleString()}
+                  </td>
+                  <td class="py-3 px-4 text-slate-600 dark:text-slate-400 capitalize">
+                    {incident.aiProvider || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    <!-- Recent Incidents -->
+    {incidents.length > 0 && (
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Incidents with Costs</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Incident</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Created</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">AI Cost</th>
+                <th class="text-right py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Tokens</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Provider</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              {incidents.slice(0, 20).map((incident) => (
+                <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td class="py-3 px-4">
+                    <a
+                      href={`/app/incidents/${incident.id}`}
+                      class="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {incident.title}
+                    </a>
+                  </td>
+                  <td class="py-3 px-4 text-slate-600 dark:text-slate-400 text-xs">
+                    {incident.createdAt instanceof Date
+                      ? incident.createdAt.toLocaleDateString()
+                      : new Date(incident.createdAt as number).toLocaleDateString()}
+                  </td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-900 dark:text-white">
+                    {(incident.aiCostUsd || 0) > 0
+                      ? `$${(incident.aiCostUsd || 0).toFixed(4)}`
+                      : <span class="text-green-600 dark:text-green-400 text-xs">Free (Ollama)</span>}
+                  </td>
+                  <td class="text-right py-3 px-4 font-mono text-slate-600 dark:text-slate-400">
+                    {(incident.aiTokensUsed || 0).toLocaleString()}
+                  </td>
+                  <td class="py-3 px-4 text-slate-600 dark:text-slate-400 capitalize text-xs">
+                    {incident.aiProvider || '-'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    {incidents.length === 0 && (
+      <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-8 text-center">
+        <p class="text-slate-600 dark:text-slate-400">No incidents with cost data yet</p>
+      </div>
+    )}
+  </div>
+</Layout>

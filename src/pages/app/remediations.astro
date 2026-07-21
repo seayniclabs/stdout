@@ -1,0 +1,163 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getDb, schema } from '../../lib/db';
+import { eq, desc } from 'drizzle-orm';
+
+// Get user from session
+const userId = (Astro.request as any).userId;
+
+if (!userId) {
+  return Astro.redirect('/login');
+}
+
+const db = getDb();
+
+// Get recent remediation executions
+const executions = db.select({
+  id: schema.remediationExecutions.id,
+  playbookId: schema.remediationExecutions.playbookId,
+  incidentId: schema.remediationExecutions.incidentId,
+  status: schema.remediationExecutions.status,
+  dryRun: schema.remediationExecutions.dryRun,
+  startedAt: schema.remediationExecutions.startedAt,
+  completedAt: schema.remediationExecutions.completedAt,
+})
+  .from(schema.remediationExecutions)
+  .where(eq(schema.remediationExecutions.userId, userId))
+  .orderBy(desc(schema.remediationExecutions.startedAt))
+  .limit(50)
+  .all();
+
+// Get playbook names
+const playbookMap: Record<string, string> = {};
+const playbooks = db.select({
+  id: schema.remediationPlaybooks.id,
+  name: schema.remediationPlaybooks.name,
+})
+  .from(schema.remediationPlaybooks)
+  .all();
+
+for (const pb of playbooks) {
+  playbookMap[pb.id] = pb.name;
+}
+
+// Add built-in playbook names
+const builtInNames: Record<string, string> = {
+  'k8s-pod-restart': 'Kubernetes Pod Restart',
+  'docker-container-restart': 'Docker Container Restart',
+  'clear-cache': 'Clear Application Cache',
+  'scale-up-resources': 'Scale Up Resources',
+  'restart-web-server': 'Restart Web Server',
+};
+
+Object.assign(playbookMap, builtInNames);
+
+// Count by status
+const statusCounts = {
+  success: executions.filter((e) => e.status === 'success').length,
+  failed: executions.filter((e) => e.status === 'failed').length,
+  running: executions.filter((e) => e.status === 'running').length,
+  rolled_back: executions.filter((e) => e.status === 'rolled_back').length,
+};
+---
+
+<Layout title="Auto-Remediation Executions">
+  <div class="p-8 max-w-7xl mx-auto">
+    <div class="mb-8">
+      <h1 class="text-4xl font-bold text-slate-900 dark:text-white mb-2">Auto-Remediation</h1>
+      <p class="text-slate-600 dark:text-slate-400">Track playbook executions and remediation history</p>
+    </div>
+
+    <!-- Status Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Successful</h3>
+        <p class="text-3xl font-bold text-green-600 dark:text-green-400">{statusCounts.success}</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Failed</h3>
+        <p class="text-3xl font-bold text-red-600 dark:text-red-400">{statusCounts.failed}</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Running</h3>
+        <p class="text-3xl font-bold text-blue-600 dark:text-blue-400">{statusCounts.running}</p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Rolled Back</h3>
+        <p class="text-3xl font-bold text-yellow-600 dark:text-yellow-400">{statusCounts.rolled_back}</p>
+      </div>
+    </div>
+
+    <!-- Executions Table -->
+    {executions.length > 0 && (
+      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+        <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Executions</h2>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Playbook</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Incident</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Status</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Started</th>
+                <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Duration</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+              {executions.map((execution) => {
+                const duration = execution.completedAt
+                  ? Math.round((new Date(execution.completedAt as number).getTime() - new Date(execution.startedAt as number).getTime()) / 1000)
+                  : 0;
+                const startTime = execution.startedAt instanceof Date
+                  ? execution.startedAt.toLocaleTimeString()
+                  : new Date(execution.startedAt as number).toLocaleTimeString();
+
+                return (
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <td class="py-3 px-4 text-slate-900 dark:text-white">
+                      <a href={`/app/remediations/${execution.id}`} class="text-blue-600 dark:text-blue-400 hover:underline">
+                        {playbookMap[execution.playbookId] || execution.playbookId}
+                      </a>
+                    </td>
+                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400">
+                      <a href={`/app/incidents/${execution.incidentId}`} class="text-blue-600 dark:text-blue-400 hover:underline text-xs">
+                        {execution.incidentId.substring(0, 8)}...
+                      </a>
+                    </td>
+                    <td class="py-3 px-4">
+                      <span class={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        execution.status === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' :
+                        execution.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' :
+                        execution.status === 'running' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' :
+                        execution.status === 'rolled_back' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' :
+                        'bg-slate-100 dark:bg-slate-900/30 text-slate-700 dark:text-slate-400'
+                      }`}>
+                        {execution.dryRun ? '🔍 ' : ''}{execution.status.replace('_', ' ')}
+                      </span>
+                    </td>
+                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 text-xs">{startTime}</td>
+                    <td class="py-3 px-4 text-slate-600 dark:text-slate-400 font-mono">
+                      {duration > 0 ? `${duration}s` : '-'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+
+    {executions.length === 0 && (
+      <div class="bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 p-8 text-center">
+        <p class="text-slate-600 dark:text-slate-400">No remediation executions yet</p>
+        <p class="text-slate-500 dark:text-slate-500 text-sm mt-2">
+          Executions will appear here as playbooks are run
+        </p>
+      </div>
+    )}
+  </div>
+</Layout>

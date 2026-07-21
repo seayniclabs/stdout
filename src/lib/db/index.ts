@@ -126,6 +126,105 @@ function initSqlite(dbPath: string): InstanceType<typeof Database> {
     console.log('[DB] resolutions_fts table created');
   }
 
+  // Add cost tracking columns to incidents if missing (migration 0015)
+  const aiCostColumnExists = sqlite.prepare(`
+    PRAGMA table_info(incidents)
+  `).all() as any[];
+
+  const hasAiCostColumn = aiCostColumnExists.some((col) => col.name === 'ai_cost_usd');
+  if (!hasAiCostColumn) {
+    console.log('[DB] Adding cost tracking columns to incidents...');
+    sqlite.exec(`
+      ALTER TABLE incidents ADD COLUMN ai_cost_usd REAL NOT NULL DEFAULT 0;
+      ALTER TABLE incidents ADD COLUMN ai_tokens_used INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE incidents ADD COLUMN ai_provider TEXT;
+    `);
+    console.log('[DB] Cost tracking columns added');
+  }
+
+  // Create remediation playbooks table if missing
+  const pbExists = sqlite.prepare(`
+    SELECT name FROM sqlite_master WHERE type='table' AND name='remediation_playbooks'
+  `).get();
+
+  if (!pbExists) {
+    console.log('[DB] Creating auto-remediation tables...');
+    sqlite.exec(`
+      CREATE TABLE remediation_playbooks (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT NOT NULL,
+        trigger TEXT NOT NULL,
+        steps TEXT NOT NULL,
+        rollback TEXT NOT NULL,
+        requires_approval INTEGER NOT NULL DEFAULT 0,
+        timeout INTEGER NOT NULL,
+        risk_level TEXT NOT NULL DEFAULT 'medium',
+        tags TEXT NOT NULL DEFAULT '[]',
+        is_built_in INTEGER NOT NULL DEFAULT 0,
+        version TEXT NOT NULL DEFAULT '1.0.0',
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL,
+        created_by TEXT
+      );
+
+      CREATE INDEX idx_rp_user_id ON remediation_playbooks(user_id);
+      CREATE INDEX idx_rp_is_built_in ON remediation_playbooks(is_built_in);
+
+      CREATE TABLE remediation_executions (
+        id TEXT PRIMARY KEY,
+        playbook_id TEXT NOT NULL REFERENCES remediation_playbooks(id),
+        incident_id TEXT NOT NULL REFERENCES incidents(id),
+        user_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        dry_run INTEGER NOT NULL DEFAULT 0,
+        approved_by TEXT,
+        approved_at INTEGER,
+        started_at INTEGER NOT NULL,
+        completed_at INTEGER,
+        logs TEXT NOT NULL DEFAULT '[]',
+        rollback_attempted INTEGER NOT NULL DEFAULT 0,
+        rollback_success INTEGER
+      );
+
+      CREATE INDEX idx_re_user_id ON remediation_executions(user_id);
+      CREATE INDEX idx_re_incident_id ON remediation_executions(incident_id);
+      CREATE INDEX idx_re_playbook_id ON remediation_executions(playbook_id);
+      CREATE INDEX idx_re_status ON remediation_executions(status);
+
+      CREATE TABLE remediation_execution_steps (
+        id TEXT PRIMARY KEY,
+        execution_id TEXT NOT NULL REFERENCES remediation_executions(id) ON DELETE CASCADE,
+        step_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        output TEXT,
+        error_message TEXT,
+        duration_ms INTEGER,
+        retries_used INTEGER NOT NULL DEFAULT 0,
+        executed_at INTEGER
+      );
+
+      CREATE INDEX idx_res_execution_id ON remediation_execution_steps(execution_id);
+
+      CREATE TABLE cost_audit (
+        id TEXT PRIMARY KEY,
+        incident_id TEXT NOT NULL REFERENCES incidents(id),
+        provider TEXT NOT NULL,
+        model TEXT NOT NULL,
+        prompt_tokens INTEGER NOT NULL,
+        completion_tokens INTEGER NOT NULL,
+        cost_usd REAL NOT NULL,
+        created_at INTEGER NOT NULL
+      );
+
+      CREATE INDEX idx_ca_incident_id ON cost_audit(incident_id);
+      CREATE INDEX idx_ca_provider ON cost_audit(provider);
+      CREATE INDEX idx_ca_created_at ON cost_audit(created_at);
+    `);
+    console.log('[DB] Auto-remediation and cost tracking tables created');
+  }
+
   return sqlite;
 }
 
