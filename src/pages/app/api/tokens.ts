@@ -17,12 +17,14 @@ function hashToken(token: string): string {
 export const GET: APIRoute = async ({ locals }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  const tokens = getDb().select({
-    id: schema.apiTokens.id,
-    name: schema.apiTokens.name,
-    lastUsedAt: schema.apiTokens.lastUsedAt,
-    createdAt: schema.apiTokens.createdAt,
-  })
+  const tokens = getDb()
+    .select({
+      id: schema.apiTokens.id,
+      name: schema.apiTokens.name,
+      expiresAt: schema.apiTokens.expiresAt,
+      lastUsedAt: schema.apiTokens.lastUsedAt,
+      createdAt: schema.apiTokens.createdAt,
+    })
     .from(schema.apiTokens)
     .where(eq(schema.apiTokens.userId, locals.user.id))
     .all();
@@ -38,36 +40,70 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const rbacBlock = checkRBAC(locals, 'manage_settings');
   if (rbacBlock) return rbacBlock;
 
-  let body: any;
-  try { body = await request.json(); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'ERROR',
+        module: 'tokens',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to parse request JSON',
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const name = (body.name || '').trim();
+  const name = (body.name as string || '').trim();
   if (!name) {
-    return new Response(JSON.stringify({ error: 'Token name is required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Token name is required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Default: token expires in 90 days
+  const expirationDays = typeof body.expirationDays === 'number' ? body.expirationDays : 90;
+  if (expirationDays < 1 || expirationDays > 365) {
+    return new Response(
+      JSON.stringify({
+        error: 'Token expiration must be between 1 and 365 days',
+      }),
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   const rawToken = generateToken();
   const tokenHash = hashToken(rawToken);
   const id = nanoid();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + expirationDays * 24 * 60 * 60 * 1000);
 
-  getDb().insert(schema.apiTokens).values({
-    id,
-    userId: locals.user.id,
-    name,
-    tokenHash,
-    createdAt: new Date(),
-  }).run();
+  getDb()
+    .insert(schema.apiTokens)
+    .values({
+      id,
+      userId: locals.user.id,
+      name,
+      tokenHash,
+      expiresAt,
+      createdAt: now,
+    })
+    .run();
 
   logAudit('token_create', {
     userId: locals.user.id,
     ip: getClientIp(request),
-    details: { tokenId: id, name },
+    details: { tokenId: id, name, expiresAt: expiresAt.toISOString() },
   });
 
   // Raw token is shown ONCE — never stored or retrievable again
-  return new Response(JSON.stringify({ token: rawToken, id, name }), {
+  return new Response(JSON.stringify({ token: rawToken, id, name, expiresAt }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };
@@ -75,17 +111,35 @@ export const POST: APIRoute = async ({ locals, request }) => {
 export const DELETE: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  let body: any;
-  try { body = await request.json(); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'ERROR',
+        module: 'tokens',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to parse request JSON',
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
+    return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const tokenId = body.id;
+  const tokenId = body.id as string | undefined;
   if (!tokenId) {
-    return new Response(JSON.stringify({ error: 'Token ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: 'Token ID required' }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  getDb().delete(schema.apiTokens)
+  getDb()
+    .delete(schema.apiTokens)
     .where(and(eq(schema.apiTokens.id, tokenId), eq(schema.apiTokens.userId, locals.user.id)))
     .run();
 

@@ -90,6 +90,7 @@ function validateBearerToken(request: Request): { userId: string } | null {
     .select({
       id: schema.apiTokens.id,
       userId: schema.apiTokens.userId,
+      expiresAt: schema.apiTokens.expiresAt,
     })
     .from(schema.apiTokens)
     .where(eq(schema.apiTokens.tokenHash, tokenHash))
@@ -98,9 +99,25 @@ function validateBearerToken(request: Request): { userId: string } | null {
   console.log('[validateBearerToken] row found:', row ? 'YES' : 'NO');
   if (!row) return null;
 
+  // Check token expiration
+  const now = new Date();
+  if (row.expiresAt && row.expiresAt < now) {
+    console.log(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'middleware',
+        timestamp: now.toISOString(),
+        msg: 'Bearer token expired',
+        userId: row.userId,
+        expiresAt: row.expiresAt.toISOString(),
+      })
+    );
+    return null;
+  }
+
   // Update last_used_at
   getDb().update(schema.apiTokens)
-    .set({ lastUsedAt: new Date() })
+    .set({ lastUsedAt: now })
     .where(eq(schema.apiTokens.id, row.id))
     .run();
 

@@ -76,10 +76,22 @@ export const GET: APIRoute = async ({ locals, url }) => {
 export const POST: APIRoute = async ({ locals, request }) => {
   if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
-  let body: any;
-  try { body = await request.json(); } catch {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'ERROR',
+        module: 'incidents',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to parse request JSON',
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
-      status: 400, headers: { 'Content-Type': 'application/json' },
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
     });
   }
 
@@ -120,7 +132,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
           'INSERT INTO incidents_fts(rowid, title, description, tags) SELECT rowid, title, description, tags FROM incidents WHERE id = ?'
         ).run(id);
       }
-    } catch { /* FTS may not exist */ }
+    } catch (err) {
+      // FTS table may not exist; continue without full-text indexing
+      console.warn(
+        JSON.stringify({
+          level: 'WARN',
+          module: 'incidents',
+          timestamp: new Date().toISOString(),
+          msg: 'Failed to index incident in FTS, continuing without full-text search',
+          error: err instanceof Error ? err.message : String(err),
+          incidentId: id,
+        })
+      );
+    }
 
     const incident = db.select().from(schema.incidents)
       .where(eq(schema.incidents.id, id)).get();
@@ -206,13 +230,37 @@ export const POST: APIRoute = async ({ locals, request }) => {
           'INSERT INTO resolutions_fts(rowid, content) SELECT rowid, content FROM resolutions WHERE id = ?'
         ).run(resId);
       }
-    } catch { /* FTS may not exist */ }
+    } catch (err) {
+      // FTS table may not exist; continue without full-text indexing
+      console.warn(
+        JSON.stringify({
+          level: 'WARN',
+          module: 'incidents',
+          timestamp: new Date().toISOString(),
+          msg: 'Failed to index resolution in FTS, continuing without full-text search',
+          error: err instanceof Error ? err.message : String(err),
+          resolutionId: resId,
+        })
+      );
+    }
 
     // Closed-loop learning: auto-document this incident IF it's novel/rare. Fire-and-forget —
     // never blocks or breaks the resolution. Scrubs secrets before storing (PII-grade).
     import('../../../../lib/observatory/auto-doc')
       .then(({ maybeAutoDocument }) => maybeAutoDocument(userId, incidentId))
-      .catch(() => { /* auto-doc is best-effort */ });
+      .catch((err) => {
+        // Auto-doc is best-effort; log the error but don't block
+        console.warn(
+          JSON.stringify({
+            level: 'WARN',
+            module: 'incidents',
+            timestamp: new Date().toISOString(),
+            msg: 'Auto-documentation failed, continuing',
+            error: err instanceof Error ? err.message : String(err),
+            incidentId,
+          })
+        );
+      });
 
     return new Response(JSON.stringify({ ok: true, id: resId, incidentId }), {
       status: 201, headers: { 'Content-Type': 'application/json' },

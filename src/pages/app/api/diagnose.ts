@@ -59,10 +59,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
   const rbacBlock = checkRBAC(locals, 'create');
   if (rbacBlock) return rbacBlock;
 
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await request.json();
-  } catch {
+  } catch (err) {
+    console.error(
+      JSON.stringify({
+        level: 'ERROR',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to parse request JSON',
+        error: err instanceof Error ? err.message : String(err),
+      })
+    );
     return new Response('Invalid JSON', { status: 400 });
   }
 
@@ -94,7 +103,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
         retryable: false,
       }), { status: 403, headers: { 'Content-Type': 'application/json' } });
     }
-  } catch { /* if the gate can't be read, fail open to preserve existing behavior */ }
+  } catch (err) {
+    // If the gate can't be read, log the error and fail open to preserve existing behavior
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to check diagnosis operating mode, failing open',
+        error: err instanceof Error ? err.message : String(err),
+        userId,
+      })
+    );
+  }
 
   // Get stack context
   let stackContext = 'No stack description provided.';
@@ -118,7 +139,20 @@ export const POST: APIRoute = async ({ locals, request }) => {
         if (row.content) pastResolutions.push(row.content);
       }
     }
-  } catch { /* FTS may not be populated yet */ }
+  } catch (err) {
+    // FTS may not be populated yet; continue without historical context
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to fetch past resolutions via FTS, continuing without historical context',
+        error: err instanceof Error ? err.message : String(err),
+        userId: locals.user.id,
+        incidentId,
+      })
+    );
+  }
 
   const { getUserLimits } = await import('../../../lib/tiers');
   const { limits } = getUserLimits(locals.user);
@@ -140,7 +174,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
       name: s.name,
       enabled: !!s.enabled,
     }));
-  } catch { /* data sources table may not exist yet */ }
+  } catch (err) {
+    // Data sources table may not exist yet; continue without data sources
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to fetch data sources, continuing without data source context',
+        error: err instanceof Error ? err.message : String(err),
+        userId: locals.user.id,
+      })
+    );
+  }
 
   const description = `Title: ${incident.title}\n\n${incident.description}`;
 
@@ -149,7 +195,19 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let credential: Awaited<ReturnType<typeof resolveForDiagnostics>> = null;
   try {
     credential = resolveForDiagnostics(locals.user.id, tier as 'free' | 'paid');
-  } catch { /* resolver may fail if DB not ready */ }
+  } catch (err) {
+    // Resolver may fail if DB not ready; will be caught by null check below
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Failed to resolve AI provider credentials',
+        error: err instanceof Error ? err.message : String(err),
+        userId: locals.user.id,
+      })
+    );
+  }
 
   // resolveForDiagnostics falls back to local Ollama, so this is only hit if even that resolver
   // throws. Local Ollama is the default; BYOK is an optional add-on (never required).
@@ -174,14 +232,27 @@ export const POST: APIRoute = async ({ locals, request }) => {
       incidentTitle: incident.title,
       incidentDescription: incident.description,
       credential: {
-        provider: credential.provider,
-        model: credential.model,
-        apiKey: credential.source === 'user_key' ? credential.apiKey : '',
+        provider: credential?.provider || 'ollama',
+        model: credential?.model || 'unknown',
+        apiKey: credential?.source === 'user_key' ? credential.apiKey : '',
       },
     });
     if (aug.ran) toolUsed = { tool: aug.tool, args: aug.args, output: aug.output, exitCode: aug.exitCode };
     toolContextBlock = aug.contextBlock;
-  } catch { /* augmentation is best-effort */ }
+  } catch (err) {
+    // Augmentation is best-effort; continue without tool context
+    console.warn(
+      JSON.stringify({
+        level: 'WARN',
+        module: 'diagnose',
+        timestamp: new Date().toISOString(),
+        msg: 'Tool-augmented diagnosis failed, continuing with basic diagnosis',
+        error: err instanceof Error ? err.message : String(err),
+        userId,
+        incidentId,
+      })
+    );
+  }
 
   const enrichedDescription = description + toolContextBlock;
 

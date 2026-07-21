@@ -58,12 +58,24 @@ async function bootstrap(): Promise<void> {
   const users = db.all(sql`SELECT id FROM users WHERE role != 'deleted'`) as { id: string }[];
 
   for (const { id: userId } of users) {
-    if (_userIntervals.has(userId)) continue; // already running
+    if (_userIntervals.has(userId)) {
+      console.log(`[watcher] skipping duplicate bootstrap for user ${userId}`);
+      continue; // already running
+    }
 
     const INTERVAL_MS = 3 * 60 * 1000; // 3 min, matches Watcher persona
     const iv = setInterval(() => {
       runCheckForUser(userId).catch(err =>
-        console.error(`[watcher] check error for user ${userId}:`, err)
+        console.error(
+          JSON.stringify({
+            level: 'ERROR',
+            module: 'watcher',
+            timestamp: new Date().toISOString(),
+            msg: `Check error for user ${userId}`,
+            error: err instanceof Error ? err.message : String(err),
+            userId,
+          })
+        )
       );
     }, INTERVAL_MS);
     _userIntervals.set(userId, iv);
@@ -72,7 +84,16 @@ async function bootstrap(): Promise<void> {
 
     // Immediate first check
     runCheckForUser(userId).catch(err =>
-      console.error(`[watcher] first check error for user ${userId}:`, err)
+      console.error(
+        JSON.stringify({
+          level: 'ERROR',
+          module: 'watcher',
+          timestamp: new Date().toISOString(),
+          msg: `First check error for user ${userId}`,
+          error: err instanceof Error ? err.message : String(err),
+          userId,
+        })
+      )
     );
   }
 }
@@ -109,7 +130,7 @@ async function runCheckForUser(userId: string): Promise<void> {
         severity: inc.severity,
         metric: inc.title,
       });
-      if ((inc as any).id) incidentIds.push((inc as any).id);
+      if (inc.id) incidentIds.push(inc.id);
     }
 
     // THE REFLEX ARC: detection just created incidents — now act on them per the operating mode,
