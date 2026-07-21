@@ -95,23 +95,24 @@ async function retrieveBaselines(
 ): Promise<Record<string, { mean: number; stdDev: number; sampleCount: number }>> {
   const db = getDb();
 
-  // Columns are mean / std_dev (see observatory_baselines DDL in scripts/apply-schema.js).
+  // Query observatory_baselines table - retrieves most recent baselines within 7-day window
   const rows = await db.all(sql`
     SELECT
       metric_name,
       mean,
       std_dev,
-      sample_count
+      sample_count,
+      window_end
     FROM observatory_baselines
     WHERE stack_id = ${stackId}
-      AND window_end > ${Date.now() - 7 * 24 * 60 * 60 * 1000}
-    ORDER BY window_end DESC
-  `) as any[];
+      AND window_end > ${Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60}
+    ORDER BY window_end DESC, metric_name ASC
+  `) as Array<{ metric_name: string; mean: number; std_dev: number; sample_count: number; window_end: number }>;
 
   const baselines: Record<string, { mean: number; stdDev: number; sampleCount: number }> = {};
 
   for (const row of rows) {
-    // Only keep the most recent baseline per metric
+    // Only keep the most recent baseline per metric (dedup by ordering DESC)
     if (!baselines[row.metric_name]) {
       baselines[row.metric_name] = {
         mean: row.mean,

@@ -326,13 +326,13 @@ export const observatoryCustomPatterns = sqliteTable('observatory_custom_pattern
 
 export const observatoryBaselines = sqliteTable('observatory_baselines', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
-  monitorId: text('monitor_id').notNull(),
-  metric: text('metric_name').notNull(),
-  baselineValue: text('baseline_value').notNull(),
-  unit: text('unit'),
-  confidenceScore: integer('confidence_score').notNull().default(50),
-  lastCalculatedAt: integer('last_calculated_at', { mode: 'timestamp' }).notNull(),
+  stackId: text('stack_id').notNull(),
+  metricName: text('metric_name').notNull(),
+  mean: real('mean').notNull(),
+  stdDev: real('std_dev').notNull(),
+  sampleCount: integer('sample_count').notNull(),
+  windowStart: integer('window_start').notNull(),
+  windowEnd: integer('window_end').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
