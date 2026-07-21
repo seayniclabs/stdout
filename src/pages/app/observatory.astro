@@ -304,23 +304,24 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     }
     .auto-section { display: flex; flex-direction: column; gap: 10px; }
     .auto-label { font-size: 13px; font-weight: 600; color: #F8FAFC; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-    .auto-hint { font-size: 12px; font-weight: 400; color: #64748B; }
-    .mode-ladder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .auto-hint { font-size: 12px; font-weight: 400; color: #94A3B8; }
+    .mode-ladder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
     .mode-btn {
-      display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
-      text-align: left; padding: 12px 14px; border-radius: 12px; cursor: pointer;
-      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      color: #94A3B8; transition: all 0.15s ease;
+      display: flex; flex-direction: column; gap: 6px; align-items: flex-start;
+      text-align: left; padding: 14px 16px; border-radius: 12px; cursor: pointer;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      color: #CBD5E1; transition: all 0.15s ease;
+      min-height: 72px;
     }
-    .mode-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.2); }
-    .mode-btn .mode-name { font-size: 14px; font-weight: 700; color: #F8FAFC; }
-    .mode-btn .mode-desc { font-size: 12px; color: #64748B; }
+    .mode-btn:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.25); }
+    .mode-btn .mode-name { font-size: 15px; font-weight: 700; color: #F8FAFC; line-height: 1.2; }
+    .mode-btn .mode-desc { font-size: 13px; color: #94A3B8; line-height: 1.4; }
     .mode-btn.active { background: rgba(108,92,231,0.18); border-color: #6c5ce7; box-shadow: 0 0 0 1px #6c5ce7 inset; }
     .mode-btn.active .mode-desc { color: #c4b5fd; }
     .mode-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .auto-toggles { display: flex; flex-direction: column; gap: 14px; }
-    .auto-toggle { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+    .auto-toggles { display: flex; flex-direction: column; gap: 16px; }
+    .auto-toggle { display: flex; align-items: flex-start; gap: 14px; cursor: pointer; padding: 2px 0; }
     .auto-toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
     .toggle-track {
       flex-shrink: 0; width: 42px; height: 24px; border-radius: 999px; margin-top: 2px;
@@ -333,9 +334,9 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     .auto-toggle input:checked + .toggle-track { background: #6c5ce7; }
     .auto-toggle input:checked + .toggle-track.toggle-danger { background: #ef4444; }
     .auto-toggle input:checked + .toggle-track .toggle-thumb { transform: translateX(18px); }
-    .toggle-text { display: flex; flex-direction: column; gap: 2px; }
-    .toggle-text strong { font-size: 13px; color: #F8FAFC; font-weight: 600; }
-    .toggle-text small { font-size: 12px; color: #64748B; line-height: 1.4; }
+    .toggle-text { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .toggle-text strong { font-size: 14px; color: #F8FAFC; font-weight: 600; line-height: 1.3; }
+    .toggle-text small { font-size: 13px; color: #94A3B8; line-height: 1.5; }
     .danger-tag { font-size: 10px; font-weight: 700; color: #fca5a5; background: rgba(239,68,68,0.15); padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
 
     .killswitch-banner {
@@ -348,7 +349,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     .killswitch-banner button { margin-left: auto; flex-shrink: 0; }
 
     .pending-list { display: flex; flex-direction: column; gap: 10px; }
-    .pending-empty { font-size: 13px; color: #64748B; padding: 8px 0; }
+    .pending-empty { font-size: 13px; color: #94A3B8; padding: 8px 0; }
     .pending-item {
       display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; border-radius: 12px;
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
