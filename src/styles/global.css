@@ -588,3 +588,258 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── P1 Accessibility Improvements ─────────────── */
+
+/* All interactive elements need labels */
+button[aria-label],
+[role="switch"][aria-label],
+[role="button"][aria-label],
+input[type="checkbox"][aria-label],
+input[type="radio"][aria-label] {
+  /* Visual feedback for labeled controls */
+}
+
+/* Icon-only buttons must have aria-label */
+button:has(svg):not(:has(svg + *)):not([aria-label]) {
+  /* This should be prevented in production */
+  position: relative;
+}
+
+/* SVG icons with aria-label get better keyboard support */
+button[aria-label]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* Form validation feedback */
+input[aria-invalid="true"] {
+  border-color: var(--critical);
+  background: rgba(240, 72, 72, 0.05);
+}
+
+input[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px rgba(240, 72, 72, 0.2);
+  border-color: var(--critical);
+}
+
+/* Error messages with role="alert" */
+[role="alert"] {
+  color: var(--critical);
+  font-weight: 500;
+  animation: slideInLeft 0.2s ease-out;
+}
+
+/* Combobox / select ARIA roles */
+[role="combobox"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Chart descriptions */
+svg[aria-label] {
+  border-radius: var(--radius-sm);
+}
+
+svg[aria-label]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Mobile Responsiveness Enhancements ────────– */
+
+/* Responsive grid layouts */
+@media (max-width: 1024px) {
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .grid-cols-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-cols-4,
+  .grid-cols-3,
+  .grid-cols-2 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Stack form fields vertically */
+  .form-row {
+    flex-direction: column;
+  }
+
+  .form-half {
+    flex: 1;
+  }
+
+  /* Larger touch targets on mobile */
+  button, a[role="button"], [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Text inputs larger on mobile (prevent zoom) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* Horizontal scroll for tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Horizontal scroll container for tables */
+  .table-wrapper {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 500px;
+  }
+
+  /* Navigation hamburger on mobile */
+  .nav-desktop {
+    display: none;
+  }
+
+  .nav-mobile {
+    display: flex;
+  }
+}
+
+@media (min-width: 769px) {
+  .nav-mobile {
+    display: none;
+  }
+
+  .nav-desktop {
+    display: flex;
+  }
+}
+
+/* ── P1 Form & Input Styling ───────────────────– */
+
+/* Unified form input styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+input[type="number"],
+textarea,
+select {
+  appearance: none;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-family: var(--font-ui);
+  padding: 0.6rem 1rem;
+  transition: var(--transition);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+input[type="text"]:hover,
+input[type="email"]:hover,
+input[type="password"]:hover,
+input[type="search"]:hover,
+textarea:hover,
+select:hover {
+  border-color: var(--accent-glow);
+}
+
+/* Toggle switches with proper ARIA */
+.toggle-switch {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-track {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: var(--border);
+  border-radius: 12px;
+  transition: var(--transition);
+  margin-right: 0.75rem;
+}
+
+[role="switch"][aria-checked="true"] .toggle-track {
+  background: var(--accent);
+}
+
+.toggle-thumb {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: var(--transition);
+}
+
+[role="switch"][aria-checked="true"] .toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* ── P1 Loading & State Indicators ─────────────– */
+
+/* Consistent loading spinner */
+.spinner-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: dotBounce 1.4s infinite;
+}
+
+.spinner-dot:nth-child(1) { animation-delay: -0.32s; }
+.spinner-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes dotBounce {
+  0%, 80%, 100% {
+    opacity: 0.6;
+    transform: scale(0.8);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

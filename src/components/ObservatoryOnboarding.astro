@@ -1,0 +1,493 @@
+---
+/**
+ * Observatory Onboarding Wizard
+ *
+ * Guided setup flow for first-time Observatory users.
+ * Shows on first visit to Observatory page when user has 0 stacks.
+ * Can be dismissed with "Don't show again" preference.
+ */
+
+interface Props {
+  /** Show the wizard */
+  visible?: boolean;
+  /** User preference to not show wizard */
+  dismissed?: boolean;
+}
+
+const { visible = true, dismissed = false } = Astro.props;
+---
+
+{visible && !dismissed && (
+  <div class="observatory-wizard" id="observatoryWizard">
+    <div class="wizard-overlay"></div>
+
+    <div class="wizard-card">
+      <div class="wizard-header">
+        <h2>Get Started with Observatory</h2>
+        <button
+          class="wizard-close"
+          id="closeWizard"
+          aria-label="Close onboarding wizard"
+          title="Close"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div class="wizard-content">
+        <!-- Step 1: Connect Monitors -->
+        <div class="wizard-step active" id="step-1" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-body">
+            <h3>Connect Your Monitors</h3>
+            <p>Link existing health checks or create new ones to feed data into Observatory</p>
+            <ul class="step-checklist">
+              <li>HTTP/ping/TCP health monitors</li>
+              <li>Docker service health checks</li>
+              <li>Custom endpoint monitoring</li>
+            </ul>
+            <a href="/app/infrastructure" class="btn btn-primary" style="align-self: flex-start;">
+              Go to Monitors
+            </a>
+          </div>
+        </div>
+
+        <!-- Step 2: Define Stacks -->
+        <div class="wizard-step" id="step-2" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-body">
+            <h3>Define Your Stacks</h3>
+            <p>Group related services into logical stacks for correlation and pattern detection</p>
+            <ul class="step-checklist">
+              <li>Web tier (frontend, backend, database)</li>
+              <li>Infrastructure (networking, storage)</li>
+              <li>External services (APIs, third-party tools)</li>
+            </ul>
+            <a href="/app/stacks" class="btn btn-primary" style="align-self: flex-start;">
+              Create Stack
+            </a>
+          </div>
+        </div>
+
+        <!-- Step 3: Baseline Collection -->
+        <div class="wizard-step" id="step-3" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-body">
+            <h3>Set Baseline Thresholds</h3>
+            <p>Observatory learns normal behavior over 7 days, then detects anomalies</p>
+            <div class="baseline-info">
+              <div class="info-row">
+                <span class="info-label">Collection period:</span>
+                <span class="info-value">7 days</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Data sources:</span>
+                <span class="info-value">Monitors, metrics, logs</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">After 7 days:</span>
+                <span class="info-value">Anomaly detection enabled</span>
+              </div>
+            </div>
+            <button id="startBaseline" class="btn btn-primary" style="align-self: flex-start;">
+              Start Baseline Collection
+            </button>
+          </div>
+        </div>
+
+        <!-- Step Progress -->
+        <div class="wizard-progress">
+          {[1, 2, 3].map((step) => (
+            <button
+              class="progress-dot"
+              class:active={step === 1}
+              data-step={step}
+              aria-label={`Go to step ${step}`}
+              aria-current={step === 1 ? 'step' : undefined}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div class="wizard-footer">
+        <label class="dismiss-checkbox">
+          <input type="checkbox" id="dontShowAgain" />
+          <span>Don't show again</span>
+        </label>
+        <div class="wizard-buttons">
+          <button class="btn btn-ghost" id="skipWizard">Skip for now</button>
+          <button class="btn btn-secondary" id="prevStep" disabled>Back</button>
+          <button class="btn btn-primary" id="nextStep">Next</button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+<script define:vars={{ dismissed }}>
+  if (!dismissed) {
+    let currentStep = 1;
+    const steps = document.querySelectorAll('.wizard-step');
+    const progressDots = document.querySelectorAll('.progress-dot');
+    const nextBtn = document.getElementById('nextStep');
+    const prevBtn = document.getElementById('prevStep');
+    const skipBtn = document.getElementById('skipWizard');
+    const closeBtn = document.getElementById('closeWizard');
+    const dontShowAgain = document.getElementById('dontShowAgain');
+    const startBaselineBtn = document.getElementById('startBaseline');
+    const wizard = document.getElementById('observatoryWizard');
+
+    function updateStep(step) {
+      currentStep = Math.max(1, Math.min(step, steps.length));
+
+      // Update step visibility
+      steps.forEach((s) => {
+        s.classList.toggle('active', s.id === `step-${currentStep}`);
+      });
+
+      // Update progress dots
+      progressDots.forEach((dot) => {
+        dot.classList.toggle('active', parseInt(dot.dataset.step) === currentStep);
+      });
+
+      // Update button states
+      prevBtn.disabled = currentStep === 1;
+      nextBtn.textContent = currentStep === steps.length ? 'Get Started' : 'Next';
+      nextBtn.onclick = currentStep === steps.length ? closeWizard : () => updateStep(currentStep + 1);
+    }
+
+    function dismissWizard() {
+      if (dontShowAgain.checked) {
+        localStorage.setItem('stdout-observatory-wizard-dismissed', 'true');
+      }
+      wizard.style.display = 'none';
+    }
+
+    function closeWizard() {
+      dismissWizard();
+    }
+
+    // Event listeners
+    nextBtn.onclick = () => updateStep(currentStep + 1);
+    prevBtn.onclick = () => updateStep(currentStep - 1);
+    skipBtn.onclick = dismissWizard;
+    closeBtn.onclick = dismissWizard;
+
+    // Progress dot clicks
+    progressDots.forEach((dot) => {
+      dot.onclick = () => updateStep(parseInt(dot.dataset.step));
+    });
+
+    // Start baseline button
+    startBaselineBtn.onclick = () => {
+      // Navigate to Observatory setup page
+      window.location.href = '/app/observatory/setup';
+    };
+
+    // Initialize
+    updateStep(1);
+  }
+</script>
+
+<style>
+  .observatory-wizard {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    padding: 1rem;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .wizard-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(2px);
+    z-index: -1;
+  }
+
+  .wizard-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+
+  .wizard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+
+    h2 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+  }
+
+  .wizard-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+
+    &:hover {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .wizard-content {
+    flex: 1;
+    padding: 2rem;
+    position: relative;
+  }
+
+  .wizard-step {
+    display: none;
+    animation: fadeInUp 0.3s ease-out;
+
+    &.active {
+      display: flex;
+      gap: 1.5rem;
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .step-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    min-width: 3rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent-light));
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 1.25rem;
+    color: #fff;
+  }
+
+  .step-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    h3 {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text);
+      margin: 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      margin: 0;
+      line-height: 1.5;
+    }
+  }
+
+  .step-checklist {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+
+    li {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+
+      &::before {
+        content: '✓';
+        color: var(--accent);
+        font-weight: 700;
+        width: 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+  }
+
+  .baseline-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: var(--bg-hover);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+  }
+
+  .info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.9rem;
+  }
+
+  .info-label {
+    color: var(--text-secondary);
+  }
+
+  .info-value {
+    color: var(--accent-light);
+    font-weight: 500;
+  }
+
+  .wizard-progress {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .progress-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border);
+    cursor: pointer;
+    transition: var(--transition);
+
+    &.active {
+      background: var(--accent);
+      width: 24px;
+      border-radius: 4px;
+    }
+
+    &:hover {
+      background: var(--accent-light);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .wizard-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .dismiss-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+
+    input[type='checkbox'] {
+      cursor: pointer;
+      width: 1rem;
+      height: 1rem;
+      accent-color: var(--accent);
+    }
+
+    &:hover {
+      color: var(--text);
+    }
+  }
+
+  .wizard-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+
+  /* ── Responsive ────────────────────────────– */
+  @media (max-width: 640px) {
+    .observatory-wizard {
+      padding: 0;
+    }
+
+    .wizard-card {
+      border-radius: 0;
+      max-height: 100vh;
+    }
+
+    .wizard-step {
+      flex-direction: column;
+      align-items: center;
+
+      .step-number {
+        order: 1;
+      }
+
+      .step-body {
+        order: 2;
+        text-align: center;
+      }
+    }
+
+    .step-checklist li::before {
+      content: '◆';
+    }
+
+    .wizard-buttons {
+      flex-direction: column-reverse;
+    }
+
+    .wizard-buttons button {
+      width: 100%;
+    }
+  }
+</style>

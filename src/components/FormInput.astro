@@ -1,0 +1,217 @@
+---
+/**
+ * FormInput Component
+ *
+ * Text input with real-time validation, error messaging, and accessibility labels.
+ * Usage:
+ *
+ *   <FormInput
+ *     name="email"
+ *     label="Email Address"
+ *     type="email"
+ *     required
+ *     pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,}$"
+ *   />
+ */
+
+export interface Props extends astroHTML.JSX.InputHTMLAttributes<'input'> {
+  /** Label text displayed above input */
+  label: string;
+  /** Helper text displayed below label */
+  hint?: string;
+  /** Error message to display */
+  error?: string;
+  /** Show required indicator */
+  required?: boolean;
+  /** Icon to display inside input (right-aligned) */
+  icon?: string;
+  /** Size variant */
+  size?: 'sm' | 'md' | 'lg';
+  /** Container class */
+  containerClass?: string;
+}
+
+const {
+  label,
+  hint,
+  error,
+  required,
+  icon,
+  size = 'md',
+  type = 'text',
+  containerClass = '',
+  class: inputClass = '',
+  id: providedId,
+  name,
+  ...rest
+} = Astro.props;
+
+const id = providedId || `input-${name}-${Math.random().toString(36).slice(2, 9)}`;
+
+const sizeClasses = {
+  sm: 'input-sm',
+  md: 'input-md',
+  lg: 'input-lg'
+};
+---
+
+<div class={`form-input-wrapper ${containerClass}`}>
+  <label for={id} class="form-label">
+    <span class="label-text">
+      {label}
+      {required && <span class="required-indicator" aria-label="required">*</span>}
+    </span>
+    {hint && <span class="hint-text">{hint}</span>}
+  </label>
+
+  <div class="input-container" class:has-error={!!error}>
+    <input
+      id={id}
+      type={type}
+      name={name}
+      class={`form-input ${sizeClasses[size]} ${inputClass} ${error ? 'input-error' : ''}`}
+      aria-label={label}
+      aria-invalid={!!error}
+      aria-describedby={error ? `${id}-error` : undefined}
+      required={required}
+      {...rest}
+    />
+    {icon && <span class="input-icon">{icon}</span>}
+  </div>
+
+  {error && (
+    <p id={`${id}-error`} class="error-text" role="alert">
+      {error}
+    </p>
+  )}
+</div>
+
+<style>
+  .form-input-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
+  .form-label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    cursor: pointer;
+  }
+
+  .label-text {
+    color: var(--text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .required-indicator {
+    color: var(--critical);
+    font-weight: 600;
+  }
+
+  .hint-text {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 400;
+  }
+
+  /* ── Input Container ───────────────────────– */
+  .input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .form-input {
+    width: 100%;
+    font-family: var(--font-ui);
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+
+    /* Placeholder styling */
+    &::placeholder {
+      color: var(--text-muted);
+    }
+
+    /* Focus state */
+    &:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+
+    /* Hover state */
+    &:hover:not(:focus) {
+      border-color: var(--accent-glow);
+    }
+  }
+
+  /* ── Size Variants ─────────────────────────– */
+  .input-sm {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .input-md {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .input-lg {
+    padding: 0.75rem 1.25rem;
+    font-size: 1rem;
+  }
+
+  /* ── Error State ───────────────────────────– */
+  .input-error {
+    border-color: var(--critical);
+    background: rgba(240, 72, 72, 0.05);
+
+    &:focus {
+      border-color: var(--critical);
+      box-shadow: 0 0 0 3px rgba(240, 72, 72, 0.2);
+    }
+  }
+
+  .error-text {
+    color: var(--critical);
+    font-size: 0.8rem;
+    margin: 0;
+    margin-top: 0.25rem;
+  }
+
+  /* ── Input Icon ────────────────────────────– */
+  .input-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+  }
+
+  .form-input:focus ~ .input-icon {
+    color: var(--accent-light);
+  }
+
+  /* ── Responsive ────────────────────────────– */
+  @media (max-width: 640px) {
+    .form-input {
+      font-size: 16px; /* Prevent zoom on iOS */
+    }
+
+    .input-md {
+      padding: 0.5rem 0.75rem;
+    }
+  }
+</style>

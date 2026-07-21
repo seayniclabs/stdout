@@ -1,0 +1,212 @@
+---
+/**
+ * StateWrapper Component
+ *
+ * Provides consistent loading, empty, and error state rendering across all pages.
+ * Usage:
+ *
+ *   <StateWrapper loading={isLoading} error={errorMessage} empty={items.length === 0}>
+ *     <YourContent />
+ *   </StateWrapper>
+ */
+
+interface Props {
+  /** Show loading skeleton/spinner */
+  loading?: boolean;
+  /** Error message to display */
+  error?: string | null;
+  /** Show empty state */
+  empty?: boolean;
+  /** Empty state message (default: "No data available") */
+  emptyMessage?: string;
+  /** CTA button text for empty state */
+  emptyCta?: string;
+  /** Minimum height for state container (default: '400px') */
+  minHeight?: string;
+  /** Custom loading spinner slot? Use default if not provided */
+  customLoader?: boolean;
+}
+
+const {
+  loading = false,
+  error = null,
+  empty = false,
+  emptyMessage = 'No data available',
+  emptyCta,
+  minHeight = '400px',
+  customLoader = false
+} = Astro.props;
+---
+
+<div class="state-wrapper" style={`min-height: ${minHeight}`}>
+  {loading && (
+    <div class="state-loading">
+      {!customLoader && (
+        <>
+          <div class="spinner"></div>
+          <p class="state-text">Loading...</p>
+        </>
+      )}
+      <slot name="loading" />
+    </div>
+  )}
+
+  {error && !loading && (
+    <div class="state-error">
+      <div class="error-icon">⚠️</div>
+      <h3 class="error-title">Something went wrong</h3>
+      <p class="error-message">{error}</p>
+      <button class="btn btn-primary retry-btn">
+        Try Again
+      </button>
+      <slot name="error" />
+    </div>
+  )}
+
+  {empty && !loading && !error && (
+    <div class="state-empty">
+      <div class="empty-icon">📭</div>
+      <h3 class="empty-title">{emptyMessage}</h3>
+      {emptyCta && (
+        <button class="btn btn-primary empty-cta">
+          {emptyCta}
+        </button>
+      )}
+      <slot name="empty" />
+    </div>
+  )}
+
+  {!loading && !error && !empty && (
+    <slot />
+  )}
+</div>
+
+<style>
+  .state-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  /* ── Loading State ──────────────────────────── */
+  .state-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-bottom: 1rem;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .state-text {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* ── Error State ────────────────────────────── */
+  .state-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+    padding: 2rem;
+    background: linear-gradient(
+      135deg,
+      rgba(240, 72, 72, 0.08) 0%,
+      rgba(240, 72, 72, 0.04) 100%
+    );
+    border: 1px solid var(--critical-dim);
+    border-radius: var(--radius);
+  }
+
+  .error-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+  }
+
+  .error-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .error-message {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    max-width: 28rem;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.5;
+  }
+
+  .retry-btn {
+    margin-top: 0.5rem;
+  }
+
+  /* ── Empty State ────────────────────────────– */
+  .state-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+    padding: 3rem 2rem;
+  }
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.6;
+  }
+
+  .empty-title {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: 0 0 1.5rem 0;
+  }
+
+  .empty-cta {
+    margin-top: 0.5rem;
+  }
+
+  /* ── Responsive ────────────────────────────– */
+  @media (max-width: 640px) {
+    .state-loading,
+    .state-error,
+    .state-empty {
+      padding: 1.5rem;
+    }
+
+    .error-title,
+    .empty-title {
+      font-size: 1.1rem;
+    }
+
+    .error-message {
+      font-size: 0.9rem;
+    }
+  }
+</style>

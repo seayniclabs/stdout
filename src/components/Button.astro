@@ -1,0 +1,220 @@
+---
+/**
+ * Button Component
+ *
+ * Unified button with consistent styling, sizes, and variants.
+ * Replaces scattered .btn-* classes across the codebase.
+ *
+ * Usage:
+ *   <Button variant="primary" size="md">Click me</Button>
+ *   <Button href="/path" variant="secondary">Link button</Button>
+ *   <Button disabled>Disabled</Button>
+ */
+
+export interface Props extends astroHTML.JSX.ButtonHTMLAttributes<'button'> {
+  /** Button style variant */
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger' | 'glass';
+  /** Button size */
+  size?: 'sm' | 'md' | 'lg';
+  /** Optional href to render as link */
+  href?: string;
+  /** Show loading state with spinner */
+  loading?: boolean;
+  /** Icon slot */
+  icon?: boolean;
+}
+
+const {
+  variant = 'secondary',
+  size = 'md',
+  href,
+  loading = false,
+  icon = false,
+  class: className,
+  ...rest
+} = Astro.props;
+
+const variantClasses = {
+  primary: 'btn-primary',
+  secondary: 'btn-secondary',
+  ghost: 'btn-ghost',
+  danger: 'btn-danger',
+  glass: 'btn-glass'
+};
+
+const sizeClasses = {
+  sm: 'btn-sm',
+  md: 'btn-md',
+  lg: 'btn-lg'
+};
+
+const classes = `btn ${variantClasses[variant]} ${sizeClasses[size]} ${className || ''}`.trim();
+
+const Element = href ? 'a' : 'button';
+---
+
+<Element
+  class={classes}
+  href={href}
+  disabled={loading || rest.disabled}
+  {...rest}
+>
+  {loading && <span class="btn-spinner"></span>}
+  <slot />
+</Element>
+
+<style>
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-family: var(--font-ui);
+    font-weight: 500;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    white-space: nowrap;
+    text-decoration: none;
+
+    /* Focus state */
+    &:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* Disabled state */
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+  }
+
+  /* ── Sizes ─────────────────────────────────── */
+  .btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+
+  .btn-md {
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* ── Primary Variant ───────────────────────── */
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+
+    &:hover:not(:disabled) {
+      background: var(--accent-light);
+      border-color: var(--accent-light);
+      transform: translateY(-2px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Secondary Variant ─────────────────────– */
+  .btn-secondary {
+    background: var(--bg-elevated);
+    color: var(--text);
+    border: 1px solid var(--border);
+
+    &:hover:not(:disabled) {
+      background: var(--bg-hover);
+      border-color: var(--accent);
+      color: var(--accent-light);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--bg-card);
+    }
+  }
+
+  /* ── Ghost Variant ─────────────────────────– */
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+
+    &:hover:not(:disabled) {
+      background: var(--bg-hover);
+      color: var(--text);
+    }
+
+    &:active:not(:disabled) {
+      background: var(--bg-elevated);
+    }
+  }
+
+  /* ── Danger Variant ────────────────────────– */
+  .btn-danger {
+    background: var(--critical);
+    color: #fff;
+    border: 1px solid var(--critical);
+
+    &:hover:not(:disabled) {
+      background: #f04848;
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+
+    &:active:not(:disabled) {
+      transform: translateY(0);
+    }
+  }
+
+  /* ── Glass Variant ─────────────────────────– */
+  .btn-glass {
+    background: var(--glass-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: var(--glass-blur);
+
+    &:hover:not(:disabled) {
+      background: rgba(26, 26, 36, 0.85);
+      border-color: var(--accent-glow);
+      color: var(--accent-light);
+    }
+
+    &:active:not(:disabled) {
+      background: rgba(26, 26, 36, 0.6);
+    }
+  }
+
+  /* ── Loading Spinner ───────────────────────– */
+  .btn-spinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Responsive ────────────────────────────– */
+  @media (max-width: 640px) {
+    .btn-lg {
+      padding: 0.6rem 1.2rem;
+      font-size: 0.95rem;
+    }
+  }
+</style>

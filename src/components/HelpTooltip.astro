@@ -1,0 +1,149 @@
+---
+/**
+ * HelpTooltip Component
+ *
+ * Contextual help icon with tooltip for form fields and controls.
+ * Usage:
+ *   <HelpTooltip text="This will take ~5 minutes to collect initial data" />
+ */
+
+interface Props {
+  /** Help text to show in tooltip */
+  text: string;
+  /** Position of tooltip */
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  /** Icon (default: ?) */
+  icon?: string;
+}
+
+const {
+  text,
+  position = 'top',
+  icon = '?'
+} = Astro.props;
+---
+
+<div class={`help-tooltip help-tooltip-${position}`} role="tooltip">
+  <button
+    class="help-icon"
+    aria-label={`Help: ${text}`}
+    title={text}
+  >
+    {icon}
+  </button>
+  <div class="tooltip-content">{text}</div>
+</div>
+
+<style>
+  .help-tooltip {
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+  }
+
+  .help-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    border: 1px solid var(--text-muted);
+    border-radius: 50%;
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+    cursor: help;
+    padding: 0;
+    transition: var(--transition);
+  }
+
+  .help-icon:hover {
+    color: var(--accent-light);
+    border-color: var(--accent-light);
+    background: var(--accent-dim);
+  }
+
+  .help-icon:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .tooltip-content {
+    position: absolute;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 200ms, visibility 200ms;
+    z-index: 10;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Position variants */
+  .help-tooltip-top .tooltip-content {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-0.5rem);
+    margin-bottom: 0.5rem;
+  }
+
+  .help-tooltip-bottom .tooltip-content {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(0.5rem);
+    margin-top: 0.5rem;
+  }
+
+  .help-tooltip-left .tooltip-content {
+    right: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(-0.5rem);
+    margin-right: 0.5rem;
+    white-space: normal;
+    width: 200px;
+  }
+
+  .help-tooltip-right .tooltip-content {
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%) translateX(0.5rem);
+    margin-left: 0.5rem;
+    white-space: normal;
+    width: 200px;
+  }
+
+  /* Show on hover */
+  .help-tooltip:hover .tooltip-content,
+  .help-icon:focus-visible ~ .tooltip-content {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Responsive — stack tooltips on mobile */
+  @media (max-width: 640px) {
+    .tooltip-content {
+      white-space: normal;
+      width: 200px;
+    }
+
+    .help-tooltip-top .tooltip-content,
+    .help-tooltip-bottom .tooltip-content {
+      width: 200px;
+      left: auto;
+      right: 0;
+      transform: translateY(-0.5rem);
+    }
+
+    .help-tooltip-left .tooltip-content,
+    .help-tooltip-right .tooltip-content {
+      width: 180px;
+    }
+  }
+</style>
