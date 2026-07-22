@@ -37,14 +37,16 @@ let isRunning = false;
 interface WatcherConfig {
   enabled: boolean;
   intervalSeconds: number;
-  mode: 'investigate' | 'approve-to-act'; // 'investigate' = read-only, 'approve-to-act' = needs human approval
+  selfHealingEnabled: boolean; // Can fix StdOut itself without approval
+  externalRemediationMode: 'investigate' | 'approve-to-act'; // For watched infrastructure
   notifyOnCritical: boolean;
 }
 
 const DEFAULT_CONFIG: WatcherConfig = {
   enabled: true,
   intervalSeconds: 180, // Check every 3 minutes
-  mode: 'investigate', // Safe by default - only investigate, never act without approval
+  selfHealingEnabled: true, // Can always fix StdOut itself
+  externalRemediationMode: 'investigate', // Watched infrastructure needs approval by default
   notifyOnCritical: true,
 };
 
@@ -125,7 +127,7 @@ async function runWatcherForUser(userId: string, config: WatcherConfig) {
 
     // PHASE 1: INVESTIGATION (automatic, read-only)
     const investigationPrompt = `
-You are performing an autonomous infrastructure check. This is the INVESTIGATION phase - you can only observe, not take action.
+You are performing an autonomous infrastructure check. This is the INVESTIGATION phase.
 
 Your investigation tasks:
 1. Check for active incidents: use get_incidents tool
@@ -133,15 +135,20 @@ Your investigation tasks:
 3. Check stack health: use get_stacks tool
 4. Identify root causes of any issues
 
-Mode: ${config.mode}
-${config.mode === 'investigate'
-  ? '- You are in INVESTIGATE-ONLY mode. Report findings but do NOT propose actions.'
-  : '- If you find issues requiring remediation, propose specific actions but DO NOT execute them.'
-}
+IMPORTANT - Remediation Authority:
+- **StdOut itself** (this system): You CAN take action immediately if needed. Self-healing is ENABLED.
+- **Watched infrastructure** (external stacks): ${config.externalRemediationMode === 'investigate'
+  ? 'INVESTIGATE ONLY - propose actions but do NOT execute them.'
+  : 'Propose actions and they will be queued for approval.'}
+
+How to identify if an issue is StdOut itself vs watched infrastructure:
+- StdOut issues: Problems with this container, Observatory services, agent processes
+- External issues: Problems with user's stacks, their containers, their services
 
 Output format:
 - If no issues: "All systems nominal."
-- If issues found: Describe the issue and root cause. If mode allows, suggest remediation.
+- If StdOut issue found: Describe it, then immediately attempt to fix (restart services, clear cache, etc.)
+- If external issue found: Describe it and suggest remediation, but DO NOT act.
 
 Be concise. Focus on actionable findings.
 `;

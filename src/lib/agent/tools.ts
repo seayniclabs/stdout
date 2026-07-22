@@ -79,7 +79,7 @@ export const OBSERVATORY_TOOLS: Tool[] = [
   },
   {
     name: 'restart_container',
-    description: 'Restart a specific container in a stack. Requires operator or admin permission.',
+    description: 'Restart a specific container in a stack. Requires operator or admin permission. Use for external stacks only - use restart_stdout_service for StdOut itself.',
     parameters: {
       type: 'object',
       properties: {
@@ -93,6 +93,36 @@ export const OBSERVATORY_TOOLS: Tool[] = [
         },
       },
       required: ['stack_id', 'container_name'],
+    },
+  },
+  {
+    name: 'restart_stdout_service',
+    description: 'SELF-HEALING: Restart StdOut itself or its internal services. No approval needed - this is self-healing.',
+    parameters: {
+      type: 'object',
+      properties: {
+        service: {
+          type: 'string',
+          description: 'Which service to restart',
+          enum: ['container', 'watcher', 'monitors'],
+        },
+      },
+      required: ['service'],
+    },
+  },
+  {
+    name: 'clear_stdout_cache',
+    description: 'SELF-HEALING: Clear StdOut internal caches. No approval needed.',
+    parameters: {
+      type: 'object',
+      properties: {
+        cache_type: {
+          type: 'string',
+          description: 'Which cache to clear',
+          enum: ['metrics', 'baselines', 'all'],
+        },
+      },
+      required: ['cache_type'],
     },
   },
 ];
@@ -150,6 +180,58 @@ export async function executeTool(
         const url = `${BASE_URL}/app/api/stacks/${parameters.stack_id}/containers/${parameters.container_name}/restart`;
         const res = await fetch(url, { method: 'POST' });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        return { success: true, result: data };
+      }
+
+      case 'restart_stdout_service': {
+        // Self-healing: restart StdOut's own services
+        const { service } = parameters;
+
+        if (service === 'container') {
+          // Restart the entire StdOut container (via Windlass if available)
+          const res = await fetch(`${BASE_URL}/app/api/windlass/exec`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              command: 'docker restart stdout',
+            }),
+          });
+          if (!res.ok) throw new Error(`Failed to restart container: HTTP ${res.status}`);
+          return { success: true, result: { restarted: 'stdout container' } };
+        }
+
+        if (service === 'watcher') {
+          // Restart Observatory Watcher (via internal API)
+          const res = await fetch(`${BASE_URL}/app/api/observatory/watcher/restart`, {
+            method: 'POST',
+          });
+          if (!res.ok) throw new Error(`Failed to restart watcher: HTTP ${res.status}`);
+          return { success: true, result: { restarted: 'Observatory Watcher' } };
+        }
+
+        if (service === 'monitors') {
+          // Restart all monitors
+          const res = await fetch(`${BASE_URL}/app/api/monitors/restart-all`, {
+            method: 'POST',
+          });
+          if (!res.ok) throw new Error(`Failed to restart monitors: HTTP ${res.status}`);
+          return { success: true, result: { restarted: 'all monitors' } };
+        }
+
+        return { success: false, result: null, error: `Unknown service: ${service}` };
+      }
+
+      case 'clear_stdout_cache': {
+        // Self-healing: clear internal caches
+        const { cache_type } = parameters;
+        const res = await fetch(`${BASE_URL}/app/api/observatory/cache/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: cache_type }),
+        });
+
+        if (!res.ok) throw new Error(`Failed to clear cache: HTTP ${res.status}`);
         const data = await res.json();
         return { success: true, result: data };
       }
