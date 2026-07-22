@@ -638,7 +638,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.84:5683 ws://stdout.local:5683",
+        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.89:5683 ws://stdout.local:5683",
         "frame-ancestors 'none'",
       ].join('; ')
     : [
@@ -647,7 +647,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
         "font-src 'self' https://fonts.gstatic.com",
         "img-src 'self' data: https:",
-        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.84:5683 ws://stdout.local:5683",
+        "connect-src 'self' https://analytics.seaynicroute.com https://cdn.jsdelivr.net ws://localhost:5683 ws://192.168.68.89:5683 ws://stdout.local:5683",
         "frame-ancestors 'none'",
       ].join('; ');
 
