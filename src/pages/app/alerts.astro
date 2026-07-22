@@ -3,6 +3,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { requireLicense } from '../../lib/license';
 import { getAlertRoutes, getRecentAlerts } from '../../lib/alerts/alert-router';
+import AddRouteModal from '../../components/modals/AddRouteModal.astro';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -123,8 +124,12 @@ const recentAlerts = getRecentAlerts(user.id, 20);
           </div>
         ) : (
           <div class="alerts-list">
-            {recentAlerts.map(alert => (
-              <div class="alert-item severity-{alert.severity}">
+            {recentAlerts.map(alert => {
+              const severityClass = ['critical', 'high', 'medium', 'low'].includes(alert.severity)
+                ? `alert-item severity-${alert.severity}`
+                : 'alert-item severity-medium';
+              return (
+              <div class={severityClass}>
                 <div class="alert-indicator"></div>
                 <div class="alert-content">
                   <div class="alert-title">{alert.title}</div>
@@ -135,7 +140,8 @@ const recentAlerts = getRecentAlerts(user.id, 20);
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -437,56 +443,49 @@ const recentAlerts = getRecentAlerts(user.id, 20);
     }
   </style>
 
+  <AddRouteModal />
+
   <script>
-    // Add route button
-    document.getElementById('addRouteBtn')?.addEventListener('click', async () => {
-      const type = prompt('Route type (slack/webhook/discord):');
-      if (!type || !['slack', 'webhook', 'discord'].includes(type)) {
-        alert('Invalid route type. Must be: slack, webhook, or discord');
-        return;
+    // Toast helper
+    function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#F44336' : '#2196F3'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 2000;
+        animation: slideIn 0.3s ease-out;
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Add animations
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
       }
-
-      const name = prompt('Route name (e.g., "Critical Alerts → Slack"):');
-      if (!name) return;
-
-      const severity = prompt('Min severity (critical/high/medium/low):', 'medium');
-      if (!severity || !['critical', 'high', 'medium', 'low'].includes(severity)) {
-        alert('Invalid severity. Must be: critical, high, medium, or low');
-        return;
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
       }
+    `;
+    document.head.appendChild(style);
 
-      let config: any = {};
-
-      if (type === 'slack') {
-        const webhookUrl = prompt('Slack webhook URL:');
-        if (!webhookUrl) return;
-        const channel = prompt('Channel (optional):');
-        config = { webhook_url: webhookUrl, ...(channel && { channel }) };
-      } else if (type === 'webhook') {
-        const url = prompt('Webhook URL:');
-        if (!url) return;
-        config = { url, method: 'POST' };
-      } else if (type === 'discord') {
-        const webhookUrl = prompt('Discord webhook URL:');
-        if (!webhookUrl) return;
-        config = { webhook_url: webhookUrl };
-      }
-
-      try {
-        const response = await fetch('/app/api/alerts/routes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, type, config, min_severity: severity }),
-        });
-
-        if (!response.ok) throw new Error('Failed to create route');
-
-        alert('Alert route created successfully!');
-        window.location.reload();
-      } catch (error) {
-        console.error('Failed to create route:', error);
-        alert('Failed to create route. Check console for details.');
-      }
+    // Add route button - open modal instead of prompts
+    document.getElementById('addRouteBtn')?.addEventListener('click', () => {
+      (window as any).openAddRouteModal();
     });
 
     // Toggle route enabled/disabled
@@ -504,12 +503,12 @@ const recentAlerts = getRecentAlerts(user.id, 20);
 
           if (!response.ok) throw new Error('Failed to update route');
 
-          console.log(`Route ${routeId} ${enabled ? 'enabled' : 'disabled'}`);
+          showToast(`Route ${enabled ? 'enabled' : 'disabled'}`, 'success');
         } catch (error) {
           console.error('Failed to update route:', error);
           // Revert toggle
           (e.target as HTMLInputElement).checked = !enabled;
-          alert('Failed to update route. Check console for details.');
+          showToast('Failed to update route. Check console for details.', 'error');
         }
       });
     });
@@ -518,7 +517,7 @@ const recentAlerts = getRecentAlerts(user.id, 20);
     document.querySelectorAll('.edit-route-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const routeId = (e.target as HTMLElement).getAttribute('data-route-id');
-        alert('Edit route UI coming soon. For now, delete and recreate the route.');
+        showToast('Edit route UI coming soon. For now, delete and recreate.', 'info');
       });
     });
 
@@ -528,6 +527,10 @@ const recentAlerts = getRecentAlerts(user.id, 20);
         const routeId = (e.target as HTMLElement).getAttribute('data-route-id');
         if (!confirm('Delete this alert route?')) return;
 
+        const btnEl = e.target as HTMLButtonElement;
+        btnEl.disabled = true;
+        btnEl.textContent = 'Deleting...';
+
         try {
           const response = await fetch(`/app/api/alerts/routes?id=${routeId}`, {
             method: 'DELETE',
@@ -535,11 +538,13 @@ const recentAlerts = getRecentAlerts(user.id, 20);
 
           if (!response.ok) throw new Error('Failed to delete route');
 
-          alert('Route deleted successfully!');
-          window.location.reload();
+          showToast('Route deleted successfully!', 'success');
+          setTimeout(() => window.location.reload(), 500);
         } catch (error) {
           console.error('Failed to delete route:', error);
-          alert('Failed to delete route. Check console for details.');
+          showToast('Failed to delete route. Check console for details.', 'error');
+          btnEl.disabled = false;
+          btnEl.textContent = 'Delete';
         }
       });
     });

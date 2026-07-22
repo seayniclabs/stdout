@@ -460,13 +460,42 @@ const manualApps = apps.filter(a => a.type === 'manual');
   </style>
 
   <script>
-    // Scan button
+    // Toast helper (will be replaced with sonner later)
+    function showToast(message: string, type: 'success' | 'error' | 'info' = 'info') {
+      const toast = document.createElement('div');
+      toast.textContent = message;
+      toast.style.cssText = `
+        position: fixed;
+        bottom: 2rem;
+        right: 2rem;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#F44336' : '#2196F3'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 2000;
+        animation: slideIn 0.3s ease-out;
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // Scan button with loading state
     document.getElementById('scanBtn')?.addEventListener('click', async () => {
       const btn = document.getElementById('scanBtn') as HTMLButtonElement;
       if (!btn) return;
 
       btn.disabled = true;
-      btn.textContent = 'Scanning...';
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Scanning...
+      `;
 
       try {
         const response = await fetch('/app/api/discovery/scan', {
@@ -476,12 +505,13 @@ const manualApps = apps.filter(a => a.type === 'manual');
         if (!response.ok) throw new Error('Scan failed');
 
         const data = await response.json();
+        showToast(`Discovered ${data.discovered} applications!`, 'success');
 
         // Reload page to show new discoveries
-        window.location.reload();
+        setTimeout(() => window.location.reload(), 500);
       } catch (error) {
         console.error('Discovery scan failed:', error);
-        alert('Discovery scan failed. Check console for details.');
+        showToast('Discovery scan failed. Check console for details.', 'error');
         btn.disabled = false;
         btn.innerHTML = `
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -496,13 +526,31 @@ const manualApps = apps.filter(a => a.type === 'manual');
     document.querySelectorAll('.configure-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const appId = (e.target as HTMLElement).getAttribute('data-app-id');
-        alert(`Log configuration UI coming soon for app: ${appId}`);
+        showToast('Log configuration UI coming soon', 'info');
       });
     });
 
     // Add manual button
     document.getElementById('addManualBtn')?.addEventListener('click', () => {
-      alert('Manual application entry UI coming soon');
+      showToast('Manual application entry UI coming soon', 'info');
     });
+
+    // Add CSS for spin animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+      }
+      @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+      }
+      @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
   </script>
 </Layout>
