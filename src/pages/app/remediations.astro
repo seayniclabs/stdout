@@ -4,11 +4,11 @@ import { getDb, schema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
 // Get user from session
-const userId = (Astro.request as any).userId;
-
-if (!userId) {
-  return Astro.redirect('/login');
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/app/login');
 }
+const userId = user.id;
 
 const db = getDb();
 

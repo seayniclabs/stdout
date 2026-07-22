@@ -3,12 +3,12 @@ import Layout from '../../layouts/Layout.astro';
 import { getDb, schema } from '../../lib/db';
 import { eq, desc } from 'drizzle-orm';
 
-// Get user from session (assumes auth middleware sets userId)
-const userId = (Astro.request as any).userId;
-
-if (!userId) {
-  return Astro.redirect('/login');
+// Get user from session
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/app/login');
 }
+const userId = user.id;
 
 const db = getDb();
 
