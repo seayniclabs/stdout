@@ -47,6 +47,16 @@ initAutoWiring();
 // Start the Observatory Watcher loop (polls stacks, detects anomalies)
 startWatcher();
 
+// Start the Autonomous Agent Watcher (Riggins monitors and acts)
+setTimeout(async () => {
+  try {
+    const { startAutonomousWatcher } = await import('./lib/agent/autonomous-watcher');
+    startAutonomousWatcher();
+  } catch (err) {
+    console.error('[middleware] Failed to start autonomous agent watcher:', err);
+  }
+}, 3000);
+
 // Auto-start all monitors on boot (runs after DB init completes)
 setTimeout(async () => {
   try {
