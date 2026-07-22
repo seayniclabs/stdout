@@ -24,3 +24,7 @@ tests/playwright/.auth/
 # Local Suricata TOOL1 deploy (scripts/deploy-suricata-integration.sh when not root)
 .deploy-suricata/
 .aider*
+
+# Test coverage and reports
+coverage/
+lighthouse-reports/

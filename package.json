@@ -27,7 +27,11 @@
     "test:auth": "STDOUT_DISABLE_RATE_LIMIT=1 npx playwright test tests/auth.spec.ts --config=tests/playwright.config.ts",
     "test:security": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test tests/security.spec.ts --config=tests/playwright.config.ts",
     "test:no-ratelimit": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
-    "test:ratelimit": "npx playwright test --config=tests/playwright.config.ts --grep @ratelimit"
+    "test:ratelimit": "npx playwright test --config=tests/playwright.config.ts --grep @ratelimit",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:ui": "vitest --ui",
+    "test:unit:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.52.0",
@@ -44,8 +48,12 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@types/better-sqlite3": "^7.6.13",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/ui": "^4.1.10",
     "drizzle-kit": "^0.31.9",
-    "playwright": "^1.60.0"
+    "playwright": "^1.60.0",
+    "tsx": "^4.23.1",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "svgo": ">=4.0.1"
