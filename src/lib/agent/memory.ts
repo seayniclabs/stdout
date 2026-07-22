@@ -155,6 +155,24 @@ async function loadConversationHistory(
 }
 
 /**
+ * Build full context prompt from loaded memory for AI routing
+ */
+export function buildPromptContext(memory: Memory): string {
+  let context = memory.identity + '\n\n';
+  context += '## Your Context\n' + memory.context + '\n\n';
+
+  if (memory.conversations.length > 0) {
+    context += '## Recent Conversation History\n';
+    for (const msg of memory.conversations) {
+      context += `${msg.role === 'user' ? 'User' : 'You'}: ${msg.content}\n`;
+    }
+    context += '\n';
+  }
+
+  return context;
+}
+
+/**
  * Save a conversation message to DB
  */
 export async function saveConversation(
