@@ -49,7 +49,7 @@ export async function autoRoute(prompt: string, context?: string): Promise<Agent
  */
 async function tryOllama(prompt: string, context?: string): Promise<AgentResponse | null> {
   const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
-  const model = 'qwen2.5:14b'; // Same as Observatory Analyst
+  const model = 'qwen2.5:14b-instruct-q4_K_M'; // Same as Observatory Analyst
 
   try {
     const fullPrompt = context ? `${context}\n\n${prompt}` : prompt;
