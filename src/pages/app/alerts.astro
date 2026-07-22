@@ -439,7 +439,7 @@ const recentAlerts = getRecentAlerts(user.id, 20);
 
   <script>
     // Add route button
-    document.getElementById('addRouteBtn')?.addEventListener('click', () => {
+    document.getElementById('addRouteBtn')?.addEventListener('click', async () => {
       const type = prompt('Route type (slack/webhook/discord):');
       if (!type || !['slack', 'webhook', 'discord'].includes(type)) {
         alert('Invalid route type. Must be: slack, webhook, or discord');
@@ -460,7 +460,8 @@ const recentAlerts = getRecentAlerts(user.id, 20);
       if (type === 'slack') {
         const webhookUrl = prompt('Slack webhook URL:');
         if (!webhookUrl) return;
-        config = { webhook_url: webhookUrl, channel: prompt('Channel (optional):') || undefined };
+        const channel = prompt('Channel (optional):');
+        config = { webhook_url: webhookUrl, ...(channel && { channel }) };
       } else if (type === 'webhook') {
         const url = prompt('Webhook URL:');
         if (!url) return;
@@ -471,8 +472,21 @@ const recentAlerts = getRecentAlerts(user.id, 20);
         config = { webhook_url: webhookUrl };
       }
 
-      // Send to API (TODO: implement API endpoint)
-      alert('Alert route creation API coming soon. Route config:\n\n' + JSON.stringify({ name, type, config, min_severity: severity }, null, 2));
+      try {
+        const response = await fetch('/app/api/alerts/routes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, type, config, min_severity: severity }),
+        });
+
+        if (!response.ok) throw new Error('Failed to create route');
+
+        alert('Alert route created successfully!');
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to create route:', error);
+        alert('Failed to create route. Check console for details.');
+      }
     });
 
     // Toggle route enabled/disabled
@@ -481,8 +495,22 @@ const recentAlerts = getRecentAlerts(user.id, 20);
         const routeId = (e.target as HTMLElement).getAttribute('data-route-id');
         const enabled = (e.target as HTMLInputElement).checked;
 
-        // TODO: Call API to update route
-        console.log(`Route ${routeId} ${enabled ? 'enabled' : 'disabled'}`);
+        try {
+          const response = await fetch('/app/api/alerts/routes', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: routeId, enabled }),
+          });
+
+          if (!response.ok) throw new Error('Failed to update route');
+
+          console.log(`Route ${routeId} ${enabled ? 'enabled' : 'disabled'}`);
+        } catch (error) {
+          console.error('Failed to update route:', error);
+          // Revert toggle
+          (e.target as HTMLInputElement).checked = !enabled;
+          alert('Failed to update route. Check console for details.');
+        }
       });
     });
 
@@ -490,7 +518,7 @@ const recentAlerts = getRecentAlerts(user.id, 20);
     document.querySelectorAll('.edit-route-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
         const routeId = (e.target as HTMLElement).getAttribute('data-route-id');
-        alert(`Edit route UI coming soon for route: ${routeId}`);
+        alert('Edit route UI coming soon. For now, delete and recreate the route.');
       });
     });
 
@@ -500,8 +528,19 @@ const recentAlerts = getRecentAlerts(user.id, 20);
         const routeId = (e.target as HTMLElement).getAttribute('data-route-id');
         if (!confirm('Delete this alert route?')) return;
 
-        // TODO: Call API to delete route
-        alert(`Delete route API coming soon for route: ${routeId}`);
+        try {
+          const response = await fetch(`/app/api/alerts/routes?id=${routeId}`, {
+            method: 'DELETE',
+          });
+
+          if (!response.ok) throw new Error('Failed to delete route');
+
+          alert('Route deleted successfully!');
+          window.location.reload();
+        } catch (error) {
+          console.error('Failed to delete route:', error);
+          alert('Failed to delete route. Check console for details.');
+        }
       });
     });
   </script>
