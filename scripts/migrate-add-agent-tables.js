@@ -11,36 +11,36 @@ import Database from 'better-sqlite3';
 import { existsSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-// Central DB path (user/auth/license data)
-const centralDbPath = process.env.CENTRAL_DB_PATH || '/data/central.db';
-console.log(`[migrate-agent] Using central database at: ${centralDbPath}`);
+// Database path (unified for self-hosted)
+const dbPath = process.env.DB_PATH || process.env.DATABASE_PATH || './data/stdout.db';
+console.log(`[migrate-agent] Using database at: ${dbPath}`);
 
-const dir = dirname(centralDbPath);
+const dir = dirname(dbPath);
 if (!existsSync(dir)) {
   mkdirSync(dir, { recursive: true });
 }
 
-const central = new Database(centralDbPath);
-central.pragma('journal_mode = WAL');
-central.pragma('foreign_keys = ON');
+const db = new Database(dbPath);
+db.pragma('journal_mode = WAL');
+db.pragma('foreign_keys = ON');
 
 console.log('[migrate-agent] Creating agent tables...');
 
 try {
   // Check if tables already exist
-  const tableCheck = central.prepare(`
+  const tableCheck = db.prepare(`
     SELECT name FROM sqlite_master
     WHERE type='table' AND name IN ('agent_config', 'agent_conversations')
   `).all();
 
   if (tableCheck.length === 2) {
     console.log('✓ Agent tables already exist, skipping migration');
-    central.close();
+    db.close();
     process.exit(0);
   }
 
   // Create agent_config table
-  central.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS agent_config (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -61,7 +61,7 @@ try {
   console.log('✓ Created agent_config table');
 
   // Create agent_conversations table
-  central.exec(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS agent_conversations (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -83,5 +83,5 @@ try {
   console.error('[migrate-agent] ❌ Migration failed:', error.message);
   process.exit(1);
 } finally {
-  central.close();
+  db.close();
 }
