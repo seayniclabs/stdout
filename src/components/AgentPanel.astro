@@ -36,10 +36,11 @@
       <ul>
         <li>Understand your infrastructure metrics</li>
         <li>Explain anomalies and baselines</li>
-        <li>Restart containers and manage incidents</li>
         <li>Answer questions about your stacks</li>
+        <li>Interpret dashboards and logs</li>
       </ul>
-      <p class="agent-welcome-tip">Try asking: "What's using the most CPU?" or "Show me recent incidents"</p>
+      <p class="agent-welcome-tip">Try asking: "What's using the most CPU?" or "Explain this memory spike"</p>
+      <p class="agent-welcome-tip" style="margin-top: 0.5rem; opacity: 0.7;">✨ Auto-routing to best available AI (no setup required)</p>
     </div>
   </div>
 
@@ -65,11 +66,6 @@
         </svg>
       </button>
     </form>
-
-    <div class="agent-config-prompt" id="agentConfigPrompt" style="display:none;">
-      <p>Enable AI to use Observatory Agent</p>
-      <a href="/app/settings/ai">Configure AI →</a>
-    </div>
   </div>
 </div>
 
@@ -333,30 +329,6 @@
     cursor: not-allowed;
   }
 
-  .agent-config-prompt {
-    text-align: center;
-    padding: 1rem;
-  }
-
-  .agent-config-prompt p {
-    font-family: var(--font-ui);
-    font-size: 0.85rem;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-  }
-
-  .agent-config-prompt a {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 600;
-  }
-
-  .agent-config-prompt a:hover {
-    text-decoration: underline;
-  }
-
   /* Mobile responsive */
   @media (max-width: 768px) {
     .agent-panel {
@@ -375,14 +347,12 @@
   const submit = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
   const closeBtn = document.getElementById('agentClose');
   const status = document.getElementById('agentStatus');
-  const configPrompt = document.getElementById('agentConfigPrompt');
 
   // Agent is always available with auto-routing (no config check needed)
   function initializeAgent() {
     // Enable input immediately - auto-routing handles provider selection
     input!.disabled = false;
     submit!.disabled = false;
-    if (configPrompt) configPrompt.style.display = 'none';
 
     console.log('[Observatory Agent] Initialized with auto-routing (Ollama → Claude CLI → Gemini CLI)');
   }
