@@ -21,14 +21,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
   try {
     const db = getDb();
     const limit = parseInt(url.searchParams.get('limit') || '50');
-    const agentName = url.searchParams.get('agent'); // Filter by agent
+    const agentType = url.searchParams.get('agent'); // Filter by agent type
 
     const conditions = ['user_id = ?'];
     const params: unknown[] = [userId];
 
-    if (agentName) {
-      conditions.push('agent_name = ?');
-      params.push(agentName);
+    if (agentType) {
+      conditions.push('agent_type = ?');
+      params.push(agentType);
     }
 
     const whereClause = `WHERE ${conditions.join(' AND ')}`;
@@ -36,15 +36,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const query = `
       SELECT
         id,
-        agent_name,
-        stack_id,
-        trigger,
-        decision_made,
-        confidence_score,
+        agent_type,
+        incident_id,
+        model,
+        prompt_tokens,
+        completion_tokens,
+        outcome,
         execution_time_ms,
-        created_at,
-        input_context,
-        output_decision
+        created_at
       FROM observatory_agent_runs
       ${whereClause}
       ORDER BY created_at DESC
@@ -56,16 +55,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
 
     const runs = rows.map(row => ({
       id: row.id,
-      agentName: row.agent_name,
-      stackId: row.stack_id,
-      trigger: row.trigger,
-      decisionMade: row.decision_made,
-      confidenceScore: row.confidence_score,
+      agentType: row.agent_type,
+      incidentId: row.incident_id,
+      model: row.model,
+      promptTokens: row.prompt_tokens,
+      completionTokens: row.completion_tokens,
+      outcome: row.outcome,
       executionTimeMs: row.execution_time_ms,
-      createdAt: new Date(row.created_at).toISOString(),
-      // Parse JSON fields
-      inputContext: JSON.parse(row.input_context),
-      outputDecision: JSON.parse(row.output_decision)
+      createdAt: new Date(row.created_at).toISOString()
     }));
 
     return new Response(JSON.stringify({

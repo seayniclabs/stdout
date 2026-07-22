@@ -12,7 +12,31 @@ import { initializeDegradationMode } from './lib/observatory/degradation-mode';
 import { initAutoWiring } from './lib/auto-wire';
 import { startWatcher } from './lib/observatory/watcher';
 
-// Initialize Observatory degradation mode check on startup
+// Initialize Observatory (full initialization with baseline establishment)
+(async () => {
+  try {
+    const { initializeObservatory } = await import('./lib/observatory/initialization');
+    const result = await initializeObservatory();
+
+    // Log full startup sequence
+    for (const line of result.startupLog) {
+      console.log('[Observatory]', line);
+    }
+
+    if (result.success) {
+      console.log('[Observatory] ✓ Initialization complete');
+      console.log(`  Agents: ${result.agentsActivated.join(', ')}`);
+      console.log(`  Baselines: ${result.baselinesEstablished}`);
+      console.log(`  Monitors: ${result.monitorsConfigured}`);
+    } else {
+      console.error('[Observatory] ✗ Initialization failed:', result.errors);
+    }
+  } catch (err) {
+    console.error('[middleware] Failed to initialize Observatory:', err);
+  }
+})();
+
+// Initialize degradation mode check
 initializeDegradationMode().catch(err =>
   console.error('[middleware] Failed to initialize degradation mode:', err)
 );
@@ -363,37 +387,7 @@ import('./lib/observatory/scan-scheduler')
   .then(({ startScanScheduler }) => startScanScheduler())
   .catch((err) => console.error('[middleware] failed to start scan scheduler:', err));
 
-// Observatory initialization — runs on every service start/restart/recovery
-// Ensures AI agents always come online with full knowledge base and mission
-let observatoryInitialized = false;
-(async () => {
-  try {
-    const { startupObservatory, formatStartupResult } = await import('./lib/observatory/startup');
-    const result = await startupObservatory();
-
-    if (result.success) {
-      console.log('[Observatory] Initialized successfully in', result.duration_ms + 'ms');
-      console.log('[Observatory] Mode:', result.mode, '| Ready:', result.ready);
-
-      if (!result.ready) {
-        console.warn('[Observatory] Not fully ready. Issues:', result.issues.join(', '));
-      }
-    } else {
-      console.error('[Observatory] Initialization FAILED');
-      console.error('[Observatory] Issues:', result.issues.join(', '));
-    }
-
-    // Log full startup brief in debug mode
-    if (process.env.DEBUG_OBSERVATORY === 'true') {
-      console.log('\n' + formatStartupResult(result));
-    }
-
-    observatoryInitialized = true;
-  } catch (error) {
-    console.error('[Observatory] Failed to start:', error);
-    observatoryInitialized = false;
-  }
-})();
+// Observatory initialization moved to top of file (initializeObservatory with full Phase 4.5 baseline establishment)
 
 // First-run detection — redirect to setup page if installation incomplete
 let installationComplete = false;

@@ -14,7 +14,7 @@
  * Falls back to the canonical loopback ports if unset.
  */
 
-import { getDb } from '../db';
+import { getDb, getSqlite } from '../db';
 import { sql } from 'drizzle-orm';
 
 interface ProbeTarget {
@@ -75,7 +75,7 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
   const unreachable: string[] = [];
   let configured = 0;
 
-  const db = getDb();
+  const db = getSqlite(); // Use raw SQLite client for reliable INSERT
   const targets = buildTargets();
 
   for (const t of targets) {
@@ -96,18 +96,17 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
       // Stable, user-scoped id so re-runs update the same row (no UNIQUE on url in the live table).
       const sourceId = `ds_obs_${t.type}_${userId}`;
       const now = Date.now();
-      await db.run(sql`
-        INSERT INTO data_sources (id, user_id, type, name, url, enabled, last_tested_at, last_test_status, created_at, updated_at)
-        VALUES (${sourceId}, ${userId}, ${t.type}, ${t.name}, ${t.url}, 1, ${now}, 'ok', ${now}, ${now})
+      db.prepare(`
+        INSERT INTO data_sources (id, user_id, type, name, url, enabled, last_checked_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
-          type = ${t.type},
-          name = ${t.name},
-          url = ${t.url},
+          type = excluded.type,
+          name = excluded.name,
+          url = excluded.url,
           enabled = 1,
-          last_tested_at = ${now},
-          last_test_status = 'ok',
-          updated_at = ${now}
-      `);
+          last_checked_at = excluded.last_checked_at,
+          updated_at = excluded.updated_at
+      `).run(sourceId, userId, t.type, t.name, t.url, now, now, now);
       configured++;
       log.push(`  ✓ ${t.name} configured (${t.type} @ ${t.url})`);
     } catch (error: unknown) {

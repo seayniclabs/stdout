@@ -17,7 +17,7 @@
  * disk_percent, network_errors). Means/std-devs are deliberately generous starting points.
  */
 
-import { getDb } from '../db';
+import { getDb, getSqlite } from '../db';
 import { sql } from 'drizzle-orm';
 
 interface ProvisionalMetric {
@@ -47,7 +47,7 @@ export interface BaselineBootstrapResult {
  */
 export async function establishProvisionalBaselines(userId: string): Promise<BaselineBootstrapResult> {
   const log: string[] = [];
-  const central = getDb();
+  const central = getSqlite(); // Use raw SQLite client for reliable INSERT
   const tenant = getDb();
 
   const stacks = tenant.all(sql`
@@ -73,32 +73,44 @@ export async function establishProvisionalBaselines(userId: string): Promise<Bas
       try {
         // Only seed if there is NO baseline yet, or the existing one is still provisional
         // (window < 1h). Never overwrite a real, wide-window baseline.
-        const existing = central.get(sql`
+        const existing = central.prepare(`
           SELECT window_start, window_end FROM observatory_baselines
-          WHERE stack_id = ${stack.id} AND metric_name = ${m.metric}
-        `) as { window_start: number; window_end: number } | undefined;
+          WHERE stack_id = ? AND metric_name = ?
+        `).get(stack.id, m.metric) as { window_start: number; window_end: number } | undefined;
 
         if (existing && (existing.window_end - existing.window_start) >= PROVISIONAL_WINDOW_MS) {
           continue; // real baseline present — leave it alone
         }
 
         const id = `bl_prov_${stack.id}_${m.metric}`;
-        central.run(sql`
+        const monitorId = 'observatory';
+        const baselineValue = String(m.mean);
+        const sampleCount = 1;
+        // Need to provide values for old columns (user_id, monitor_id, baseline_value) even though they're legacy
+        // The schema has both old columns (from original design) and new columns (from statistical baseline expansion)
+        // Using raw SQLite client with ON CONFLICT(id) since (stack_id, metric_name) doesn't have UNIQUE constraint
+        central.prepare(`
           INSERT INTO observatory_baselines
-            (id, stack_id, metric_name, mean, std_dev, sample_count, window_start, window_end, created_at, updated_at)
+            (id, user_id, monitor_id, stack_id, metric_name, baseline_value, mean, std_dev, sample_count, window_start, window_end, last_calculated_at, created_at, updated_at)
           VALUES
-            (${id}, ${stack.id}, ${m.metric}, ${m.mean}, ${m.stdDev}, 1, ${windowStart}, ${now}, ${now}, ${now})
-          ON CONFLICT(stack_id, metric_name) DO UPDATE SET
-            mean = ${m.mean},
-            std_dev = ${m.stdDev},
-            window_start = ${windowStart},
-            window_end = ${now},
-            updated_at = ${now}
-        `);
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            mean = excluded.mean,
+            std_dev = excluded.std_dev,
+            baseline_value = excluded.baseline_value,
+            window_start = excluded.window_start,
+            window_end = excluded.window_end,
+            last_calculated_at = excluded.last_calculated_at,
+            updated_at = excluded.updated_at
+        `).run(
+          id, userId, monitorId, stack.id, m.metric, baselineValue, m.mean, m.stdDev, sampleCount, windowStart, now, now, now, now
+        );
         baselinesWritten++;
         wroteForStack = true;
       } catch (error: unknown) {
-        log.push(`  ⚠ ${stack.name}/${m.metric}: ${error instanceof Error ? error.message : String(error)}`);
+        const errorMsg = error instanceof Error ? `${error.message} | Stack: ${error.stack?.split('\n')[1]}` : String(error);
+        log.push(`  ⚠ ${stack.name}/${m.metric}: ${errorMsg}`);
+        console.error(`[Baseline Bootstrap Error] ${stack.name}/${m.metric}:`, error);
       }
     }
     if (wroteForStack) {
