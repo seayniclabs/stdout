@@ -13,7 +13,7 @@
 
 import type { APIRoute } from 'astro';
 import { loadMemory, saveConversation, buildPromptContext } from '../../../../lib/agent/memory';
-import { autoRoute } from '../../../../lib/agent/auto-router';
+import { autoRouteWithTools } from '../../../../lib/agent/auto-router-tools';
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const user = locals.user;
@@ -39,8 +39,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const memory = await loadMemory(user.id);
     const context = buildPromptContext(memory);
 
-    // 2. Auto-route to best available AI (Ollama → Claude → Gemini → fail gracefully)
-    const response = await autoRoute(message, context);
+    // 2. Auto-route with tool support (Ollama can call Observatory APIs)
+    const response = await autoRouteWithTools(message, context, user.id);
 
     // 3. Persist conversation
     await saveConversation(user.id, 'user', message);
@@ -48,6 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       provider: response.provider,
       model: response.model,
       degraded: response.degraded,
+      toolsUsed: response.toolsUsed,
     });
 
     // 4. Return response
@@ -56,6 +57,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       provider: response.provider,
       model: response.model,
       degraded: response.degraded,
+      toolsUsed: response.toolsUsed,
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
