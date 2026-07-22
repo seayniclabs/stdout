@@ -1,0 +1,496 @@
+---
+/**
+ * Observatory Agent Panel
+ *
+ * Hidable sidebar chat interface for Observatory Agent.
+ * Shows conversation history, handles user input, displays agent responses.
+ */
+---
+
+<div id="agentPanel" class="agent-panel hidden" role="complementary" aria-label="Observatory Agent">
+  <div class="agent-header">
+    <div class="agent-header-left">
+      <div class="agent-avatar">🤖</div>
+      <div class="agent-header-info">
+        <h3 class="agent-title">Steer</h3>
+        <span class="agent-status" id="agentStatus">Idle</span>
+      </div>
+    </div>
+    <button
+      id="agentClose"
+      class="agent-close"
+      aria-label="Close agent panel"
+      type="button"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <div class="agent-messages" id="agentMessages" role="log" aria-live="polite">
+    <!-- Messages will be inserted here -->
+    <div class="agent-welcome">
+      <p>Hi! I'm Steer, your Observatory Agent. I can help you:</p>
+      <ul>
+        <li>Understand your infrastructure metrics</li>
+        <li>Explain anomalies and baselines</li>
+        <li>Restart containers and manage incidents</li>
+        <li>Answer questions about your stacks</li>
+      </ul>
+      <p class="agent-welcome-tip">Try asking: "What's using the most CPU?" or "Show me recent incidents"</p>
+    </div>
+  </div>
+
+  <div class="agent-input-wrapper">
+    <form id="agentForm" class="agent-form">
+      <input
+        type="text"
+        id="agentInput"
+        class="agent-input"
+        placeholder="Ask about your infrastructure..."
+        autocomplete="off"
+        disabled
+      />
+      <button
+        type="submit"
+        class="agent-submit"
+        aria-label="Send message"
+        disabled
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </form>
+
+    <div class="agent-config-prompt" id="agentConfigPrompt" style="display:none;">
+      <p>Enable AI to use Observatory Agent</p>
+      <a href="/app/settings/ai">Configure AI →</a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .agent-panel {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 420px;
+    max-width: 90vw;
+    background: var(--bg-elevated);
+    border-left: 1px solid var(--border);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(0);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .agent-panel.hidden {
+    transform: translateX(100%);
+  }
+
+  .agent-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-surface);
+  }
+
+  .agent-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .agent-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+  }
+
+  .agent-header-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .agent-title {
+    font-family: var(--font-ui);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+  }
+
+  .agent-status {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .agent-status.thinking {
+    color: var(--accent);
+  }
+
+  .agent-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+  }
+
+  .agent-close:hover {
+    background: var(--bg-hover);
+    color: var(--text);
+  }
+
+  .agent-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .agent-welcome {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .agent-welcome p {
+    margin-bottom: 0.75rem;
+  }
+
+  .agent-welcome ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0.75rem;
+  }
+
+  .agent-welcome li {
+    padding: 0.4rem 0;
+    padding-left: 1.5rem;
+    position: relative;
+  }
+
+  .agent-welcome li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  .agent-welcome-tip {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    padding: 0.75rem;
+    background: var(--bg-surface);
+    border-radius: 6px;
+    border-left: 2px solid var(--accent);
+    margin-top: 1rem;
+  }
+
+  .agent-message {
+    display: flex;
+    gap: 0.75rem;
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(0.5rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .agent-message-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    background: var(--accent-dim);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+  }
+
+  .agent-message-avatar.user {
+    background: var(--bg-surface);
+  }
+
+  .agent-message-content {
+    flex: 1;
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  .agent-message-content code {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    background: var(--bg-surface);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    color: var(--accent-light);
+  }
+
+  .agent-message-content pre {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.75rem;
+    overflow-x: auto;
+    margin: 0.5rem 0;
+  }
+
+  .agent-message-content pre code {
+    background: none;
+    padding: 0;
+  }
+
+  .agent-input-wrapper {
+    border-top: 1px solid var(--border);
+    background: var(--bg-surface);
+    padding: 1rem 1.25rem;
+  }
+
+  .agent-form {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .agent-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .agent-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .agent-input:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .agent-submit {
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .agent-submit:hover:not(:disabled) {
+    background: var(--accent-light);
+    transform: translateY(-1px);
+  }
+
+  .agent-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .agent-config-prompt {
+    text-align: center;
+    padding: 1rem;
+  }
+
+  .agent-config-prompt p {
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  .agent-config-prompt a {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .agent-config-prompt a:hover {
+    text-decoration: underline;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .agent-panel {
+      width: 100%;
+      max-width: 100%;
+    }
+  }
+</style>
+
+<script>
+  // Agent Panel State Management
+  const panel = document.getElementById('agentPanel');
+  const messages = document.getElementById('agentMessages');
+  const form = document.getElementById('agentForm');
+  const input = document.getElementById('agentInput') as HTMLInputElement;
+  const submit = form?.querySelector('button[type="submit"]') as HTMLButtonElement;
+  const closeBtn = document.getElementById('agentClose');
+  const status = document.getElementById('agentStatus');
+  const configPrompt = document.getElementById('agentConfigPrompt');
+
+  let isConfigured = false;
+
+  // Check if agent is configured
+  async function checkAgentConfig() {
+    try {
+      const res = await fetch('/app/api/agent/config');
+      const data = await res.json();
+
+      isConfigured = data.configured && data.config?.enabled;
+
+      if (isConfigured) {
+        input!.disabled = false;
+        submit!.disabled = false;
+        if (configPrompt) configPrompt.style.display = 'none';
+      } else {
+        input!.disabled = true;
+        submit!.disabled = true;
+        if (configPrompt) configPrompt.style.display = 'block';
+      }
+    } catch (error) {
+      console.error('Failed to check agent config:', error);
+    }
+  }
+
+  // Add message to chat
+  function addMessage(role: 'user' | 'assistant', content: string) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'agent-message';
+
+    const avatar = document.createElement('div');
+    avatar.className = `agent-message-avatar ${role}`;
+    avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'agent-message-content';
+
+    // Simple markdown rendering (code blocks, inline code)
+    let html = content
+      .replace(/```(\w+)?\n([\s\S]+?)```/g, '<pre><code>$2</code></pre>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\n/g, '<br>');
+
+    contentDiv.innerHTML = html;
+
+    msgDiv.appendChild(avatar);
+    msgDiv.appendChild(contentDiv);
+    messages!.appendChild(msgDiv);
+
+    // Scroll to bottom
+    messages!.scrollTop = messages!.scrollHeight;
+  }
+
+  // Send message to agent
+  async function sendMessage(message: string) {
+    if (!message.trim()) return;
+
+    // Add user message
+    addMessage('user', message);
+    input!.value = '';
+
+    // Update status
+    status!.textContent = 'Thinking...';
+    status!.classList.add('thinking');
+    input!.disabled = true;
+    submit!.disabled = true;
+
+    try {
+      const res = await fetch('/app/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to send message');
+      }
+
+      // Add agent response
+      addMessage('assistant', data.response);
+
+    } catch (error) {
+      console.error('Agent error:', error);
+      addMessage('assistant', `⚠️ ${error instanceof Error ? error.message : 'Something went wrong'}`);
+    } finally {
+      // Reset status
+      status!.textContent = 'Idle';
+      status!.classList.remove('thinking');
+      input!.disabled = false;
+      submit!.disabled = false;
+      input!.focus();
+    }
+  }
+
+  // Event listeners
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const message = input!.value;
+    sendMessage(message);
+  });
+
+  closeBtn?.addEventListener('click', () => {
+    panel?.classList.add('hidden');
+  });
+
+  // Initialize on load
+  checkAgentConfig();
+
+  // Expose toggle function for floating button
+  (window as any).toggleAgentPanel = function() {
+    panel?.classList.toggle('hidden');
+    if (!panel?.classList.contains('hidden')) {
+      input?.focus();
+    }
+  };
+</script>

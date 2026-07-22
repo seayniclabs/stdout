@@ -4,6 +4,7 @@ import { getDb, schema } from '../lib/db';
 import { getUserWorkspaces } from '../lib/rbac';
 import { getUserLimits } from '../lib/tiers';
 import { eq } from 'drizzle-orm';
+import AgentPanel from '../components/AgentPanel.astro';
 
 interface Props {
   title?: string;
@@ -198,6 +199,22 @@ const currentWsId = ws?.ownerId || user?.id;
   <main class="main" id="main-content">
     <slot />
   </main>
+
+  <!-- Observatory Agent Panel -->
+  <AgentPanel />
+
+  <!-- Floating Agent Toggle Button -->
+  <button
+    id="agentToggle"
+    class="agent-toggle"
+    aria-label="Open Observatory Agent (Steer)"
+    type="button"
+    title="Ask Steer"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+    </svg>
+  </button>
 
   <footer style="text-align:center; padding:2rem 1rem 3rem; opacity:0.4;">
     <div style="display:flex; justify-content:center; gap:16px; margin-bottom:6px;">
@@ -895,6 +912,47 @@ const currentWsId = ws?.ownerId || user?.id;
         display: flex;
       }
     }
+
+    /* Observatory Agent Toggle Button */
+    .agent-toggle {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.4),
+                  0 2px 6px rgba(0, 0, 0, 0.3);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 999;
+    }
+
+    .agent-toggle:hover {
+      background: var(--accent-light);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(249, 115, 22, 0.5),
+                  0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+
+    .agent-toggle:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 768px) {
+      .agent-toggle {
+        bottom: 1rem;
+        right: 1rem;
+        width: 52px;
+        height: 52px;
+      }
+    }
   </style>
 
   <!-- Load active skin on page load -->
@@ -904,6 +962,17 @@ const currentWsId = ws?.ownerId || user?.id;
 
     // Apply saved skin or default (Obsidian) on page load
     loadSavedSkin(defaultSkins[0], defaultSkins);
+  </script>
+
+  <!-- Observatory Agent Toggle -->
+  <script>
+    const agentToggle = document.getElementById('agentToggle');
+
+    agentToggle?.addEventListener('click', () => {
+      if (typeof (window as any).toggleAgentPanel === 'function') {
+        (window as any).toggleAgentPanel();
+      }
+    });
   </script>
 </body>
 </html>

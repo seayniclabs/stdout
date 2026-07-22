@@ -1,0 +1,512 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import Button from '../../../components/Button.astro';
+import FormInput from '../../../components/FormInput.astro';
+
+const user = Astro.locals.user;
+if (!user) {
+  return Astro.redirect('/app/login?redirect=/app/settings/ai');
+}
+---
+
+<Layout title="AI Configuration - StdOut">
+  <div class="settings-container">
+    <div class="settings-header">
+      <h1 class="settings-title">AI Configuration</h1>
+      <p class="settings-description">
+        Configure AI provider for Observatory Agent (Steer). Choose between local Ollama, Anthropic, Gemini, or other providers.
+      </p>
+    </div>
+
+    <div class="settings-content">
+      <!-- Configuration Status -->
+      <div class="config-status" id="configStatus">
+        <div class="status-loading">
+          <div class="spinner"></div>
+          <span>Loading configuration...</span>
+        </div>
+      </div>
+
+      <!-- Configuration Form -->
+      <form id="aiConfigForm" class="config-form" style="display:none;">
+        <div class="form-group">
+          <label for="provider" class="form-label">AI Provider</label>
+          <select id="provider" name="provider" class="form-select" required>
+            <option value="">Select a provider...</option>
+            <option value="ollama">Ollama (Local, Free)</option>
+            <option value="anthropic-cli">Anthropic CLI (Subscription)</option>
+            <option value="anthropic-api">Anthropic API (Pay-per-use)</option>
+            <option value="gemini">Google Gemini (Pay-per-use)</option>
+            <option value="openai">OpenAI (Pay-per-use)</option>
+            <option value="custom">Custom Endpoint</option>
+          </select>
+          <p class="form-hint">Choose your AI provider. Ollama runs locally and is free.</p>
+        </div>
+
+        <!-- Ollama-specific fields -->
+        <div id="ollamaFields" class="provider-fields" style="display:none;">
+          <FormInput
+            name="endpoint"
+            label="Ollama Endpoint"
+            type="url"
+            placeholder="http://localhost:11434"
+            value="http://localhost:11434"
+            helpText="URL where Ollama is running (default: http://localhost:11434)"
+          />
+          <FormInput
+            name="model"
+            label="Model Name"
+            type="text"
+            placeholder="qwen2.5:14b"
+            helpText="Available models: qwen2.5:14b, deepseek-r1:14b, llama3.2:3b"
+            required
+          />
+        </div>
+
+        <!-- Anthropic API fields -->
+        <div id="anthropicApiFields" class="provider-fields" style="display:none;">
+          <FormInput
+            name="apiKey"
+            label="API Key"
+            type="password"
+            placeholder="sk-ant-..."
+            helpText="Get your API key from console.anthropic.com"
+            required
+          />
+          <div class="form-group">
+            <label for="anthropicModel" class="form-label">Model</label>
+            <select id="anthropicModel" name="model" class="form-select">
+              <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (Best reasoning)</option>
+              <option value="claude-3-7-sonnet-20250219">Claude 3.7 Sonnet (Fast, balanced)</option>
+              <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Fast, cheap)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Anthropic CLI fields -->
+        <div id="anthropicCliFields" class="provider-fields" style="display:none;">
+          <div class="form-group">
+            <label for="anthropicCliModel" class="form-label">Model</label>
+            <select id="anthropicCliModel" name="model" class="form-select">
+              <option value="sonnet">Sonnet (Default)</option>
+              <option value="opus">Opus (Most capable)</option>
+              <option value="haiku">Haiku (Fast)</option>
+            </select>
+          </div>
+          <div class="alert alert-info">
+            <p>⚡ Using Claude CLI subscription. Make sure <code>claude</code> is available in your PATH.</p>
+          </div>
+        </div>
+
+        <!-- Gemini fields -->
+        <div id="geminiFields" class="provider-fields" style="display:none;">
+          <FormInput
+            name="apiKey"
+            label="API Key"
+            type="password"
+            placeholder="..."
+            helpText="Get your API key from ai.google.dev"
+            required
+          />
+          <div class="form-group">
+            <label for="geminiModel" class="form-label">Model</label>
+            <select id="geminiModel" name="model" class="form-select">
+              <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Fast, experimental)</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro (Best quality)</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Fast, cheap)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- OpenAI fields -->
+        <div id="openaiFields" class="provider-fields" style="display:none;">
+          <FormInput
+            name="apiKey"
+            label="API Key"
+            type="password"
+            placeholder="sk-..."
+            helpText="Get your API key from platform.openai.com"
+            required
+          />
+          <div class="form-group">
+            <label for="openaiModel" class="form-label">Model</label>
+            <select id="openaiModel" name="model" class="form-select">
+              <option value="gpt-4o">GPT-4o (Best)</option>
+              <option value="gpt-4o-mini">GPT-4o Mini (Fast, cheap)</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Cheapest)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom endpoint fields -->
+        <div id="customFields" class="provider-fields" style="display:none;">
+          <FormInput
+            name="endpoint"
+            label="API Endpoint"
+            type="url"
+            placeholder="https://api.example.com/v1"
+            helpText="OpenAI-compatible API endpoint"
+            required
+          />
+          <FormInput
+            name="apiKey"
+            label="API Key"
+            type="password"
+            placeholder="..."
+            helpText="API key for authentication"
+          />
+          <FormInput
+            name="model"
+            label="Model Name"
+            type="text"
+            placeholder="..."
+            helpText="Model identifier"
+            required
+          />
+        </div>
+
+        <!-- Preferences -->
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="enabled" name="enabled" checked />
+            <span>Enable Observatory Agent (Steer)</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="proactiveNotifications" name="proactiveNotifications" />
+            <span>Enable proactive notifications (Steer will alert you about anomalies)</span>
+          </label>
+        </div>
+
+        <!-- Actions -->
+        <div class="form-actions">
+          <Button type="submit" id="saveBtn">Save Configuration</Button>
+          <Button type="button" variant="secondary" id="testBtn">Test Connection</Button>
+        </div>
+      </form>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .settings-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+  }
+
+  .settings-header {
+    margin-bottom: 2rem;
+  }
+
+  .settings-title {
+    font-family: var(--font-ui);
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .settings-description {
+    font-family: var(--font-ui);
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+
+  .settings-content {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 2rem;
+  }
+
+  .config-status {
+    text-align: center;
+    padding: 2rem;
+  }
+
+  .status-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .config-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .form-label {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .form-select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.875rem;
+    color: var(--text);
+    transition: all 0.2s;
+  }
+
+  .form-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+  }
+
+  .form-hint {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .provider-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--text);
+    cursor: pointer;
+  }
+
+  .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .alert {
+    padding: 1rem;
+    border-radius: 8px;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+    line-height: 1.6;
+  }
+
+  .alert-info {
+    background: rgba(52, 152, 219, 0.1);
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    color: #3498db;
+  }
+
+  .alert code {
+    font-family: var(--font-mono);
+    background: rgba(255, 255, 255, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 3px;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .settings-container {
+      padding: 1rem;
+    }
+
+    .settings-content {
+      padding: 1.5rem;
+    }
+
+    .form-actions {
+      flex-direction: column;
+    }
+  }
+</style>
+
+<script>
+  const form = document.getElementById('aiConfigForm') as HTMLFormElement;
+  const status = document.getElementById('configStatus');
+  const providerSelect = document.getElementById('provider') as HTMLSelectElement;
+  const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+  const testBtn = document.getElementById('testBtn') as HTMLButtonElement;
+
+  // Provider-specific field groups
+  const fieldGroups = {
+    ollama: document.getElementById('ollamaFields'),
+    'anthropic-api': document.getElementById('anthropicApiFields'),
+    'anthropic-cli': document.getElementById('anthropicCliFields'),
+    gemini: document.getElementById('geminiFields'),
+    openai: document.getElementById('openaiFields'),
+    custom: document.getElementById('customFields'),
+  };
+
+  // Load current configuration
+  async function loadConfig() {
+    try {
+      const res = await fetch('/app/api/agent/config');
+      const data = await res.json();
+
+      if (data.configured && data.config) {
+        // Populate form with existing config
+        providerSelect.value = data.config.provider;
+        showProviderFields(data.config.provider);
+
+        // Set provider-specific fields
+        const endpointInput = form.querySelector('[name="endpoint"]') as HTMLInputElement;
+        if (endpointInput) endpointInput.value = data.config.endpoint || '';
+
+        const modelInput = form.querySelector('[name="model"]') as HTMLInputElement;
+        if (modelInput) modelInput.value = data.config.model || '';
+
+        const enabledCheckbox = document.getElementById('enabled') as HTMLInputElement;
+        enabledCheckbox.checked = data.config.enabled;
+
+        const proactiveCheckbox = document.getElementById('proactiveNotifications') as HTMLInputElement;
+        proactiveCheckbox.checked = data.config.proactiveNotifications;
+      }
+
+      // Show form
+      status!.style.display = 'none';
+      form!.style.display = 'flex';
+
+    } catch (error) {
+      console.error('Failed to load config:', error);
+      status!.innerHTML = '<div class="alert alert-error">Failed to load configuration. Please refresh the page.</div>';
+    }
+  }
+
+  // Show/hide provider-specific fields
+  function showProviderFields(provider: string) {
+    Object.values(fieldGroups).forEach(group => {
+      if (group) group.style.display = 'none';
+    });
+
+    const group = fieldGroups[provider as keyof typeof fieldGroups];
+    if (group) group.style.display = 'flex';
+  }
+
+  providerSelect.addEventListener('change', () => {
+    showProviderFields(providerSelect.value);
+  });
+
+  // Save configuration
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'Saving...';
+
+    try {
+      const formData = new FormData(form);
+      const data: any = {
+        provider: formData.get('provider'),
+        model: formData.get('model'),
+        enabled: formData.get('enabled') === 'on',
+        proactiveNotifications: formData.get('proactiveNotifications') === 'on',
+      };
+
+      if (formData.get('endpoint')) data.endpoint = formData.get('endpoint');
+      if (formData.get('apiKey')) data.apiKey = formData.get('apiKey');
+
+      const res = await fetch('/app/api/agent/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const result = await res.json();
+
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to save configuration');
+      }
+
+      (window as any).showToast('Configuration saved successfully!', 'success');
+
+    } catch (error) {
+      console.error('Save error:', error);
+      (window as any).showToast(error instanceof Error ? error.message : 'Failed to save configuration', 'error');
+    } finally {
+      saveBtn.disabled = false;
+      saveBtn.textContent = 'Save Configuration';
+    }
+  });
+
+  // Test connection
+  testBtn.addEventListener('click', async () => {
+    testBtn.disabled = true;
+    testBtn.textContent = 'Testing...';
+
+    try {
+      const res = await fetch('/app/api/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Hello, test connection' }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Connection test failed');
+      }
+
+      (window as any).showToast('Connection successful!', 'success');
+
+    } catch (error) {
+      console.error('Test error:', error);
+      (window as any).showToast(error instanceof Error ? error.message : 'Connection test failed', 'error');
+    } finally {
+      testBtn.disabled = false;
+      testBtn.textContent = 'Test Connection';
+    }
+  });
+
+  // Initialize
+  loadConfig();
+</script>
+
+<style is:global>
+  .alert-error {
+    background: rgba(231, 76, 60, 0.1);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    color: #e74c3c;
+  }
+</style>
