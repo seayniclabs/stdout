@@ -377,39 +377,14 @@
   const status = document.getElementById('agentStatus');
   const configPrompt = document.getElementById('agentConfigPrompt');
 
-  let isConfigured = false;
+  // Agent is always available with auto-routing (no config check needed)
+  function initializeAgent() {
+    // Enable input immediately - auto-routing handles provider selection
+    input!.disabled = false;
+    submit!.disabled = false;
+    if (configPrompt) configPrompt.style.display = 'none';
 
-  // Check if agent is configured
-  async function checkAgentConfig() {
-    try {
-      const res = await fetch('/app/api/agent/config');
-      const data = await res.json();
-
-      isConfigured = data.configured && data.config?.enabled;
-
-      if (isConfigured) {
-        // Update agent name in UI
-        const agentName = data.config?.agentName || 'Riggins';
-        const titleEl = document.getElementById('agentTitle');
-        const welcomeEl = document.getElementById('agentWelcome');
-
-        if (titleEl) titleEl.textContent = agentName;
-        if (welcomeEl) {
-          const firstP = welcomeEl.querySelector('p');
-          if (firstP) firstP.innerHTML = `Hi! I'm ${agentName}, your Observatory Agent. I can help you:`;
-        }
-
-        input!.disabled = false;
-        submit!.disabled = false;
-        if (configPrompt) configPrompt.style.display = 'none';
-      } else {
-        input!.disabled = true;
-        submit!.disabled = true;
-        if (configPrompt) configPrompt.style.display = 'block';
-      }
-    } catch (error) {
-      console.error('Failed to check agent config:', error);
-    }
+    console.log('[Observatory Agent] Initialized with auto-routing (Ollama → Claude CLI → Gemini CLI)');
   }
 
   // Add message to chat
@@ -495,7 +470,7 @@
   });
 
   // Initialize on load
-  checkAgentConfig();
+  initializeAgent();
 
   // Expose toggle function for floating button
   (window as any).toggleAgentPanel = function() {
