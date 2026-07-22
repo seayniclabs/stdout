@@ -115,3 +115,28 @@ export const systemState = sqliteTable('system_state', {
   value: text('value').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
+
+// Observatory Agent tables
+export const agentConfig = sqliteTable('agent_config', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  provider: text('provider', {
+    enum: ['ollama', 'anthropic-cli', 'anthropic-api', 'gemini', 'openai', 'custom'],
+  }).notNull(),
+  endpoint: text('endpoint'), // For Ollama/custom providers
+  model: text('model').notNull(),
+  apiKey: text('api_key'), // Encrypted, for API-based providers
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  proactiveNotifications: integer('proactive_notifications', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const agentConversations = sqliteTable('agent_conversations', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: text('role', { enum: ['user', 'assistant'] }).notNull(),
+  content: text('content').notNull(),
+  metadata: text('metadata'), // JSON: tool calls, model used, tokens, etc.
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
