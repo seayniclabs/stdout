@@ -1670,13 +1670,13 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
         }
       }
 
-      // Generate mock data every 3 seconds for demonstration
-      setInterval(generateMockData, 3000);
+      // Mock data generator DISABLED - using real Observatory data now
+      // setInterval(generateMockData, 3000);
 
-      // Initial data generation
-      for (let i = 0; i < 10; i++) {
-        generateMockData();
-      }
+      // Initial mock data DISABLED
+      // for (let i = 0; i < 10; i++) {
+      //   generateMockData();
+      // }
 
       // Fetch agent runs on load
       fetchAgentRuns();

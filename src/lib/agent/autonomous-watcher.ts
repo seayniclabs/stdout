@@ -30,6 +30,9 @@
 import { autoRouteWithTools } from './auto-router-tools';
 import { loadMemory, saveConversation, buildPromptContext } from './memory';
 import { getDb, getSqlite } from '../db';
+import { runPassiveDiscovery } from '../discovery/passive-discovery';
+import { sendAlert } from '../alerts/alert-router';
+import { getStorageUsage, recordDailyStorageSnapshot, vacuumDatabase, archiveOldLogs } from '../storage/storage-monitor';
 
 let watcherInterval: NodeJS.Timeout | null = null;
 let isRunning = false;
@@ -104,6 +107,9 @@ async function runWatcherCycle(config: WatcherConfig) {
     for (const user of users) {
       await runWatcherForUser(user.id, config);
     }
+
+    // Run housekeeping tasks (daily checks)
+    await runHousekeepingTasks();
 
     console.log('[Agent Watcher] Cycle complete');
   } catch (error) {
@@ -291,5 +297,124 @@ export function saveWatcherConfig(config: Partial<WatcherConfig>) {
   if (isRunning) {
     stopAutonomousWatcher();
     startAutonomousWatcher();
+  }
+}
+
+/**
+ * Housekeeping Tasks (run daily)
+ *
+ * Riggins keeps the system clean and healthy:
+ * - Passive discovery sweep
+ * - Storage monitoring + auto-archival
+ * - Database vacuum
+ * - Alert on storage issues
+ */
+async function runHousekeepingTasks() {
+  const db = getSqlite();
+
+  // Track last housekeeping run
+  db.prepare(`
+    CREATE TABLE IF NOT EXISTS housekeeping_runs (
+      id INTEGER PRIMARY KEY,
+      task TEXT NOT NULL,
+      last_run INTEGER NOT NULL,
+      status TEXT NOT NULL,
+      details TEXT
+    )
+  `).run();
+
+  const getLastRun = (task: string): number => {
+    const row = db.prepare(`SELECT last_run FROM housekeeping_runs WHERE task = ?`).get(task) as { last_run: number } | undefined;
+    return row?.last_run || 0;
+  };
+
+  const recordRun = (task: string, status: 'success' | 'failed', details?: string) => {
+    db.prepare(`
+      INSERT OR REPLACE INTO housekeeping_runs (id, task, last_run, status, details)
+      VALUES ((SELECT id FROM housekeeping_runs WHERE task = ?), ?, ?, ?, ?)
+    `).run(task, task, Date.now(), status, details || null);
+  };
+
+  // Task 1: Passive Discovery (every 6 hours)
+  const lastDiscovery = getLastRun('passive-discovery');
+  if (Date.now() - lastDiscovery > 6 * 60 * 60 * 1000) {
+    try {
+      console.log('[Housekeeping] Running passive discovery...');
+      const apps = await runPassiveDiscovery();
+      recordRun('passive-discovery', 'success', `Found ${apps.length} applications`);
+    } catch (error) {
+      console.error('[Housekeeping] Passive discovery failed:', error);
+      recordRun('passive-discovery', 'failed', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Task 2: Storage Monitoring (every 1 hour)
+  const lastStorage = getLastRun('storage-check');
+  if (Date.now() - lastStorage > 60 * 60 * 1000) {
+    try {
+      console.log('[Housekeeping] Checking storage usage...');
+      const usage = await getStorageUsage();
+
+      // Alert if storage critically full
+      if (usage.percent_used > 90) {
+        const users = db.prepare('SELECT id FROM users').all() as Array<{ id: string }>;
+        for (const user of users) {
+          await sendAlert({
+            id: `storage_critical_${Date.now()}`,
+            severity: 'critical',
+            title: 'Storage Critically Full',
+            message: `Storage usage at ${usage.percent_used.toFixed(1)}%. Auto-archival recommended.`,
+            source: 'riggins',
+            metadata: { usage },
+            created_at: Date.now(),
+            fingerprint: 'storage-critical',
+          }, user.id);
+        }
+      }
+
+      recordRun('storage-check', 'success', `${usage.percent_used.toFixed(1)}% used`);
+    } catch (error) {
+      console.error('[Housekeeping] Storage check failed:', error);
+      recordRun('storage-check', 'failed', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Task 3: Daily Storage Snapshot
+  const lastSnapshot = getLastRun('storage-snapshot');
+  if (Date.now() - lastSnapshot > 24 * 60 * 60 * 1000) {
+    try {
+      console.log('[Housekeeping] Recording daily storage snapshot...');
+      await recordDailyStorageSnapshot();
+      recordRun('storage-snapshot', 'success');
+    } catch (error) {
+      console.error('[Housekeeping] Storage snapshot failed:', error);
+      recordRun('storage-snapshot', 'failed', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Task 4: Database VACUUM (weekly)
+  const lastVacuum = getLastRun('database-vacuum');
+  if (Date.now() - lastVacuum > 7 * 24 * 60 * 60 * 1000) {
+    try {
+      console.log('[Housekeeping] Running database VACUUM...');
+      const result = await vacuumDatabase();
+      recordRun('database-vacuum', 'success', `Reclaimed ${(result.reclaimed_bytes / 1024 / 1024).toFixed(2)} MB`);
+    } catch (error) {
+      console.error('[Housekeeping] VACUUM failed:', error);
+      recordRun('database-vacuum', 'failed', error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Task 5: Log Archival (weekly, if >30 days retention)
+  const lastArchive = getLastRun('log-archival');
+  if (Date.now() - lastArchive > 7 * 24 * 60 * 60 * 1000) {
+    try {
+      console.log('[Housekeeping] Archiving old logs...');
+      const result = await archiveOldLogs(30);
+      recordRun('log-archival', 'success', `Archived ${result.archived_count} logs, freed ${(result.space_freed / 1024 / 1024).toFixed(2)} MB`);
+    } catch (error) {
+      console.error('[Housekeeping] Log archival failed:', error);
+      recordRun('log-archival', 'failed', error instanceof Error ? error.message : String(error));
+    }
   }
 }
