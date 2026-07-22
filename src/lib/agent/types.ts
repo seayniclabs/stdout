@@ -5,6 +5,7 @@
 export interface AgentConfig {
   id: string;
   userId: string;
+  agentName: string; // Customer-configurable name (default: "Riggins")
   provider: 'ollama' | 'anthropic-cli' | 'anthropic-api' | 'gemini' | 'openai' | 'custom';
   endpoint?: string; // For Ollama/custom
   model: string;

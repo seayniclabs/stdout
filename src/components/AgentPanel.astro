@@ -12,7 +12,7 @@
     <div class="agent-header-left">
       <div class="agent-avatar">🤖</div>
       <div class="agent-header-info">
-        <h3 class="agent-title">Steer</h3>
+        <h3 class="agent-title" id="agentTitle">Riggins</h3>
         <span class="agent-status" id="agentStatus">Idle</span>
       </div>
     </div>
@@ -31,8 +31,8 @@
 
   <div class="agent-messages" id="agentMessages" role="log" aria-live="polite">
     <!-- Messages will be inserted here -->
-    <div class="agent-welcome">
-      <p>Hi! I'm Steer, your Observatory Agent. I can help you:</p>
+    <div class="agent-welcome" id="agentWelcome">
+      <p>Hi! I'm Riggins, your Observatory Agent. I can help you:</p>
       <ul>
         <li>Understand your infrastructure metrics</li>
         <li>Explain anomalies and baselines</li>
@@ -388,6 +388,17 @@
       isConfigured = data.configured && data.config?.enabled;
 
       if (isConfigured) {
+        // Update agent name in UI
+        const agentName = data.config?.agentName || 'Riggins';
+        const titleEl = document.getElementById('agentTitle');
+        const welcomeEl = document.getElementById('agentWelcome');
+
+        if (titleEl) titleEl.textContent = agentName;
+        if (welcomeEl) {
+          const firstP = welcomeEl.querySelector('p');
+          if (firstP) firstP.innerHTML = `Hi! I'm ${agentName}, your Observatory Agent. I can help you:`;
+        }
+
         input!.disabled = false;
         submit!.disabled = false;
         if (configPrompt) configPrompt.style.display = 'none';

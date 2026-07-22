@@ -187,6 +187,7 @@ async function getAgentConfig(userId: string): Promise<AgentConfig | null> {
   return {
     id: row.id,
     userId: row.user_id,
+    agentName: row.agent_name || 'Riggins',
     provider: row.provider,
     endpoint: row.endpoint,
     model: row.model,
@@ -204,6 +205,7 @@ async function getAgentConfig(userId: string): Promise<AgentConfig | null> {
 async function upsertAgentConfig(
   userId: string,
   data: {
+    agentName: string;
     provider: string;
     endpoint?: string;
     model: string;
@@ -222,9 +224,10 @@ async function upsertAgentConfig(
     // Update existing
     central.prepare(`
       UPDATE agent_config
-      SET provider = ?, endpoint = ?, model = ?, api_key = ?, enabled = ?, proactive_notifications = ?, updated_at = ?
+      SET agent_name = ?, provider = ?, endpoint = ?, model = ?, api_key = ?, enabled = ?, proactive_notifications = ?, updated_at = ?
       WHERE id = ?
     `).run(
+      data.agentName || 'Riggins',
       data.provider,
       data.endpoint || null,
       data.model,
@@ -245,11 +248,12 @@ async function upsertAgentConfig(
     const id = `agcfg_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
     central.prepare(`
-      INSERT INTO agent_config (id, user_id, provider, endpoint, model, api_key, enabled, proactive_notifications, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO agent_config (id, user_id, agent_name, provider, endpoint, model, api_key, enabled, proactive_notifications, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       userId,
+      data.agentName || 'Riggins',
       data.provider,
       data.endpoint || null,
       data.model,
