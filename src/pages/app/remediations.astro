@@ -70,7 +70,7 @@ const statusCounts = {
 
     <!-- Status Summary -->
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+      <div style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 1.5rem; transition: all 0.2s ease;" class="hover:border-white/20 hover:shadow-lg hover:shadow-black/40">
         <h3 class="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">Successful</h3>
         <p class="text-3xl font-bold text-green-600 dark:text-green-400">{statusCounts.success}</p>
       </div>
@@ -93,11 +93,11 @@ const statusCounts = {
 
     <!-- Executions Table -->
     {executions.length > 0 && (
-      <div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm">
+      <div style="background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 1.5rem;">
         <h2 class="text-lg font-semibold text-slate-900 dark:text-white mb-4">Recent Executions</h2>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
-            <thead class="border-b border-slate-200 dark:border-slate-700">
+            <thead style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
               <tr>
                 <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Playbook</th>
                 <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Incident</th>
@@ -106,7 +106,7 @@ const statusCounts = {
                 <th class="text-left py-3 px-4 font-medium text-slate-600 dark:text-slate-400">Duration</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody style="border-top: 1px solid rgba(255, 255, 255, 0.1);">border-t: 1px solid rgba(255,255,255,0.1);
               {executions.map((execution) => {
                 const duration = execution.completedAt
                   ? Math.round((new Date(execution.completedAt as number).getTime() - new Date(execution.startedAt as number).getTime()) / 1000)

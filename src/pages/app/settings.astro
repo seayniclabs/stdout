@@ -1699,14 +1699,14 @@ const licenseNotice = getLicenseNotice();
   .section-link:hover { text-decoration: underline; }
 
   /* ── Profile ── */
-  .profile-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }
+  .profile-info { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; overflow: hidden; }
+  .profile-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
   .profile-row:last-child { border-bottom: none; }
   .label { font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em; }
   .value { font-size: 13px; }
 
   /* ── Billing ── */
-  .billing-info { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .billing-info { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; overflow: hidden; }
   .tier-card { padding: 20px; }
   .tier-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
   .tier-name { font-size: 18px; font-weight: 700; }
@@ -1726,9 +1726,9 @@ const licenseNotice = getLicenseNotice();
   .btn-secondary:hover { background: var(--bg-hover); }
 
   /* ── Team ── */
-  .team-section { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+  .team-section { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 16px; }
   .team-list { margin-bottom: 16px; }
-  .team-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .team-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
   .team-row:last-child { border-bottom: none; }
   .team-info { display: flex; align-items: center; gap: 8px; }
   .team-email { font-size: 13px; }
@@ -1787,7 +1787,7 @@ const licenseNotice = getLicenseNotice();
   .ai-provider-card:not(.has-key) { flex-direction: row; justify-content: space-between; align-items: center; }
 
   /* ── Data Sources ── */
-  .ds-add-form { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .ds-add-form { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
   .ds-form-header { display: flex; justify-content: space-between; align-items: center; }
   .ds-form-header h3 { font-size: 13px; font-weight: 600; color: var(--text-secondary); }
   .ds-form-body { display: flex; flex-direction: column; gap: 8px; }
@@ -1824,7 +1824,8 @@ const licenseNotice = getLicenseNotice();
 
   /* ── Backups ── */
   .backup-list { margin-bottom: 12px; }
-  .backup-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .backup-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px; margin-bottom: 6px; transition: all 0.2s ease; }
+  .backup-row:hover { border-color: rgba(255, 255, 255, 0.2); box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4); }
   .backup-info { display: flex; gap: 16px; align-items: center; }
   .backup-date { font-size: 13px; }
   .backup-size { font-size: 11px; color: var(--text-muted); }

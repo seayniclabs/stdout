@@ -134,9 +134,11 @@ const hostsWithServices = hosts.map(host => ({
   .empty-state {
     text-align: center;
     padding: 4rem 2rem;
-    background: var(--color-card-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
   }
 
   .empty-icon {
@@ -160,13 +162,21 @@ const hostsWithServices = hosts.map(host => ({
   }
 
   .host-card {
-    background: var(--color-card-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 12px;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     padding: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
+    transition: all 0.2s ease;
+  }
+  .host-card:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
   }
 
   .host-header {

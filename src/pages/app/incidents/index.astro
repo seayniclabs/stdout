@@ -307,12 +307,18 @@ function truncate(str: string, max: number) {
     align-items: center;
     gap: 20px;
     padding: 12px 16px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     margin-bottom: 24px;
-    box-shadow: var(--shadow-sm), var(--shadow-inset);
+    transition: all 0.2s ease;
     flex-wrap: wrap;
+  }
+  .filters-bar:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
   }
 
   .search-wrapper-incidents {
@@ -448,13 +454,14 @@ function truncate(str: string, max: number) {
     flex-direction: column;
     gap: 10px;
     padding: 16px;
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     text-decoration: none;
     color: inherit;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    box-shadow: var(--shadow-sm), var(--shadow-inset);
     position: relative;
     overflow: hidden;
   }
@@ -471,11 +478,12 @@ function truncate(str: string, max: number) {
   .active-card.severity-medium::before { background: var(--medium); }
   .active-card.severity-low::before { background: var(--low); }
   .active-card:hover {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-lg);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
   }
   .active-card.severity-critical {
-    border-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.35);
     animation: pulse-glow 3s ease-in-out infinite;
   }
   @keyframes pulse-glow {
@@ -584,11 +592,17 @@ function truncate(str: string, max: number) {
     gap: 8px;
   }
   .resolved-group {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     overflow: hidden;
-    box-shadow: var(--shadow-sm), var(--shadow-inset);
+    transition: all 0.2s ease;
+  }
+  .resolved-group:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
   }
   .group-summary {
     display: flex;
@@ -634,14 +648,14 @@ function truncate(str: string, max: number) {
     align-items: stretch;
     gap: 12px;
     padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     text-decoration: none;
     color: inherit;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   }
   .resolved-card:last-child { border-bottom: none; }
   .resolved-card:hover {
-    background: var(--bg-hover);
+    background: rgba(255, 255, 255, 0.05);
     transform: translateX(4px);
   }
   .resolved-card .severity-bar {

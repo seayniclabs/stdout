@@ -573,14 +573,15 @@ function timeAgo(date: Date) {
     margin-bottom: 24px;
   }
   .ov-card {
-    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg) 100%);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     padding: 18px;
     display: flex;
     align-items: flex-start;
     gap: 12px;
-    box-shadow: var(--shadow-sm), var(--shadow-inset);
     position: relative;
     transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     animation: fadeInUp 0.35s ease-out both;
@@ -589,9 +590,9 @@ function timeAgo(date: Date) {
   .ov-card:nth-child(3) { animation-delay: 0.1s; }
   .ov-card:nth-child(4) { animation-delay: 0.15s; }
   .ov-card:hover {
-    border-color: var(--border-hover);
-    box-shadow: var(--shadow-lg);
-    transform: translateY(-3px);
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
   }
   .ov-icon {
     flex-shrink: 0;
@@ -658,12 +659,19 @@ function timeAgo(date: Date) {
 
   /* Sections */
   .dash-section {
-    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--bg-card) 100%);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 24px;
     padding: 16px 18px;
-    box-shadow: var(--shadow-sm), var(--shadow-inset);
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     animation: fadeInUp 0.4s ease-out both;
+  }
+  .dash-section:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
+    transform: translateY(-2px);
   }
   .dash-section h2 {
     font-size: 13px;
