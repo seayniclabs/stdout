@@ -2,6 +2,8 @@ import type { APIRoute } from 'astro';
 import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * POST /app/api/setup/install-windlass
@@ -15,7 +17,23 @@ import path from 'path';
  * 4. Wait for health check
  * 5. Return success/failure
  */
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - service installation requires install_services permission
+  const rbacError = checkRBAC(locals, 'install_services');
+  if (rbacError) return rbacError;
+
+  // CSRF check
+  let body: any = {};
+  try { body = await request.json(); } catch (error: unknown) { /* Optional body */ }
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+  }
+
   try {
     console.log('[install-windlass] Starting Windlass installation...');
 

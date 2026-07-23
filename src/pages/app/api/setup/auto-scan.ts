@@ -6,10 +6,20 @@ import { getSetupProgress, SetupStep, completeStep } from '../../../../lib/setup
 import { detectLocalSubnets } from '../../../../lib/network-utils';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 const execAsync = promisify(exec);
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - auto-scan during setup requires install_services permission
+  const rbacError = checkRBAC(locals, 'install_services');
+  if (rbacError) return rbacError;
+
   try {
     const progress = await getSetupProgress();
 
@@ -22,7 +32,16 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Get subnets from request or detect automatically
-    const { subnets } = await request.json();
+    let body: any = {};
+    try { body = await request.json(); } catch (error: unknown) { /* Optional body */ }
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
+
+    const { subnets } = body;
     const subnetsToScan = subnets || await detectSubnets();
 
     console.log('[auto-scan] Starting background infrastructure scan:', subnetsToScan);

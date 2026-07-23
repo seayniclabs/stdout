@@ -3,10 +3,14 @@ import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { startMonitor, stopMonitor, getRecentChecks, getUptimeStats } from '../../../lib/hud';
+import { requireAuth, checkRBAC } from '../../../lib/rbac';
+import { validateCsrf } from '../../../middleware';
 
 // GET — list all monitors with current status + sparkline data
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
   const monitorId = url.searchParams.get('id');
@@ -48,15 +52,24 @@ export const GET: APIRoute = async ({ locals, url }) => {
 };
 
 // POST — create or update a monitor
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
-  const { checkRBAC } = await import('../../../lib/rbac');
-  const rbacBlock = checkRBAC(locals, 'manage_monitors');
-  if (rbacBlock) return rbacBlock;
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_monitors');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const action = body.action || 'create';

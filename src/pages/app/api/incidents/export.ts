@@ -1,10 +1,17 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 // GET /app/api/incidents/export?id=xxx&format=markdown|json
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'export_data');
+  if (rbacError) return rbacError;
 
   const incidentId = url.searchParams.get('id');
   const format = url.searchParams.get('format') || 'markdown';

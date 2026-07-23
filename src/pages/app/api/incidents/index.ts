@@ -2,13 +2,17 @@ import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
 import { eq, and, desc } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * GET /app/api/incidents
  * List incidents with optional filters: ?status=active&severity=critical&limit=50
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
@@ -73,8 +77,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
  * POST /app/api/incidents
  * Actions: create, update_status, add_resolution
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'create');
+  if (rbacError) return rbacError;
 
   let body: Record<string, unknown>;
   try {
@@ -93,6 +103,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || (body._csrf as string);
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
@@ -276,8 +292,22 @@ export const POST: APIRoute = async ({ locals, request }) => {
  * DELETE /app/api/incidents?id=xxx
  * Delete an incident and its resolutions/diagnoses.
  */
-export const DELETE: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const DELETE: APIRoute = async ({ locals, url, cookies, request }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'delete');
+  if (rbacError) return rbacError;
+
+  // CSRF check - DELETE uses header or query param
+  const csrfFromHeader = request.headers.get('x-csrf-token');
+  const csrfFromQuery = url.searchParams.get('_csrf');
+  const csrfToken = csrfFromHeader || csrfFromQuery;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+  }
 
   const id = url.searchParams.get('id');
   if (!id) {
