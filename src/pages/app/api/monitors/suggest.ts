@@ -3,10 +3,12 @@ import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { startMonitor } from '../../../../lib/hud';
+import { requireAuth } from '../../../../lib/rbac';
 
 // GET — suggest monitors from the most recent confirmed scanner import
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
 
@@ -99,12 +101,27 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 // POST — bulk-create monitors from suggestions
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_monitors');
+  if (rbacBlock) return rbacBlock;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const monitors = body.monitors;

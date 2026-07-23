@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { getN8nWorkflowWindowsForDisplay } from '../../../../lib/windlass';
+import { requireAuth } from '../../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const workflows = await getN8nWorkflowWindowsForDisplay(userId);

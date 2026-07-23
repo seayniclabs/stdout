@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getSqlite } from '../../../../lib/db';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Network Topology Visualization API
@@ -9,12 +10,23 @@ import { getSqlite } from '../../../../lib/db';
  * Uses dashed connectors and traveling dots to show network flow
  */
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const { checkRBAC } = await import('../../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'view');
   if (rbacBlock) return rbacBlock;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   const db = getSqlite();
 
