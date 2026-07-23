@@ -1,22 +1,32 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { SyncEngine } from '../../../../lib/ticketing/sync/SyncEngine';
+import { requireAuth } from '../../../../lib/rbac';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
 
   try {
     const body = await request.json();
     const { connectorId } = body;
 
+    // CSRF check
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+
     const db = getDb();
-    const syncEngine = new SyncEngine(db as any, session.id);
+    const syncEngine = new SyncEngine(db as any, locals.user.id);
 
     let results;
 

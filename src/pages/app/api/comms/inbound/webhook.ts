@@ -35,11 +35,11 @@ interface InboundWebhookRequest {
   channel_id?: string;
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
     'Content-Type': 'application/json',
   };
 
@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     );
   }
 
-  // Determine user ID (use authenticated user or provided user_id)
+  // Auth check: prefer session user, allow override via user_id
   const userId = user_id || locals.user?.id;
 
   if (!userId) {
@@ -61,6 +61,25 @@ export const POST: APIRoute = async ({ request, locals }) => {
       JSON.stringify({ error: 'User ID required (authenticate or provide user_id)' }),
       { status: 401, headers: corsHeaders }
     );
+  }
+
+  // CSRF check if session-based (skip for external with user_id override)
+  if (locals.user && !user_id) {
+    const { validateCsrf } = await import('../../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: corsHeaders
+      });
+    }
+
+    const { checkRBAC } = await import('../../../../../lib/rbac');
+    const rbacBlock = checkRBAC(locals, 'create');
+    if (rbacBlock) return new Response(JSON.stringify({ error: 'Forbidden' }), {
+      status: 403,
+      headers: corsHeaders
+    });
   }
 
   try {
@@ -121,7 +140,7 @@ export const OPTIONS: APIRoute = async () => {
     headers: {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-CSRF-Token',
     },
   });
 };

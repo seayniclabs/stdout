@@ -1,17 +1,28 @@
 import type { APIRoute } from 'astro';
 import { validateNmapData } from '../../../../../lib/discovery/nmap-parser';
+import { requireAuth } from '../../../../../lib/rbac';
 
 /**
  * POST /app/api/discovery/schema/validate
- * 
+ *
  * Validates Nmap XML or JSON data against the discovery ingestion schema constraints.
  * Enforces strict typing (port range), required fields (valid IP/MAC), and reports warnings/errors.
  */
-export const POST: APIRoute = async ({ request, locals }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'view');
+  if (rbacBlock) return rbacBlock;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
