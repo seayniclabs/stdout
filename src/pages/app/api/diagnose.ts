@@ -5,6 +5,7 @@ import { logAudit, getClientIp } from '../../../lib/audit';
 import { notify } from '../../../lib/notify';
 import { nanoid } from 'nanoid';
 import { eq, desc } from 'drizzle-orm';
+import { requireAuth } from '../../../lib/rbac';
 
 // --- Per-user rate limiting for AI diagnosis ---
 const DIAGNOSE_WINDOW_MS = 60 * 60 * 1000; // 1 hour
@@ -53,8 +54,11 @@ function checkDiagnoseRateLimit(userId: string, isPaid: boolean): Response | nul
   return null;
 }
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const { checkRBAC } = await import('../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'create');
   if (rbacBlock) return rbacBlock;
@@ -73,6 +77,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
       })
     );
     return new Response('Invalid JSON', { status: 400 });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const { incidentId } = body;
