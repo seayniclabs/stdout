@@ -5,14 +5,24 @@
 
 import type { APIRoute } from 'astro';
 import { runPassiveDiscovery } from '../../../../lib/discovery/passive-discovery';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
-export const POST: APIRoute = async ({ locals }) => {
-  const user = locals.user;
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
+
+  // CSRF check
+  let body: any = {};
+  try { body = await request.json(); } catch { /* Optional body */ }
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   try {

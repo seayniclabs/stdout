@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 const execAsync = promisify(exec);
 
@@ -16,17 +18,22 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, label: string): 
   ]);
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  // Allow during setup - no auth required
-  // const session = locals.user;
-  // if (!session) {
-  //   return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-  //     status: 401,
-  //     headers: { 'Content-Type': 'application/json' }
-  //   });
-  // }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check - SECURITY FIX: was previously disabled "for setup"
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   const body = await request.json();
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+  }
   const subnetInput = body.subnet || '192.168.0.0/24';
 
   // Parse multiple subnets (comma or space separated)

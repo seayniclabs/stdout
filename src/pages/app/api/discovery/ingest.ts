@@ -3,20 +3,30 @@ import { nanoid } from 'nanoid';
 import { getSqlite } from '../../../../lib/db/index.ts';
 import { validateNmapData } from '../../../../lib/discovery/nmap-parser';
 import { emit } from '../../../../lib/events';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * POST /app/api/discovery/ingest
- * 
+ *
  * Formalized endpoint for ingesting Nmap discovery XML/JSON payloads.
  * Validates, sanitizes, and registers discovered hosts and services.
  * Integrates into the entity graph topology and triggers monitor auto-creation.
  */
-export const POST: APIRoute = async ({ request, locals }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
+
+  // CSRF check - special handling for text payload
+  const csrfFromHeader = request.headers.get('x-csrf-token');
+  // For ingest, we might get CSRF from header only (since body is XML/JSON payload, not form data)
+  if (!validateCsrf(csrfFromHeader, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const contentType = request.headers.get('content-type') || '';

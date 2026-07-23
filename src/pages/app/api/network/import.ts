@@ -4,20 +4,28 @@ import { getDb, schema } from '../../../../lib/db';
 import { eq, and } from 'drizzle-orm';
 import { getSetupProgress, getSetupConfig, SetupStep } from '../../../../lib/setup';
 import { emit } from '../../../../lib/events';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 const { stacks, discoveredHosts, discoveredServices } = schema;
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   try {
     const body = await request.json();
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
     const { hosts } = body;
 
     if (!Array.isArray(hosts) || hosts.length === 0) {
