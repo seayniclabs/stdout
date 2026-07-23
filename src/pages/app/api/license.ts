@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { getStoredLicense, isValidLicenseKeyFormat, storeLicense } from '../../../lib/license';
+import { requireAuth } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const row = getStoredLicense();
   return new Response(JSON.stringify({
@@ -13,14 +15,29 @@ export const GET: APIRoute = async ({ locals }) => {
   }), { headers: { 'Content-Type': 'application/json' } });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  let body: { key?: string; email?: string };
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
+
+  let body: { key?: string; email?: string; _csrf?: string };
   try {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const key = (body.key || '').trim();
