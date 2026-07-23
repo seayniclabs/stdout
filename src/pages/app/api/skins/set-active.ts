@@ -1,21 +1,31 @@
 import type { APIRoute } from 'astro';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
+import { requireAuth } from '../../../../lib/rbac';
 
 const { userSkinPreferences } = schema;
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
 
   try {
     const body = await request.json();
     const { skinId } = body;
+
+    // CSRF check
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!skinId || typeof skinId !== 'string') {
       return new Response(JSON.stringify({ error: 'Invalid skin ID' }), {
@@ -42,11 +52,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
           activeSkinId: skinId,
           updatedAt: now,
         })
-        .where(eq(userSkinPreferences.userId, session.id));
+        .where(eq(userSkinPreferences.userId, locals.user.id));
     } else {
       // Create new preference row
       await db.insert(userSkinPreferences).values({
-        userId: session.id,
+        userId: locals.user.id,
         activeSkinId: skinId,
         customOverrides: null,
         updatedAt: now,

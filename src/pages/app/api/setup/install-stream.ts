@@ -6,11 +6,12 @@
  */
 
 import type { APIRoute } from 'astro';
+import { requireAuth } from '../../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const userId = locals.workspace?.ownerId || locals.user.id;
 
   // Create SSE response

@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Above-ceiling pending-fix approval queue (Charlie 2026-06-12).
@@ -16,15 +17,18 @@ import { eq } from 'drizzle-orm';
  */
 
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const userId = locals.workspace?.ownerId || locals.user.id;
   const status = url.searchParams.get('status') || 'pending';
   const { listPendingFixes } = await import('../../../../lib/observatory/operating-mode');
   return json({ fixes: listPendingFixes(userId, status) });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const { checkRBAC } = await import('../../../../lib/rbac');
   const block = checkRBAC(locals, 'manage_settings');
@@ -32,6 +36,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
 
   let body: any;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return json({ error: 'CSRF token validation failed' }, 403);
+  }
 
   const { id, decision } = body || {};
   if (!id || (decision !== 'approve' && decision !== 'deny')) {

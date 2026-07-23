@@ -4,6 +4,7 @@ import { promisify } from 'node:util';
 import { getDb, schema } from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { eq, and } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 const execAsync = promisify(exec);
 
@@ -15,30 +16,41 @@ const execAsync = promisify(exec);
  *
  * Called automatically after setup OR manually from infrastructure page.
  */
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
+
+  const body = await request.json();
+  const { hosts } = body;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
   }
 
-  const body = await request.json();
-  const hosts = body.hosts || []; // Array of {ip, hostname?}
+  const hostList = hosts || []; // Array of {ip, hostname?}
 
-  console.log('[scan-services] Starting background service scan for', hosts.length, 'hosts');
+  console.log('[scan-services] Starting background service scan for', hostList.length, 'hosts');
 
   // Run in background - don't wait for completion
-  const userId = locals.workspace?.ownerId || session.id;
-  scanServicesInBackground(hosts, userId).catch(err => {
+  const userId = locals.workspace?.ownerId || locals.user.id;
+  scanServicesInBackground(hostList, userId).catch(err => {
     console.error('[scan-services] Background scan failed:', err);
   });
 
   return new Response(
     JSON.stringify({
       status: 'started',
-      hosts: hosts.length,
+      hosts: hostList.length,
       message: 'Service scan started in background'
     }),
     {
