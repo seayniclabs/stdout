@@ -2,9 +2,25 @@ import type { APIRoute } from 'astro';
 import { eq } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
 import { generateScheduleYamlFromScan } from '../../../../lib/windlass-schedule';
+import { requireAuth } from '../../../../lib/rbac';
 
-export const POST: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, cookies, request }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   const ownerId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
