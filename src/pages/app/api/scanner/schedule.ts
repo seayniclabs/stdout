@@ -70,11 +70,6 @@ export const PUT: APIRoute = async ({ locals, request, cookies }) => {
     return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
-  let body: any;
-  try { body = await request.json(); } catch {
-    return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-  }
-
   // Validate
   const interval = body.interval || 'daily';
   if (!['hourly', 'daily', 'weekly'].includes(interval)) {
