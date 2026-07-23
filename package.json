@@ -23,7 +23,7 @@
     "verify:suricata": "bash scripts/verify-suricata-integration.sh",
     "test": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",
     "test:all": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts",
-    "test:smoke": "npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts",
+    "test:smoke": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_DISABLE_USER_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test tests/smoke.spec.ts --config=tests/playwright.config.ts",
     "test:auth": "STDOUT_DISABLE_RATE_LIMIT=1 npx playwright test tests/auth.spec.ts --config=tests/playwright.config.ts",
     "test:security": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test tests/security.spec.ts --config=tests/playwright.config.ts",
     "test:no-ratelimit": "STDOUT_DISABLE_RATE_LIMIT=1 STDOUT_ENCRYPTION_KEY=test_key_for_playwright npx playwright test --config=tests/playwright.config.ts --grep-invert @ratelimit",

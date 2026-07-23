@@ -9,7 +9,7 @@ import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
 import { sendVerificationEmail } from '../../lib/email';
 
-const MAX_USERS_BUILTIN = 10;
+const MAX_USERS_BUILTIN = process.env.STDOUT_DISABLE_USER_LIMIT === '1' ? Infinity : 10;
 
 let error = '';
 let email = '';
