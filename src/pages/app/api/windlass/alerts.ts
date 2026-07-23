@@ -4,13 +4,17 @@ import {
   createRule, listRules, deleteRule,
   listAlertEvents, fireAlert,
 } from '../../../../lib/alert-router';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * GET /app/api/windlass/alerts
  * List channels, rules, and recent events.
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const section = url.searchParams.get('section') || 'all';
@@ -38,14 +42,26 @@ export const GET: APIRoute = async ({ locals, url }) => {
  * Actions: create_channel, delete_channel, toggle_channel, test_channel,
  *          create_rule, delete_rule, fire (external event ingest)
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;
