@@ -297,6 +297,7 @@ export const monitors = sqliteTable('monitors', {
   // Output-freshness monitor fields
   jsonPath: text('json_path'),             // JSONPath to extract timestamp (e.g., "$[0].completed_at")
   freshnessWindowSeconds: integer('freshness_window_seconds'), // Max age before alert (e.g., 21600 = 6h)
+  fingerprint: text('fingerprint'), // For deduplication
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });

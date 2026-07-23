@@ -153,6 +153,7 @@ export const monitors = sqliteTable('monitors', {
   lastResponseMs: integer('last_response_ms'),
   jsonPath: text('json_path'),
   freshnessWindowSeconds: integer('freshness_window_seconds'),
+  fingerprint: text('fingerprint'), // For deduplication
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
