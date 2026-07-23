@@ -33,135 +33,181 @@ export async function configureMonitors(
   try {
     const { getDb } = await import('../db');
     const { sql } = await import('drizzle-orm');
+    const { nanoid } = await import('nanoid');
     const db = getDb();
 
-    onProgress(10, 'Checking for existing stacks...');
+    onProgress(5, 'Riggins is analyzing your environment...');
 
     // Get all stacks
-    const stacks = await db.all(sql`
+    let stacks = await db.all(sql`
       SELECT id, name FROM stacks WHERE user_id = ${userId}
     `) as Array<{ id: string; name: string }>;
 
-    output.push(`Found ${stacks.length} stacks`);
+    output.push(`Found ${stacks.length} existing stacks`);
 
+    // Create default stacks if none exist
     if (stacks.length === 0) {
-      warnings.push('No stacks found - run scanner first to discover infrastructure');
-      onProgress(100, 'No stacks to monitor');
-      return {
-        success: true,
-        duration: Date.now() - startTime,
-        output,
-        warnings,
-        errors
-      };
+      onProgress(10, 'Riggins is creating your infrastructure stacks...');
+      const now = Date.now();
+
+      const defaultStacks = [
+        {
+          name: 'Production Services',
+          description: 'Core production infrastructure and services',
+          tags: JSON.stringify(['production', 'core'])
+        },
+        {
+          name: 'Monitoring & Observatory',
+          description: 'StdOut, Windlass, and Observatory services',
+          tags: JSON.stringify(['monitoring', 'observatory'])
+        }
+      ];
+
+      for (const stackDef of defaultStacks) {
+        const stackId = nanoid();
+        await db.run(sql`
+          INSERT INTO stacks (id, user_id, name, description, tags, created_at, updated_at)
+          VALUES (${stackId}, ${userId}, ${stackDef.name}, ${stackDef.description}, ${stackDef.tags}, ${now}, ${now})
+        `);
+        output.push(`✓ Created stack: ${stackDef.name}`);
+      }
+
+      // Reload stacks
+      stacks = await db.all(sql`
+        SELECT id, name FROM stacks WHERE user_id = ${userId}
+      `) as Array<{ id: string; name: string }>;
     }
 
-    onProgress(30, 'Generating monitor templates...');
+    onProgress(30, 'Riggins is selecting key services to monitor...');
 
-    // Default monitor templates for each stack
-    const templates: MonitorTemplate[] = [
+    // Create specific, meaningful monitors
+    const initialMonitors = [
       {
-        type: 'health',
-        name: 'Container Health',
-        checkInterval: 300, // 5 minutes
-        thresholds: { warning: 1, critical: 1 }
+        stackName: 'Monitoring & Observatory',
+        name: 'StdOut Health',
+        type: 'http',
+        target: 'http://localhost:3000/',
+        interval: 60,
+        description: 'StdOut application health'
       },
       {
-        type: 'cpu',
-        name: 'CPU Usage',
-        checkInterval: 300,
-        thresholds: { warning: 70, critical: 90 }
-      },
-      {
-        type: 'memory',
-        name: 'Memory Usage',
-        checkInterval: 300,
-        thresholds: { warning: 80, critical: 95 }
-      },
-      {
-        type: 'restart',
-        name: 'Restart Count',
-        checkInterval: 600, // 10 minutes
-        thresholds: { warning: 3, critical: 5 }
+        stackName: 'Monitoring & Observatory',
+        name: 'Windlass Scheduler',
+        type: 'http',
+        target: 'http://windlass:8116/health',
+        interval: 300,
+        description: 'Windlass task scheduler'
       }
     ];
 
-    onProgress(50, 'Creating monitors for each stack...');
+    onProgress(50, 'Creating monitors...');
 
-    const progressPerStack = 40 / stacks.length;
+    const progressPerMonitor = 40 / initialMonitors.length;
     let currentProgress = 50;
 
-    for (const stack of stacks) {
-      for (const template of templates) {
-        try {
-          // Check if monitor already exists
-          const existing = await db.get(sql`
-            SELECT id FROM monitors
-            WHERE stack_id = ${stack.id}
-            AND type = ${template.type}
-            AND user_id = ${userId}
-          `);
-
-          if (existing) {
-            output.push(`○ Monitor already exists: ${stack.name} - ${template.name}`);
-            continue;
-          }
-
-          // Create monitor
-          const monitorId = `mon_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-          const now = Date.now();
-
-          // Map monitor types to schema-compatible types
-          const typeMapping: Record<string, string> = {
-            'health': 'docker',
-            'cpu': 'docker',
-            'memory': 'docker',
-            'restart': 'docker'
-          };
-
-          await db.run(sql`
-            INSERT INTO monitors (
-              id,
-              user_id,
-              stack_id,
-              name,
-              type,
-              target,
-              interval_seconds,
-              paused,
-              current_status,
-              consecutive_failures,
-              created_at,
-              updated_at
-            ) VALUES (
-              ${monitorId},
-              ${userId},
-              ${stack.id},
-              ${`${stack.name} - ${template.name}`},
-              ${typeMapping[template.type] || 'docker'},
-              ${stack.id},
-              ${template.checkInterval},
-              0,
-              'unknown',
-              0,
-              ${now},
-              ${now}
-            )
-          `);
-
-          monitorsCreated++;
-          output.push(`✓ Created: ${stack.name} - ${template.name}`);
-
-        } catch (error: unknown) {
-          warnings.push(`Failed to create monitor for ${stack.name} - ${template.name}: ${error instanceof Error ? error.message : String(error)}`);
+    for (const monitorDef of initialMonitors) {
+      try {
+        // Find the stack
+        const stack = stacks.find(s => s.name === monitorDef.stackName);
+        if (!stack) {
+          warnings.push(`Stack not found: ${monitorDef.stackName}`);
+          continue;
         }
+
+        // Check if monitor already exists
+        const existing = await db.get(sql`
+          SELECT id FROM monitors
+          WHERE name = ${monitorDef.name}
+          AND user_id = ${userId}
+        `);
+
+        if (existing) {
+          output.push(`○ Monitor already exists: ${monitorDef.name}`);
+          continue;
+        }
+
+        // Create monitor
+        const monitorId = nanoid();
+        const now = Date.now();
+
+        await db.run(sql`
+          INSERT INTO monitors (
+            id,
+            user_id,
+            stack_id,
+            name,
+            type,
+            target,
+            interval_seconds,
+            paused,
+            current_status,
+            consecutive_failures,
+            created_at,
+            updated_at
+          ) VALUES (
+            ${monitorId},
+            ${userId},
+            ${stack.id},
+            ${monitorDef.name},
+            ${monitorDef.type},
+            ${monitorDef.target},
+            ${monitorDef.interval},
+            0,
+            'unknown',
+            0,
+            ${now},
+            ${now}
+          )
+        `);
+
+        monitorsCreated++;
+        output.push(`✓ Created monitor: ${monitorDef.name}`);
+
+      } catch (error: unknown) {
+        warnings.push(`Failed to create monitor ${monitorDef.name}: ${error instanceof Error ? error.message : String(error)}`);
       }
 
-      currentProgress += progressPerStack;
-      onProgress(Math.round(currentProgress), `Configured monitors for ${stack.name}`);
+      currentProgress += progressPerMonitor;
+      onProgress(Math.round(currentProgress), `Setting up ${monitorDef.name}...`);
     }
 
-    onProgress(100, `Monitor configuration complete - created ${monitorsCreated} monitors`);
+    onProgress(95, `Riggins has configured ${monitorsCreated} monitors`);
+
+    // Create a welcome incident from Riggins
+    try {
+      const incidentId = nanoid();
+      const now = Date.now();
+
+      await db.run(sql`
+        INSERT INTO incidents (
+          id,
+          user_id,
+          stack_id,
+          title,
+          description,
+          severity,
+          status,
+          created_at,
+          updated_at
+        ) VALUES (
+          ${incidentId},
+          ${userId},
+          ${stacks[0]?.id || null},
+          ${"Hello! I'm Riggins, your Observatory AI"},
+          ${"I've just finished setting up your monitoring infrastructure. I created " + monitorsCreated + " monitors to watch your key services.\n\n**What I'm watching:**\n- StdOut Health (every 60 seconds)\n- Windlass Scheduler (every 5 minutes)\n\n**What I can do:**\n- Detect anomalies automatically (I check every 3 minutes)\n- Diagnose incidents when they occur\n- Learn from your resolutions to get smarter over time\n\n**Try me out:**\nCreate a test incident and click 'Get AI Diagnosis' to see how I analyze your infrastructure.\n\nI'm here 24/7, learning and watching. Let's keep your systems running smoothly together."},
+          ${"low"},
+          ${"active"},
+          ${now},
+          ${now}
+        )
+      `);
+
+      output.push("✓ Riggins says hello!");
+    } catch {
+      // Non-fatal if welcome message fails
+    }
+
+    onProgress(100, `Setup complete - Riggins is ready!`);
 
     return {
       success: true,
