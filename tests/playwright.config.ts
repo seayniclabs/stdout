@@ -16,6 +16,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: 1,
   globalSetup: hasTestUser ? './global-setup.ts' : undefined,
+  globalTeardown: './global-teardown.ts',
   reporter: [
     ['html', { open: 'never' }],
     ['list'],

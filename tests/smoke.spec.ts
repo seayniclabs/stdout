@@ -39,10 +39,18 @@ test.describe('Smoke Tests (S1-S6)', () => {
     const resolutionTextarea = page.locator('textarea[name="content"]');
     if (await resolutionTextarea.isVisible()) {
       await resolutionTextarea.fill('test_resolution: Restarted nginx container and cleared cache.');
-      await page.locator('input[name="action"][value="resolve"]').evaluate(el => {
-        (el as HTMLInputElement).closest('form')?.requestSubmit();
-      });
-      await page.waitForURL(/\/app\/incidents\//);
+
+      // Click the resolve action button and wait for navigation
+      const resolveButton = page.locator('input[name="action"][value="resolve"]');
+      await resolveButton.waitFor({ state: 'visible' });
+
+      // Wait for form submission and navigation
+      await Promise.all([
+        page.waitForURL(/\/app\/incidents\//, { timeout: 10000 }),
+        resolveButton.evaluate(el => {
+          (el as HTMLInputElement).closest('form')?.requestSubmit();
+        })
+      ]);
     }
 
     // Verify status shows resolved

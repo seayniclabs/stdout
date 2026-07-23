@@ -52,10 +52,21 @@ export async function registerUser(
   await page.locator('input[name="displayName"]').fill(displayName);
   await page.locator('input[name="password"]').fill(password);
   await page.locator('input[name="confirm"]').fill(password);
-  await page.getByRole('button', { name: 'Create account' }).click();
 
+  // Wait for navigation and form submission in parallel
+  // Fresh database redirects to /setup, existing users go to /app
   try {
-    await page.waitForURL(/\/app(?!\/register)/, { timeout: 10000 });
+    await Promise.all([
+      page.waitForURL(/\/(setup|app(?!\/register))/, { timeout: 10000 }),
+      page.getByRole('button', { name: 'Create account' }).click()
+    ]);
+
+    // If we landed on /setup, wait for automated setup to complete and redirect to /app
+    if (page.url().includes('/setup')) {
+      console.log(`[registerUser] Waiting for automated setup to complete...`);
+      await page.waitForURL(/\/app(?!\/setup)/, { timeout: 60000 });
+      console.log(`[registerUser] Setup completed, now at: ${page.url()}`);
+    }
   } catch (err) {
     const errorLocator = page.locator('.auth-error');
     if (await errorLocator.isVisible().catch(() => false)) {
@@ -119,9 +130,12 @@ export async function loginUser(
 
   await page.locator('input[name="email"]').fill(email);
   await page.locator('input[name="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
 
-  await page.waitForURL(/\/app(?!\/login)/);
+  // Wait for navigation and form submission in parallel
+  await Promise.all([
+    page.waitForURL(/\/app(?!\/login)/),
+    page.locator('button[type="submit"]').click()
+  ]);
 }
 
 /**
