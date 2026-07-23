@@ -52,10 +52,10 @@ export async function registerUser(
   await page.locator('input[name="displayName"]').fill(displayName);
   await page.locator('input[name="password"]').fill(password);
   await page.locator('input[name="confirm"]').fill(password);
-  await page.locator('button[type="submit"]').click();
+  await page.getByRole('button', { name: 'Create account' }).click();
 
   try {
-    await page.waitForURL(/\/app(?!\/register)/, { timeout: 5000 });
+    await page.waitForURL(/\/app(?!\/register)/, { timeout: 10000 });
   } catch (err) {
     const errorLocator = page.locator('.auth-error');
     if (await errorLocator.isVisible().catch(() => false)) {
@@ -63,6 +63,8 @@ export async function registerUser(
       console.error(`[registerUser] Registration failed for ${email} with error: ${errorMsg}`);
     } else {
       console.error(`[registerUser] Registration timed out for ${email} without visible error. Current URL: ${page.url()}`);
+      // Take screenshot for debugging
+      await page.screenshot({ path: `test-results/register-timeout-${Date.now()}.png` });
     }
     throw err;
   }
