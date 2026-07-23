@@ -3,15 +3,19 @@ import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { getConfig } from '../../../../lib/windlass';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * GET /app/api/windlass/config
  * Get the user's Windlass configuration.
  */
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
+  const userId = locals.workspace?.ownerId || locals.user!.id;
   const config = getConfig(userId);
 
   return new Response(JSON.stringify({ config: config || null }), {
@@ -23,14 +27,26 @@ export const GET: APIRoute = async ({ locals }) => {
  * POST /app/api/windlass/config
  * Create or update Windlass configuration.
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const userId = locals.workspace?.ownerId || locals.user.id;

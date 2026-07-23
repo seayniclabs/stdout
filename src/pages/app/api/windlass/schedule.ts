@@ -1,12 +1,20 @@
 import type { APIRoute } from 'astro';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 function getWindlassUrl(): string | null {
   const url = process.env.WINDLASS_URL?.trim();
   return url ? url.replace(/\/$/, '') : null;
 }
 
-export const PUT: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const PUT: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   const windlassUrl = getWindlassUrl();
   if (!windlassUrl) {
@@ -21,6 +29,12 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const yaml = body.yaml?.trim();
