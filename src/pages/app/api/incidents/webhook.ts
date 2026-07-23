@@ -3,6 +3,7 @@ import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { notify } from '../../../../lib/notify';
 import { createOrDeduplicateIncident } from '../../../../lib/incident-dedup';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * POST /app/api/incidents/webhook
@@ -25,12 +26,11 @@ import { createOrDeduplicateIncident } from '../../../../lib/incident-dedup';
  *
  * Response: { incidentId, url, isDuplicate, occurrenceCount }
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized. Provide Authorization: Bearer <token>' }), {
-      status: 401, headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const { checkRBAC } = await import('../../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'create');
   if (rbacBlock) return rbacBlock;
@@ -38,6 +38,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const title = (body.title || '').trim();

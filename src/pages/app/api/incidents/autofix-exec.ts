@@ -4,6 +4,9 @@ import { promisify } from 'node:util';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { assertAutofixCommandAllowed } from '../../../../lib/autofix-exec-policy';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+
+const execAsync = promisify(exec);
 
 // Add GitHub API integration for creating a PR
 import { Octokit } from "octokit";
@@ -22,8 +25,14 @@ const octokit = new Octokit({
  * This is NOT arbitrary command execution — commands must come from
  * an AI-generated plan and be explicitly approved by the user.
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - executing commands is a critical operation
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   const { isSelfHosted } = await import('../../../../lib/ai-providers');
   if (!isSelfHosted()) {
@@ -36,6 +45,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
