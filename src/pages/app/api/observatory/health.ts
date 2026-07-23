@@ -13,8 +13,12 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { eq, and, like, sql } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ locals }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
   const db = getDb();
 
   // Query system_state directly via raw SQL (system_state table not in exported schema)

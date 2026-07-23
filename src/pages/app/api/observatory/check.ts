@@ -7,15 +7,27 @@
 
 import type { APIRoute } from 'astro';
 import { runScheduledCheck } from '../../../../lib/observatory/sentinel';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
-export const POST: APIRoute = async ({ locals }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'configure_observatory');
+  if (rbacError) return rbacError;
+
+  // CSRF check - accepts header or body
+  let body: any = {};
+  try { body = await request.json(); } catch { /* Optional body */ }
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
-  const userId = locals.workspace?.ownerId || locals.user.id;
+
+  const userId = locals.workspace?.ownerId || locals.user!.id;
 
   try {
     const result = await runScheduledCheck(userId);

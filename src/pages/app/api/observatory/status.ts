@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/observatory/status
@@ -13,7 +14,9 @@ import { sql } from 'drizzle-orm';
  *   - Recent auto-created incidents
  */
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const centralDb = getDb();
   const db = getDb();
