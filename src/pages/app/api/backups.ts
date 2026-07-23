@@ -1,10 +1,11 @@
 import type { APIRoute } from 'astro';
 import { createBackup, listBackups, restoreBackup } from '../../../lib/backup';
 import { logAudit, getClientIp } from '../../../lib/audit';
-import { checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
+import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const tenantOwnerId = getWorkspaceOwnerId(locals);
   if (tenantOwnerId !== locals.user.id) {
@@ -25,8 +26,10 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const rbacBlock = checkRBAC(locals, 'create_backup');
   if (rbacBlock) return rbacBlock;
 
@@ -34,6 +37,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
   try {
     body = await request.json();
   } catch { /* empty body is fine for create */ }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   const action = body.action || 'create';
 

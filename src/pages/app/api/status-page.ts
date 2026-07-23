@@ -2,10 +2,12 @@ import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
 import { eq, and } from 'drizzle-orm';
+import { requireAuth } from '../../../lib/rbac';
 
 // GET — return current status page config
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
   const page = db.select().from(schema.statusPage)
@@ -17,8 +19,9 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 // POST — create or update status page config
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   // RBAC gate
   const { checkRBAC } = await import('../../../lib/rbac');
@@ -33,6 +36,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
   }
 
   const db = getDb();

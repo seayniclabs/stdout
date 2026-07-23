@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
 import { eq, gt, and } from 'drizzle-orm';
 import { syncCommunityLibrary } from '../../../lib/community-kb';
+import { requireAuth } from '../../../lib/rbac';
 
 /**
  * GET /app/api/community-sync?since_version=0
@@ -59,8 +60,24 @@ export const GET: APIRoute = async ({ url }) => {
  *
  * Auth: requires an authenticated user. Sync is scoped to that user's workspace.
  */
-export const POST: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, cookies, request }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'manage_settings');
+  if (rbacBlock) return rbacBlock;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
   const workspaceUserId = locals.workspace?.ownerId || locals.user.id;
   const summary = await syncCommunityLibrary(workspaceUserId);
   return new Response(JSON.stringify(summary), {
