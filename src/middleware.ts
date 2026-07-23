@@ -161,33 +161,69 @@ function validateBearerToken(request: Request): { userId: string } | null {
 // --- CSRF Origin Check ---
 const ALLOWED_ORIGINS: string[] = [];
 
+// Customer-configured production URL (set via APP_URL env var)
 if (process.env.APP_URL) {
   ALLOWED_ORIGINS.push(process.env.APP_URL.replace(/\/$/, ''));
 }
 
+// Development and localhost ports
 ALLOWED_ORIGINS.push(
-  'http://localhost:4321',
-  'http://localhost:3000',
-  'http://localhost:8112',
-  'http://localhost:9112',  // SSH tunnel port
-  'http://192.168.68.89:8112',  // ThinkPad
-  'http://stdout.local:8112'  // mDNS hostname
+  'http://localhost:4321',  // Astro dev default
+  'http://localhost:3000',  // Production build default
+  'http://localhost:8112',  // Dev alternate
+  'http://localhost:9112'   // SSH tunnel
 );
 
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+function isOriginAllowed(originUrl: string): boolean {
+  // Exact match against allowed origins
+  if (ALLOWED_ORIGINS.includes(originUrl)) return true;
+
+  try {
+    const url = new URL(originUrl);
+
+    // Allow any *.local mDNS hostname (Home Assistant style)
+    if (url.hostname.endsWith('.local')) {
+      console.log('[checkOrigin] allowing .local mDNS:', url.hostname);
+      return true;
+    }
+
+    // Allow private IP ranges (RFC 1918)
+    const ip = url.hostname;
+    if (
+      ip.startsWith('192.168.') ||    // 192.168.0.0/16
+      ip.startsWith('10.') ||          // 10.0.0.0/8
+      /^172\.(1[6-9]|2[0-9]|3[01])\./.test(ip)  // 172.16.0.0/12
+    ) {
+      console.log('[checkOrigin] allowing private IP:', ip);
+      return true;
+    }
+
+    // Localhost variants
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1') {
+      return true;
+    }
+
+  } catch {
+    return false;
+  }
+
+  return false;
+}
 
 function checkOrigin(request: Request): boolean {
   if (!MUTATING_METHODS.has(request.method)) return true;
   const origin = request.headers.get('origin');
   const referer = request.headers.get('referer');
-  console.log('[checkOrigin] method:', request.method, 'origin:', origin, 'referer:', referer, 'allowed:', ALLOWED_ORIGINS);
+  console.log('[checkOrigin] method:', request.method, 'origin:', origin, 'referer:', referer);
 
   // Allow requests with no Origin header if Referer matches (same-origin navigation)
   if (!origin) {
     if (referer) {
       try {
         const refererOrigin = new URL(referer).origin;
-        const isAllowed = ALLOWED_ORIGINS.some(allowed => refererOrigin === allowed);
+        const isAllowed = isOriginAllowed(refererOrigin);
         console.log('[checkOrigin] using referer:', refererOrigin, 'allowed:', isAllowed);
         return isAllowed;
       } catch {
@@ -199,7 +235,7 @@ function checkOrigin(request: Request): boolean {
     return false;
   }
 
-  const isAllowed = ALLOWED_ORIGINS.some(allowed => origin === allowed);
+  const isAllowed = isOriginAllowed(origin);
   console.log('[checkOrigin] origin check:', isAllowed);
   return isAllowed;
 }

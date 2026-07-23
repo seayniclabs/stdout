@@ -310,6 +310,72 @@ docker compose --profile observatory up -d
 
 ---
 
+## Development
+
+### Prerequisites
+
+- Node.js 18+ (20+ recommended)
+- npm 9+
+- SQLite 3.35+
+
+### Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/seayniclabs/stdout.git
+cd stdout
+
+# Install dependencies
+npm install
+
+# Run database migrations (REQUIRED before dev server)
+npm run db:migrate
+
+# Start dev server
+npm run dev
+```
+
+**Important:** Migrations must run before starting the dev server. The application verifies migrations have been applied and will throw an error if the database is not initialized.
+
+### Available Scripts
+
+```bash
+npm run dev            # Start Astro dev server (localhost:4321)
+npm run build          # Build for production
+npm run preview        # Preview production build
+npm run db:migrate     # Run database migrations
+npm run db:studio      # Open Drizzle Studio (database GUI)
+npm run test:smoke     # Run smoke tests (6 critical paths)
+npm run test:security  # Run security tests
+```
+
+### Database Migrations
+
+StdOut uses Drizzle ORM with SQLite. **Never** skip migrations:
+
+1. **First-time setup:** `npm run db:migrate`
+2. **After pulling changes:** `npm run db:migrate`
+3. **Before tests:** Migrations run automatically via `test:setup`
+
+The dev server verifies migrations have run and will exit with an error if the `__drizzle_migrations` table is missing.
+
+### Testing
+
+```bash
+# Smoke tests (6 critical user paths)
+npm run test:smoke
+
+# Security tests (OWASP checks, CVE scans)
+npm run test:security
+
+# Individual test files
+npx playwright test tests/smoke.spec.ts
+```
+
+Tests create a temporary database at `./data/stdout.db` with seeded test data. The `test:setup` script runs migrations automatically.
+
+---
+
 ## Support
 
 - **Documentation**: [seayniclabs.com/stdout](https://seayniclabs.com/stdout)

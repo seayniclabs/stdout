@@ -73,12 +73,14 @@ if (Astro.request.method === 'POST') {
         // Auto-create scanner token so scanner works during setup
         const rawToken = `stdout_scan_${nanoid(32)}`;
         const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+        const expiresAt = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000); // 90 days
 
         db.insert(schema.apiTokens).values({
           id: nanoid(),
           userId: userId,
           name: 'Scanner (Auto-created during setup)',
           tokenHash,
+          expiresAt,
           createdAt: now,
         }).run();
 

@@ -1,0 +1,1 @@
+ALTER TABLE `api_tokens` ADD `expires_at` integer NOT NULL DEFAULT (strftime('%s', 'now', '+90 days'));

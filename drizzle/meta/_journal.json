@@ -78,6 +78,34 @@
       "when": 1784836800000,
       "tag": "0010_add_monitors_fingerprint",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1784837400000,
+      "tag": "0011_add_incidents_dedup_and_cost",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1784838000000,
+      "tag": "0012_add_ai_cost_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1784838600000,
+      "tag": "0013_add_api_tokens_expires_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1784839200000,
+      "tag": "0014_add_resolutions_fts",
+      "breakpoints": true
     }
   ]
 }
