@@ -14,19 +14,29 @@
 import type { APIRoute } from 'astro';
 import { loadMemory, saveConversation, buildPromptContext } from '../../../../lib/agent/memory';
 import { autoRouteWithTools } from '../../../../lib/agent/auto-router-tools';
+import { requireAuth } from '../../../../lib/rbac';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const user = locals.user;
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   try {
-    const { message } = await request.json();
+    const body = await request.json();
+    const { message } = body;
+
+    // CSRF check
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     if (!message || typeof message !== 'string') {
       return new Response(JSON.stringify({ error: 'Invalid message' }), {
@@ -36,15 +46,15 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     // 1. Load 4-tier memory
-    const memory = await loadMemory(user.id);
+    const memory = await loadMemory(locals.user.id);
     const context = buildPromptContext(memory);
 
     // 2. Auto-route with tool support (Ollama can call Observatory APIs)
-    const response = await autoRouteWithTools(message, context, user.id);
+    const response = await autoRouteWithTools(message, context, locals.user.id);
 
     // 3. Persist conversation
-    await saveConversation(user.id, 'user', message);
-    await saveConversation(user.id, 'assistant', response.content, {
+    await saveConversation(locals.user.id, 'user', message);
+    await saveConversation(locals.user.id, 'assistant', response.content, {
       provider: response.provider,
       model: response.model,
       degraded: response.degraded,

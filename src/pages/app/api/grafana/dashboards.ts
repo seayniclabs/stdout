@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
 import { getGrafanaConfig, listGrafanaDashboards, buildGrafanaDashboardUrl } from '../../../../lib/grafana';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/grafana/dashboards
  * List Grafana dashboards and build URLs with time ranges
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const config = getGrafanaConfig(userId);
