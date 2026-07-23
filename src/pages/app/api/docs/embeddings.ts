@@ -2,6 +2,7 @@ import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 // Simple cosine similarity calculation
 function cosineSimilarity(a: number[], b: number[]): number {
@@ -20,18 +21,27 @@ function cosineSimilarity(a: number[], b: number[]): number {
   return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   try {
     const body = await request.json();
     const { action, docId, query } = body;
+
+    // CSRF check
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
 
     const db = getDb();
 
