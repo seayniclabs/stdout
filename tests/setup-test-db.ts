@@ -65,7 +65,19 @@ if (userCount.count === 0) {
     VALUES ('installation_complete', 'true', ?)
   `).run(now);
 
-  console.log('[test-setup] Seeded admin@stdout.local + marked installation complete');
+  // Mark all setup steps as complete to prevent setup wizard redirect
+  const setupSteps = [
+    'welcome', 'license', 'admin', 'observatory', 'stack', 'monitors', 'integrations', 'complete'
+  ];
+
+  for (let i = 0; i < setupSteps.length; i++) {
+    db.prepare(`
+      INSERT OR REPLACE INTO setup_progress (id, step_number, step_name, completed, completed_at, created_at)
+      VALUES (?, ?, ?, 1, ?, ?)
+    `).run(nanoid(), i + 1, setupSteps[i], now, now);
+  }
+
+  console.log('[test-setup] Seeded admin + marked installation complete + setup steps done');
 
   userCount = db.prepare(`SELECT COUNT(*) as count FROM users`).get() as { count: number };
 }

@@ -71,6 +71,13 @@
       "when": 1782670000000,
       "tag": "0009_add_satellite_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784836800000,
+      "tag": "0010_add_monitors_fingerprint",
+      "breakpoints": true
     }
   ]
 }
