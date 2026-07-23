@@ -4,13 +4,23 @@ import { getDb, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { logAudit, getClientIp } from '../../../lib/audit';
+import { requireAuth } from '../../../lib/rbac';
+import { validateCsrf } from '../../../middleware';
 
 export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   // Require confirmation word in request body
   let body: any = {};
   try { body = await request.json(); } catch (error: unknown) { /* Intentionally ignored */ }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+  }
 
   if (body.confirmation !== 'DELETE') {
     return new Response(JSON.stringify({ error: 'Type DELETE to confirm account deletion.' }), {

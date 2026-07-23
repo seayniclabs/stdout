@@ -42,11 +42,14 @@ export async function discoverDockerContainers(): Promise<DiscoveredApp[]> {
     ].filter(Boolean);
 
     let dockerAvailable = false;
-    for (const socketPath of dockerSocketPaths) {
+    let socketPath = '';
+    for (const path of dockerSocketPaths) {
       try {
         const fs = await import('fs/promises');
-        await fs.access(socketPath);
+        await fs.access(path);
         dockerAvailable = true;
+        socketPath = path;
+        console.log(`[Discovery] Docker socket found at ${socketPath}`);
         break;
       } catch {
         continue;
@@ -58,17 +61,42 @@ export async function discoverDockerContainers(): Promise<DiscoveredApp[]> {
       return apps;
     }
 
-    // Query Docker API for running containers
-    const response = await fetch('http://localhost/containers/json', {
-      socketPath: '/var/run/docker.sock',
-      method: 'GET',
+    // Query Docker API for running containers via Unix socket
+    console.log(`[Discovery] Querying Docker API at ${socketPath}...`);
+    const http = await import('http');
+    const containers = await new Promise((resolve, reject) => {
+      const options = {
+        socketPath,
+        path: '/containers/json',
+        method: 'GET',
+      };
+
+      const req = http.request(options, (res) => {
+        let data = '';
+        res.on('data', (chunk) => (data += chunk));
+        res.on('end', () => {
+          if (res.statusCode !== 200) {
+            console.error(`[Discovery] Docker API returned ${res.statusCode}`);
+            reject(new Error(`Docker API error: ${res.statusCode}`));
+          } else {
+            try {
+              const parsed = JSON.parse(data);
+              console.log(`[Discovery] Docker API returned ${parsed.length} containers`);
+              resolve(parsed);
+            } catch (e) {
+              console.error('[Discovery] Failed to parse Docker API response');
+              reject(new Error('Failed to parse Docker API response'));
+            }
+          }
+        });
+      });
+
+      req.on('error', (err) => {
+        console.error('[Discovery] Docker API request error:', err);
+        reject(err);
+      });
+      req.end();
     });
-
-    if (!response.ok) {
-      throw new Error(`Docker API error: ${response.status}`);
-    }
-
-    const containers = await response.json();
 
     for (const container of containers) {
       const name = container.Names?.[0]?.replace(/^\//, '') || container.Id.slice(0, 12);

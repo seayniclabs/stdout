@@ -1,14 +1,13 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
+import { eq } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../lib/rbac';
+import { validateCsrf } from '../../../middleware';
 
 export const GET: APIRoute = async ({ locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   // Team management not implemented for self-hosted single-user mode
   // Return empty array to prevent UI errors
@@ -18,17 +17,23 @@ export const GET: APIRoute = async ({ locals }) => {
   });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_team');
+  if (rbacError) return rbacError;
 
   try {
     const body = await request.json();
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
     const { email, role } = body;
 
     if (!email || !role) {
@@ -42,7 +47,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const newMember = {
       email,
       role,
-      invitedBy: session.id,
+      invitedBy: locals.user!.id,
       invitedAt: new Date(),
       status: 'pending',
     };
@@ -62,17 +67,23 @@ export const POST: APIRoute = async ({ locals, request }) => {
   }
 };
 
-export const DELETE: APIRoute = async ({ locals, request }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_team');
+  if (rbacError) return rbacError;
 
   try {
     const body = await request.json();
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
     const { memberId } = body;
 
     if (!memberId) {

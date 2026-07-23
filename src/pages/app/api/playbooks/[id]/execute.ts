@@ -9,17 +9,33 @@ import { executePlaybook } from '../../../../../lib/remediation/executor';
 import { getBuiltInPlaybooks } from '../../../../../lib/remediation/playbooks';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../../../lib/rbac';
+import { validateCsrf } from '../../../../../middleware';
 
-export const POST: APIRoute = async ({ request, params }) => {
+export const POST: APIRoute = async ({ request, params, locals, cookies }) => {
   try {
-    const userId = (request as any).userId;
-    const playbookId = params.id;
+    // Auth check
+    const authError = requireAuth(locals);
+    if (authError) return authError;
 
-    if (!userId || !playbookId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized or missing playbook ID' }), { status: 401 });
+    // RBAC check - playbook execution requires execute_playbook permission
+    const rbacError = checkRBAC(locals, 'execute_playbook');
+    if (rbacError) return rbacError;
+
+    // CSRF check
+    const body = await request.json() as any;
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
     }
 
-    const body = await request.json() as any;
+    const userId = locals.user!.id;
+    const playbookId = params.id;
+
+    if (!playbookId) {
+      return new Response(JSON.stringify({ error: 'Missing playbook ID' }), { status: 400 });
+    }
+
     const { incidentId, dryRun = false, approve = false } = body;
 
     if (!incidentId) {

@@ -30,11 +30,17 @@ const manualApps = apps.filter(a => a.type === 'manual');
         <p class="subtitle">Automatically discovered infrastructure and services</p>
       </div>
       <div class="header-actions">
-        <button id="scanBtn" class="btn-glass btn-primary">
+        <button id="quickScanBtn" class="btn-glass btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          Quick Scan
+        </button>
+        <button id="detailedScanBtn" class="btn-glass">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
           </svg>
-          Scan Now
+          Detailed Scan
         </button>
         <button id="addManualBtn" class="btn-glass">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -484,8 +490,9 @@ const manualApps = apps.filter(a => a.type === 'manual');
     }
 
     // Scan button with loading state
-    document.getElementById('scanBtn')?.addEventListener('click', async () => {
-      const btn = document.getElementById('scanBtn') as HTMLButtonElement;
+    // Quick scan - passive discovery only (Docker containers)
+    document.getElementById('quickScanBtn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('quickScanBtn') as HTMLButtonElement;
       if (!btn) return;
 
       btn.disabled = true;
@@ -494,7 +501,7 @@ const manualApps = apps.filter(a => a.type === 'manual');
           <circle cx="12" cy="12" r="10"/>
           <path d="M12 6v6l4 2"/>
         </svg>
-        Scanning...
+        Quick Scanning...
       `;
 
       try {
@@ -505,20 +512,54 @@ const manualApps = apps.filter(a => a.type === 'manual');
         if (!response.ok) throw new Error('Scan failed');
 
         const data = await response.json();
-        showToast(`Discovered ${data.discovered} applications!`, 'success');
+        showToast(`Quick scan: Found ${data.discovered} Docker containers`, 'success');
 
-        // Reload page to show new discoveries
         setTimeout(() => window.location.reload(), 500);
       } catch (error) {
-        console.error('Discovery scan failed:', error);
-        showToast('Discovery scan failed. Check console for details.', 'error');
+        console.error('Quick scan failed:', error);
+        showToast('Quick scan failed', 'error');
         btn.disabled = false;
-        btn.innerHTML = `
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-          </svg>
-          Scan Now
-        `;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Quick Scan`;
+      }
+    });
+
+    // Detailed scan - network scanner + passive discovery
+    document.getElementById('detailedScanBtn')?.addEventListener('click', async () => {
+      const btn = document.getElementById('detailedScanBtn') as HTMLButtonElement;
+      if (!btn) return;
+
+      btn.disabled = true;
+      btn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        Network Scanning...
+      `;
+
+      try {
+        // Run network scanner with detailed mode
+        const response = await fetch('/app/api/scanner/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'detailed',
+            subnets: ['192.168.68.0/24']
+          }),
+        });
+
+        if (!response.ok) throw new Error('Scanner failed');
+
+        const data = await response.json();
+        const total = (data.discovered || 0) + (data.containers?.length || 0);
+        showToast(`Detailed scan: Found ${total} devices/services`, 'success');
+
+        setTimeout(() => window.location.reload(), 500);
+      } catch (error) {
+        console.error('Detailed scan failed:', error);
+        showToast('Network scan failed. Check console for details.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Detailed Scan`;
       }
     });
 

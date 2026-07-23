@@ -4,6 +4,8 @@ import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import { eq, and } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../lib/rbac';
+import { validateCsrf } from '../../../middleware';
 
 // Token format: stdout_scan_{nanoid(32)}
 function generateToken(): string {
@@ -15,7 +17,9 @@ function hashToken(token: string): string {
 }
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const tokens = getDb()
     .select({
@@ -26,7 +30,7 @@ export const GET: APIRoute = async ({ locals }) => {
       createdAt: schema.apiTokens.createdAt,
     })
     .from(schema.apiTokens)
-    .where(eq(schema.apiTokens.userId, locals.user.id))
+    .where(eq(schema.apiTokens.userId, locals.user!.id))
     .all();
 
   return new Response(JSON.stringify({ tokens }), {
@@ -34,11 +38,14 @@ export const GET: APIRoute = async ({ locals }) => {
   });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
-  const { checkRBAC } = await import('../../../lib/rbac');
-  const rbacBlock = checkRBAC(locals, 'manage_settings');
-  if (rbacBlock) return rbacBlock;
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_tokens');
+  if (rbacError) return rbacError;
 
   let body: Record<string, unknown>;
   try {
@@ -57,6 +64,12 @@ export const POST: APIRoute = async ({ locals, request }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || (body._csrf as string);
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const name = (body.name as string || '').trim();
@@ -108,8 +121,14 @@ export const POST: APIRoute = async ({ locals, request }) => {
   });
 };
 
-export const DELETE: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_tokens');
+  if (rbacError) return rbacError;
 
   let body: Record<string, unknown>;
   try {
@@ -128,6 +147,12 @@ export const DELETE: APIRoute = async ({ locals, request }) => {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || (body._csrf as string);
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const tokenId = body.id as string | undefined;

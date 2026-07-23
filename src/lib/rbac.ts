@@ -48,11 +48,15 @@ export type RBACAction =
   | 'manage_monitors' // create/edit/delete monitors, status pages
   | 'create_backup'   // create/restore backups
   | 'export_data'     // export account data
+  | 'execute_playbook' // execute remediation playbooks (potentially destructive)
+  | 'configure_observatory' // configure Observatory settings
+  | 'manage_tokens'   // create/delete API tokens
+  | 'install_services' // install/configure system services (setup phase)
 
 const ROLE_PERMISSIONS: Record<TeamRole, RBACAction[]> = {
-  owner: ['read', 'create', 'edit', 'delete', 'manage_team', 'manage_settings', 'manage_monitors', 'create_backup', 'export_data'],
-  admin: ['read', 'create', 'edit', 'delete', 'manage_team', 'manage_settings', 'manage_monitors', 'create_backup', 'export_data'],
-  editor: ['read', 'create', 'edit', 'manage_monitors'],
+  owner: ['read', 'create', 'edit', 'delete', 'manage_team', 'manage_settings', 'manage_monitors', 'create_backup', 'export_data', 'execute_playbook', 'configure_observatory', 'manage_tokens', 'install_services'],
+  admin: ['read', 'create', 'edit', 'delete', 'manage_team', 'manage_settings', 'manage_monitors', 'create_backup', 'export_data', 'execute_playbook', 'configure_observatory', 'manage_tokens'],
+  editor: ['read', 'create', 'edit', 'manage_monitors', 'execute_playbook'],
   viewer: ['read'],
 };
 
@@ -121,4 +125,30 @@ export function checkRBAC(locals: App.Locals, action: RBACAction): Response | nu
   if (locals.workspace.isOwnWorkspace) return null; // owner always allowed
   if (canPerform(locals.workspace.role, action)) return null;
   return rbacBlockedResponse(action, locals.workspace.role);
+}
+
+/**
+ * Helper to return unauthorized response (401)
+ */
+export function unauthorized(): Response {
+  return new Response(
+    JSON.stringify({
+      error: 'Authentication required',
+      code: 'UNAUTHORIZED'
+    }),
+    {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' }
+    }
+  );
+}
+
+/**
+ * Check if user is authenticated
+ */
+export function requireAuth(locals: App.Locals): Response | null {
+  if (!locals.user) {
+    return unauthorized();
+  }
+  return null;
 }
