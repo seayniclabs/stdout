@@ -1,4 +1,6 @@
 import type { APIRoute } from 'astro';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * Observatory operating-mode management (Charlie 2026-06-12).
@@ -7,28 +9,39 @@ import type { APIRoute } from 'astro';
  *   POST /app/api/observatory/mode   → mutate; body.op ∈
  *        { setMode | setAutopilot | setGodMode | resetKillswitch }
  *
- * Reading state needs only an authenticated user. Every MUTATION requires manage_settings —
+ * Reading state needs only an authenticated user. Every MUTATION requires configure_observatory —
  * changing what the autonomous brain is allowed to do is an operator-level decision. God mode
  * (lifting the non-destructive ceiling) is the most privileged and is human-only by construction
  * (auto-pilot has no code path that can set it).
  */
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
-  const userId = locals.workspace?.ownerId || locals.user.id;
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const userId = locals.workspace?.ownerId || locals.user!.id;
   const { getModeState } = await import('../../../../lib/observatory/operating-mode');
   return json({ state: getModeState(userId) });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  const { checkRBAC } = await import('../../../../lib/rbac');
-  const block = checkRBAC(locals, 'manage_settings');
-  if (block) return block;
+  // RBAC check - Observatory configuration requires configure_observatory permission
+  const rbacError = checkRBAC(locals, 'configure_observatory');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch { return json({ error: 'Invalid JSON' }, 400); }
+
+  // CSRF check
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return json({ error: 'CSRF token validation failed' }, 403);
+  }
 
   const { op } = body || {};
   const userId = locals.workspace?.ownerId || locals.user.id;

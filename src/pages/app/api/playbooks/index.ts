@@ -9,15 +9,17 @@ import { getDb, schema } from '../../../../lib/db';
 import { getBuiltInPlaybooks } from '../../../../lib/remediation/playbooks';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
-export const GET: APIRoute = async ({ request }) => {
+export const GET: APIRoute = async ({ locals }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   try {
     const db = getDb();
-    const userId = (request as any).userId; // Set by auth middleware
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+    const userId = locals.user!.id;
 
     // Fetch user playbooks + built-in playbooks
     const userPlaybooks = db.select()
@@ -45,15 +47,24 @@ export const GET: APIRoute = async ({ request }) => {
   }
 };
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - playbook management requires manage_settings permission
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
+
   try {
-    const userId = (request as any).userId;
-
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
-
+    const userId = locals.user!.id;
     const body = await request.json() as any;
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
     const { name, description, trigger, steps, rollback, requiresApproval, timeout, riskLevel, tags } = body;
 
     if (!name || !description || !trigger || !steps) {

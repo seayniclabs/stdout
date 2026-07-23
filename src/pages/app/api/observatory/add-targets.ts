@@ -6,18 +6,26 @@ import { getDb, schema } from '../../../../lib/db';
 import { discoveredServices, discoveredHosts } from '../../../../lib/db/tenant-schema';
 import { eq } from 'drizzle-orm';
 import { promises as fs } from 'node:fs';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
-export const POST: APIRoute = async ({ request, locals }) => {
-  const session = locals.user;
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - adding Observatory targets requires configure_observatory permission
+  const rbacError = checkRBAC(locals, 'configure_observatory');
+  if (rbacError) return rbacError;
 
   try {
     const body = await request.json();
+
+    // CSRF check
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
     const { serviceIds } = body; // Array of service IDs to add to monitoring
 
     const db = getDb();
