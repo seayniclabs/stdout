@@ -6,6 +6,7 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
 import { eq, sql, desc } from 'drizzle-orm';
+import { requireAuth } from '../../../lib/rbac';
 
 interface CostSummary {
   totalCostThisMonth: number;
@@ -28,13 +29,12 @@ interface CostSummary {
   }>;
 }
 
-export const GET: APIRoute = async ({ request }) => {
-  try {
-    const userId = (request as any).userId;
+export const GET: APIRoute = async ({ locals, request }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-    if (!userId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
-    }
+  try {
+    const userId = locals.user.id;
 
     const db = getDb();
 

@@ -2,9 +2,12 @@ import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
 import { eq, inArray } from 'drizzle-orm';
 import { logAudit, getClientIp } from '../../../lib/audit';
+import { requireAuth } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const { checkRBAC } = await import('../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'export_data');
   if (rbacBlock) return rbacBlock;

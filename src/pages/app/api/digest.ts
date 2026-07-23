@@ -1,9 +1,11 @@
 import type { APIRoute } from 'astro';
 import { generateDigest, renderDigestHTML, sendWeeklyDigests } from '../../../lib/digest';
+import { requireAuth } from '../../../lib/rbac';
 
 // GET — preview digest for current user (returns HTML)
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const data = generateDigest(locals.user.id);
   if (!data) {
@@ -28,13 +30,24 @@ export const GET: APIRoute = async ({ locals, url }) => {
 };
 
 // POST — trigger digest send for all users (admin or Bearer token)
-export const POST: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, cookies, request }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   // RBAC gate
   const { checkRBAC } = await import('../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'manage_settings');
   if (rbacBlock) return rbacBlock;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token');
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
 
   // Tier gate: weekly digest
   const { checkFeature, tierBlockedResponse } = await import('../../../lib/tier-gate');

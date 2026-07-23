@@ -9,6 +9,7 @@ import {
   queryPrometheusContainerMetrics,
   queryPrometheusCurrentResources,
 } from '../../../lib/prometheus';
+import { requireAuth } from '../../../lib/rbac';
 
 /**
  * Metrics API — proxies InfluxDB queries through StdOut.
@@ -17,7 +18,8 @@ import {
  * GET /app/api/metrics?type=resources&names=n8n,plex,homepage
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const influxConfig = getInfluxConfig(userId);
