@@ -5,15 +5,12 @@
 
 import type { APIRoute } from 'astro';
 import { getStorageUsage, formatBytes } from '../../../../lib/storage/storage-monitor';
+import { requireAuth } from '../../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  const user = locals.user;
-  if (!user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   try {
     const usage = await getStorageUsage();

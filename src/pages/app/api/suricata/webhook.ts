@@ -6,6 +6,7 @@ import {
   parseEveLine,
   resetCorrelationState,
 } from '../../../../lib/suricata';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 /**
  * POST /app/api/suricata/webhook
@@ -22,13 +23,40 @@ import {
  *   dryRun=1   — classify only, no side effects
  *   resetCorrelation=1 — clear in-memory correlation (tests)
  */
-export const POST: APIRoute = async ({ locals, request, url }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({
-      error: 'Unauthorized. Provide Authorization: Bearer stdout_scan_<token>',
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
+export const POST: APIRoute = async ({ locals, request, url, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - ingesting Suricata events is a management operation
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  let csrfToken: string | undefined;
+
+  // For NDJSON, CSRF token must be in header
+  const contentType = (request.headers.get('content-type') || '').toLowerCase();
+  if (contentType.includes('ndjson') || contentType.includes('x-ndjson')) {
+    csrfToken = request.headers.get('x-csrf-token') || undefined;
+  } else {
+    // For JSON, can be in header or body
+    const bodyText = await request.text();
+    try {
+      const parsed = JSON.parse(bodyText);
+      csrfToken = request.headers.get('x-csrf-token') || (parsed as any)._csrf;
+      // Re-create request with text for later parsing
+      request = new Request(request, { body: bodyText });
+    } catch {
+      // Invalid JSON, will fail later
+    }
+  }
+
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -36,7 +64,6 @@ export const POST: APIRoute = async ({ locals, request, url }) => {
     resetCorrelationState();
   }
 
-  const contentType = (request.headers.get('content-type') || '').toLowerCase();
   let events: Record<string, unknown>[] = [];
 
   try {

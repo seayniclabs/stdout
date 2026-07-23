@@ -8,14 +8,13 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const userId = locals.workspace?.ownerId || locals.user.id;
 
   try {

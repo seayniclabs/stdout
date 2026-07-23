@@ -6,11 +6,16 @@
  */
 
 import type { APIRoute } from 'astro';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - setup requires install_services permission
+  const rbacError = checkRBAC(locals, 'install_services');
+  if (rbacError) return rbacError;
 
   // Create SSE response
   const stream = new ReadableStream({

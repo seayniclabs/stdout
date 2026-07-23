@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { and, desc, eq } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
+import { requireAuth } from '../../../../lib/rbac';
 
 type MissingSource = {
   type?: string;
@@ -9,7 +10,9 @@ type MissingSource = {
 };
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
 

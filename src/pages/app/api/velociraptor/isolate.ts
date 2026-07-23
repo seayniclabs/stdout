@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { isolateVelociraptorClient, getVelociraptorConfig } from '../../../../lib/velociraptor';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 /**
  * POST /app/api/velociraptor/isolate
@@ -15,14 +16,14 @@ import { isolateVelociraptorClient, getVelociraptorConfig } from '../../../../li
  * }
  * ```
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  // Auth: require valid API token or session
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - isolating clients is a critical management operation
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   let body: { clientId?: string; reason?: string; duration?: number };
   try {
@@ -31,6 +32,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 

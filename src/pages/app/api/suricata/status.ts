@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSuricataIngestStatus } from '../../../../lib/suricata-ingest';
 import { getSuricataMetrics, metricsPrometheusText } from '../../../../lib/suricata';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/suricata/status
@@ -9,18 +10,16 @@ import { getSuricataMetrics, metricsPrometheusText } from '../../../../lib/suric
  * Query: ?format=prometheus — plain-text Prometheus counters.
  */
 export const GET: APIRoute = async ({ locals, url }) => {
+  // Prometheus format is public for scraping, but requires auth for JSON
   if (url.searchParams.get('format') === 'prometheus') {
     return new Response(metricsPrometheusText(), {
       headers: { 'Content-Type': 'text/plain; version=0.0.4; charset=utf-8' },
     });
   }
 
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+  // Auth check for JSON response
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const status = getSuricataIngestStatus();
   const mode = (process.env.SURICATA_REDIS_MODE || 'list').toLowerCase() === 'stream'

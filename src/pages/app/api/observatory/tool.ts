@@ -1,4 +1,5 @@
 import type { APIRoute } from 'astro';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Observatory tool-invocation endpoint (P7b).
@@ -14,13 +15,18 @@ import type { APIRoute } from 'astro';
  */
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const { listTools } = await import('../../../../lib/observatory/toolbox');
   return json({ tools: listTools() });
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const { checkRBAC } = await import('../../../../lib/rbac');
   // Running a diagnostic tool is an action — require at least 'create'.
@@ -30,6 +36,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
   let body: any;
   try { body = await request.json(); } catch {
     return json({ error: 'Invalid JSON' }, 400);
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return json({ error: 'CSRF token validation failed' }, 403);
   }
 
   const { tool, args, allowGated, reason } = body || {};

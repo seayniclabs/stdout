@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getCVEMetrics } from '../../../../lib/cve-scanner';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/cve/status?format=json|prometheus
@@ -7,9 +8,9 @@ import { getCVEMetrics } from '../../../../lib/cve-scanner';
  * Returns CVE scanner metrics for monitoring dashboards.
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const format = url.searchParams.get('format') || 'json';
   const metrics = getCVEMetrics(locals.user.id);

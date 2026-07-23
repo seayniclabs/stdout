@@ -1,15 +1,16 @@
 import type { APIRoute } from 'astro';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/presets/:id
  * Fetch preset details by ID
  */
 export const GET: APIRoute = async ({ locals, params }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const { id } = params;
 

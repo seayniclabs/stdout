@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getWazuhMetrics } from '../../../../lib/wazuh';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * GET /app/api/wazuh/status?format=json|prometheus
@@ -7,9 +8,9 @@ import { getWazuhMetrics } from '../../../../lib/wazuh';
  * Returns Wazuh metrics for monitoring dashboards.
  */
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const format = url.searchParams.get('format') || 'json';
   const metrics = getWazuhMetrics(locals.user.id);

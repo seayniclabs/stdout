@@ -9,6 +9,7 @@ import {
   parseZeekBundle,
   pullZeekLogsFromContainer,
 } from '../../../../lib/zeek';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 /**
  * POST /app/api/zeek/ingest
@@ -30,15 +31,14 @@ import {
  *   analyze=1  — run zeek -r on the latest pcap, then pull (implies pull)
  *   noIncidents=1 — update baselines without creating incidents
  */
-export const POST: APIRoute = async ({ locals, request, url }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({
-      error: 'Unauthorized. Provide Authorization: Bearer stdout_scan_<token>',
-    }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ locals, request, url, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - ingesting Zeek logs is a management operation
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   const dryRun = url.searchParams.get('dryRun') === '1'
     || url.searchParams.get('dry_run') === '1';
@@ -66,6 +66,18 @@ export const POST: APIRoute = async ({ locals, request, url }) => {
     const text = await request.text();
     const typeParam = url.searchParams.get('type') || 'conn';
     body = { type: typeParam, content: text };
+  }
+
+  // CSRF check (for JSON bodies)
+  if (contentType.includes('application/json')) {
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
   }
 
   let bundle = bundleFromBody(body);

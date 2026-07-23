@@ -3,21 +3,34 @@ import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 /**
  * POST /app/api/presets/apply
  * Apply a configuration preset to the user's StdOut instance
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) {
-    return new Response('Unauthorized', { status: 401 });
-  }
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - applying presets modifies system configuration
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
 
   try {
-    const { presetId } = await request.json();
+    const body = await request.json();
+    const { presetId } = body;
+
+    // CSRF check
+    const { validateCsrf } = await import('../../../../middleware');
+    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    if (!validateCsrf(csrfToken, cookies)) {
+      return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+    }
 
     if (!presetId) {
       return new Response(JSON.stringify({ error: 'presetId required' }), {

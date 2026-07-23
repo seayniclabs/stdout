@@ -7,7 +7,7 @@ import { testConnection as testInfluxConnection } from '../../../lib/influx';
 import { testPrometheusConnection } from '../../../lib/prometheus';
 import { testSourceConnection } from '../../../lib/source-test';
 import { isBlockedTarget } from '../../../lib/hud';
-import { checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
+import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
 
 const VALID_DS_TYPES = ['influxdb', 'prometheus', 'trivy', 'uptime-kuma', 'loki', 'graylog', 'crowdsec', 'pihole'] as const;
 
@@ -21,7 +21,9 @@ function canMutateDataSource(locals: App.Locals, rowUserId: string): boolean {
 // --- List data sources ---
 
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
   // Tenant DB is already workspace-scoped — list all rows so team members see shared integrations.
@@ -43,8 +45,10 @@ export const GET: APIRoute = async ({ locals }) => {
 
 // --- Create / Update / Delete / Test ---
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const rbacBlock = checkRBAC(locals, 'manage_settings');
   if (rbacBlock) return rbacBlock;
@@ -54,6 +58,13 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400, headers: { 'Content-Type': 'application/json' },
     });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const db = getDb();

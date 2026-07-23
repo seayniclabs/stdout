@@ -6,6 +6,7 @@ import { logAudit, getClientIp } from '../../../../lib/audit';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { emit } from '../../../../lib/events';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 // sat_<nanoid(32)> — distinct prefix from scanner tokens
 function generateToken(): string {
@@ -18,7 +19,9 @@ function hashToken(token: string): string {
 
 /** GET /app/api/satellite/nodes — list enrolled nodes */
 export const GET: APIRoute = async ({ locals }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const db = getDb();
   const rows = db.all(sql`
@@ -43,12 +46,25 @@ export const GET: APIRoute = async ({ locals }) => {
 };
 
 /** POST /app/api/satellite/nodes — register a new node */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - managing satellite nodes requires manage_settings
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const name = (body.name || '').trim();
@@ -84,12 +100,25 @@ export const POST: APIRoute = async ({ locals, request }) => {
 };
 
 /** DELETE /app/api/satellite/nodes — deregister a node */
-export const DELETE: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // RBAC check - managing satellite nodes requires manage_settings
+  const rbacError = checkRBAC(locals, 'manage_settings');
+  if (rbacError) return rbacError;
 
   let body: any;
   try { body = await request.json(); } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
   }
 
   const nodeId = (body.id || '').trim();
