@@ -3,7 +3,7 @@ import { nanoid } from 'nanoid';
 import { and, eq } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
 import { checkCountLimit, tierBlockedResponse } from '../../../../lib/tier-gate';
-import { checkRBAC } from '../../../../lib/rbac';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 import { requireLicense } from '../../../../lib/license';
 
 const MAX_PAYLOAD_BYTES = 1_048_576; // 1MB
@@ -21,8 +21,10 @@ type ScannerDataSourcesPayload = {
   missing?: Array<{ type?: string; recommendation?: string; reason?: string }>;
 };
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const rbacBlock = checkRBAC(locals, 'create');
   if (rbacBlock) return rbacBlock;
 
@@ -57,6 +59,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 

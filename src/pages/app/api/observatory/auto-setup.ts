@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSqlite } from '../../../../lib/db';
 import { createMonitorsFromScan, executeMonitorCreation } from '../../../../lib/observatory/auto-monitor';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Observatory Auto-Setup API
@@ -8,8 +9,9 @@ import { createMonitorsFromScan, executeMonitorCreation } from '../../../../lib/
  */
 
 // POST — Analyze and create monitors
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const { checkRBAC } = await import('../../../../lib/rbac');
   const rbacBlock = checkRBAC(locals, 'manage_monitors');
@@ -21,6 +23,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
       headers: { 'Content-Type': 'application/json' }
     });
   }

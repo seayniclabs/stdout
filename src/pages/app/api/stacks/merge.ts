@@ -1,10 +1,12 @@
 import type { APIRoute } from 'astro';
 import { eq, and } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
-import { checkRBAC, getWorkspaceOwnerId } from '../../../../lib/rbac';
+import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../../lib/rbac';
 
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
   const rbacBlock = checkRBAC(locals, 'edit');
   if (rbacBlock) return rbacBlock;
 
@@ -15,6 +17,16 @@ export const POST: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
