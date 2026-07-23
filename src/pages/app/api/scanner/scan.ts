@@ -1,20 +1,27 @@
 import type { APIRoute } from 'astro';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
+import { validateCsrf } from '../../../../middleware';
 
 /**
  * Scanner endpoint that triggers comprehensive network discovery
  * This is called by the "Run Scan Now" button and scheduled scans
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  // Auth check
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  const { checkRBAC } = await import('../../../../lib/rbac');
-  const rbacBlock = checkRBAC(locals, 'manage_monitors');
-  if (rbacBlock) return rbacBlock;
+  // RBAC check
+  const rbacError = checkRBAC(locals, 'manage_monitors');
+  if (rbacError) return rbacError;
+
+  // CSRF check
+  let body: any = {};
+  try { body = await request.json(); } catch { /* Optional body */ }
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), { status: 403 });
+  }
 
   console.log('[scanner/scan] Triggering comprehensive network discovery...');
 
