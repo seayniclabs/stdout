@@ -1,8 +1,10 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
+import { requireAuth } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals, url }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
   const q = url.searchParams.get('q')?.trim();
   const excludeId = url.searchParams.get('exclude') || '';

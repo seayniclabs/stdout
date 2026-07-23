@@ -4,22 +4,38 @@ import { eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import { sanitizeForCommunity } from '../../../lib/sanitize';
 import { scoreSubmission } from '../../../lib/value-score';
+import { requireAuth } from '../../../lib/rbac';
 
 /**
  * POST /app/api/contribute
  * Sanitizes a user doc for community contribution.
  * Returns the sanitized preview for user review.
  */
-export const POST: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const POST: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  let body: { docId: string };
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
+
+  let body: { docId: string; _csrf?: string };
   try {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -80,14 +96,20 @@ export const POST: APIRoute = async ({ locals, request }) => {
  * Confirms a contribution — saves sanitized doc to central community_submissions.
  * Runs value scoring before accepting.
  */
-export const PUT: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const PUT: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
 
   let body: {
     docId: string;
     sanitizedTitle: string;
     sanitizedContent: string;
     replacements: any[];
+    _csrf?: string;
   };
   try {
     body = await request.json();
@@ -95,6 +117,16 @@ export const PUT: APIRoute = async ({ locals, request }) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
@@ -194,16 +226,31 @@ export const PUT: APIRoute = async ({ locals, request }) => {
  * DELETE /app/api/contribute
  * Withdraw a previously submitted contribution.
  */
-export const DELETE: APIRoute = async ({ locals, request }) => {
-  if (!locals.user) return new Response('Unauthorized', { status: 401 });
+export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
 
-  let body: { submissionId: string };
+  const { checkRBAC } = await import('../../../lib/rbac');
+  const rbacBlock = checkRBAC(locals, 'create');
+  if (rbacBlock) return rbacBlock;
+
+  let body: { submissionId: string; _csrf?: string };
   try {
     body = await request.json();
   } catch {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // CSRF check
+  const { validateCsrf } = await import('../../../middleware');
+  const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+  if (!validateCsrf(csrfToken, cookies)) {
+    return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 
