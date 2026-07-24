@@ -43,7 +43,7 @@ async function setupAuthenticatedContext(page): Promise<TestContext> {
 
   // Extract session cookie
   const cookies = await page.context().cookies();
-  const sessionCookie = cookies.find(c => c.name === 'session_id')?.value || '';
+  const sessionCookie = cookies.find(c => c.name === 'sl_session')?.value || '';
 
   // Extract CSRF token from page (from hidden input or meta tag)
   let csrfToken = '';
@@ -90,7 +90,7 @@ test.describe('API — Authentication & Authorization', () => {
     for (const endpoint of samples) {
       const response = await page.request.get(`${BASE_URL}${endpoint.path}`, {
         headers: {
-          'Cookie': `session_id=${sessionCookie}`,
+          'Cookie': `sl_session=${sessionCookie}`,
         },
         failOnStatusCode: false
       });
@@ -117,7 +117,7 @@ test.describe('API — Authentication & Authorization', () => {
     // Request WITHOUT CSRF token should fail
     const response = await page.request.post(`${BASE_URL}${sample.path}`, {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json'
       },
       data: {},
@@ -145,7 +145,7 @@ test.describe('API — Input Validation', () => {
     
     const response = await page.request.post(`${BASE_URL}${sample.path}`, {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -163,7 +163,7 @@ test.describe('API — Input Validation', () => {
     // Test monitor creation endpoint (requires name, url, type)
     const response = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -183,7 +183,7 @@ test.describe('API — Input Validation', () => {
     const longTitle = 'A'.repeat(1000);
     const response = await page.request.post('${BASE_URL}/app/api/incidents', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -238,7 +238,7 @@ test.describe('API — Rate Limiting', () => {
     for (let i = 0; i < 101; i++) {
       requests.push(
         page.request.get(`${BASE_URL}${endpoint.path}`, {
-          headers: { 'Cookie': `session_id=${sessionCookie}` },
+          headers: { 'Cookie': `sl_session=${sessionCookie}` },
           failOnStatusCode: false
         })
       );
@@ -272,7 +272,7 @@ test.describe('API — Rate Limiting', () => {
       requests.push(
         page.request.post(`${BASE_URL}${endpoint.path}`, {
           headers: {
-            'Cookie': `session_id=${sessionCookie}`,
+            'Cookie': `sl_session=${sessionCookie}`,
             'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken
           },
@@ -297,7 +297,7 @@ test.describe('API — Data Integrity', () => {
     // Create a monitor
     const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -315,7 +315,7 @@ test.describe('API — Data Integrity', () => {
     
     // Retrieve the monitor
     const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `session_id=${sessionCookie}` }
+      headers: { 'Cookie': `sl_session=${sessionCookie}` }
     });
     
     expect(getResponse.ok()).toBeTruthy();
@@ -329,7 +329,7 @@ test.describe('API — Data Integrity', () => {
     // Create then update a monitor
     const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -345,7 +345,7 @@ test.describe('API — Data Integrity', () => {
     
     const updateResponse = await page.request.put(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -358,7 +358,7 @@ test.describe('API — Data Integrity', () => {
     
     // Verify change persisted
     const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `session_id=${sessionCookie}` }
+      headers: { 'Cookie': `sl_session=${sessionCookie}` }
     });
     
     const retrieved = await getResponse.json();
@@ -371,7 +371,7 @@ test.describe('API — Data Integrity', () => {
     // Create then delete a monitor
     const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -387,7 +387,7 @@ test.describe('API — Data Integrity', () => {
     
     const deleteResponse = await page.request.delete(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'X-CSRF-Token': csrfToken
       }
     });
@@ -396,7 +396,7 @@ test.describe('API — Data Integrity', () => {
     
     // Verify resource is gone
     const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `session_id=${sessionCookie}` },
+      headers: { 'Cookie': `sl_session=${sessionCookie}` },
       failOnStatusCode: false
     });
     
@@ -423,7 +423,7 @@ test.describe('API — Security', () => {
     const xssPayload = '<script>alert("XSS")</script>';
     const response = await page.request.post('${BASE_URL}/app/api/incidents', {
       headers: {
-        'Cookie': `session_id=${sessionCookie}`,
+        'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken
       },
@@ -438,7 +438,7 @@ test.describe('API — Security', () => {
     
     // Retrieve and verify script tags are escaped/sanitized
     const getResponse = await page.request.get(`${BASE_URL}/app/api/incidents/${created.id}`, {
-      headers: { 'Cookie': `session_id=${sessionCookie}` }
+      headers: { 'Cookie': `sl_session=${sessionCookie}` }
     });
     
     const retrieved = await getResponse.json();
