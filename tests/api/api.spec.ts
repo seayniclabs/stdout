@@ -63,22 +63,31 @@ async function setupAuthenticatedContext(page): Promise<TestContext> {
 
 test.describe('API — Authentication & Authorization', () => {
   
-  test('Protected endpoints reject unauthenticated requests', async ({ request }) => {
+  test('Protected endpoints reject unauthenticated requests', async ({ playwright }) => {
     const protectedEndpoints = catalog.filter(ep => ep.requiresAuth && ep.methods.length > 0);
     const sampleSize = Math.min(10, protectedEndpoints.length);
     const samples = protectedEndpoints.slice(0, sampleSize);
 
-    for (const endpoint of samples) {
-      for (const method of endpoint.methods) {
-        // Use request fixture (no storageState) instead of page.request (has storageState)
-        const response = await request.fetch(`${BASE_URL}${endpoint.path}`, {
-          method,
-          failOnStatusCode: false
-        });
+    // Create fresh request context WITHOUT storageState (truly unauthenticated)
+    const unauthContext = await playwright.request.newContext({
+      baseURL: BASE_URL,
+      extraHTTPHeaders: { 'Origin': BASE_URL }
+    });
 
-        expect(response.status()).toBeGreaterThanOrEqual(401);
-        expect(response.status()).toBeLessThanOrEqual(403);
+    try {
+      for (const endpoint of samples) {
+        for (const method of endpoint.methods) {
+          const response = await unauthContext.fetch(endpoint.path, {
+            method,
+            failOnStatusCode: false
+          });
+
+          expect(response.status()).toBeGreaterThanOrEqual(401);
+          expect(response.status()).toBeLessThanOrEqual(403);
+        }
       }
+    } finally {
+      await unauthContext.dispose();
     }
   });
   
@@ -407,14 +416,24 @@ test.describe('API — Data Integrity', () => {
 
 test.describe('API — Security', () => {
   
-  test('No credentials in URL parameters', async ({ request }) => {
-    // All endpoints should reject api_key in query string
-    const response = await request.get(`${BASE_URL}/app/api/monitors?api_key=secret123`, {
-      failOnStatusCode: false
+  test('No credentials in URL parameters', async ({ playwright }) => {
+    // Create unauthenticated context
+    const unauthContext = await playwright.request.newContext({
+      baseURL: BASE_URL,
+      extraHTTPHeaders: { 'Origin': BASE_URL }
     });
 
-    // Should return 401/403, not accept the key
-    expect(response.status()).toBeGreaterThanOrEqual(401);
+    try {
+      // All endpoints should reject api_key in query string
+      const response = await unauthContext.get('/app/api/monitors?api_key=secret123', {
+        failOnStatusCode: false
+      });
+
+      // Should return 401/403, not accept the key
+      expect(response.status()).toBeGreaterThanOrEqual(401);
+    } finally {
+      await unauthContext.dispose();
+    }
   });
   
   test('XSS attempts are sanitized', async ({ page }) => {
