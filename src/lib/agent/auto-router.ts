@@ -62,7 +62,7 @@ async function tryOllama(prompt: string, context?: string): Promise<AgentRespons
         prompt: fullPrompt,
         stream: false,
       }),
-      signal: AbortSignal.timeout(30000),
+      signal: AbortSignal.timeout(120000), // 2 minutes for slow hardware
     });
 
     if (!response.ok) {

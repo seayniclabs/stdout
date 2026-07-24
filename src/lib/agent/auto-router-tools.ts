@@ -71,7 +71,7 @@ async function tryOllamaWithTools(
           tools: OBSERVATORY_TOOLS.map(ollamaToolFormat),
           stream: false,
         }),
-        signal: AbortSignal.timeout(60000),
+        signal: AbortSignal.timeout(180000), // 3 minutes for slow hardware (qwen2.5:14b @ 6.2 t/s)
       });
 
       if (!response.ok) {
