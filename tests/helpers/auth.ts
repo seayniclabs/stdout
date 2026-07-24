@@ -42,8 +42,8 @@ export async function registerUser(
   const displayName = options?.displayName || TEST_DISPLAY_NAME;
 
   const url = options?.redirect
-    ? `/app/register?redirect=${encodeURIComponent(options.redirect)}`
-    : '/app/register';
+    ? `${BASE_URL}/app/register?redirect=${encodeURIComponent(options.redirect)}`
+    : `${BASE_URL}/app/register`;
 
   await page.goto(url);
   await dismissViteOverlay(page);
@@ -94,18 +94,18 @@ export async function apiLogin(page: Page, email: string, password: string): Pro
   const reqCtx = await context.request;
 
   // GET /app/login to get CSRF cookie + token
-  const loginPageResp = await reqCtx.get('/app/login');
+  const loginPageResp = await reqCtx.get(`${BASE_URL}/app/login`);
   const html = await loginPageResp.text();
   const csrfMatch = html.match(/name="_csrf"\s+value="([^"]+)"/);
   const csrfToken = csrfMatch?.[1] || '';
 
   // POST credentials
-  await reqCtx.post('/app/login', {
+  await reqCtx.post(`${BASE_URL}/app/login`, {
     form: { email, password, _csrf: csrfToken, redirect: '/app' },
   });
 
   // Navigate to /app — cookies from reqCtx are shared with the browser context
-  await page.goto('/app');
+  await page.goto(`${BASE_URL}/app`);
   // If still on login, the login failed
   if (page.url().includes('/login')) {
     throw new Error(`apiLogin failed for ${email} — still on login page`);
@@ -122,8 +122,8 @@ export async function loginUser(
   options?: { redirect?: string }
 ): Promise<void> {
   const url = options?.redirect
-    ? `/app/login?redirect=${encodeURIComponent(options.redirect)}`
-    : '/app/login';
+    ? `${BASE_URL}/app/login?redirect=${encodeURIComponent(options.redirect)}`
+    : `${BASE_URL}/app/login`;
 
   await page.goto(url);
   await dismissViteOverlay(page);
@@ -159,7 +159,7 @@ export async function createAuthenticatedUser(
     // If a previous test logged out (invalidating the server-side session),
     // clear the stale cookies first so apiLogin gets a fresh CSRF token,
     // then re-authenticate via the API path.
-    await page.goto('/app');
+    await page.goto(`${BASE_URL}/app`);
     if (page.url().includes('/login')) {
       await page.context().clearCookies();
       await apiLogin(page, testEmail, testPassword);
@@ -245,7 +245,7 @@ export async function rawFetch(
  * Log out the current user.
  */
 export async function logoutUser(page: Page): Promise<void> {
-  await page.goto('/app/logout');
+  await page.goto(`${BASE_URL}/app/logout`);
   // The logout page has a single form with a submit button
   await page.locator('form button[type="submit"]').click();
   // After POST, server redirects to / (or OIDC logout URL)

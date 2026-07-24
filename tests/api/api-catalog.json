@@ -1,0 +1,871 @@
+[
+  {
+    "path": "/app/api/admin/submissions",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "admin"
+  },
+  {
+    "path": "/app/api/docs/embeddings",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "docs"
+  },
+  {
+    "path": "/app/api/incidents",
+    "methods": [
+      "GET",
+      "POST",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/incidents/autofix",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/incidents/autofix-exec",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/incidents/export",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/incidents/external",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": false,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/incidents/webhook",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "incidents"
+  },
+  {
+    "path": "/app/api/monitors/suggest",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "monitors"
+  },
+  {
+    "path": "/app/api/settings/ai-providers",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "settings"
+  },
+  {
+    "path": "/app/api/setup/auto-scan",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "setup"
+  },
+  {
+    "path": "/app/api/setup/install-observatory",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "setup"
+  },
+  {
+    "path": "/app/api/setup/install-stream",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "setup"
+  },
+  {
+    "path": "/app/api/setup/install-windlass",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "setup"
+  },
+  {
+    "path": "/app/api/account",
+    "methods": [
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/addons/dismiss",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/addons/notify",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/agent/chat",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/alerts/routes",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/backups",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/comms/inbound/voice-incident",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": false,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/comms/inbound/webhook",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/community-sync",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/contribute",
+    "methods": [
+      "POST",
+      "PUT",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/costs",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/cve/ingest",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/cve/status",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/data-sources",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/data-sources/recommendations",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/diagnose",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/digest",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/discovery/ingest",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/discovery/network-scan",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/discovery/scan",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/discovery/schema/validate",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/export",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/feature-requests",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/grafana/dashboards",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/grafana/snapshot",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/health",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": false,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/license",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/loki/ingest",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/me",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/metrics",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/monitors",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/netdata/webhook",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/network/import",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/network/scan",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/network/scan-services",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/add-targets",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/auto-setup",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/check",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/health",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/mode",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/pending-fix",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/runs",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/setup-stream",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/status",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/tool",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/observatory/tools/[tool]",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/onboarding",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/playbooks",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/playbooks/[id]/execute",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/preferences",
+    "methods": [
+      "GET",
+      "POST",
+      "PUT"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/presets/[id]",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/presets/apply",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/riggins/command",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/satellite/nodes",
+    "methods": [
+      "GET",
+      "POST",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/satellite/ping",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": false,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/satellite/report",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": false,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/scanner/autodiscover",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/scanner/run",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/scanner/run-now",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/scanner/scan",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/scanner/schedule",
+    "methods": [
+      "GET",
+      "PUT"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/search",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/similar",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/skins/set-active",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/stacks/import",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/stacks/merge",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/status-page",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/storage/usage",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/suricata/status",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/suricata/webhook",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/team",
+    "methods": [
+      "GET",
+      "POST",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/test/wipe-data",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/ticketing/sync",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/tokens",
+    "methods": [
+      "GET",
+      "POST",
+      "DELETE"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/tools/detect",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/velociraptor/instant-ir",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/velociraptor/isolate",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/visualization/network-map",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/wazuh/status",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/wazuh/webhook",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/alerts",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/config",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/event",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/events",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/generate-schedule",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/n8n-schedules",
+    "methods": [
+      "GET"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/schedule",
+    "methods": [
+      "PUT"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/services",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/windlass/weekly-digest",
+    "methods": [
+      "GET",
+      "POST"
+    ],
+    "requiresAuth": false,
+    "category": "uncategorized"
+  },
+  {
+    "path": "/app/api/zeek/ingest",
+    "methods": [
+      "POST"
+    ],
+    "requiresAuth": true,
+    "category": "uncategorized"
+  }
+]
