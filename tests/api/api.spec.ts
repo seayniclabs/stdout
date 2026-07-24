@@ -199,13 +199,14 @@ test.describe('API — Input Validation', () => {
 test.describe('API — Error Handling', () => {
   
   test('404 errors do not leak stack traces', async ({ page }) => {
-    const response = await page.request.get(`${BASE_URL}/app/api/nonexistent-endpoint`, {
+    // Test a truly nonexistent public route (not under /app/api which requires auth)
+    const response = await page.request.get(`${BASE_URL}/nonexistent-public-route`, {
       failOnStatusCode: false
     });
-    
+
     expect(response.status()).toBe(404);
     const body = await response.text();
-    
+
     // Should NOT contain stack traces or internal paths
     expect(body).not.toContain('at ');
     expect(body).not.toContain('node_modules');
