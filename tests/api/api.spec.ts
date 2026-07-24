@@ -35,11 +35,11 @@ interface TestContext {
  * Setup: Create authenticated user session and extract auth tokens
  */
 async function setupAuthenticatedContext(page): Promise<TestContext> {
+  // createAuthenticatedUser handles authentication (via storageState or registration)
   const { email, password } = await createAuthenticatedUser(page);
-  await loginUser(page, email, password);
 
   // Navigate to app to get CSRF token
-  await page.goto('${BASE_URL}/app');
+  await page.goto(`${BASE_URL}/app`);
 
   // Extract session cookie
   const cookies = await page.context().cookies();
