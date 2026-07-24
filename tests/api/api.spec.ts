@@ -19,6 +19,8 @@ import { createAuthenticatedUser, loginUser } from '../helpers/auth';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const BASE_URL = process.env.STDOUT_TEST_URL || '${BASE_URL}';
+
 const catalog = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'api-catalog.json'), 'utf-8')
 );
@@ -37,7 +39,7 @@ async function setupAuthenticatedContext(page): Promise<TestContext> {
   await loginUser(page, email, password);
 
   // Navigate to app to get CSRF token
-  await page.goto('http://localhost:4321/app');
+  await page.goto('${BASE_URL}/app');
 
   // Extract session cookie
   const cookies = await page.context().cookies();
@@ -68,7 +70,7 @@ test.describe('API — Authentication & Authorization', () => {
     
     for (const endpoint of samples) {
       for (const method of endpoint.methods) {
-        const response = await page.request.fetch(`http://localhost:4321${endpoint.path}`, {
+        const response = await page.request.fetch(`${BASE_URL}${endpoint.path}`, {
           method,
           failOnStatusCode: false
         });
@@ -86,7 +88,7 @@ test.describe('API — Authentication & Authorization', () => {
     const samples = protectedEndpoints.slice(0, 5);
     
     for (const endpoint of samples) {
-      const response = await page.request.get(`http://localhost:4321${endpoint.path}`, {
+      const response = await page.request.get(`${BASE_URL}${endpoint.path}`, {
         headers: {
           'Cookie': `session_id=${sessionCookie}`,
         },
@@ -113,7 +115,7 @@ test.describe('API — Authentication & Authorization', () => {
     }
     
     // Request WITHOUT CSRF token should fail
-    const response = await page.request.post(`http://localhost:4321${sample.path}`, {
+    const response = await page.request.post(`${BASE_URL}${sample.path}`, {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json'
@@ -141,7 +143,7 @@ test.describe('API — Input Validation', () => {
       return;
     }
     
-    const response = await page.request.post(`http://localhost:4321${sample.path}`, {
+    const response = await page.request.post(`${BASE_URL}${sample.path}`, {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -159,7 +161,7 @@ test.describe('API — Input Validation', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Test monitor creation endpoint (requires name, url, type)
-    const response = await page.request.post('http://localhost:4321/app/api/monitors', {
+    const response = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -179,7 +181,7 @@ test.describe('API — Input Validation', () => {
     
     // Attempt to create incident with title > 500 chars
     const longTitle = 'A'.repeat(1000);
-    const response = await page.request.post('http://localhost:4321/app/api/incidents', {
+    const response = await page.request.post('${BASE_URL}/app/api/incidents', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -200,7 +202,7 @@ test.describe('API — Input Validation', () => {
 test.describe('API — Error Handling', () => {
   
   test('404 errors do not leak stack traces', async ({ page }) => {
-    const response = await page.request.get('http://localhost:4321/app/api/nonexistent-endpoint', {
+    const response = await page.request.get('${BASE_URL}/app/api/nonexistent-endpoint', {
       failOnStatusCode: false
     });
     
@@ -235,7 +237,7 @@ test.describe('API — Rate Limiting', () => {
     const requests = [];
     for (let i = 0; i < 101; i++) {
       requests.push(
-        page.request.get(`http://localhost:4321${endpoint.path}`, {
+        page.request.get(`${BASE_URL}${endpoint.path}`, {
           headers: { 'Cookie': `session_id=${sessionCookie}` },
           failOnStatusCode: false
         })
@@ -268,7 +270,7 @@ test.describe('API — Rate Limiting', () => {
     const requests = [];
     for (let i = 0; i < 11; i++) {
       requests.push(
-        page.request.post(`http://localhost:4321${endpoint.path}`, {
+        page.request.post(`${BASE_URL}${endpoint.path}`, {
           headers: {
             'Cookie': `session_id=${sessionCookie}`,
             'Content-Type': 'application/json',
@@ -293,7 +295,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create a monitor
-    const createResponse = await page.request.post('http://localhost:4321/app/api/monitors', {
+    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -312,7 +314,7 @@ test.describe('API — Data Integrity', () => {
     expect(created.id).toBeDefined();
     
     // Retrieve the monitor
-    const getResponse = await page.request.get(`http://localhost:4321/app/api/monitors/${created.id}`, {
+    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: { 'Cookie': `session_id=${sessionCookie}` }
     });
     
@@ -325,7 +327,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create then update a monitor
-    const createResponse = await page.request.post('http://localhost:4321/app/api/monitors', {
+    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -341,7 +343,7 @@ test.describe('API — Data Integrity', () => {
     
     const created = await createResponse.json();
     
-    const updateResponse = await page.request.put(`http://localhost:4321/app/api/monitors/${created.id}`, {
+    const updateResponse = await page.request.put(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -355,7 +357,7 @@ test.describe('API — Data Integrity', () => {
     expect(updateResponse.ok()).toBeTruthy();
     
     // Verify change persisted
-    const getResponse = await page.request.get(`http://localhost:4321/app/api/monitors/${created.id}`, {
+    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: { 'Cookie': `session_id=${sessionCookie}` }
     });
     
@@ -367,7 +369,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create then delete a monitor
-    const createResponse = await page.request.post('http://localhost:4321/app/api/monitors', {
+    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -383,7 +385,7 @@ test.describe('API — Data Integrity', () => {
     
     const created = await createResponse.json();
     
-    const deleteResponse = await page.request.delete(`http://localhost:4321/app/api/monitors/${created.id}`, {
+    const deleteResponse = await page.request.delete(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'X-CSRF-Token': csrfToken
@@ -393,7 +395,7 @@ test.describe('API — Data Integrity', () => {
     expect(deleteResponse.ok()).toBeTruthy();
     
     // Verify resource is gone
-    const getResponse = await page.request.get(`http://localhost:4321/app/api/monitors/${created.id}`, {
+    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
       headers: { 'Cookie': `session_id=${sessionCookie}` },
       failOnStatusCode: false
     });
@@ -406,7 +408,7 @@ test.describe('API — Security', () => {
   
   test('No credentials in URL parameters', async ({ page }) => {
     // All endpoints should reject api_key in query string
-    const response = await page.request.get('http://localhost:4321/app/api/monitors?api_key=secret123', {
+    const response = await page.request.get('${BASE_URL}/app/api/monitors?api_key=secret123', {
       failOnStatusCode: false
     });
     
@@ -419,7 +421,7 @@ test.describe('API — Security', () => {
     
     // Attempt XSS in incident title
     const xssPayload = '<script>alert("XSS")</script>';
-    const response = await page.request.post('http://localhost:4321/app/api/incidents', {
+    const response = await page.request.post('${BASE_URL}/app/api/incidents', {
       headers: {
         'Cookie': `session_id=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -435,7 +437,7 @@ test.describe('API — Security', () => {
     const created = await response.json();
     
     // Retrieve and verify script tags are escaped/sanitized
-    const getResponse = await page.request.get(`http://localhost:4321/app/api/incidents/${created.id}`, {
+    const getResponse = await page.request.get(`${BASE_URL}/app/api/incidents/${created.id}`, {
       headers: { 'Cookie': `session_id=${sessionCookie}` }
     });
     
