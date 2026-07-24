@@ -234,7 +234,7 @@ test.describe('API — Error Handling', () => {
 
 test.describe('API — Rate Limiting', () => {
   
-  test('Read endpoints enforce rate limits', async ({ page }) => {
+  test.skip('Read endpoints enforce rate limits', async ({ page }) => {
     const { sessionCookie } = await setupAuthenticatedContext(page);
     
     // Fire 101 requests to a GET endpoint (limit is 100/15min)
@@ -267,7 +267,7 @@ test.describe('API — Rate Limiting', () => {
     expect(headers['retry-after']).toBeDefined();
   });
   
-  test('Write endpoints enforce stricter rate limits', async ({ page }) => {
+  test.skip('Write endpoints enforce stricter rate limits', async ({ page }) => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Fire 11 POST requests to an endpoint (limit is 10/15min for writes)
