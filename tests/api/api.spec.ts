@@ -19,7 +19,7 @@ import { createAuthenticatedUser, loginUser } from '../helpers/auth';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const BASE_URL = process.env.STDOUT_TEST_URL || '${BASE_URL}';
+const BASE_URL = process.env.STDOUT_TEST_URL || 'http://localhost:4321';
 
 const catalog = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'api-catalog.json'), 'utf-8')
@@ -63,18 +63,19 @@ async function setupAuthenticatedContext(page): Promise<TestContext> {
 
 test.describe('API — Authentication & Authorization', () => {
   
-  test('Protected endpoints reject unauthenticated requests', async ({ page }) => {
+  test('Protected endpoints reject unauthenticated requests', async ({ request }) => {
     const protectedEndpoints = catalog.filter(ep => ep.requiresAuth && ep.methods.length > 0);
     const sampleSize = Math.min(10, protectedEndpoints.length);
     const samples = protectedEndpoints.slice(0, sampleSize);
-    
+
     for (const endpoint of samples) {
       for (const method of endpoint.methods) {
-        const response = await page.request.fetch(`${BASE_URL}${endpoint.path}`, {
+        // Use request fixture (no storageState) instead of page.request (has storageState)
+        const response = await request.fetch(`${BASE_URL}${endpoint.path}`, {
           method,
           failOnStatusCode: false
         });
-        
+
         expect(response.status()).toBeGreaterThanOrEqual(401);
         expect(response.status()).toBeLessThanOrEqual(403);
       }
@@ -161,7 +162,7 @@ test.describe('API — Input Validation', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Test monitor creation endpoint (requires name, url, type)
-    const response = await page.request.post('${BASE_URL}/app/api/monitors', {
+    const response = await page.request.post(`${BASE_URL}/app/api/monitors`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ test.describe('API — Input Validation', () => {
     
     // Attempt to create incident with title > 500 chars
     const longTitle = 'A'.repeat(1000);
-    const response = await page.request.post('${BASE_URL}/app/api/incidents', {
+    const response = await page.request.post(`${BASE_URL}/app/api/incidents`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -202,7 +203,7 @@ test.describe('API — Input Validation', () => {
 test.describe('API — Error Handling', () => {
   
   test('404 errors do not leak stack traces', async ({ page }) => {
-    const response = await page.request.get('${BASE_URL}/app/api/nonexistent-endpoint', {
+    const response = await page.request.get(`${BASE_URL}/app/api/nonexistent-endpoint`, {
       failOnStatusCode: false
     });
     
@@ -295,7 +296,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create a monitor
-    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
+    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -327,7 +328,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create then update a monitor
-    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
+    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -369,7 +370,7 @@ test.describe('API — Data Integrity', () => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
     
     // Create then delete a monitor
-    const createResponse = await page.request.post('${BASE_URL}/app/api/monitors', {
+    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
@@ -408,7 +409,7 @@ test.describe('API — Security', () => {
   
   test('No credentials in URL parameters', async ({ page }) => {
     // All endpoints should reject api_key in query string
-    const response = await page.request.get('${BASE_URL}/app/api/monitors?api_key=secret123', {
+    const response = await page.request.get(`${BASE_URL}/app/api/monitors?api_key=secret123`, {
       failOnStatusCode: false
     });
     
@@ -421,7 +422,7 @@ test.describe('API — Security', () => {
     
     // Attempt XSS in incident title
     const xssPayload = '<script>alert("XSS")</script>';
-    const response = await page.request.post('${BASE_URL}/app/api/incidents', {
+    const response = await page.request.post(`${BASE_URL}/app/api/incidents`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
