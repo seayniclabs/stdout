@@ -576,6 +576,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/setup/install-windlass',
     '/app/api/setup/install-observatory',
     '/app/api/test/',
+    '/app/api/health', // Health check for monitoring systems (rate-limited: 100 req/15min)
     '/app/api/satellite/ping', // unauthenticated discovery endpoint — satellites probe this before setup
     '/app/api/comms/inbound/', // External channels (Sonique, SMS, webhooks) can query infrastructure status
     '/app/api/suricata/status', // Prometheus scrape (?format=prometheus); JSON still requires session

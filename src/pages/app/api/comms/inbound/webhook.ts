@@ -7,12 +7,15 @@ import {
   getSatelliteStatuses,
   getStacksSummary,
 } from '../../../../../lib/comms/queries';
+import { requireAuth } from '../../../../../lib/rbac';
 
 /**
  * Comms Webhook Inbound Endpoint
  *
  * Receives messages from external channels (Sonique, CAEL, custom integrations)
  * and routes them to appropriate query functions.
+ *
+ * AUTHENTICATED endpoint - requires valid session or API token.
  *
  * POST /app/api/comms/inbound/webhook
  * Body: {
@@ -36,6 +39,9 @@ interface InboundWebhookRequest {
 }
 
 export const POST: APIRoute = async ({ request, locals, cookies }) => {
+  // SECURITY: Require authentication
+  const authError = requireAuth(locals);
+  if (authError) return authError;
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',

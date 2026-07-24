@@ -17,6 +17,7 @@ import { getDb, schema } from '../../../../lib/db';
 import { nanoid } from 'nanoid';
 import { notify } from '../../../../lib/notify';
 import { emit } from '../../../../lib/events';
+import { timingSafeEqual } from 'node:crypto';
 
 const HEALTH_TOKEN = process.env.STDOUT_HEALTH_TOKEN || 'dev-health-token';
 
@@ -32,7 +33,11 @@ export const POST: APIRoute = async ({ request }) => {
 
   const token = authHeader.slice(7); // Remove 'Bearer ' prefix
 
-  if (token !== HEALTH_TOKEN) {
+  // Use constant-time comparison to prevent timing attacks
+  const tokenBuffer = Buffer.from(token);
+  const expectedBuffer = Buffer.from(HEALTH_TOKEN);
+
+  if (tokenBuffer.length !== expectedBuffer.length || !timingSafeEqual(tokenBuffer, expectedBuffer)) {
     return new Response(JSON.stringify({
       error: 'Unauthorized',
       hint: 'Set STDOUT_HEALTH_TOKEN env var to match your health monitor configuration'

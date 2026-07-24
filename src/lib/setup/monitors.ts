@@ -78,9 +78,73 @@ export async function configureMonitors(
       `) as Array<{ id: string; name: string }>;
     }
 
-    onProgress(30, 'Riggins is selecting key services to monitor...');
+    onProgress(30, 'Riggins is scanning your network for devices and services...');
 
-    // Create specific, meaningful monitors
+    // Run comprehensive network discovery
+    const { scanNetwork } = await import('../discovery/network-scanner');
+    const discoveredDevices = await scanNetwork({
+      arpScan: true,
+      mdnsScan: true,
+      ssdpScan: true,
+      vendorLookup: true,
+      timeout: 10
+    });
+
+    output.push(`✓ Network scan complete: found ${discoveredDevices.length} devices`);
+    onProgress(50, `Found ${discoveredDevices.length} devices on your network...`);
+
+    // Save discovered devices to database
+    for (const device of discoveredDevices) {
+      try {
+        const deviceId = nanoid();
+        const now = Date.now();
+
+        await db.run(sql`
+          INSERT INTO discovered_hosts (
+            id, ip_address, mac_address, hostname, device_type, vendor,
+            os_guess, last_seen_at, first_seen_at, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          deviceId,
+          device.ip,
+          device.mac || null,
+          device.hostname || null,
+          device.deviceType || 'unknown',
+          device.vendor || null,
+          device.os || null,
+          now,
+          now,
+          now
+        ]);
+
+        // Save discovered services for this device
+        for (const service of device.services || []) {
+          const serviceId = nanoid();
+          await db.run(sql`
+            INSERT INTO discovered_services (
+              id, host_id, name, port, protocol, type, description,
+              discovered_at, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            serviceId,
+            deviceId,
+            service.name || 'Unknown Service',
+            service.port || null,
+            service.protocol || 'tcp',
+            service.type || 'unknown',
+            service.description || null,
+            now,
+            now
+          ]);
+        }
+      } catch (error) {
+        warnings.push(`Failed to save device ${device.ip}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+
+    onProgress(70, 'Creating monitors for discovered services...');
+
+    // Create monitors for discovered HTTP services
     const initialMonitors = [
       {
         stackName: 'Monitoring & Observatory',
@@ -89,16 +153,39 @@ export async function configureMonitors(
         target: 'http://localhost:3000/',
         interval: 60,
         description: 'StdOut application health'
-      },
-      {
-        stackName: 'Monitoring & Observatory',
-        name: 'Windlass Scheduler',
-        type: 'http',
-        target: 'http://windlass:8116/health',
-        interval: 300,
-        description: 'Windlass task scheduler'
       }
     ];
+
+    // Auto-create monitors for discovered HTTP services
+    for (const device of discoveredDevices) {
+      if (!device.services) continue;
+
+      for (const service of device.services) {
+        // Create HTTP monitors for web services
+        if (service.type === 'http' || service.port === 80 || service.port === 443 || service.port === 8080) {
+          const protocol = service.port === 443 ? 'https' : 'http';
+          initialMonitors.push({
+            stackName: 'Production Services',
+            name: `${device.hostname || device.ip} (${service.name || 'HTTP'})`,
+            type: 'http',
+            target: `${protocol}://${device.ip}:${service.port || 80}`,
+            interval: 300,
+            description: `Auto-discovered HTTP service on ${device.hostname || device.ip}`
+          });
+        }
+        // Create TCP monitors for other services
+        else if (service.port) {
+          initialMonitors.push({
+            stackName: 'Production Services',
+            name: `${device.hostname || device.ip}:${service.port} (${service.name || 'TCP'})`,
+            type: 'tcp',
+            target: `${device.ip}:${service.port}`,
+            interval: 300,
+            description: `Auto-discovered service on ${device.hostname || device.ip}`
+          });
+        }
+      }
+    }
 
     onProgress(50, 'Creating monitors...');
 
@@ -178,6 +265,29 @@ export async function configureMonitors(
       const incidentId = nanoid();
       const now = Date.now();
 
+      const welcomeMessage = `I've just finished setting up your monitoring infrastructure. I scanned your network and discovered ${discoveredDevices.length} devices, then created ${monitorsCreated} monitors to watch your services.
+
+**What I found:**
+- ${discoveredDevices.length} devices on your network
+- ${discoveredDevices.filter(d => d.services && d.services.length > 0).length} devices with active services
+- ${monitorsCreated} monitors configured and running
+
+**What I'm watching:**
+${initialMonitors.slice(0, 5).map(m => `- ${m.name} (every ${m.interval}s)`).join('\n')}
+${initialMonitors.length > 5 ? `\n...and ${initialMonitors.length - 5} more monitors` : ''}
+
+**What I can do:**
+- Detect anomalies automatically (I check every 3 minutes)
+- Diagnose incidents when they occur
+- Learn from your resolutions to get smarter over time
+
+**Next steps:**
+- Check the Infrastructure tab to see all your devices and services
+- Visit the Observatory tab to see what I'm learning about your environment
+- Create a test incident and click 'Get AI Diagnosis' to see my analysis
+
+I'm here 24/7, learning and watching. Let's keep your systems running smoothly together.`;
+
       await db.run(sql`
         INSERT INTO incidents (
           id,
@@ -194,7 +304,7 @@ export async function configureMonitors(
           ${userId},
           ${stacks[0]?.id || null},
           ${"Hello! I'm Riggins, your Observatory AI"},
-          ${"I've just finished setting up your monitoring infrastructure. I created " + monitorsCreated + " monitors to watch your key services.\n\n**What I'm watching:**\n- StdOut Health (every 60 seconds)\n- Windlass Scheduler (every 5 minutes)\n\n**What I can do:**\n- Detect anomalies automatically (I check every 3 minutes)\n- Diagnose incidents when they occur\n- Learn from your resolutions to get smarter over time\n\n**Try me out:**\nCreate a test incident and click 'Get AI Diagnosis' to see how I analyze your infrastructure.\n\nI'm here 24/7, learning and watching. Let's keep your systems running smoothly together."},
+          ${welcomeMessage},
           ${"low"},
           ${"active"},
           ${now},

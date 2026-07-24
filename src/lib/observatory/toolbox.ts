@@ -121,9 +121,59 @@ const TOOLS: Record<string, ToolDef> = {
       'cd /logs && zeek -r /captures/capture.pcap 2>/dev/null;',
       'for f in conn dns http ssl notice; do',
       '  echo "=== $f.log ===";',
-      '  cat /logs/$f.log 2>/dev/null | head -40;',
+      '  cat /logs/$f.log 2>/dev/null | head-40;',
       'done',
     ].join(' ')],
+  },
+  // INFRASTRUCTURE MANAGEMENT TOOLS (Riggins can create stacks and monitors)
+  discover_network: {
+    name: 'discover_network',
+    safety: 'read-only',
+    description: 'Comprehensive network discovery: ARP scan + mDNS + SSDP. Finds all devices and services.',
+    container: 'stdout', // runs in main container
+    timeoutMs: 30_000,
+    build: () => ['node', '-e', `
+      const {scanNetwork} = require('./dist/server/chunks/network-scanner_DExBVjCe.mjs');
+      scanNetwork({arpScan:true,mdnsScan:true,ssdpScan:true,vendorLookup:true,timeout:10})
+        .then(d => console.log(JSON.stringify(d,null,2)))
+        .catch(e => {console.error(e);process.exit(1);});
+    `],
+  },
+  create_stack: {
+    name: 'create_stack',
+    safety: 'mutating',
+    description: 'Create a new infrastructure stack with name and description.',
+    container: 'stdout',
+    timeoutMs: 5_000,
+    build: (a) => ['node', '-e', `
+      const {getDb} = require('./dist/server/chunks/db_BGDDlJLW.mjs');
+      const {sql} = require('drizzle-orm');
+      const {nanoid} = require('nanoid');
+      const db = getDb();
+      const id = nanoid();
+      const now = Date.now();
+      db.run(sql\\\`INSERT INTO stacks (id,user_id,name,description,tags,created_at,updated_at)
+        VALUES (\${id},\${'${safeTarget(a.userId)}'},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.description)}'},\${'[]'},\${now},\${now})\\\`);
+      console.log(JSON.stringify({id,name:'${safeTarget(a.name)}'}));
+    `],
+  },
+  create_monitor: {
+    name: 'create_monitor',
+    safety: 'mutating',
+    description: 'Create a monitor for a service. Requires: name, type (http/tcp/ping), target (URL or IP:port), stackId.',
+    container: 'stdout',
+    timeoutMs: 5_000,
+    build: (a) => ['node', '-e', `
+      const {getDb} = require('./dist/server/chunks/db_BGDDlJLW.mjs');
+      const {sql} = require('drizzle-orm');
+      const {nanoid} = require('nanoid');
+      const db = getDb();
+      const id = nanoid();
+      const now = Date.now();
+      db.run(sql\\\`INSERT INTO monitors (id,user_id,stack_id,name,type,target,interval_seconds,paused,current_status,consecutive_failures,created_at,updated_at)
+        VALUES (\${id},\${'${safeTarget(a.userId)}'},\${'${safeTarget(a.stackId)}'},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.type)}'},\${'${safeTarget(a.target)}'},\${300},\${0},\${'unknown'},\${0},\${now},\${now})\\\`);
+      console.log(JSON.stringify({id,name:'${safeTarget(a.name)}',target:'${safeTarget(a.target)}'}));
+    `],
   },
 };
 

@@ -5,6 +5,7 @@ import { eq, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats } from '../../lib/hud';
 import { checkForUpdate, getLicenseNotice, type UpdateCheckResult } from '../../lib/update-check';
 import { getStoredLicense } from '../../lib/license';
+import AgentPanel from '../../components/AgentPanel.astro';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -490,6 +491,9 @@ function timeAgo(date: Date) {
         </div>
       </Fragment>
     )}
+
+    {/* Observatory Agent (Riggins) */}
+    <AgentPanel />
   </div>
 </Layout>
 

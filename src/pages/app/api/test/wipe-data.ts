@@ -8,8 +8,21 @@ import { getDb, schema } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
 import fs from 'node:fs';
 import path from 'node:path';
+import { requireAuth } from '../../../../lib/rbac';
 
-export const POST: APIRoute = async ({ request }) => {
+export const POST: APIRoute = async ({ request, locals }) => {
+  // SECURITY: Require authentication
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  // SECURITY: Require admin role
+  if (locals.user?.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Admin role required' }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   // Only allow in non-production (saas production specifically)
   // Self-host deployments (STDOUT_MODE=selfhost) are allowed for E2E testing
   if (process.env.STDOUT_MODE === 'saas' || process.env.STDOUT_MODE === 'production') {

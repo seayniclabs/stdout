@@ -3,6 +3,7 @@ import { getDb, schema } from '../../../../lib/db';
 import { eq } from 'drizzle-orm';
 import { sendWindlassWeeklyDigest } from '../../../../lib/alert-router';
 import { sumRecoveredGbHoursFromServices } from '../../../../lib/windlass-weekly-digest-math';
+import { isRateLimited, getRateLimitHeaders, getClientIdentifier } from '../../../../middleware/rate-limit';
 
 const SELF_HOST = process.env.STDOUT_MODE !== 'saas';
 
@@ -96,6 +97,15 @@ async function runWeeklyDigestForUser(userId: string, force: boolean): Promise<R
  * that has Windlass enabled (typically one) — supports machine cron without a browser cookie.
  */
 export const POST: APIRoute = async ({ locals, request }) => {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  if (isRateLimited(clientId, { windowMs: 60 * 60 * 1000, maxRequests: 10 })) {  // 10 per hour
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: { 'Content-Type': 'application/json', 'Retry-After': '3600' },
+    });
+  }
+
   if (!digestSecretMatches(request, !!locals.user)) {
     return new Response(JSON.stringify({ error: 'Invalid digest secret' }), {
       status: 401, headers: { 'Content-Type': 'application/json' },

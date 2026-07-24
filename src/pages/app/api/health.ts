@@ -1,15 +1,29 @@
 import type { APIRoute } from 'astro';
 import { getStatus } from '../../../lib/observatory/degradation-mode';
+import { isRateLimited, getRateLimitHeaders, getClientIdentifier } from '../../../middleware/rate-limit';
 
 /**
  * Health Check Endpoint
  *
  * Returns system health status including Observatory degradation mode.
  * PUBLIC endpoint (no auth required).
+ * RATE LIMITED: 100 requests per 15 minutes per IP.
  *
  * GET /app/api/health
  */
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  if (isRateLimited(clientId)) {
+    return new Response(JSON.stringify({ error: 'Too many requests' }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': '900',  // 15 minutes
+      },
+    });
+  }
+
   try {
     const degradationStatus = getStatus();
 
@@ -33,11 +47,13 @@ export const GET: APIRoute = async () => {
       },
     };
 
+    const rateLimitHeaders = getRateLimitHeaders(clientId);
     return new Response(JSON.stringify(health), {
       status: 200,
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, max-age=30',
+        ...rateLimitHeaders,
       },
     });
   } catch (error) {
