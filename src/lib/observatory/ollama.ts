@@ -96,7 +96,7 @@ export async function callWatcherModel(systemPrompt: string): Promise<string> {
     system: systemPrompt,
     prompt: 'Analyze the current metrics and baselines. Respond with JSON only.',
     temperature: 0.2 // Low temperature for consistent, conservative detection
-  }, 15000); // 15s timeout (3B model is fast)
+  }, 60000); // 60s timeout (accommodates slower hardware - ThinkPad @ 6.2 t/s)
 
   return response.response;
 }
@@ -114,7 +114,7 @@ export async function callAnalystModel(systemPrompt: string): Promise<string> {
     system: systemPrompt,
     prompt: 'Investigate this incident and provide a diagnosis with recommended resolution. Respond with JSON only.',
     temperature: 0.4 // Slightly higher for more creative problem-solving
-  }, 45000); // 45s timeout (14B model is slower)
+  }, 180000); // 180s timeout (14B model @ 6.2 t/s on slow hardware)
 
   return response.response;
 }
