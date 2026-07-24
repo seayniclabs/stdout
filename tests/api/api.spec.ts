@@ -392,9 +392,10 @@ test.describe('API — Security', () => {
     // Attempt XSS in incident title
     const xssPayload = '<script>alert("XSS")</script>';
     const { json: created } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      action: 'create',
       title: xssPayload,
-      severity: 'high',
-      status: 'open'
+      description: 'Test XSS sanitization',
+      severity: 'high'
     });
 
     // Retrieve and verify script tags are escaped/sanitized
