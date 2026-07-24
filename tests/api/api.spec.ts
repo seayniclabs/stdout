@@ -14,7 +14,7 @@ import { test, expect } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { createAuthenticatedUser, loginUser } from '../helpers/auth';
+import { createAuthenticatedUser, loginUser, apiRequest } from '../helpers/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -172,42 +172,27 @@ test.describe('API — Input Validation', () => {
   test('Endpoints reject missing required fields', async ({ page }) => {
     await createAuthenticatedUser(page);
 
-    // Get CSRF token from cookies
-    const cookies = await page.context().cookies();
-    const csrfToken = cookies.find(c => c.name === 'sl_csrf')?.value || '';
-
     // Test monitor creation endpoint (requires name, type, target)
-    const response = await page.request.post(`${BASE_URL}/app/api/monitors`, {
-      data: { name: 'Test', _csrf: csrfToken }, // Missing type, target
-      failOnStatusCode: false
+    const { status, json } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      name: 'Test', // Missing type, target
     });
 
-    expect(response.status()).toBe(400);
-    const body = await response.json();
-    expect(body.error).toBeDefined();
+    expect(status).toBe(400);
+    expect(json.error).toBeDefined();
   });
   
   test('Endpoints validate string length limits', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
+    await createAuthenticatedUser(page);
 
     // Attempt to create incident with title > 500 chars
     const longTitle = 'A'.repeat(1000);
-    const response = await page.request.post(`${BASE_URL}/app/api/incidents`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken,
-        'Origin': BASE_URL
-      },
-      data: {
-        title: longTitle,
-        severity: 'high',
-        status: 'open'
-      },
-      failOnStatusCode: false
+    const { status } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      title: longTitle,
+      severity: 'high',
+      status: 'open'
     });
-    
-    expect(response.status()).toBe(400);
+
+    expect(status).toBe(400);
   });
 });
 

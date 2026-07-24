@@ -208,9 +208,28 @@ export async function apiRequest(
 ): Promise<{ status: number; json: any; headers: Record<string, string> }> {
   const isXml = typeof body === 'string' && body.trim().startsWith('<');
   const contentType = isXml ? 'application/xml' : 'application/json';
+  // Convert relative paths to full URLs for remote testing
+  const fullUrl = path.startsWith('http') ? path : `${BASE_URL}${path}`;
+
+  // For mutating methods, automatically include CSRF token from cookies
+  const needsCsrf = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
+  let requestBody = body;
+  if (needsCsrf && body && typeof body === 'object' && !isXml) {
+    const cookies = await page.context().cookies();
+    const csrfToken = cookies.find(c => c.name === 'sl_csrf')?.value;
+    if (csrfToken) {
+      requestBody = { ...body, _csrf: csrfToken };
+    }
+  }
+
+  const requestHeaders: Record<string, string> = { 'Content-Type': contentType };
+  if (needsCsrf) {
+    requestHeaders['Origin'] = BASE_URL;
+  }
+
   const response = await page.request[method.toLowerCase() as 'get' | 'post' | 'put' | 'delete'](
-    path,
-    body !== undefined ? { data: body, headers: { 'Content-Type': contentType } } : undefined
+    fullUrl,
+    requestBody !== undefined ? { data: requestBody, headers: requestHeaders } : undefined
   );
   const status = response.status();
   let json: any = null;
