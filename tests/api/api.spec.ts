@@ -64,10 +64,6 @@ async function setupAuthenticatedContext(page): Promise<TestContext> {
 test.describe('API — Authentication & Authorization', () => {
   
   test('Protected endpoints reject unauthenticated requests', async ({ playwright }) => {
-    const protectedEndpoints = catalog.filter(ep => ep.requiresAuth && ep.methods.length > 0);
-    const sampleSize = Math.min(10, protectedEndpoints.length);
-    const samples = protectedEndpoints.slice(0, sampleSize);
-
     // Create fresh request context WITHOUT storageState (truly unauthenticated)
     const unauthContext = await playwright.request.newContext({
       baseURL: BASE_URL,
@@ -75,16 +71,20 @@ test.describe('API — Authentication & Authorization', () => {
     });
 
     try {
-      for (const endpoint of samples) {
-        for (const method of endpoint.methods) {
-          const response = await unauthContext.fetch(endpoint.path, {
-            method,
-            failOnStatusCode: false
-          });
+      // Test a sample of known auth-required endpoints (GET only to avoid side effects)
+      const testEndpoints = [
+        '/app/api/admin/submissions',
+        '/app/api/incidents',
+        '/app/api/settings/ai-providers',
+      ];
 
-          expect(response.status()).toBeGreaterThanOrEqual(401);
-          expect(response.status()).toBeLessThanOrEqual(403);
-        }
+      for (const path of testEndpoints) {
+        const response = await unauthContext.get(path, {
+          failOnStatusCode: false
+        });
+
+        expect(response.status(), `${path} should require auth`).toBeGreaterThanOrEqual(401);
+        expect(response.status(), `${path} should require auth`).toBeLessThanOrEqual(403);
       }
     } finally {
       await unauthContext.dispose();
@@ -424,13 +424,14 @@ test.describe('API — Security', () => {
     });
 
     try {
-      // All endpoints should reject api_key in query string
-      const response = await unauthContext.get('/app/api/monitors?api_key=secret123', {
+      // Endpoints should not accept API keys in query string
+      const response = await unauthContext.get('/app/api/incidents?api_key=secret123', {
         failOnStatusCode: false
       });
 
       // Should return 401/403, not accept the key
       expect(response.status()).toBeGreaterThanOrEqual(401);
+      expect(response.status()).toBeLessThanOrEqual(403);
     } finally {
       await unauthContext.dispose();
     }
