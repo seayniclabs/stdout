@@ -289,115 +289,76 @@ test.describe('API — Rate Limiting', () => {
 test.describe('API — Data Integrity', () => {
   
   test('Created resources are retrievable', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
+    await createAuthenticatedUser(page);
+
     // Create a monitor
-    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: {
-        name: 'API Test Monitor',
-        url: 'https://example.com',
-        type: 'http',
-        interval: 60
-      }
+    const { status: createStatus, json: created } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      action: 'create',
+      name: 'API Test Monitor',
+      target: 'https://example.com',
+      type: 'http',
+      interval: 60
     });
-    
-    expect(createResponse.ok()).toBeTruthy();
-    const created = await createResponse.json();
+
+    expect(createStatus).toBe(201);
     expect(created.id).toBeDefined();
-    
+
     // Retrieve the monitor
-    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `sl_session=${sessionCookie}` }
-    });
-    
-    expect(getResponse.ok()).toBeTruthy();
-    const retrieved = await getResponse.json();
-    expect(retrieved.name).toBe('API Test Monitor');
+    const { status: getStatus, json: retrieved } = await apiRequest(page, 'GET', `/app/api/monitors?id=${created.id}`);
+
+    expect(getStatus).toBe(200);
+    expect(retrieved.monitor.name).toBe('API Test Monitor');
   });
   
   test('Updated resources persist changes', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
+    await createAuthenticatedUser(page);
+
     // Create then update a monitor
-    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: {
-        name: 'Original Name',
-        url: 'https://example.com',
-        type: 'http',
-        interval: 60
-      }
+    const { json: created } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      action: 'create',
+      name: 'Original Name',
+      target: 'https://example.com',
+      type: 'http',
+      interval: 60
     });
-    
-    const created = await createResponse.json();
-    
-    const updateResponse = await page.request.put(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: {
-        name: 'Updated Name'
-      }
+
+    const { status: updateStatus } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      action: 'update',
+      id: created.id,
+      name: 'Updated Name'
     });
-    
-    expect(updateResponse.ok()).toBeTruthy();
-    
+
+    expect(updateStatus).toBe(200);
+
     // Verify change persisted
-    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `sl_session=${sessionCookie}` }
-    });
-    
-    const retrieved = await getResponse.json();
-    expect(retrieved.name).toBe('Updated Name');
+    const { json: retrieved } = await apiRequest(page, 'GET', `/app/api/monitors?id=${created.id}`);
+
+    expect(retrieved.monitor.name).toBe('Updated Name');
   });
   
   test('Deleted resources return 404', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
+    await createAuthenticatedUser(page);
+
     // Create then delete a monitor
-    const createResponse = await page.request.post(`${BASE_URL}/app/api/monitors`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: {
-        name: 'To Delete',
-        url: 'https://example.com',
-        type: 'http',
-        interval: 60
-      }
+    const { json: created } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      action: 'create',
+      name: 'To Delete',
+      target: 'https://example.com',
+      type: 'http',
+      interval: 60
     });
-    
-    const created = await createResponse.json();
-    
-    const deleteResponse = await page.request.delete(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'X-CSRF-Token': csrfToken
-      }
+
+    const { status: deleteStatus } = await apiRequest(page, 'POST', '/app/api/monitors', {
+      action: 'delete',
+      id: created.id
     });
-    
-    expect(deleteResponse.ok()).toBeTruthy();
-    
+
+    expect(deleteStatus).toBe(200);
+
     // Verify resource is gone
-    const getResponse = await page.request.get(`${BASE_URL}/app/api/monitors/${created.id}`, {
-      headers: { 'Cookie': `sl_session=${sessionCookie}` },
-      failOnStatusCode: false
-    });
-    
-    expect(getResponse.status()).toBe(404);
+    const { status: getStatus } = await apiRequest(page, 'GET', `/app/api/monitors?id=${created.id}`);
+
+    expect(getStatus).toBe(404);
   });
 });
 
@@ -425,32 +386,20 @@ test.describe('API — Security', () => {
   });
   
   test('XSS attempts are sanitized', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
+    await createAuthenticatedUser(page);
+
     // Attempt XSS in incident title
     const xssPayload = '<script>alert("XSS")</script>';
-    const response = await page.request.post(`${BASE_URL}/app/api/incidents`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: {
-        title: xssPayload,
-        severity: 'high',
-        status: 'open'
-      }
+    const { json: created } = await apiRequest(page, 'POST', '/app/api/incidents', {
+      title: xssPayload,
+      severity: 'high',
+      status: 'open'
     });
-    
-    const created = await response.json();
-    
+
     // Retrieve and verify script tags are escaped/sanitized
-    const getResponse = await page.request.get(`${BASE_URL}/app/api/incidents/${created.id}`, {
-      headers: { 'Cookie': `sl_session=${sessionCookie}` }
-    });
-    
-    const retrieved = await getResponse.json();
-    expect(retrieved.title).not.toContain('<script>');
+    const { json: retrieved } = await apiRequest(page, 'GET', `/app/api/incidents?id=${created.id}`);
+
+    expect(retrieved.incident.title).not.toContain('<script>');
   });
 });
 
