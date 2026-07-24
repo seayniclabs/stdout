@@ -6,6 +6,20 @@ import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 import { validateCsrf } from '../../../../middleware';
 
 /**
+ * Sanitize user input to prevent XSS attacks
+ * Escapes HTML special characters
+ */
+function sanitizeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;');
+}
+
+/**
  * GET /app/api/incidents
  * List incidents with optional filters: ?status=active&severity=critical&limit=50
  */
@@ -127,11 +141,15 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     const id = nanoid();
     const now = new Date();
 
+    // Sanitize user input to prevent XSS
+    const sanitizedTitle = sanitizeHtml(String(title));
+    const sanitizedDescription = sanitizeHtml(String(description));
+
     db.insert(schema.incidents).values({
       id,
       userId: locals.user.id,
-      title,
-      description,
+      title: sanitizedTitle,
+      description: sanitizedDescription,
       severity: severity || 'medium',
       status: 'active',
       stackId: stackId || null,
