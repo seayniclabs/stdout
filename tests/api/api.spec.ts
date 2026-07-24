@@ -401,7 +401,9 @@ test.describe('API — Security', () => {
     // Retrieve and verify script tags are escaped/sanitized
     const { json: retrieved } = await apiRequest(page, 'GET', `/app/api/incidents?id=${created.id}`);
 
+    // Script tags should be HTML-escaped, not preserved as-is
     expect(retrieved.incident.title).not.toContain('<script>');
+    expect(retrieved.incident.title).toContain('&lt;script&gt;'); // Should be escaped
   });
 });
 
