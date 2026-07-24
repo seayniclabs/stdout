@@ -407,12 +407,12 @@ test.describe('API — Data Integrity', () => {
 
 test.describe('API — Security', () => {
   
-  test('No credentials in URL parameters', async ({ page }) => {
+  test('No credentials in URL parameters', async ({ request }) => {
     // All endpoints should reject api_key in query string
-    const response = await page.request.get(`${BASE_URL}/app/api/monitors?api_key=secret123`, {
+    const response = await request.get(`${BASE_URL}/app/api/monitors?api_key=secret123`, {
       failOnStatusCode: false
     });
-    
+
     // Should return 401/403, not accept the key
     expect(response.status()).toBeGreaterThanOrEqual(401);
   });
