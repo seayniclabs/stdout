@@ -99,9 +99,10 @@ export async function apiLogin(page: Page, email: string, password: string): Pro
   const csrfMatch = html.match(/name="_csrf"\s+value="([^"]+)"/);
   const csrfToken = csrfMatch?.[1] || '';
 
-  // POST credentials
+  // POST credentials (include Origin header for CSRF protection)
   await reqCtx.post(`${BASE_URL}/app/login`, {
     form: { email, password, _csrf: csrfToken, redirect: '/app' },
+    headers: { 'Origin': BASE_URL },
   });
 
   // Navigate to /app — cookies from reqCtx are shared with the browser context

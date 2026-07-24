@@ -124,11 +124,12 @@ test.describe('API — Authentication & Authorization', () => {
       return;
     }
     
-    // Request WITHOUT CSRF token should fail
+    // Request WITHOUT CSRF token should fail (but WITH Origin to pass origin check)
     const response = await page.request.post(`${BASE_URL}${sample.path}`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Origin': BASE_URL
       },
       data: {},
       failOnStatusCode: false
@@ -157,7 +158,8 @@ test.describe('API — Input Validation', () => {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
+        'X-CSRF-Token': csrfToken,
+        'Origin': BASE_URL
       },
       data: 'invalid json{',
       failOnStatusCode: false
@@ -168,19 +170,18 @@ test.describe('API — Input Validation', () => {
   });
   
   test('Endpoints reject missing required fields', async ({ page }) => {
-    const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
-    // Test monitor creation endpoint (requires name, url, type)
+    await createAuthenticatedUser(page);
+
+    // Get CSRF token from cookies
+    const cookies = await page.context().cookies();
+    const csrfToken = cookies.find(c => c.name === 'sl_csrf')?.value || '';
+
+    // Test monitor creation endpoint (requires name, type, target)
     const response = await page.request.post(`${BASE_URL}/app/api/monitors`, {
-      headers: {
-        'Cookie': `sl_session=${sessionCookie}`,
-        'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
-      },
-      data: { name: 'Test' }, // Missing url, type
+      data: { name: 'Test', _csrf: csrfToken }, // Missing type, target
       failOnStatusCode: false
     });
-    
+
     expect(response.status()).toBe(400);
     const body = await response.json();
     expect(body.error).toBeDefined();
@@ -188,16 +189,17 @@ test.describe('API — Input Validation', () => {
   
   test('Endpoints validate string length limits', async ({ page }) => {
     const { sessionCookie, csrfToken } = await setupAuthenticatedContext(page);
-    
+
     // Attempt to create incident with title > 500 chars
     const longTitle = 'A'.repeat(1000);
     const response = await page.request.post(`${BASE_URL}/app/api/incidents`, {
       headers: {
         'Cookie': `sl_session=${sessionCookie}`,
         'Content-Type': 'application/json',
-        'X-CSRF-Token': csrfToken
+        'X-CSRF-Token': csrfToken,
+        'Origin': BASE_URL
       },
-      data: { 
+      data: {
         title: longTitle,
         severity: 'high',
         status: 'open'
