@@ -127,7 +127,7 @@ export const GET: APIRoute = async ({ locals }) => {
         } else {
           watcher.startStep('observatory');
 
-          const obsResult = await runObservatorySetup((progress, message) => {
+          const obsResult = await runObservatorySetup(userId, (progress, message) => {
             watcher.updateProgress('observatory', progress, message);
           });
 

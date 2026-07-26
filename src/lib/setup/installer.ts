@@ -334,6 +334,7 @@ export async function runWindlassInstall(
  * Run Observatory setup
  */
 export async function runObservatorySetup(
+  userId: string,
   onProgress: (progress: number, message: string) => void
 ): Promise<StepResult> {
   const startTime = Date.now();
@@ -393,7 +394,45 @@ export async function runObservatorySetup(
       });
     }
 
-    onProgress(100, 'Observatory setup initiated');
+    onProgress(80, 'Configuring Riggins agent...');
+
+    // Create default agent_config for Riggins
+    const db = getDb();
+    const { nanoid } = await import('nanoid');
+
+    const agentId = nanoid();
+    const now = Date.now();
+
+    // Check if agent config already exists
+    const existingConfig = await db.get(sql`
+      SELECT id FROM agent_config WHERE user_id = ${userId}
+    `);
+
+    if (!existingConfig) {
+      await db.run(sql`
+        INSERT INTO agent_config (
+          id, user_id, agent_name, provider, endpoint, model,
+          enabled, proactive_notifications, created_at, updated_at
+        ) VALUES (
+          ${agentId},
+          ${userId},
+          'Riggins',
+          'ollama',
+          'http://172.17.0.1:11434',
+          'qwen2.5:14b-instruct-q4_K_M',
+          1,
+          0,
+          ${now},
+          ${now}
+        )
+      `);
+
+      output.push('✓ Riggins agent configured (auto-routing to Ollama)');
+    } else {
+      output.push('✓ Riggins agent already configured');
+    }
+
+    onProgress(100, 'Observatory setup complete');
 
     output.push('✓ Observatory configured');
 
