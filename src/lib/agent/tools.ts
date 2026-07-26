@@ -139,6 +139,38 @@ export const OBSERVATORY_TOOLS: Tool[] = [
       required: ['question'],
     },
   },
+  {
+    name: 'find_similar_incidents',
+    description: 'Search past resolved incidents for similar problems and their solutions. Use when current issue resembles something from incident history. Returns top 5 most similar incidents with resolution details.',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: {
+          type: 'string',
+          description: 'Description of the current problem (e.g. "nginx container keeps restarting every 5 minutes")',
+        },
+      },
+      required: ['description'],
+    },
+  },
+  {
+    name: 'search_community_knowledge',
+    description: 'Search curated community knowledge base for common problems and best-practice solutions. Use for well-known issues (Docker, database, networking, etc.). Returns matching patterns with tags and vote scores.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search keywords (e.g. "docker restart loop", "database locked", "cors error")',
+        },
+        category: {
+          type: 'string',
+          description: 'Optional category filter (docker, database, networking, performance, ssl, api, auth, etc.)',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];
 
 /**
@@ -268,6 +300,86 @@ export async function executeTool(
           result: {
             answer: result.answer,
             source: 'StdOut Documentation (NotebookLM)'
+          }
+        };
+      }
+
+      case 'find_similar_incidents': {
+        // RAG: Search incident history for similar problems
+        const { findSimilarIncidents } = await import('./rag/incident-learning');
+        const similar = await findSimilarIncidents(parameters.description, 5);
+
+        if (similar.length === 0) {
+          return {
+            success: true,
+            result: {
+              matches: [],
+              message: 'No similar incidents found in history'
+            }
+          };
+        }
+
+        return {
+          success: true,
+          result: {
+            matches: similar.map(inc => ({
+              title: inc.title,
+              description: inc.description,
+              resolution: inc.resolution,
+              similarity: Math.round(inc.similarity * 100) + '%',
+              resolved_date: new Date(inc.resolved_at).toISOString().split('T')[0]
+            })),
+            source: 'Incident History (Local Learning)'
+          }
+        };
+      }
+
+      case 'search_community_knowledge': {
+        // RAG: Search community knowledge base
+        const db = (await import('$lib/db')).getDb();
+        const { sql } = await import('drizzle-orm');
+
+        let query = sql`
+          SELECT id, title, category, problem_pattern, solution, tags, upvotes, downvotes
+          FROM community_kb
+          WHERE (
+            title LIKE ${'%' + parameters.query + '%'}
+            OR problem_pattern LIKE ${'%' + parameters.query + '%'}
+            OR solution LIKE ${'%' + parameters.query + '%'}
+            OR tags LIKE ${'%' + parameters.query + '%'}
+          )
+        `;
+
+        if (parameters.category) {
+          query = sql`${query} AND category = ${parameters.category}`;
+        }
+
+        query = sql`${query} ORDER BY upvotes DESC, downvotes ASC LIMIT 5`;
+
+        const results = await db.all(query);
+
+        if (results.length === 0) {
+          return {
+            success: true,
+            result: {
+              matches: [],
+              message: 'No community knowledge found for this query'
+            }
+          };
+        }
+
+        return {
+          success: true,
+          result: {
+            matches: results.map((kb: any) => ({
+              title: kb.title,
+              category: kb.category,
+              problem: kb.problem_pattern,
+              solution: kb.solution,
+              tags: JSON.parse(kb.tags || '[]'),
+              score: `+${kb.upvotes} / -${kb.downvotes}`
+            })),
+            source: 'Community Knowledge Base'
           }
         };
       }
