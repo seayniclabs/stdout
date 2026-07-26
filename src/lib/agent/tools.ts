@@ -125,6 +125,20 @@ export const OBSERVATORY_TOOLS: Tool[] = [
       required: ['cache_type'],
     },
   },
+  {
+    name: 'query_documentation',
+    description: 'Search StdOut documentation, runbooks, and troubleshooting guides for answers to user questions. Use when user asks "how to" or you need context beyond current metrics.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'The question to ask the documentation (e.g. "How do I configure Prometheus integration?")',
+        },
+      },
+      required: ['question'],
+    },
+  },
 ];
 
 /**
@@ -234,6 +248,28 @@ export async function executeTool(
         if (!res.ok) throw new Error(`Failed to clear cache: HTTP ${res.status}`);
         const data = await res.json();
         return { success: true, result: data };
+      }
+
+      case 'query_documentation': {
+        // RAG: Search StdOut documentation via NotebookLM
+        const { queryDocs } = await import('./rag/notebooklm');
+        const result = await queryDocs(parameters.question);
+
+        if (!result.available) {
+          return {
+            success: false,
+            result: null,
+            error: result.error || 'Documentation search unavailable'
+          };
+        }
+
+        return {
+          success: true,
+          result: {
+            answer: result.answer,
+            source: 'StdOut Documentation (NotebookLM)'
+          }
+        };
       }
 
       default:
