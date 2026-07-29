@@ -256,34 +256,43 @@ async function storePendingAction(userId: string, investigationReport: string) {
  * Load watcher configuration (from DB or defaults)
  */
 function loadWatcherConfig(): WatcherConfig {
+  const db = getSqlite();
+  let config = { ...DEFAULT_CONFIG };
+
+  // Try to load from agent_watcher_config table (optional)
   try {
-    const db = getSqlite();
-
-    // Check system_state for observatory_external_remediation_mode
-    const modeRow = db.prepare(`
-      SELECT value FROM system_state WHERE key = 'observatory_external_remediation_mode'
-    `).get() as { value: string } | undefined;
-
     const row = db.prepare(`
       SELECT config FROM agent_watcher_config LIMIT 1
     `).get() as { config: string } | undefined;
 
-    let config = row ? { ...DEFAULT_CONFIG, ...JSON.parse(row.config) } : DEFAULT_CONFIG;
-
-    // Override with system_state if present
-    if (modeRow?.value) {
-      config.externalRemediationMode = modeRow.value as 'investigate' | 'approve-to-act' | 'autofix';
+    if (row) {
+      config = { ...config, ...JSON.parse(row.config) };
     }
-
-    // Set autoRemediate based on mode
-    config.autoRemediate = config.externalRemediationMode === 'autofix';
-
-    return config;
   } catch (error) {
-    // Table might not exist yet - that's fine
+    // Table might not exist yet - that's fine, continue with defaults
   }
 
-  return DEFAULT_CONFIG;
+  // Always check system_state for observatory_external_remediation_mode (this takes precedence)
+  try {
+    const modeRow = db.prepare(`
+      SELECT value FROM system_state WHERE key = 'observatory_external_remediation_mode'
+    `).get() as { value: string } | undefined;
+
+    if (modeRow?.value) {
+      console.log(`[Agent Watcher] Loaded remediation mode from DB: ${modeRow.value}`);
+      config.externalRemediationMode = modeRow.value as 'investigate' | 'approve-to-act' | 'autofix';
+    } else {
+      console.log('[Agent Watcher] No remediation mode found in system_state, using default');
+    }
+  } catch (error) {
+    console.error('[Agent Watcher] Error reading system_state:', error);
+  }
+
+  // Set autoRemediate based on mode
+  config.autoRemediate = config.externalRemediationMode === 'autofix';
+  console.log(`[Agent Watcher] Config loaded - autoRemediate: ${config.autoRemediate} (mode: ${config.externalRemediationMode})`);
+
+  return config;
 }
 
 /**
