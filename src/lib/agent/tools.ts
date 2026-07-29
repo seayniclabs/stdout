@@ -174,8 +174,8 @@ export const OBSERVATORY_TOOLS: Tool[] = [
 ];
 
 /**
- * Execute a tool call by making the appropriate API request
- * Uses localhost:3000 (internal to container) for self-contained execution
+ * Execute a tool call by querying the database directly
+ * Bypasses HTTP layer for internal agent context
  */
 export async function executeTool(
   toolName: string,
@@ -183,43 +183,88 @@ export async function executeTool(
   userId: string
 ): Promise<{ success: boolean; result: any; error?: string }> {
   const BASE_URL = 'http://localhost:3000'; // Internal to StdOut container
+  const { getDb } = await import('../db');
+  const { sql } = await import('drizzle-orm');
 
   try {
     switch (toolName) {
       case 'get_metrics': {
-        const url = parameters.stack_id
-          ? `${BASE_URL}/app/api/observatory/metrics?stack_id=${parameters.stack_id}`
-          : `${BASE_URL}/app/api/observatory/metrics`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { success: true, result: data };
+        const db = getDb();
+        if (parameters.stack_id) {
+          const stack = await db.get(sql`SELECT id, name, description FROM stacks WHERE id = ${parameters.stack_id}`);
+          if (!stack) return { success: false, result: null, error: 'Stack not found' };
+
+          const metrics = await db.all(sql`
+            SELECT metric_name, value, unit, timestamp
+            FROM metrics WHERE stack_id = ${parameters.stack_id}
+            ORDER BY timestamp DESC LIMIT 10
+          `);
+          return { success: true, result: { stack, metrics: metrics || [] } };
+        }
+
+        const stacks = await db.all(sql`SELECT id, name, description FROM stacks WHERE user_id = ${userId}`);
+        const result = [];
+        for (const stack of stacks as any[]) {
+          const metrics = await db.all(sql`
+            SELECT metric_name, value, unit, timestamp
+            FROM metrics WHERE stack_id = ${stack.id}
+            ORDER BY timestamp DESC LIMIT 5
+          `);
+          result.push({ stack, metrics: metrics || [] });
+        }
+        return { success: true, result: { stacks: result } };
       }
 
       case 'get_baselines': {
-        const url = `${BASE_URL}/app/api/observatory/baselines?stack_id=${parameters.stack_id}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { success: true, result: data };
+        const db = getDb();
+        const baselines = await db.all(sql`
+          SELECT metric_name, baseline_value, threshold_high, threshold_low,
+                 confidence_score, sample_count, updated_at
+          FROM baselines WHERE stack_id = ${parameters.stack_id}
+          ORDER BY metric_name ASC
+        `);
+        return { success: true, result: { stack_id: parameters.stack_id, baselines: baselines || [] } };
       }
 
       case 'get_incidents': {
-        const params = new URLSearchParams();
-        if (parameters.status) params.set('status', parameters.status);
-        if (parameters.severity) params.set('severity', parameters.severity);
-        const url = `${BASE_URL}/app/api/observatory/incidents?${params.toString()}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { success: true, result: data };
+        const db = getDb();
+        const conditions = [`user_id = ${userId}`];
+        if (parameters.status) conditions.push(`status = ${parameters.status}`);
+        if (parameters.severity) conditions.push(`severity = ${parameters.severity}`);
+
+        const query = sql`
+          SELECT id, title, description, severity, status, created_at, resolved_at, stack_id
+          FROM incidents
+          WHERE user_id = ${userId}
+          ${parameters.status ? sql` AND status = ${parameters.status}` : sql``}
+          ${parameters.severity ? sql` AND severity = ${parameters.severity}` : sql``}
+          ORDER BY created_at DESC LIMIT 50
+        `;
+
+        const incidents = await db.all(query);
+        return { success: true, result: { incidents: incidents || [], total: incidents?.length || 0 } };
       }
 
       case 'get_stacks': {
-        const res = await fetch(`${BASE_URL}/app/api/stacks`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-        return { success: true, result: data };
+        const db = getDb();
+        const stacks = await db.all(sql`
+          SELECT id, name, description, type, created_at, updated_at
+          FROM stacks WHERE user_id = ${userId}
+          ORDER BY name ASC
+        `);
+
+        const stacksWithCounts = await Promise.all(
+          (stacks as any[]).map(async (stack) => {
+            const monitorCount = await db.get(sql`SELECT COUNT(*) as count FROM monitors WHERE stack_id = ${stack.id}`);
+            const incidentCount = await db.get(sql`SELECT COUNT(*) as count FROM incidents WHERE stack_id = ${stack.id} AND status = 'active'`);
+            return {
+              ...stack,
+              monitor_count: (monitorCount as any)?.count || 0,
+              active_incidents: (incidentCount as any)?.count || 0,
+            };
+          })
+        );
+        return { success: true, result: { stacks: stacksWithCounts, total: stacks?.length || 0 } };
       }
 
       case 'restart_container': {

@@ -1,14 +1,19 @@
 import type { APIRoute } from 'astro';
 import { getDb } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Observatory Baselines API — Internal endpoint for agent tools
  *
  * Returns established baselines for a stack.
- * No auth required — only accessible from internal agent context.
+ * Auth required for proper user context.
  */
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ locals, url }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const userId = locals.user.id;
   const stackId = url.searchParams.get('stack_id');
 
   if (!stackId) {

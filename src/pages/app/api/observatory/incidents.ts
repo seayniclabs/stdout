@@ -1,14 +1,19 @@
 import type { APIRoute} from 'astro';
 import { getDb } from '../../../../lib/db';
 import { sql } from 'drizzle-orm';
+import { requireAuth } from '../../../../lib/rbac';
 
 /**
  * Observatory Incidents API — Internal endpoint for agent tools
  *
  * Returns incidents filtered by status and severity.
- * No auth required — only accessible from internal agent context.
+ * Auth required for proper user context.
  */
-export const GET: APIRoute = async ({ url }) => {
+export const GET: APIRoute = async ({ locals, url }) => {
+  const authError = requireAuth(locals);
+  if (authError) return authError;
+
+  const userId = locals.user.id;
   const status = url.searchParams.get('status');
   const severity = url.searchParams.get('severity');
   const db = getDb();
