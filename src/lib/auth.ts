@@ -22,7 +22,7 @@ export async function verifyPassword(storedHash: string, password: string): Prom
 export async function createSession(userId: string, githubToken?: string): Promise<string> {
   const id = nanoid(32);
   const expiresAt = new Date(Date.now() + SESSION_DURATION_MS);
-  getDb().insert(schema.sessions).values({ id, userId, expiresAt, githubToken }).run();
+  getDb().insert(schema.sessions).values({ id, userId, expiresAt }).run();
   return id;
 }
 

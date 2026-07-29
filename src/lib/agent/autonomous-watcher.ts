@@ -195,6 +195,9 @@ Be concise. Focus on actionable findings.
 
   } catch (error) {
     console.error(`[Agent Watcher] Check failed for user ${userId}:`, error);
+    if (error instanceof Error && error.stack) {
+      console.error('[Agent Watcher] Stack:', error.stack);
+    }
   }
 }
 
