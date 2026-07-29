@@ -41,7 +41,8 @@ interface WatcherConfig {
   enabled: boolean;
   intervalSeconds: number;
   selfHealingEnabled: boolean; // Can fix StdOut itself without approval
-  externalRemediationMode: 'investigate' | 'approve-to-act'; // For watched infrastructure
+  externalRemediationMode: 'investigate' | 'approve-to-act' | 'autofix'; // For watched infrastructure
+  autoRemediate?: boolean; // Derived from externalRemediationMode
   notifyOnCritical: boolean;
 }
 
@@ -50,6 +51,7 @@ const DEFAULT_CONFIG: WatcherConfig = {
   intervalSeconds: 180, // Check every 3 minutes
   selfHealingEnabled: true, // Can always fix StdOut itself
   externalRemediationMode: 'investigate', // Watched infrastructure needs approval by default
+  autoRemediate: false,
   notifyOnCritical: true,
 };
 
@@ -256,13 +258,27 @@ async function storePendingAction(userId: string, investigationReport: string) {
 function loadWatcherConfig(): WatcherConfig {
   try {
     const db = getSqlite();
+
+    // Check system_state for observatory_external_remediation_mode
+    const modeRow = db.prepare(`
+      SELECT value FROM system_state WHERE key = 'observatory_external_remediation_mode'
+    `).get() as { value: string } | undefined;
+
     const row = db.prepare(`
       SELECT config FROM agent_watcher_config LIMIT 1
     `).get() as { config: string } | undefined;
 
-    if (row) {
-      return { ...DEFAULT_CONFIG, ...JSON.parse(row.config) };
+    let config = row ? { ...DEFAULT_CONFIG, ...JSON.parse(row.config) } : DEFAULT_CONFIG;
+
+    // Override with system_state if present
+    if (modeRow?.value) {
+      config.externalRemediationMode = modeRow.value as 'investigate' | 'approve-to-act' | 'autofix';
     }
+
+    // Set autoRemediate based on mode
+    config.autoRemediate = config.externalRemediationMode === 'autofix';
+
+    return config;
   } catch (error) {
     // Table might not exist yet - that's fine
   }
