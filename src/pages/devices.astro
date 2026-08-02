@@ -1,0 +1,247 @@
+---
+// StdOut Devices Dashboard
+// Displays discovered devices from Riggins discovery engine
+
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execPromise = promisify(exec);
+
+// Load discovered devices
+let devices = [];
+let summary = {};
+
+try {
+  const { stdout } = await execPromise('node /Users/charlieseay/Projects/stdout/riggins-discovery.cjs list');
+  // Parse CLI output (simplified - real impl would query DB directly)
+  const lines = stdout.split('\n').filter(l => l.trim() && !l.includes('Total:') && !l.includes('Inventory:'));
+
+  devices = lines.map(line => {
+    const parts = line.trim().split(/\s+/);
+    return {
+      ip: parts[0],
+      hostname: parts[1] === '—' ? null : parts[1],
+      status: parts[2],
+      serviceCount: parseInt(parts[3])
+    };
+  });
+
+  // Get summary
+  const { stdout: summaryOutput } = await execPromise('node /Users/charlieseay/Projects/stdout/riggins-discovery.cjs summary');
+  const summaryLines = summaryOutput.split('\n');
+  summary = {
+    total: parseInt(summaryLines.find(l => l.includes('Total devices'))?.match(/\d+/)?.[0] || '0'),
+    active: parseInt(summaryLines.find(l => l.includes('Active'))?.match(/\d+/)?.[0] || '0'),
+    inactive: parseInt(summaryLines.find(l => l.includes('Inactive'))?.match(/\d+/)?.[0] || '0'),
+    services: parseInt(summaryLines.find(l => l.includes('Total services'))?.match(/\d+/)?.[0] || '0'),
+    lastScan: summaryLines.find(l => l.includes('Last scan'))?.split(':')[1]?.trim() || 'Never'
+  };
+} catch (error) {
+  console.error('Failed to load devices:', error);
+}
+
+const title = 'Discovered Devices';
+---
+
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title} | StdOut</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      padding: 2rem;
+    }
+
+    header {
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .stat-card {
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+
+    .stat-label {
+      color: #888;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    .stat-value.green { color: #4ade80; }
+    .stat-value.red { color: #f87171; }
+    .stat-value.blue { color: #60a5fa; }
+    .stat-value.gray { color: #9ca3af; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    thead {
+      background: #252525;
+    }
+
+    th {
+      text-align: left;
+      padding: 1rem;
+      font-weight: 600;
+      color: #a0a0a0;
+      font-size: 0.875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    td {
+      padding: 1rem;
+      border-top: 1px solid #2a2a2a;
+    }
+
+    .status {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+    }
+
+    .status.up {
+      background: rgba(74, 222, 128, 0.1);
+      color: #4ade80;
+    }
+
+    .status.down {
+      background: rgba(248, 113, 113, 0.1);
+      color: #f87171;
+    }
+
+    .ip {
+      font-family: 'Monaco', 'Menlo', monospace;
+      font-size: 0.875rem;
+    }
+
+    .empty {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #666;
+    }
+
+    .scan-trigger {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    .scan-trigger:hover {
+      background: #1d4ed8;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{title}</h1>
+    <p style="color: #888; margin-top: 0.5rem;">
+      Riggins Auto-Discovery Engine
+    </p>
+  </header>
+
+  <div class="summary">
+    <div class="stat-card">
+      <div class="stat-label">Total Devices</div>
+      <div class="stat-value gray">{summary.total}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Active (Up)</div>
+      <div class="stat-value green">{summary.active}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Inactive (Down)</div>
+      <div class="stat-value red">{summary.inactive}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Services Detected</div>
+      <div class="stat-value blue">{summary.services}</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom: 1rem; color: #666; font-size: 0.875rem;">
+    Last scan: {summary.lastScan}
+    <button class="scan-trigger" onclick="triggerScan()">Scan Now</button>
+  </div>
+
+  {devices.length > 0 ? (
+    <table>
+      <thead>
+        <tr>
+          <th>IP Address</th>
+          <th>Hostname</th>
+          <th>Status</th>
+          <th>Services</th>
+        </tr>
+      </thead>
+      <tbody>
+        {devices.map(device => (
+          <tr>
+            <td class="ip">{device.ip}</td>
+            <td>{device.hostname || '—'}</td>
+            <td>
+              <span class={`status ${device.status}`}>
+                {device.status}
+              </span>
+            </td>
+            <td>{device.serviceCount}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  ) : (
+    <div class="empty">
+      <p>No devices discovered yet.</p>
+      <p style="margin-top: 0.5rem; font-size: 0.875rem;">Run a network scan to discover devices.</p>
+    </div>
+  )}
+
+  <script>
+    function triggerScan() {
+      alert('Scan triggered (backend integration pending)');
+      // TODO: POST to /api/scan endpoint
+    }
+  </script>
+</body>
+</html>
