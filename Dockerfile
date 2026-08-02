@@ -23,6 +23,7 @@ COPY --from=build /app/src/lib/incident-dedup.ts ./src/lib/incident-dedup.ts
 COPY --from=build /app/src/lib/fix-verification.ts ./src/lib/fix-verification.ts
 COPY --from=build /app/src/lib/bulk-resolution.ts ./src/lib/bulk-resolution.ts
 COPY --from=build /app/scripts ./scripts
+COPY --from=build /app/riggins-discovery.cjs ./
 # Stdlib standard-pattern library — seeded into the DB on fresh boot by apply-schema.js.
 COPY --from=build /app/src/lib/observatory/standard-patterns.json ./scripts/standard-patterns.json
 RUN chmod +x scripts/start.sh

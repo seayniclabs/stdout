@@ -12,7 +12,8 @@ let devices = [];
 let summary = {};
 
 try {
-  const { stdout } = await execPromise('node /Users/charlieseay/Projects/stdout/riggins-discovery.cjs list');
+  const rigginsPath = process.env.NODE_ENV === 'production' ? '/app/riggins-discovery.cjs' : '/Users/charlieseay/Projects/stdout/riggins-discovery.cjs';
+  const { stdout } = await execPromise(`node ${rigginsPath} list`);
   // Parse CLI output (simplified - real impl would query DB directly)
   const lines = stdout.split('\n').filter(l => l.trim() && !l.includes('Total:') && !l.includes('Inventory:'));
 
@@ -27,7 +28,7 @@ try {
   });
 
   // Get summary
-  const { stdout: summaryOutput } = await execPromise('node /Users/charlieseay/Projects/stdout/riggins-discovery.cjs summary');
+  const { stdout: summaryOutput } = await execPromise(`node ${rigginsPath} summary`);
   const summaryLines = summaryOutput.split('\n');
   summary = {
     total: parseInt(summaryLines.find(l => l.includes('Total devices'))?.match(/\d+/)?.[0] || '0'),
