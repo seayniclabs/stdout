@@ -106,13 +106,6 @@
       "when": 1784839200000,
       "tag": "0014_add_resolutions_fts",
       "breakpoints": true
-    },
-    {
-      "idx": 15,
-      "version": "7",
-      "when": 1785907200000,
-      "tag": "0015_fix_scanner_schedule_schema",
-      "breakpoints": true
     }
   ]
 }
