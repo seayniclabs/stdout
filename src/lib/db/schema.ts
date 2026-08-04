@@ -3,7 +3,7 @@ export * from './central-schema';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
-export * from './central-schema';
+export * from './tenant-schema';
 import { incidents } from './monitoring-schema';
 import { users } from './central-schema';
 
@@ -339,19 +339,7 @@ export const satelliteReports = sqliteTable('satellite_reports', {
   receivedAt: integer('received_at', { mode: 'timestamp' }).notNull(),
 });
 
-export const scannerSchedule = sqliteTable('scanner_schedule', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
-  scanType: text('scan_type', {
-    enum: ['network', 'port', 'vulnerability'],
-  }).notNull(),
-  target: text('target').notNull(),
-  schedule: text('schedule').notNull(),
-  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  lastRunAt: integer('last_run_at', { mode: 'timestamp' }),
-  nextRunAt: integer('next_run_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-});
+// NOTE: scannerSchedule is now defined in tenant-schema.ts - import from there
 
 // --- WINDLASS (Network Diagnostic Toolbox) ---
 
