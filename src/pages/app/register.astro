@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { logAudit, getClientIp } from '../../lib/audit';
 import { sendVerificationEmail } from '../../lib/email';
+import { isValidLicenseKeyFormat, storeLicense } from '../../lib/license';
 
 const MAX_USERS_BUILTIN = process.env.STDOUT_DISABLE_USER_LIMIT === '1' ? Infinity : 10;
 
@@ -29,6 +30,7 @@ if (Astro.request.method === 'POST') {
     displayName = (form.get('displayName') as string || '').trim();
     const password = form.get('password') as string || '';
     const confirm = form.get('confirm') as string || '';
+    const licenseKey = (form.get('licenseKey') as string || '').trim();
     const formRedirect = (form.get('redirect') as string || '').trim();
     const destination = (formRedirect.startsWith('/') && !formRedirect.startsWith('//')) ? formRedirect : '/app';
 
@@ -54,26 +56,41 @@ if (Astro.request.method === 'POST') {
       if (existing) {
         error = 'An account with that email already exists.';
       } else {
-        const id = nanoid();
-        const now = new Date();
-        const passwordHash = await hashPassword(password);
-        getDb().insert(schema.users).values({
-          id,
-          email,
-          passwordHash,
-          displayName,
-          role: 'member',
-          createdAt: now,
-          updatedAt: now,
-        }).run();
+        // Validate license key if provided
+        if (licenseKey && !isValidLicenseKeyFormat(licenseKey)) {
+          error = 'Invalid license key format. License keys start with SL- or use the format XXXX-XXXX-XXXX-XXXX.';
+        } else {
+          const id = nanoid();
+          const now = new Date();
+          const passwordHash = await hashPassword(password);
+          getDb().insert(schema.users).values({
+            id,
+            email,
+            passwordHash,
+            displayName,
+            role: 'member',
+            createdAt: now,
+            updatedAt: now,
+          }).run();
 
-        getDb();
-        logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
-        sendVerificationEmail(email, id).catch(() => {});
+          // Store license if provided
+          if (licenseKey) {
+            try {
+              storeLicense(licenseKey, email, 'self-host');
+              logAudit('license_activated', { userId: id, ip: getClientIp(Astro.request) });
+            } catch (err) {
+              // License storage failed but user is created - they can activate later
+              console.error('Failed to store license during registration:', err);
+            }
+          }
 
-        const sessionId = await createSession(id);
-        Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
-        return Astro.redirect(destination);
+          logAudit('register', { userId: id, ip: getClientIp(Astro.request) });
+          sendVerificationEmail(email, id).catch(() => {});
+
+          const sessionId = await createSession(id);
+          Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
+          return Astro.redirect(destination);
+        }
       }
     }
   }
@@ -106,6 +123,10 @@ if (Astro.locals.user) return Astro.redirect('/app');
       <label>
         <span>Confirm password</span>
         <input type="password" name="confirm" required minlength="8" autocomplete="new-password" />
+      </label>
+      <label>
+        <span>License key (optional)</span>
+        <input type="text" name="licenseKey" placeholder="SL-..." autocomplete="off" />
       </label>
       <button type="submit">Create account</button>
     </form>
