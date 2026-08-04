@@ -5,6 +5,7 @@ import { eq, desc } from 'drizzle-orm';
 import { getRecentChecks, getUptimeStats } from '../../lib/hud';
 import { checkForUpdate, getLicenseNotice, type UpdateCheckResult } from '../../lib/update-check';
 import { getStoredLicense } from '../../lib/license';
+import { getDiscoveryState } from '../../lib/observatory/initial-discovery';
 import AgentPanel from '../../components/AgentPanel.astro';
 
 const user = Astro.locals.user;
@@ -150,6 +151,14 @@ function timeAgo(date: Date) {
 ---
 <Layout title="Dashboard — StdOut">
   <div class="dash">
+    {/* Discovery banner */}
+    {(await getDiscoveryState()) === 'collecting' && (
+      <div class="import-banner" style="background: var(--surface); border-color: var(--primary);">
+        <span class="import-banner-icon mono" style="color: var(--primary);">⚡</span>
+        <span><strong>Riggins is currently scanning your network</strong> and auto-configuring your monitors in the background...</span>
+      </div>
+    )}
+
     {/* Pending import banner */}
     {pendingImports.length > 0 && (
       <a href={`/app/stacks/import/${pendingImports[0].id}`} class="import-banner">

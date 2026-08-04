@@ -11,7 +11,7 @@
  * persists hosts, emits host.discovered, and lets auto-wire create monitors.
  */
 
-import { getDb } from '../db';
+import { getDb } from '../../db';
 import { sql } from 'drizzle-orm';
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // evaluate schedules every 5 minutes
@@ -70,7 +70,7 @@ async function tick(): Promise<void> {
       WHERE enabled = 1
     `) as ScheduleRow[];
   } catch (error: unknown) {
-    console.error('[scan-scheduler] failed to read schedules:', error instanceof Error ? error.message : String(error));
+    console.error('[passive-discovery-worker] failed to read schedules:', error instanceof Error ? error.message : String(error));
     return;
   }
 
@@ -84,15 +84,15 @@ async function tick(): Promise<void> {
     if (_lastRun.get(dedupeKey) === key) continue; // already fired this period
     _lastRun.set(dedupeKey, key);
 
-    console.log(`[scan-scheduler] re-scan due for user ${row.user_id} (${row.interval}) — triggering discovery`);
+    console.log(`[passive-discovery-worker] re-scan due for user ${row.user_id} (${row.interval}) — triggering discovery`);
     try {
-      const { runInitialDiscovery } = await import('./initial-discovery');
+      const { runInitialDiscovery } = await import('../initial-discovery');
       // Fire-and-forget — discovery is resilient and self-logging; don't block the ticker.
       runInitialDiscovery(row.user_id).catch((e) =>
-        console.error(`[scan-scheduler] discovery failed for ${row.user_id}:`, e),
+        console.error(`[passive-discovery-worker] discovery failed for ${row.user_id}:`, e),
       );
     } catch (error: unknown) {
-      console.error('[scan-scheduler] could not start discovery:', error instanceof Error ? error.message : String(error));
+      console.error('[passive-discovery-worker] could not start discovery:', error instanceof Error ? error.message : String(error));
     }
   }
 }
@@ -115,17 +115,17 @@ export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
     `);
     return true;
   } catch (error: unknown) {
-    console.error('[scan-scheduler] failed to seed default schedule:', error instanceof Error ? error.message : String(error));
+    console.error('[passive-discovery-worker] failed to seed default schedule:', error instanceof Error ? error.message : String(error));
     return false;
   }
 }
 
 /** Start the recurring-scan ticker. Idempotent. Call once at service startup. */
-export function startScanScheduler(): void {
+export function startPassiveDiscoveryWorker(): void {
   if (_started) return;
   _started = true;
   setInterval(() => {
-    tick().catch((error) => console.error('[scan-scheduler] tick error:', error));
+    tick().catch((error) => console.error('[passive-discovery-worker] tick error:', error));
   }, CHECK_INTERVAL_MS);
-  console.log('[scan-scheduler] started — checking scanner_schedule every 5 min');
+  console.log('[passive-discovery-worker] started — checking scanner_schedule every 5 min');
 }

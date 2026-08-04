@@ -8,21 +8,13 @@ export enum SetupStep {
   AdminAccount = 1,
   Environment = 2,
   License = 3,
-  Scanner = 4,
-  Review = 5,
-  Windlass = 6,
-  Ticketing = 7,
-  Complete = 8,
+  Complete = 4,
 }
 
 export const STEP_NAMES: Record<SetupStep, string> = {
   [SetupStep.AdminAccount]: 'Create Admin Account',
   [SetupStep.Environment]: 'Name Environment',
   [SetupStep.License]: 'Activate License',
-  [SetupStep.Scanner]: 'Discover Infrastructure',
-  [SetupStep.Review]: 'Review Environment',
-  [SetupStep.Windlass]: 'Configure Windlass',
-  [SetupStep.Ticketing]: 'Ticketing Integration',
   [SetupStep.Complete]: 'Complete',
 };
 

@@ -78,8 +78,19 @@ export function getDb(): BetterSQLite3Database<typeof schema> {
     // DEBUG: Log schema columns for monitors to verify fingerprint is in memory
     console.log('[DB DEBUG] monitors schema columns:', Object.keys(schema.monitors));
 
-    _db = drizzle(sqlite, { schema });
-    console.log('[DB] Drizzle instance created WITHOUT logger');
+    _db = drizzle(sqlite, {
+      schema,
+      logger: process.env.NODE_ENV === 'development'
+        ? {
+            logQuery(query: string) {
+              // Never log queries touching credentials, even in dev - query shape only, no params
+              if (query.includes('token') || query.includes('sessions')) return;
+              console.log('[DB QUERY]', query);
+            }
+          }
+        : undefined
+    });
+    console.log('[DB] Drizzle instance created');
   } else {
     console.log(`[DB REUSE] Using existing connection (init #${_dbInitCount})`);
   }

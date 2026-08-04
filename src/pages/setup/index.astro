@@ -18,10 +18,7 @@ if (session && progress.currentStep > SetupStep.AdminAccount) {
   // User has an account, redirect to their current step
   if (progress.currentStep === SetupStep.Environment) return Astro.redirect('/setup/environment');
   if (progress.currentStep === SetupStep.License) return Astro.redirect('/setup/license');
-  if (progress.currentStep === SetupStep.Scanner) return Astro.redirect('/setup/scanner');
-  if (progress.currentStep === SetupStep.Review) return Astro.redirect('/setup/review');
-  if (progress.currentStep === SetupStep.Windlass) return Astro.redirect('/setup/windlass');
-  if (progress.currentStep >= SetupStep.Complete) return Astro.redirect('/setup/complete');
+  if (progress.currentStep >= SetupStep.Complete) return Astro.redirect('/app');
 }
 
 let error = '';
@@ -110,7 +107,7 @@ if (Astro.request.method === 'POST') {
 
 <Layout title="Create Your Account">
   <div class="auth-page" style="max-width: 600px;">
-    <SetupProgress currentStep={1} totalSteps={7} />
+    <SetupProgress currentStep={1} totalSteps={3} />
 
     <h1>Welcome to StdOut</h1>
     <p class="auth-subtitle">Create your admin account to get started</p>

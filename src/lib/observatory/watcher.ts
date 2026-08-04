@@ -15,6 +15,9 @@ import { getDb } from '../db';
 import { sql } from 'drizzle-orm';
 import { emit } from '../events';
 import { runScheduledCheck, createIncidentFromAnomaly } from './sentinel';
+import { startPassiveDiscoveryWorker } from './workers/passive-discovery-worker';
+import { startStorageMonitorWorker } from './workers/storage-monitor-worker';
+import { startHousekeepingWorker } from './workers/housekeeping-worker';
 
 let _started = false;
 const _userIntervals = new Map<string, ReturnType<typeof setInterval>>();
@@ -38,17 +41,10 @@ export function startWatcher(): void {
     processWatchQueue().catch(err => console.error('[watcher] queue processor error:', err));
   }, 30 * 1000);
 
-  // Diagnosis processor — diagnose any undiagnosed active incidents every 5 minutes
-  // This catches incidents created by external sources (health monitors, API, manual creation)
-  // that bypass the Watcher's own anomaly detection flow
-  setInterval(() => {
-    processPendingDiagnoses().catch(err => console.error('[diagnosis-processor] error:', err));
-  }, 5 * 60 * 1000);
-
-  // Run first diagnosis pass after 3.5 minutes (after Watcher bootstrap completes)
-  setTimeout(() => {
-    processPendingDiagnoses().catch(err => console.error('[diagnosis-processor] initial pass error:', err));
-  }, 3.5 * 60 * 1000);
+  // Start external workers
+  startPassiveDiscoveryWorker();
+  startStorageMonitorWorker();
+  startHousekeepingWorker();
 
   console.log('[watcher] scheduled — first check in 3 min');
 }
@@ -200,58 +196,7 @@ async function processWatchQueue(): Promise<void> {
   }
 }
 
-/**
- * Process undiagnosed incidents — catches incidents created by external sources
- * (health monitors, external API, manual creation) that bypass the Watcher's
- * own anomaly detection flow.
- *
- * Runs every 5 minutes. Looks for active incidents with no diagnosis record
- * created >5 min ago (grace period to avoid racing with Watcher-created incidents).
- */
-async function processPendingDiagnoses(): Promise<void> {
-  const db = getDb();
-  const GRACE_PERIOD_SEC = 5 * 60; // 5 minutes
-  const cutoff = Math.floor(Date.now() / 1000) - GRACE_PERIOD_SEC;
 
-  // Find all active incidents without a diagnosis
-  const undiagnosed = db.all(sql`
-    SELECT i.id, i.user_id, i.title
-    FROM incidents i
-    LEFT JOIN diagnoses d ON d.incident_id = i.id
-    WHERE i.status = 'active'
-      AND d.id IS NULL
-      AND i.created_at < ${cutoff}
-    ORDER BY i.created_at ASC
-    LIMIT 50
-  `) as Array<{ id: string; user_id: string; title: string }>;
-
-  if (undiagnosed.length === 0) return;
-
-  console.log(`[diagnosis-processor] Found ${undiagnosed.length} undiagnosed incident(s), processing...`);
-
-  // Group by user for batch processing
-  const byUser = new Map<string, string[]>();
-  for (const inc of undiagnosed) {
-    const ids = byUser.get(inc.user_id) || [];
-    ids.push(inc.id);
-    byUser.set(inc.user_id, ids);
-  }
-
-  // Process each user's incidents via the reflex arc
-  for (const [userId, incidentIds] of byUser) {
-    try {
-      const { reflexForIncidents } = await import('./reflex');
-      const outcomes = await reflexForIncidents(userId, incidentIds);
-
-      const acted = outcomes.filter(o => o.diagnosed || o.applied || o.parked);
-      if (acted.length > 0) {
-        console.log(`[diagnosis-processor] ${userId}: diagnosed ${acted.length}/${incidentIds.length} incident(s)`);
-      }
-    } catch (err) {
-      console.error(`[diagnosis-processor] failed for user ${userId}:`, err);
-    }
-  }
-}
 
 async function ensureStackMonitored(userId: string, stackId: string, stackName: string): Promise<void> {
   const db = getDb();

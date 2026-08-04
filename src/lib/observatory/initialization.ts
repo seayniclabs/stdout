@@ -221,7 +221,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       log.push(...blResult.log);
 
       // Seed a default recurring-scan schedule so discovery keeps running (P2b).
-      const { ensureDefaultSchedule } = await import('./scan-scheduler');
+      const { ensureDefaultSchedule } = await import('./workers/passive-discovery-worker');
       const seeded = await ensureDefaultSchedule(firstUser.id);
       log.push(seeded
         ? '  ✓ Default scan schedule created (daily 03:00 UTC) — recurring discovery enabled'
@@ -259,6 +259,28 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     const centralDb = getDb();
     const firstUser = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
     if (firstUser) {
+      // Seed default agentConfig for Riggins if it doesn't exist
+      try {
+        const { agentConfig } = await import('../db/agent-schema');
+        const existingConfig = centralDb.get(sql`SELECT id FROM agent_config WHERE user_id = ${firstUser.id} LIMIT 1`);
+        if (!existingConfig) {
+          centralDb.insert(agentConfig).values({
+            id: crypto.randomUUID(),
+            userId: firstUser.id,
+            provider: 'ollama',
+            model: 'llama3:latest',
+            apiKey: '',
+            baseUrl: 'http://localhost:11434',
+            autoFixEnabled: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          }).run();
+          log.push('  ✓ Default Riggins agent configuration (Ollama) seeded');
+        }
+      } catch (err) {
+        log.push(`  ! Failed to seed default agentConfig: ${err instanceof Error ? err.message : String(err)}`);
+      }
+
       emit({
         type: 'observatory.started',
         userId: firstUser.id,

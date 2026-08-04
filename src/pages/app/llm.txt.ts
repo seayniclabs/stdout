@@ -39,12 +39,6 @@ StdOut is an AI-assisted incident companion for infrastructure monitoring and re
 
 ## Connected Systems
 
-### Ticketing
-- **Primary**: Built-in (StdOut native)
-- **Sync Direction**: N/A (no external system)
-- **Ticket Types**: incidents, bugs, features
-
-*Note: External ticketing integration (Linear, Jira, ServiceNow, GitHub) coming soon.*
 
 ### Infrastructure
 - **Stacks**: ${stackCount.count} configured
@@ -156,7 +150,7 @@ StdOut is an AI-assisted incident companion for infrastructure monitoring and re
 This file was generated dynamically. It reflects the current state of:
 - Infrastructure discovery (stacks, monitors, services)
 - Knowledge base (runbooks, guides, community docs)
-- Connected systems (ticketing, data sources)
+- Connected systems (data sources)
 
 **Last Updated**: ${new Date().toISOString()}
 

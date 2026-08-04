@@ -245,11 +245,7 @@ const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX = 10;
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMITED_PATHS = ['/app/login', '/app/register', '/app/forgot-password', '/app/reset-password'];
-// Write-tier endpoints (ticketing sync etc.) — closes the "no rate limit at all" gap.
-// Uses a more permissive window than the auth tier so legitimate sync isn't throttled.
-const WRITE_RATE_LIMITED_PATHS = ['/app/api/ticketing/sync'];
-const WRITE_RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
-const WRITE_RATE_LIMIT_MAX = 20; // 20/min per IP, per API Security Checklist write tier
+
 
 function getClientIp(request: Request): string {
   return (
@@ -263,10 +259,9 @@ function checkRateLimit(request: Request, pathname: string): Response | null {
   if (process.env.STDOUT_DISABLE_RATE_LIMIT === '1') return null;
   if (request.method !== 'POST') return null;
   const isAuthPath = RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/');
-  const isWritePath = WRITE_RATE_LIMITED_PATHS.some(p => pathname === p || pathname === p + '/');
-  if (!isAuthPath && !isWritePath) return null;
-  const windowMs = isWritePath ? WRITE_RATE_LIMIT_WINDOW_MS : RATE_LIMIT_WINDOW_MS;
-  const maxReqs = isWritePath ? WRITE_RATE_LIMIT_MAX : RATE_LIMIT_MAX;
+  if (!isAuthPath) return null;
+  const windowMs = RATE_LIMIT_WINDOW_MS;
+  const maxReqs = RATE_LIMIT_MAX;
 
   const ip = getClientIp(request);
   const key = `${ip}:${pathname}`;
@@ -427,11 +422,6 @@ scheduleShodanScanner();
 import('./lib/suricata-ingest')
   .then(({ startSuricataIngestors }) => startSuricataIngestors())
   .catch((err) => console.error('[middleware] failed to start Suricata ingest:', err));
-
-// Recurring network discovery — honors each user's scanner_schedule (P2b)
-import('./lib/observatory/scan-scheduler')
-  .then(({ startScanScheduler }) => startScanScheduler())
-  .catch((err) => console.error('[middleware] failed to start scan scheduler:', err));
 
 // Observatory initialization moved to top of file (initializeObservatory with full Phase 4.5 baseline establishment)
 
