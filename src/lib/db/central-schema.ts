@@ -20,6 +20,8 @@ export const license = sqliteTable('license', {
   key: text('key').primaryKey(),
   email: text('email').notNull(),
   edition: text('edition').notNull().default('self-host'),
+  kbSubscriptionStatus: text('kb_subscription_status', { enum: ['active', 'inactive', 'none'] }).notNull().default('none'),
+  kbSubscriptionExpiresAt: integer('kb_subscription_expires_at', { mode: 'timestamp' }),
   activatedAt: integer('activated_at', { mode: 'timestamp' }).notNull(),
   lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
 });

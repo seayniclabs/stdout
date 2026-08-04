@@ -1,0 +1,97 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import { getDb, schema } from '../../../lib/db';
+import { eq, desc, like, or } from 'drizzle-orm';
+import AgentPanel from '../../../components/AgentPanel.astro';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const db = getDb();
+
+// Query network security incidents (Suricata/IDS)
+const securityIncidents = db.select().from(schema.incidents)
+  .where(
+    or(
+      like(schema.incidents.tags, '%suricata%'),
+      like(schema.incidents.tags, '%security%'),
+      like(schema.incidents.tags, '%ids%')
+    )
+  )
+  .orderBy(desc(schema.incidents.createdAt))
+  .all();
+
+---
+
+<Layout title="Network Security — StdOut">
+  <div class="dash">
+    <div class="dash-header">
+      <div>
+        <h1>Network & Security Toolkit</h1>
+        <p class="dash-subtitle">Real-time threat detection and network inspection (Powered by Suricata & Nmap)</p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card" style="grid-column: 1 / -1;">
+        <div class="card-header">
+          <h2>Intrusion Detection Alerts (Suricata)</h2>
+          <span class="badge" style="background: var(--surface-light); color: var(--text-dim);">{securityIncidents.length} events</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Severity</th>
+                <th>Alert Title</th>
+                <th>Status</th>
+                <th>Tags</th>
+              </tr>
+            </thead>
+            <tbody>
+              {securityIncidents.length === 0 ? (
+                <tr>
+                  <td colspan="5" class="empty-state" style="padding: 3rem 1rem;">
+                    <div class="empty-icon">🛡️</div>
+                    <p>No network security events detected.</p>
+                    <p style="font-size: 0.85rem; color: var(--text-dim); margin-top: 0.5rem;">Suricata IDS is monitoring your network traffic in the background.</p>
+                  </td>
+                </tr>
+              ) : (
+                securityIncidents.map(inc => (
+                  <tr>
+                    <td class="mono" style="font-size: 0.85rem; white-space: nowrap;">
+                      {new Date(inc.createdAt).toLocaleString()}
+                    </td>
+                    <td>
+                      <span class={`status status--${inc.severity === 'critical' ? 'down' : inc.severity === 'high' ? 'down' : inc.severity === 'medium' ? 'degraded' : 'healthy'}`}>
+                        {inc.severity}
+                      </span>
+                    </td>
+                    <td>
+                      <strong><a href={`/app/incidents/${inc.id}`} class="table-link">{inc.title}</a></strong>
+                    </td>
+                    <td>
+                      <span class={`status status--${inc.status === 'resolved' ? 'healthy' : 'degraded'}`}>
+                        {inc.status}
+                      </span>
+                    </td>
+                    <td>
+                      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        {inc.tags?.split(',').map(tag => (
+                          <span class="badge mono" style="font-size: 0.7rem; background: var(--surface-light);">{tag.trim()}</span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  <AgentPanel currentIncidentId={null} context="network_security" />
+</Layout>
