@@ -107,9 +107,15 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       }).run();
     }
 
-    // Parse intent and route to appropriate query
-    const intent = parseIntent(text);
-    const { response, metadata } = await handleIntent(intent, userId);
+    // Invoke Riggins natively via autoRouteWithTools
+    const { autoRouteWithTools } = await import('../../../../../lib/agent/auto-router-tools');
+    
+    // Pass channel info in context so Riggins knows where this came from
+    const rigginsContext = `Inbound ChatOps Request via ${channel}`;
+    const agentResponse = await autoRouteWithTools(text, rigginsContext, userId);
+
+    const response = agentResponse.response;
+    const metadata = agentResponse.metadata || {};
 
     // Log outbound message
     if (channel_id) {

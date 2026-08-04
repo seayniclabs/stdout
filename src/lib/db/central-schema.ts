@@ -142,3 +142,20 @@ export const agentConversations = sqliteTable('agent_conversations', {
   metadata: text('metadata'), // JSON: tool calls, model used, tokens, etc.
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
+
+export const commsMessages = sqliteTable('comms_messages', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull(),
+  direction: text('direction', { enum: ['inbound', 'outbound'] }).notNull(),
+  content: text('content').notNull(),
+  metadata: text('metadata'),
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+});
+
+export const userSettings = sqliteTable('user_settings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  key: text('key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
