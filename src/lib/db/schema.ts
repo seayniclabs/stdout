@@ -1,11 +1,11 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-export * from './auth-schema';
+export * from './central-schema';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
 export * from './central-schema';
 import { incidents } from './monitoring-schema';
-import { users } from './auth-schema';
+import { users } from './central-schema';
 
 
 // ============================================================================

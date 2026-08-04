@@ -1,22 +1,8 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { users } from './central-schema';
 
-export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  passwordHash: text('password_hash').notNull(),
-  displayName: text('display_name'),
-  role: text('role', {
-    enum: ['admin', 'member'],
-  }).notNull().default('member'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-});
-
-export const sessions = sqliteTable('sessions', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-});
+// NOTE: users and sessions tables are defined in central-schema.ts
+// Do not duplicate them here - import instead
 
 export const apiTokens = sqliteTable('api_tokens', {
   id: text('id').primaryKey(),

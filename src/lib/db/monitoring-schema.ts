@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { users } from './auth-schema';
+import { users } from './central-schema';
 
 export const stacks = sqliteTable('stacks', {
   id: text('id').primaryKey(),

@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { users } from './auth-schema';
+import { users } from './central-schema';
 
 export const agentConfig = sqliteTable('agent_config', {
   id: text('id').primaryKey(),
