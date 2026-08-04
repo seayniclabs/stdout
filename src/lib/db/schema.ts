@@ -11,13 +11,17 @@
 // - monitoring-schema.ts: stacks, monitors, incidents, diagnoses
 // - observatory-schema.ts: baselines, patterns, agent runs, feedback
 // - agent-schema.ts: agent config, conversations
-// - tenant-schema.ts: multi-tenant tables (tickets, docs, alerts, etc.)
 // - satellite-schema.ts: satellite agents and reports
 // - entities-schema.ts: entity graph (hosts, containers, services)
 // - skins-schema.ts: theming and UI customization
 // - collectors-schema.ts: data collector configs and events
 // - cost-schema.ts: LLM cost tracking
 // - community-schema.ts: community library submissions
+//
+// NOTE: tenant-schema.ts is NOT exported here - it's for SaaS multi-tenant mode.
+// Self-hosted deployments use monitoring-schema.ts instead, which has the same
+// tables but without the multi-tenant overhead. Selective exports from tenant-schema
+// are done below for tables that don't exist in other schemas.
 // ============================================================================
 
 export * from './setup-schema';
@@ -25,10 +29,34 @@ export * from './central-schema';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
-export * from './tenant-schema';
 export * from './satellite-schema';
 export * from './entities-schema';
 export * from './skins-schema';
 export * from './collectors-schema';
 export * from './cost-schema';
 export * from './community-schema';
+
+// Selective exports from tenant-schema for tables unique to it:
+export {
+  scannerSchedule,
+  tickets,
+  ticketingConnectors,
+  docEmbeddings,
+  tenantPreferences,
+  notificationPreferences,
+  docs,
+  statusPage,
+  dataSources,
+  unknownTools,
+  addonInterest,
+  windlassServices,
+  windlassEvents,
+  windlassConfig,
+  featureRequests,
+  alertChannels,
+  alertRules,
+  alertEvents,
+  aiProviderKeys,
+  aiExecutionAudit,
+  stackImports,
+} from './tenant-schema';
