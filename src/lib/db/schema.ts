@@ -3,7 +3,9 @@ export * from './central-schema';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
-export * from './tenant-schema';
+// NOTE: tenant-schema has duplicate exports of many tables also in this file
+// Only export scannerSchedule from tenant-schema to fix passive-discovery-worker
+export { scannerSchedule } from './tenant-schema';
 import { incidents } from './monitoring-schema';
 import { users } from './central-schema';
 

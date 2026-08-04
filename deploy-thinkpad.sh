@@ -19,7 +19,9 @@ echo ""
 # Step 1: Push to Docker Hub
 echo "📤 Pushing image to Docker Hub..."
 docker push $IMAGE
-docker push charlieseay/stdout:$COMMIT_SHA
+# Tag and push commit-specific image for rollback capability
+docker tag $IMAGE charlieseay/stdout:$COMMIT_SHA
+docker push charlieseay/stdout:$COMMIT_SHA || echo "⚠️ Failed to push commit tag (non-fatal)"
 echo "✅ Image pushed"
 echo ""
 
