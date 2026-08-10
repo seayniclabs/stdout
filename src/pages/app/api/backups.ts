@@ -1,13 +1,13 @@
 import type { APIRoute } from 'astro';
 import { createBackup, listBackups, restoreBackup } from '../../../lib/backup';
 import { logAudit, getClientIp } from '../../../lib/audit';
-import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
+import { requireAuth, checkRBAC } from '../../../lib/rbac';
 
 export const GET: APIRoute = async ({ locals }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
-  const tenantOwnerId = getWorkspaceOwnerId(locals);
+  const tenantOwnerId = locals.user.id;
   if (tenantOwnerId !== locals.user.id) {
     const blocked = checkRBAC(locals, 'read');
     if (blocked) return blocked;
@@ -56,7 +56,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     const gate = checkFeature(locals.user, 'backupsEnabled');
     if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 
-    const tenantOwnerId = getWorkspaceOwnerId(locals);
+    const tenantOwnerId = locals.user.id;
     if (tenantOwnerId !== locals.user.id) {
       const blocked = checkRBAC(locals, 'create_backup');
       if (blocked) return blocked;
@@ -85,7 +85,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       });
     }
 
-    const tenantOwnerId = getWorkspaceOwnerId(locals);
+    const tenantOwnerId = locals.user.id;
     if (tenantOwnerId !== locals.user.id) {
       const blocked = checkRBAC(locals, 'create_backup');
       if (blocked) return blocked;

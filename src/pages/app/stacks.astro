@@ -6,14 +6,14 @@ import { nanoid } from 'nanoid';
 import { eq, and, or, desc } from 'drizzle-orm';
 import { validateCsrf } from '../../middleware';
 import { stackTemplates } from '../../lib/stack-templates';
-import { canPerform, getWorkspaceOwnerId } from '../../lib/rbac';
+import { canPerform } from '../../lib/rbac';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
 const ws = Astro.locals.workspace;
-const workspaceOwnerId = getWorkspaceOwnerId(Astro.locals);
+const workspaceOwnerId = user.id;
 const allowedStackUserIds = new Set([user.id, workspaceOwnerId]);
 
 function stackAccessible(row: { userId: string } | null | undefined): boolean {

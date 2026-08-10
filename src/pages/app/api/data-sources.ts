@@ -7,13 +7,13 @@ import { testConnection as testInfluxConnection } from '../../../lib/influx';
 import { testPrometheusConnection } from '../../../lib/prometheus';
 import { testSourceConnection } from '../../../lib/source-test';
 import { isBlockedTarget } from '../../../lib/hud';
-import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../lib/rbac';
+import { requireAuth, checkRBAC } from '../../../lib/rbac';
 
 const VALID_DS_TYPES = ['influxdb', 'prometheus', 'trivy', 'uptime-kuma', 'loki', 'graylog', 'crowdsec', 'pihole'] as const;
 
 function canMutateDataSource(locals: App.Locals, rowUserId: string): boolean {
   if (rowUserId === locals.user!.id) return true;
-  const ownerId = getWorkspaceOwnerId(locals);
+  const ownerId = locals.user!.id;
   if (rowUserId === ownerId && checkRBAC(locals, 'manage_settings') === null) return true;
   return false;
 }

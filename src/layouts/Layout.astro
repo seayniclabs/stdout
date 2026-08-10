@@ -1,7 +1,6 @@
 ---
 import '../styles/global.css';
 import { getDb, schema } from '../lib/db';
-import { getUserWorkspaces } from '../lib/rbac';
 import { getUserLimits } from '../lib/tiers';
 import { eq } from 'drizzle-orm';
 import AgentPanel from '../components/AgentPanel.astro';
@@ -63,7 +62,7 @@ if (user) {
       accentOverride = prefs.accentColor;
     }
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
-    workspaces = getUserWorkspaces(user.id);
+    workspaces = { own: { id: user.id, name: workspaceName, role: 'owner' }, teams: [] };
   } catch {}
 }
 const hasMultipleWorkspaces = workspaces.teams.length > 0;

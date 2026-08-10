@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { eq, and } from 'drizzle-orm';
 import { getDb, schema } from '../../../../lib/db';
-import { requireAuth, checkRBAC, getWorkspaceOwnerId } from '../../../../lib/rbac';
+import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 
 export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const authError = requireAuth(locals);
@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   }
 
   const db = getDb();
-  const workspaceOwnerId = getWorkspaceOwnerId(locals);
+  const workspaceOwnerId = locals.user.id;
   const allowedStackUserIds = new Set([locals.user.id, workspaceOwnerId]);
 
   // Validate both stacks belong to this workspace (owner and/or current member rows)
