@@ -110,8 +110,7 @@ async function runCheckForUser(userId: string): Promise<void> {
     const db = getDb();
     const recentIncidents = db.all(sql`
       SELECT id, stack_id, severity, title FROM incidents
-      WHERE user_id = ${userId}
-        AND tags LIKE '%observatory%'
+      WHERE tags LIKE '%observatory%'
         AND created_at > ${Math.floor(Date.now() / 1000) - 300}
       ORDER BY created_at DESC
       LIMIT 5
@@ -203,7 +202,7 @@ async function ensureStackMonitored(userId: string, stackId: string, stackName: 
 
   // Check if the stack already has a monitor
   const existing = db.get(sql`
-    SELECT id FROM monitors WHERE user_id = ${userId} AND stack_id = ${stackId} LIMIT 1
+    SELECT id FROM monitors WHERE stack_id = ${stackId} LIMIT 1
   `) as { id: string } | undefined;
 
   if (existing) return;
@@ -211,7 +210,7 @@ async function ensureStackMonitored(userId: string, stackId: string, stackName: 
   // Count hosts linked to this stack
   const hosts = db.all(sql`
     SELECT id, ip_address, hostname FROM discovered_hosts
-    WHERE user_id = ${userId} AND stack_id = ${stackId}
+    WHERE stack_id = ${stackId}
   `) as Array<{ id: string; ip_address: string; hostname: string | null }>;
 
   const now = Math.floor(Date.now() / 1000);
@@ -223,11 +222,11 @@ async function ensureStackMonitored(userId: string, stackId: string, stackName: 
 
     db.run(sql`
       INSERT OR IGNORE INTO monitors (
-        id, user_id, name, type, target, interval_seconds, timeout_ms,
+        id, name, type, target, interval_seconds, timeout_ms,
         expected_status, retries, stack_id, paused, maintenance,
         current_status, consecutive_failures, created_at, updated_at
       ) VALUES (
-        ${monitorId}, ${userId}, ${'[auto] ' + label}, 'ping', ${host.ip_address},
+        ${monitorId}, ${'[auto] ' + label}, 'ping', ${host.ip_address},
         300, 5000, NULL, 2, ${stackId}, 0, 0, 'unknown', 0, ${now}, ${now}
       )
     `);

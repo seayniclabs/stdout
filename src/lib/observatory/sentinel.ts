@@ -254,7 +254,6 @@ async function recordAgentRun(
   await db.run(sql`
     INSERT INTO observatory_agent_runs (
       id,
-      user_id,
       agent_name,
       stack_id,
       trigger,
@@ -266,7 +265,6 @@ async function recordAgentRun(
       created_at
     ) VALUES (
       ${id},
-      ${userId},
       ${run.agentName},
       ${run.stackId || null},
       ${run.trigger},
@@ -309,7 +307,6 @@ This incident was automatically created by Observatory. Review the metrics and c
   await db.run(sql`
     INSERT INTO incidents (
       id,
-      user_id,
       stack_id,
       title,
       description,
@@ -320,7 +317,6 @@ This incident was automatically created by Observatory. Review the metrics and c
       updated_at
     ) VALUES (
       ${id},
-      ${userId},
       ${stackId},
       ${detection.suggestedTitle || 'Observatory Anomaly Detected'},
       ${description},
@@ -357,7 +353,6 @@ export async function runScheduledCheck(userId: string): Promise<{
   const stacks = await db.all(sql`
     SELECT id, name
     FROM stacks
-    WHERE user_id = ${userId}
     ORDER BY created_at DESC
   `) as any[];
 

@@ -63,7 +63,7 @@ async function autoCreateHostMonitor(
 
   // Check if a monitor already targets this IP
   const existing = db.get(sql`
-    SELECT id FROM monitors WHERE user_id = ${userId} AND target LIKE ${'%' + ip + '%'}
+    SELECT id FROM monitors WHERE target LIKE ${'%' + ip + '%'}
     LIMIT 1
   `) as { id: string } | undefined;
 
@@ -76,11 +76,11 @@ async function autoCreateHostMonitor(
   // Try HTTP first (port 80). If the host has services we'll upgrade later.
   db.run(sql`
     INSERT INTO monitors (
-      id, user_id, name, type, target, interval_seconds, timeout_ms,
+      id, name, type, target, interval_seconds, timeout_ms,
       expected_status, retries, stack_id, paused, maintenance,
       current_status, consecutive_failures, created_at, updated_at
     ) VALUES (
-      ${monitorId}, ${userId}, ${'[auto] ' + label}, 'ping', ${ip},
+      ${monitorId}, ${'[auto] ' + label}, 'ping', ${ip},
       300, 5000, NULL, 2, NULL, 0, 0, 'unknown', 0, ${now}, ${now}
     )
   `);
@@ -102,8 +102,7 @@ async function linkSatelliteToHost(
   // e.g. agent named "hetzner-web-01" matches host with hostname "hetzner-web-01"
   const host = db.get(sql`
     SELECT id, ip_address FROM discovered_hosts
-    WHERE user_id = ${userId}
-      AND (
+    WHERE (
         lower(hostname) = lower(${name})
         OR ip_address = ${name}
       )

@@ -221,7 +221,7 @@ export function detectZeekAnomalies(
 function userStackIds(userId: string): string[] {
   const db = getDb();
   const stacks = db.all(sql`
-    SELECT id FROM stacks WHERE user_id = ${userId} ORDER BY created_at ASC
+    SELECT id FROM stacks ORDER BY created_at ASC
   `) as Array<{ id: string }>;
   if (stacks.length > 0) return stacks.map((s) => s.id);
   return [`zeek_host_${userId}`];

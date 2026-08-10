@@ -56,7 +56,7 @@ function resolvePrometheusUrl(userId: string): string | null {
     const db = getDb();
     const row = db.get(sql`
       SELECT url FROM data_sources
-      WHERE user_id = ${userId} AND type = 'prometheus' AND enabled = 1
+      WHERE type = 'prometheus' AND enabled = 1
       ORDER BY updated_at DESC LIMIT 1
     `) as { url: string } | undefined;
     if (row?.url) return row.url;

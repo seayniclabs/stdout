@@ -40,7 +40,7 @@ export async function configureMonitors(
 
     // Get all stacks
     let stacks = await db.all(sql`
-      SELECT id, name FROM stacks WHERE user_id = ${userId}
+      SELECT id, name FROM stacks
     `) as Array<{ id: string; name: string }>;
 
     output.push(`Found ${stacks.length} existing stacks`);
@@ -66,15 +66,15 @@ export async function configureMonitors(
       for (const stackDef of defaultStacks) {
         const stackId = nanoid();
         await db.run(sql`
-          INSERT INTO stacks (id, user_id, name, description, tags, created_at, updated_at)
-          VALUES (${stackId}, ${userId}, ${stackDef.name}, ${stackDef.description}, ${stackDef.tags}, ${now}, ${now})
+          INSERT INTO stacks (id, name, description, tags, created_at, updated_at)
+          VALUES (${stackId}, ${stackDef.name}, ${stackDef.description}, ${stackDef.tags}, ${now}, ${now})
         `);
         output.push(`✓ Created stack: ${stackDef.name}`);
       }
 
       // Reload stacks
       stacks = await db.all(sql`
-        SELECT id, name FROM stacks WHERE user_id = ${userId}
+        SELECT id, name FROM stacks
       `) as Array<{ id: string; name: string }>;
     }
 
@@ -205,7 +205,6 @@ export async function configureMonitors(
         const existing = await db.get(sql`
           SELECT id FROM monitors
           WHERE name = ${monitorDef.name}
-          AND user_id = ${userId}
         `);
 
         if (existing) {
@@ -220,7 +219,6 @@ export async function configureMonitors(
         await db.run(sql`
           INSERT INTO monitors (
             id,
-            user_id,
             stack_id,
             name,
             type,
@@ -233,7 +231,6 @@ export async function configureMonitors(
             updated_at
           ) VALUES (
             ${monitorId},
-            ${userId},
             ${stack.id},
             ${monitorDef.name},
             ${monitorDef.type},
@@ -291,7 +288,6 @@ I'm here 24/7, learning and watching. Let's keep your systems running smoothly t
       await db.run(sql`
         INSERT INTO incidents (
           id,
-          user_id,
           stack_id,
           title,
           description,
@@ -301,7 +297,6 @@ I'm here 24/7, learning and watching. Let's keep your systems running smoothly t
           updated_at
         ) VALUES (
           ${incidentId},
-          ${userId},
           ${stacks[0]?.id || null},
           ${"Hello! I'm Riggins, your Observatory AI"},
           ${welcomeMessage},

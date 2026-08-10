@@ -27,9 +27,9 @@ function getMasterKey(): Buffer {
   }
 }
 
-function deriveKey(userId: string): Buffer {
+function deriveKey(_userId: string = 'instance'): Buffer {
   const masterKey = getMasterKey();
-  return crypto.hkdfSync('sha256', masterKey, userId, 'stdout-backup', 32) as unknown as Buffer;
+  return crypto.hkdfSync('sha256', masterKey, 'stdout-instance', 'stdout-backup', 32) as unknown as Buffer;
 }
 
 // --- Encryption ---
@@ -54,42 +54,33 @@ function decrypt(payload: Buffer, key: Buffer): Buffer {
 
 // --- Paths ---
 
-function getBackupDir(userId: string): string {
-  return path.join(DATA_DIR, 'backups', userId);
+function getBackupDir(_userId: string = 'instance'): string {
+  return path.join(DATA_DIR, 'backups');
 }
 
-function getTenantDbPath(userId: string): string {
-  const selfHost = process.env.STDOUT_MODE !== 'saas';
-  if (selfHost) return process.env.DB_PATH || path.join(DATA_DIR, 'stdout.db');
-  return path.join(DATA_DIR, 'tenants', `${userId}.db`);
+function getTenantDbPath(_userId?: string): string {
+  return process.env.DB_PATH || path.join(DATA_DIR, 'stdout.db');
 }
 
 // --- Public API ---
 
 /**
- * Create an encrypted backup of a tenant's database.
+ * Create an encrypted backup of the database.
  * Uses SQLite's backup API for a safe, consistent snapshot.
  * Keeps max 3 backups, prunes oldest.
  */
-export function createBackup(userId: string): BackupInfo {
+export function createBackup(userId: string = 'instance'): BackupInfo {
   const srcPath = getTenantDbPath(userId);
   if (!fs.existsSync(srcPath)) {
-    throw new Error('Tenant database not found.');
+    throw new Error('Database not found.');
   }
 
   const backupDir = getBackupDir(userId);
   if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
 
-  // Use SQLite backup API for consistent snapshot
   const tmpPath = path.join(backupDir, `_tmp_${Date.now()}.db`);
-  const srcDb = new Database(srcPath, { readonly: true });
-  srcDb.backup(tmpPath).then(() => {}).catch(() => {});
-  // backup() is sync in better-sqlite3 despite returning a promise-like
-  // Use the synchronous exec approach instead
-  srcDb.close();
 
-  // Actually use file copy since better-sqlite3's backup is async
-  // For consistency, we'll use VACUUM INTO which creates a clean copy
+  // Use VACUUM INTO which creates a clean copy
   const db = new Database(srcPath, { readonly: true });
   db.exec(`VACUUM INTO '${tmpPath.replace(/'/g, "''")}'`);
   db.close();
@@ -119,9 +110,9 @@ export function createBackup(userId: string): BackupInfo {
 }
 
 /**
- * List available backups for a tenant.
+ * List available backups.
  */
-export function listBackups(userId: string): BackupInfo[] {
+export function listBackups(userId: string = 'instance'): BackupInfo[] {
   const backupDir = getBackupDir(userId);
   if (!fs.existsSync(backupDir)) return [];
 
@@ -133,7 +124,6 @@ export function listBackups(userId: string): BackupInfo[] {
   return files.map(filename => {
     const filePath = path.join(backupDir, filename);
     const stats = fs.statSync(filePath);
-    // Extract timestamp from filename: 2026-03-17T14-30-00-000Z.db.enc
     const tsRaw = filename.replace('.db.enc', '').replace(/-(\d{2})-(\d{2})-(\d{3})Z/, ':$1:$2.$3Z');
     return {
       filename,
@@ -144,10 +134,9 @@ export function listBackups(userId: string): BackupInfo[] {
 }
 
 /**
- * Restore a tenant's database from an encrypted backup.
- * Evicts the tenant DB from the connection pool before replacing.
+ * Restore database from an encrypted backup.
  */
-export function restoreBackup(userId: string, filename: string): void {
+export function restoreBackup(userId: string = 'instance', filename: string): void {
   const backupDir = getBackupDir(userId);
   const backupPath = path.join(backupDir, filename);
 
@@ -175,8 +164,6 @@ export function restoreBackup(userId: string, filename: string): void {
     throw new Error('Decrypted data is not a valid SQLite database.');
   }
 
-  // Evict from pool so the old connection is dropped
-
   // Replace the tenant DB
   const tenantPath = getTenantDbPath(userId);
   const walPath = tenantPath + '-wal';
@@ -191,10 +178,9 @@ export function restoreBackup(userId: string, filename: string): void {
 }
 
 /**
- * Delete all backups for a tenant.
- * Called during GDPR account deletion.
+ * Delete all backups.
  */
-export function deleteAllBackups(userId: string): void {
+export function deleteAllBackups(userId: string = 'instance'): void {
   const backupDir = getBackupDir(userId);
   if (!fs.existsSync(backupDir)) return;
 
@@ -207,7 +193,7 @@ export function deleteAllBackups(userId: string): void {
 
 // --- Internal ---
 
-function pruneBackups(userId: string): void {
+function pruneBackups(userId: string = 'instance'): void {
   const backupDir = getBackupDir(userId);
   if (!fs.existsSync(backupDir)) return;
 

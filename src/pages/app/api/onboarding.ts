@@ -1,7 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
-import { nanoid } from 'nanoid';
 import { requireAuth } from '../../../lib/rbac';
 
 export const VALID_STEPS = [
@@ -20,9 +18,7 @@ export const GET: APIRoute = async ({ locals }) => {
   if (authError) return authError;
 
   const db = getDb();
-  const prefs = db.select().from(schema.tenantPreferences)
-    .where(eq(schema.tenantPreferences.userId, locals.workspace?.ownerId || locals.user.id))
-    .get();
+  const prefs = db.select().from(schema.systemSettings).get();
 
   const completed: string[] = prefs?.onboardingProgress
     ? JSON.parse(prefs.onboardingProgress)
@@ -55,24 +51,18 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     });
   }
 
-  const ownerId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
 
-  let prefs = db.select().from(schema.tenantPreferences)
-    .where(eq(schema.tenantPreferences.userId, ownerId))
-    .get();
+  let prefs = db.select().from(schema.systemSettings).get();
 
   if (!prefs) {
-    db.insert(schema.tenantPreferences).values({
-      id: nanoid(),
-      userId: ownerId,
+    db.insert(schema.systemSettings).values({
+      id: 'instance',
       onboardingProgress: '[]',
       onboardingDismissed: false,
       updatedAt: new Date(),
     }).run();
-    prefs = db.select().from(schema.tenantPreferences)
-      .where(eq(schema.tenantPreferences.userId, ownerId))
-      .get()!;
+    prefs = db.select().from(schema.systemSettings).get()!;
   }
 
   const completed: string[] = prefs.onboardingProgress
@@ -80,9 +70,8 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     : [];
 
   if (action === 'dismiss') {
-    db.update(schema.tenantPreferences)
+    db.update(schema.systemSettings)
       .set({ onboardingDismissed: true, updatedAt: new Date() })
-      .where(eq(schema.tenantPreferences.userId, ownerId))
       .run();
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' },
@@ -91,12 +80,11 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
   if (action === 'complete' && step && (VALID_STEPS as readonly string[]).includes(step) && !completed.includes(step)) {
     completed.push(step);
-    db.update(schema.tenantPreferences)
+    db.update(schema.systemSettings)
       .set({
         onboardingProgress: JSON.stringify(completed),
         updatedAt: new Date(),
       })
-      .where(eq(schema.tenantPreferences.userId, ownerId))
       .run();
   }
 

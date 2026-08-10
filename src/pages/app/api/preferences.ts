@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { requireAuth } from '../../../lib/rbac';
 
 // --- Branding ---
@@ -12,11 +12,8 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const db = getDb();
 
-  const branding = db.select().from(schema.tenantPreferences)
-    .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
-
-  const notifications = db.select().from(schema.notificationPreferences)
-    .where(eq(schema.notificationPreferences.userId, locals.user.id)).all();
+  const branding = db.select().from(schema.systemSettings).get();
+  const notifications = db.select().from(schema.notificationPreferences).all();
 
   return new Response(JSON.stringify({ branding: branding || null, notifications }), {
     headers: { 'Content-Type': 'application/json' },
@@ -51,8 +48,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
   // --- Branding ---
   if (action === 'update_branding') {
-    const existing = db.select().from(schema.tenantPreferences)
-      .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
+    const existing = db.select().from(schema.systemSettings).get();
 
     const values = {
       workspaceName: (body.workspaceName || '').trim() || null,
@@ -62,14 +58,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     };
 
     if (existing) {
-      db.update(schema.tenantPreferences).set(values)
-        .where(and(
-          eq(schema.tenantPreferences.id, existing.id),
-          eq(schema.tenantPreferences.userId, locals.user.id),
-        )).run();
+      db.update(schema.systemSettings).set(values).run();
     } else {
-      db.insert(schema.tenantPreferences).values({
-        id: nanoid(), userId: locals.user.id, ...values,
+      db.insert(schema.systemSettings).values({
+        id: 'instance', ...values,
       }).run();
     }
 
@@ -105,7 +97,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     const enabled = body.enabled;
     db.update(schema.notificationPreferences)
       .set({ enabled, updatedAt: new Date() })
-      .where(and(eq(schema.notificationPreferences.id, notifId), eq(schema.notificationPreferences.userId, locals.user.id)))
+      .where(eq(schema.notificationPreferences.id, notifId))
       .run();
     return new Response(JSON.stringify({ toggled: true }), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -114,7 +106,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   if (action === 'delete_notification') {
     const notifId = body.id;
     db.delete(schema.notificationPreferences)
-      .where(and(eq(schema.notificationPreferences.id, notifId), eq(schema.notificationPreferences.userId, locals.user.id)))
+      .where(eq(schema.notificationPreferences.id, notifId))
       .run();
     return new Response(JSON.stringify({ deleted: true }), { headers: { 'Content-Type': 'application/json' } });
   }
@@ -147,8 +139,7 @@ export const PUT: APIRoute = async ({ locals, request, cookies }) => {
   }
 
   const db = getDb();
-  const existing = db.select().from(schema.tenantPreferences)
-    .where(eq(schema.tenantPreferences.userId, locals.user.id)).get();
+  const existing = db.select().from(schema.systemSettings).get();
 
   const updates: any = { updatedAt: new Date() };
 
@@ -160,14 +151,10 @@ export const PUT: APIRoute = async ({ locals, request, cookies }) => {
   }
 
   if (existing) {
-    db.update(schema.tenantPreferences).set(updates)
-      .where(and(
-        eq(schema.tenantPreferences.id, existing.id),
-        eq(schema.tenantPreferences.userId, locals.user.id),
-      )).run();
+    db.update(schema.systemSettings).set(updates).run();
   } else {
-    db.insert(schema.tenantPreferences).values({
-      id: nanoid(), userId: locals.user.id, ...updates,
+    db.insert(schema.systemSettings).values({
+      id: 'instance', ...updates,
     }).run();
   }
 
