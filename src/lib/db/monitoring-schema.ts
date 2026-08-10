@@ -102,23 +102,24 @@ export const monitors = sqliteTable('monitors', {
 export const checkResults = sqliteTable('check_results', {
   id: text('id').primaryKey(),
   monitorId: text('monitor_id').notNull(),
-  status: text('status', {
-    enum: ['up', 'down', 'degraded'],
-  }).notNull(),
+  userId: text('user_id'),
+  status: text('status').notNull(),
+  responseTimeMs: integer('response_time_ms'),
   latencyMs: integer('latency_ms'),
   statusCode: integer('status_code'),
-  errorMessage: text('error_message'),
+  error: text('error'),
   checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const uptimeDaily = sqliteTable('uptime_daily', {
   id: text('id').primaryKey(),
   monitorId: text('monitor_id').notNull(),
+  userId: text('user_id'),
   date: text('date').notNull(),
-  totalChecks: integer('total_checks').notNull().default(0),
-  successfulChecks: integer('successful_checks').notNull().default(0),
-  avgLatencyMs: integer('avg_latency_ms'),
-  uptimePercentage: real('uptime_percentage').notNull().default(100),
+  successCount: integer('success_count').notNull().default(0),
+  failureCount: integer('failure_count').notNull().default(0),
+  avgResponseTime: integer('avg_response_time'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }),
 });
 
 export const incidentOccurrences = sqliteTable('incident_occurrences', {
