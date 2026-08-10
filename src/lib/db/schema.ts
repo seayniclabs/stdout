@@ -280,41 +280,44 @@ export const notificationPreferences = sqliteTable('notification_preferences', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
-// --- TENANT PREFERENCES (temporary - remove in Task 8) ---
-// NOTE: This table is kept temporarily to avoid breaking the build.
-// It will be removed in Task 8 when workspace UI is cleaned up.
+// --- SYSTEM SETTINGS (single-instance configuration) ---
 
-export const tenantPreferences = sqliteTable('tenant_preferences', {
-  id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
-  workspaceName: text('workspace_name'),
-  accentColor: text('accent_color'),
+export const systemSettings = sqliteTable('system_settings', {
+  id: text('id').primaryKey().$defaultFn(() => 'instance'),
+  // Branding
+  workspaceName: text('workspace_name').$defaultFn(() => 'StdOut'),
+  accentColor: text('accent_color').$defaultFn(() => '#F97316'),
   logoUrl: text('logo_url'),
+  // Onboarding
   onboardingProgress: text('onboarding_progress'),
-  onboardingDismissed: integer('onboarding_dismissed', { mode: 'boolean' }).notNull().default(false),
-  addonsDismissed: integer('addons_dismissed', { mode: 'boolean' }).notNull().default(false),
-  addonsHidden: integer('addons_hidden', { mode: 'boolean' }).notNull().default(false),
+  onboardingDismissed: integer('onboarding_dismissed', { mode: 'boolean' }).$defaultFn(() => false),
+  addonsDismissed: integer('addons_dismissed', { mode: 'boolean' }).$defaultFn(() => false),
+  addonsHidden: integer('addons_hidden', { mode: 'boolean' }).$defaultFn(() => false),
   addonsCache: text('addons_cache'),
   addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp' }),
+  // Observatory settings
   operatingMode: text('operating_mode', {
     enum: ['discover', 'diagnose', 'autofix'],
-  }).notNull().default('discover'),
-  autopilotEnabled: integer('autopilot_enabled', { mode: 'boolean' }).notNull().default(false),
+  }).$defaultFn(() => 'discover'),
+  autopilotEnabled: integer('autopilot_enabled', { mode: 'boolean' }).$defaultFn(() => false),
   autopilotLevel: text('autopilot_level', {
     enum: ['discover', 'diagnose', 'autofix'],
-  }).notNull().default('discover'),
-  autopilotSuccessCount: integer('autopilot_success_count').notNull().default(0),
-  autopilotFailCount: integer('autopilot_fail_count').notNull().default(0),
+  }).$defaultFn(() => 'discover'),
+  autopilotSuccessCount: integer('autopilot_success_count').$defaultFn(() => 0),
+  autopilotFailCount: integer('autopilot_fail_count').$defaultFn(() => 0),
   autopilotLevelSince: integer('autopilot_level_since'),
-  killswitchTripped: integer('killswitch_tripped', { mode: 'boolean' }).notNull().default(false),
+  killswitchTripped: integer('killswitch_tripped', { mode: 'boolean' }).$defaultFn(() => false),
   killswitchReason: text('killswitch_reason'),
   killswitchAt: integer('killswitch_at'),
-  godModeGranted: integer('god_mode_granted', { mode: 'boolean' }).notNull().default(false),
+  godModeGranted: integer('god_mode_granted', { mode: 'boolean' }).$defaultFn(() => false),
   godModeGrantedBy: text('god_mode_granted_by'),
   godModeGrantedAt: integer('god_mode_granted_at'),
-  ragIncludePublic: integer('rag_include_public', { mode: 'boolean' }).notNull().default(false),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  ragIncludePublic: integer('rag_include_public', { mode: 'boolean' }).$defaultFn(() => true),
+  // Timestamps
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
+
 
 // --- SATELLITES & NETWORK MONITORING ---
 
