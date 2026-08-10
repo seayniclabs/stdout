@@ -31,6 +31,34 @@ CREATE TABLE IF NOT EXISTS system_settings (
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
 
+-- Step 1.5: Ensure tenant_preferences table exists so SELECT won't fail if table was already absent
+CREATE TABLE IF NOT EXISTS tenant_preferences (
+  id INTEGER PRIMARY KEY,
+  workspace_name TEXT,
+  accent_color TEXT,
+  logo_url TEXT,
+  onboarding_progress TEXT,
+  onboarding_dismissed INTEGER,
+  addons_dismissed INTEGER,
+  addons_hidden INTEGER,
+  addons_cache TEXT,
+  addons_cache_at INTEGER,
+  operating_mode TEXT,
+  autopilot_enabled INTEGER,
+  autopilot_level TEXT,
+  autopilot_success_count INTEGER,
+  autopilot_fail_count INTEGER,
+  autopilot_level_since INTEGER,
+  killswitch_tripped INTEGER,
+  killswitch_reason TEXT,
+  killswitch_at INTEGER,
+  god_mode_granted INTEGER,
+  god_mode_granted_by TEXT,
+  god_mode_granted_at INTEGER,
+  rag_include_public INTEGER,
+  updated_at INTEGER
+);
+
 -- Step 2: Migrate data from tenant_preferences (take first row only for single-instance)
 INSERT OR IGNORE INTO system_settings (
   workspace_name, accent_color, logo_url, onboarding_progress,
@@ -58,3 +86,4 @@ DROP TABLE IF EXISTS tenant_preferences;
 
 -- Note: user_id column removal from other tables will be done via schema evolution
 -- SQLite doesn't support ALTER TABLE DROP COLUMN, so those will be handled in code
+
