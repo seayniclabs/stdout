@@ -10,8 +10,6 @@ import { canPerform } from '../../../lib/rbac';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
-const ws = Astro.locals.workspace;
-if (ws && !ws.isOwnWorkspace && !canPerform(ws.role, 'create')) return Astro.redirect('/app');
 const { tier, limits } = getUserLimits(user);
 
 const db = getDb();

@@ -33,23 +33,11 @@ const mobileNav = [
 ];
 
 const user = Astro.locals.user;
-const ws = Astro.locals.workspace;
 
-// Team nav link: only visible for Shop (rbacEnabled) users
-let showTeamNav = false;
-if (user) {
-  const { limits } = getUserLimits(user);
-  showTeamNav = limits.rbacEnabled;
-}
-
-// Load tenant branding — use workspace owner's DB if in a team workspace
+// Load tenant branding
 let workspaceName = 'StdOut';
 let accentOverride = '';
 let logoOverride = '';
-const wsOwnerId = ws?.ownerId || user?.id;
-
-// Workspace switcher data
-let workspaces: { own: any; teams: any[] } = { own: null, teams: [] };
 
 if (user) {
   try {
@@ -60,11 +48,8 @@ if (user) {
       accentOverride = prefs.accentColor;
     }
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
-    workspaces = { own: { id: user.id, name: workspaceName, role: 'owner' }, teams: [] };
   } catch {}
 }
-const hasMultipleWorkspaces = workspaces.teams.length > 0;
-const currentWsId = ws?.ownerId || user?.id;
 ---
 <!doctype html>
 <html lang="en">
@@ -122,9 +107,6 @@ const currentWsId = ws?.ownerId || user?.id;
           }]}
         >{label}</a>
       ))}
-      {showTeamNav && (
-        <a href="/app/team" class:list={[{ active: path.startsWith('/app/team') }]}>Team</a>
-      )}
     </div>
 
     <form class="nav-search" action="/app/search" method="get" role="search">
@@ -142,27 +124,7 @@ const currentWsId = ws?.ownerId || user?.id;
       </svg>
     </button>
 
-    {hasMultipleWorkspaces && (
-      <div class="ws-switcher">
-        <select id="wsSwitcher" class="ws-select" aria-label="Switch workspace">
-          {workspaces.own && (
-            <option value={workspaces.own.id} selected={currentWsId === workspaces.own.id}>
-              {workspaces.own.name} (yours)
-            </option>
-          )}
-          {workspaces.teams.map(t => (
-            <option value={t.id} selected={currentWsId === t.id}>
-              {t.name} ({t.role})
-            </option>
-          ))}
-        </select>
-      </div>
-    )}
-    {ws && !ws.isOwnWorkspace && (
-      <div class="ws-badge" title={`Viewing as ${ws.role}`}>
-        {ws.role}
-      </div>
-    )}
+
     <div class="topnav-auth" id="authNav">
       <a href="/app/login" class="topnav-auth-link">Log in</a>
     </div>
@@ -186,9 +148,6 @@ const currentWsId = ws?.ownerId || user?.id;
         }]}
       >{label}</a>
     ))}
-    {showTeamNav && (
-      <a href="/app/team" class:list={['nav-mobile-link', { active: path.startsWith('/app/team') }]}>Team</a>
-    )}
     <div class="nav-mobile-divider"></div>
     <div class="nav-mobile-auth" id="mobileAuthNav">
       <a href="/app/login" class="nav-mobile-link">Log in</a>
@@ -315,13 +274,7 @@ const currentWsId = ws?.ownerId || user?.id;
       }
     }).catch(() => {});
 
-    // Workspace switcher
-    const wsSwitcher = document.getElementById('wsSwitcher') as HTMLSelectElement;
-    wsSwitcher?.addEventListener('change', () => {
-      const url = new URL(window.location.href);
-      url.searchParams.set('ws', wsSwitcher.value);
-      window.location.href = url.toString();
-    });
+
 
     // Nav search inline dropdown
     const navSearchInput = document.getElementById('navSearchInput') as HTMLInputElement;
@@ -547,17 +500,7 @@ const currentWsId = ws?.ownerId || user?.id;
       transition: color 150ms;
     }
     .topnav-auth-link:hover { color: var(--text); }
-    .ws-switcher { margin-left: auto; margin-right: 8px; }
-    .ws-select {
-      background: var(--bg-surface); border: 1px solid var(--border); border-radius: 4px;
-      color: var(--text-secondary); font-size: 11px; padding: 4px 8px;
-      font-family: var(--font-mono); cursor: pointer;
-    }
-    .ws-badge {
-      font-size: 10px; padding: 2px 6px; border-radius: 4px;
-      background: #DBEAFE; color: #1E40AF; font-weight: 600;
-      text-transform: uppercase; letter-spacing: 0.04em; margin-right: 8px;
-    }
+
     .topnav-avatar {
       width: 26px; height: 26px;
       background: var(--accent);

@@ -12,7 +12,6 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
-const ws = Astro.locals.workspace;
 const workspaceOwnerId = user.id;
 const allowedStackUserIds = new Set([user.id, workspaceOwnerId]);
 

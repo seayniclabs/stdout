@@ -7,7 +7,7 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 if (user.role !== 'superadmin') return Astro.redirect('/app');
 
-const userId = Astro.locals.workspace?.ownerId || user.id;
+const userId = user.id;
 const db = getDb();
 
 // Get all unknown tools, grouped and counted

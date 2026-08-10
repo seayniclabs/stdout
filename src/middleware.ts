@@ -510,8 +510,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
-  // No workspace context needed for self-hosted mode
-  context.locals.workspace = null;
+
 
   // Nonce for CSP
   const nonce = generateNonce();

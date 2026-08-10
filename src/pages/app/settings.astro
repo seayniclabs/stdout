@@ -80,28 +80,7 @@ const licenseNotice = getLicenseNotice();
         </section>
       )}
 
-      <!-- Team -->
-      {limits.rbacEnabled && (
-        <section class="section">
-          <h2>Team Members</h2>
-          <p class="section-desc">Invite team members with role-based access. <a href="/app/team" class="section-link">Open Team panel &rarr;</a></p>
-          <div class="team-section">
-            <div id="teamList" class="team-list">
-              <div class="team-loading">Loading team...</div>
-            </div>
-            <div class="team-invite">
-              <input type="email" id="inviteEmail" placeholder="Email address" class="settings-input" />
-              <select id="inviteRole" class="settings-input">
-                <option value="viewer">Viewer</option>
-                <option value="editor">Editor</option>
-                <option value="admin">Admin</option>
-              </select>
-              <button id="inviteBtn" class="btn btn-primary btn-sm">Invite</button>
-            </div>
-            <div id="teamStatus" class="backup-status"></div>
-          </div>
-        </section>
-      )}
+
 
       <!-- Appearance (Skins) -->
       <section class="section">
@@ -611,83 +590,7 @@ const licenseNotice = getLicenseNotice();
 
   initTabs();
 
-  // ── Team Management ──
-  const teamList = document.getElementById('teamList');
-  const inviteBtn = document.getElementById('inviteBtn');
-  const teamStatus = document.getElementById('teamStatus');
 
-  async function loadTeam() {
-    if (!teamList) return;
-    try {
-      const res = await fetch('/app/api/team');
-      const data = await res.json();
-      if (!data.members || data.members.length === 0) {
-        teamList.innerHTML = '<div class="team-empty">No team members yet. Invite someone below.</div>';
-        return;
-      }
-      teamList.innerHTML = data.members
-        .filter((m: any) => m.status !== 'revoked')
-        .map((m: any) => `
-          <div class="team-row">
-            <div class="team-info">
-              <span class="team-email">${m.email}</span>
-              <span class="team-role-badge ${m.role}">${m.role}</span>
-              ${m.status === 'pending' ? '<span class="team-role-badge pending">pending</span>' : ''}
-            </div>
-            <div class="team-actions">
-              <select class="settings-input team-role-select" data-id="${m.id}" style="width:auto;padding:4px 8px;font-size:12px;">
-                <option value="viewer" ${m.role === 'viewer' ? 'selected' : ''}>Viewer</option>
-                <option value="editor" ${m.role === 'editor' ? 'selected' : ''}>Editor</option>
-                <option value="admin" ${m.role === 'admin' ? 'selected' : ''}>Admin</option>
-              </select>
-              <button class="btn btn-sm team-remove-btn" data-id="${m.id}" style="color:var(--text-muted);font-size:11px;">Remove</button>
-            </div>
-          </div>
-        `).join('');
-
-      teamList.querySelectorAll('.team-role-select').forEach((sel: any) => {
-        sel.addEventListener('change', async () => {
-          await fetch('/app/api/team', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'update_role', memberId: sel.dataset.id, role: sel.value }),
-          });
-        });
-      });
-
-      teamList.querySelectorAll('.team-remove-btn').forEach((btn: any) => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Remove this team member?')) return;
-          await fetch('/app/api/team', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'remove', memberId: btn.dataset.id }),
-          });
-          loadTeam();
-        });
-      });
-    } catch { if (teamList) teamList.innerHTML = '<div class="team-empty">Failed to load team.</div>'; }
-  }
-
-  inviteBtn?.addEventListener('click', async () => {
-    const emailInput = document.getElementById('inviteEmail') as HTMLInputElement;
-    const roleSelect = document.getElementById('inviteRole') as HTMLSelectElement;
-    const email = emailInput?.value.trim();
-    if (!email) return;
-    const res = await fetch('/app/api/team', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'invite', email, role: roleSelect?.value || 'viewer' }),
-    });
-    const data = await res.json();
-    if (teamStatus) {
-      teamStatus.textContent = res.ok ? `Invited ${email} as ${data.role}` : data.error;
-      teamStatus.style.color = res.ok ? 'var(--text-secondary)' : 'var(--error)';
-    }
-    if (res.ok) { emailInput.value = ''; loadTeam(); }
-  });
-
-  loadTeam();
 
   // ── Branding ──
   const brandName = document.getElementById('brandName') as HTMLInputElement;
@@ -1725,21 +1628,7 @@ const licenseNotice = getLicenseNotice();
   .btn-secondary { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text); padding: 8px 16px; border-radius: var(--radius-sm); font-size: 13px; text-decoration: none; cursor: pointer; }
   .btn-secondary:hover { background: var(--bg-hover); }
 
-  /* ── Team ── */
-  .team-section { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 24px; padding: 16px; }
-  .team-list { margin-bottom: 16px; }
-  .team-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
-  .team-row:last-child { border-bottom: none; }
-  .team-info { display: flex; align-items: center; gap: 8px; }
-  .team-email { font-size: 13px; }
-  .team-role-badge { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--bg-hover); color: var(--text-secondary); font-weight: 600; }
-  .team-role-badge.admin { background: rgba(139,92,246,0.14); color: #a78bfa; }
-  .team-role-badge.editor { background: rgba(16,185,129,0.14); color: #34d399; }
-  .team-role-badge.pending { background: rgba(245,158,11,0.12); color: #f59e0b; }
-  .team-actions { display: flex; gap: 8px; align-items: center; }
-  .team-invite { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .team-empty { font-size: 13px; color: var(--text-muted); padding: 8px 0; }
-  .team-loading { font-size: 13px; color: var(--text-muted); }
+
 
   /* ── Branding ── */
   .brand-form { display: flex; flex-direction: column; gap: 12px; }
