@@ -202,7 +202,7 @@ export async function executeTool(
           return { success: true, result: { stack, metrics: metrics || [] } };
         }
 
-        const stacks = await db.all(sql`SELECT id, name, description FROM stacks WHERE user_id = ${userId}`);
+        const stacks = await db.all(sql`SELECT id, name, description FROM stacks`);
         const result = [];
         for (const stack of stacks as any[]) {
           const metrics = await db.all(sql`
@@ -235,7 +235,7 @@ export async function executeTool(
         const query = sql`
           SELECT id, title, description, severity, status, created_at, resolved_at, stack_id
           FROM incidents
-          WHERE user_id = ${userId}
+          WHERE 1=1
           ${parameters.status ? sql` AND status = ${parameters.status}` : sql``}
           ${parameters.severity ? sql` AND severity = ${parameters.severity}` : sql``}
           ORDER BY created_at DESC LIMIT 50
@@ -249,7 +249,7 @@ export async function executeTool(
         const db = getDb();
         const stacks = await db.all(sql`
           SELECT id, name, description, type, created_at, updated_at
-          FROM stacks WHERE user_id = ${userId}
+          FROM stacks
           ORDER BY name ASC
         `);
 

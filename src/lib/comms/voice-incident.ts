@@ -73,10 +73,9 @@ export async function loadVoiceIncidentContext(userId: string): Promise<VoiceInc
         .prepare(
           `SELECT r.content FROM resolutions r
            JOIN incidents i ON r.incident_id = i.id
-           WHERE i.user_id = ?
            ORDER BY r.created_at DESC LIMIT 3`,
         )
-        .all(userId);
+        .all();
       for (const row of rows) {
         if (row.content) pastResolutions.push(row.content);
       }

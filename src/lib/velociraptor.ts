@@ -56,9 +56,8 @@ export function getVelociraptorConfig(userId: number): VelociraptorConfig | null
     const config = db.prepare(`
       SELECT api_url, api_key, enabled
       FROM velociraptor_config
-      WHERE user_id = ?
       LIMIT 1
-    `).get(userId) as any;
+    `).get() as any;
 
     if (!config) return null;
 

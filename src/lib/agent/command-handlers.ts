@@ -118,7 +118,7 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
 
     // Get or create default stack
     let stacks = await db.all(sql`
-      SELECT id, name FROM stacks WHERE user_id = ${userId}
+      SELECT id, name FROM stacks
     `) as Array<{ id: string; name: string }>;
 
     if (stacks.length === 0) {
@@ -126,7 +126,6 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
       const now = Date.now();
       await db.insert(schema.stacks).values({
         id: stackId,
-        userId,
         name: 'Infrastructure',
         description: 'Auto-discovered infrastructure and services',
         tags: JSON.stringify(['auto-discovered']),
@@ -162,7 +161,6 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
       const existing = await db.get(sql`
         SELECT id FROM monitors
         WHERE target LIKE ${'%' + service.ip_address + '%'}
-        AND user_id = ${userId}
       `);
 
       if (existing) continue;

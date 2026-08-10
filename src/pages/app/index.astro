@@ -82,13 +82,11 @@ const pendingImports = db.select().from(schema.stackImports)
   .where(eq(schema.stackImports.status, 'pending')).all();
 
 // --- Onboarding state ---
-const tokens = getDb().select().from(schema.apiTokens)
-  .where(eq(schema.apiTokens.userId, user.id)).all();
+const tokens = getDb().select().from(schema.apiTokens).all();
 const hasToken = tokens.length > 0;
 
-// Load onboarding progress from tenant preferences
-const prefs = db.select().from(schema.tenantPreferences)
-  .where(eq(schema.tenantPreferences.userId, user.id)).get();
+// Load onboarding progress from system settings
+const prefs = db.select().from(schema.systemSettings).get();
 const onboardingDismissed = prefs?.onboardingDismissed ?? false;
 const savedProgress: string[] = prefs?.onboardingProgress ? JSON.parse(prefs.onboardingProgress) : [];
 
@@ -97,9 +95,7 @@ const confirmedImport = db.select().from(schema.stackImports)
   .all()
   .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())[0];
 
-const windlassCfg = db.select().from(schema.windlassConfig)
-  .where(eq(schema.windlassConfig.userId, user.id))
-  .get();
+const windlassCfg = db.select().from(schema.windlassConfig).get();
 
 const autoCompleted = new Set(savedProgress);
 const hasLicense = !!getStoredLicense();

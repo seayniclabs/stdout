@@ -101,8 +101,7 @@ async function buildContextString(userId: string, tenant: any): Promise<string> 
   // Load stacks
   const customerStacks = await tenant
     .select()
-    .from(stacks)
-    .where(eq(stacks.userId, userId));
+    .from(stacks);
 
   if (customerStacks.length === 0) {
     context += 'No stacks configured yet.\n';
@@ -117,8 +116,7 @@ async function buildContextString(userId: string, tenant: any): Promise<string> 
   // Load data sources
   const sources = await tenant
     .select()
-    .from(dataSources)
-    .where(eq(dataSources.userId, userId));
+    .from(dataSources);
 
   if (sources.length > 0) {
     context += `\n### Data Sources (${sources.length})\n`;
@@ -142,10 +140,9 @@ async function loadConversationHistory(
   const rows = central.prepare(`
     SELECT role, content
     FROM agent_conversations
-    WHERE user_id = ?
     ORDER BY created_at DESC
     LIMIT ?
-  `).all(userId, limit);
+  `).all(limit);
 
   // Reverse to chronological order (oldest first)
   return rows.reverse().map((row: any) => ({
@@ -206,6 +203,5 @@ export async function clearConversationHistory(userId: string): Promise<void> {
 
   central.prepare(`
     DELETE FROM agent_conversations
-    WHERE user_id = ?
-  `).run(userId);
+  `).run();
 }

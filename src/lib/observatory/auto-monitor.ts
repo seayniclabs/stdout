@@ -317,9 +317,9 @@ export function executeMonitorCreation(
       // Check for existing monitor with same target
       const existing = db.prepare(`
         SELECT id FROM monitors
-        WHERE user_id = ? AND target = ?
+        WHERE target = ?
         LIMIT 1
-      `).get(userId, suggestion.target) as { id: string } | undefined;
+      `).get(suggestion.target) as { id: string } | undefined;
 
       const now = new Date().toISOString();
 

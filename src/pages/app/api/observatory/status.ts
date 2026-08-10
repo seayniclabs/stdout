@@ -33,23 +33,23 @@ export const GET: APIRoute = async ({ locals }) => {
   // ── Stacks ────────────────────────────────────────────────────────────────
   const stacks = db.all(sql`
     SELECT s.id, s.name, s.created_at,
-      (SELECT COUNT(*) FROM discovered_hosts h WHERE h.user_id = ${userId} AND h.stack_id = s.id) as host_count,
-      (SELECT COUNT(*) FROM monitors m WHERE m.user_id = ${userId} AND m.stack_id = s.id) as monitor_count
-    FROM stacks s WHERE s.user_id = ${userId}
+      (SELECT COUNT(*) FROM discovered_hosts h WHERE h.stack_id = s.id) as host_count,
+      (SELECT COUNT(*) FROM monitors m WHERE m.stack_id = s.id) as monitor_count
+    FROM stacks s
     ORDER BY s.created_at DESC LIMIT 20
   `) as Array<{ id: string; name: string; created_at: number; host_count: number; monitor_count: number }>;
 
   // ── Discovered hosts ──────────────────────────────────────────────────────
   const hosts = db.all(sql`
     SELECT id, ip_address, hostname, stack_id, last_seen
-    FROM discovered_hosts WHERE user_id = ${userId}
+    FROM discovered_hosts
     ORDER BY last_seen DESC LIMIT 50
   `) as Array<{ id: string; ip_address: string; hostname: string | null; stack_id: string | null; last_seen: number }>;
 
   // ── Satellite agents ──────────────────────────────────────────────────────
   const satellites = centralDb.all(sql`
     SELECT id, name, alert_state, last_seen, tags FROM satellite_agents
-    WHERE user_id = ${userId} ORDER BY created_at DESC
+    ORDER BY created_at DESC
   `) as Array<{ id: string; name: string; alert_state: string; last_seen: number | null; tags: string }>;
 
   // ── Recent events (last 100) ──────────────────────────────────────────────
@@ -57,7 +57,6 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     recentEvents = db.all(sql`
       SELECT id, type, payload, created_at FROM event_log
-      WHERE user_id = ${userId}
       ORDER BY created_at DESC LIMIT 100
     `) as typeof recentEvents;
   } catch {
@@ -65,7 +64,6 @@ export const GET: APIRoute = async ({ locals }) => {
     try {
       recentEvents = centralDb.all(sql`
         SELECT id, type, payload, created_at FROM event_log
-        WHERE user_id = ${userId}
         ORDER BY created_at DESC LIMIT 100
       `) as typeof recentEvents;
     } catch { /* table not yet created */ }
@@ -75,7 +73,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const autoIncidents = db.all(sql`
     SELECT id, title, severity, status, stack_id, created_at
     FROM incidents
-    WHERE user_id = ${userId} AND tags LIKE '%observatory%'
+    WHERE tags LIKE '%observatory%'
     ORDER BY created_at DESC LIMIT 20
   `) as Array<{ id: string; title: string; severity: string; status: string; stack_id: string | null; created_at: number }>;
 

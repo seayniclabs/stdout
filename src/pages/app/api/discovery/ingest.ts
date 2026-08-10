@@ -344,8 +344,8 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
       const { startMonitor } = await import('../../../../lib/hud');
       const newMonitors = db.prepare(`
         SELECT id FROM monitors
-        WHERE user_id = ? AND created_at >= ?
-      `).all(userId, now) as Array<{ id: string }>;
+        WHERE created_at >= ?
+      `).all(now) as Array<{ id: string }>;
 
       for (const monitor of newMonitors) {
         try {

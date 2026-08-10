@@ -1,6 +1,5 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
-import { eq } from 'drizzle-orm';
 import { requireAuth } from '../../../../lib/rbac';
 
 // POST /app/api/addons/dismiss — dismiss the add-ons banner for this session
@@ -16,12 +15,10 @@ export const POST: APIRoute = async ({ locals, cookies }) => {
     return Response.json({ error: 'CSRF token validation failed' }, { status: 403 });
   }
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
 
-  db.update(schema.tenantPreferences)
+  db.update(schema.systemSettings)
     .set({ addonsDismissed: true })
-    .where(eq(schema.tenantPreferences.userId, userId))
     .run();
 
   return Response.json({ ok: true });

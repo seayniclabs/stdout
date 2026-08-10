@@ -234,10 +234,9 @@ export function getWazuhMetrics(userId: number): WazuhMetrics {
     const alerts = db.prepare(`
       SELECT severity, rule_id
       FROM wazuh_alerts
-      WHERE user_id = ?
       ORDER BY timestamp DESC
       LIMIT 1000
-    `).all(userId) as Array<{ severity: string; rule_id: string }>;
+    `).all() as Array<{ severity: string; rule_id: string }>;
 
     const metrics: WazuhMetrics = {
       totalAlerts: alerts.length,

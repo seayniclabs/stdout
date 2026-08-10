@@ -45,7 +45,7 @@ export async function maybeAutoDocument(userId: string, incidentId: string): Pro
 
     const incident = tenant.get(sql`
       SELECT id, title, description, severity, tags FROM incidents
-      WHERE id = ${incidentId} AND user_id = ${userId}
+      WHERE id = ${incidentId}
     `) as { id: string; title: string; description: string; severity: string; tags: string | null } | undefined;
     if (!incident) return { documented: false, reason: 'incident not found' };
 
@@ -151,8 +151,7 @@ async function hasCloseMatch(userId: string, title: string, description: string)
       SELECT COUNT(*) AS n
       FROM incidents i
       JOIN incidents_fts fts ON fts.rowid = i.rowid
-      WHERE i.user_id = ${userId}
-        AND i.resolved_at IS NOT NULL
+      WHERE i.resolved_at IS NOT NULL
         AND incidents_fts MATCH ${match}
     `) as { n: number } | undefined;
     // 1 match is THIS incident; "rare" means ≤1 other similar prior. ≥3 similar = common, skip.

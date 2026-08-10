@@ -124,7 +124,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
 
       // Check if any hosts have been discovered yet
       const totalHostsRow = tenantDb.get(sql`
-        SELECT COUNT(*) as n FROM discovered_hosts WHERE user_id = ${firstUser.id}
+        SELECT COUNT(*) as n FROM discovered_hosts
       `) as { n: number } | undefined;
       const totalHosts = totalHostsRow?.n ?? 0;
 
@@ -139,7 +139,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       }
 
       const stacks = tenantDb.all(sql`
-        SELECT id, name FROM stacks WHERE user_id = ${firstUser.id} ORDER BY created_at DESC
+        SELECT id, name FROM stacks ORDER BY created_at DESC
       `) as Array<{ id: string; name: string }>;
 
       if (stacks.length === 0) {
@@ -149,7 +149,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
 
         for (const stack of stacks) {
           const hostRow = tenantDb.get(sql`
-            SELECT COUNT(*) as n FROM discovered_hosts WHERE user_id = ${firstUser.id} AND stack_id = ${stack.id}
+            SELECT COUNT(*) as n FROM discovered_hosts WHERE stack_id = ${stack.id}
           `) as { n: number } | undefined;
           const hostsCount = hostRow?.n ?? 0;
           log.push(`  - ${stack.name}: ${hostsCount} hosts`);
@@ -181,7 +181,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     if (firstUser) {
       const tenantDb = getDb();
       const existingMonitors = tenantDb.all(sql`
-        SELECT id, name, type, current_status FROM monitors WHERE user_id = ${firstUser.id} ORDER BY created_at DESC
+        SELECT id, name, type, current_status FROM monitors ORDER BY created_at DESC
       `) as Array<{ id: string; name: string; type: string; current_status: string }>;
 
       if (existingMonitors.length === 0) {
@@ -262,7 +262,7 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       // Seed default agentConfig for Riggins if it doesn't exist
       try {
         const { agentConfig } = await import('../db/agent-schema');
-        const existingConfig = centralDb.get(sql`SELECT id FROM agent_config WHERE user_id = ${firstUser.id} LIMIT 1`);
+        const existingConfig = centralDb.get(sql`SELECT id FROM agent_config LIMIT 1`);
         if (!existingConfig) {
           centralDb.insert(agentConfig).values({
             id: crypto.randomUUID(),

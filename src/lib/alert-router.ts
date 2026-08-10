@@ -48,7 +48,6 @@ export function createChannel(
 export function listChannels(userId: string) {
   const db = getDb();
   return db.select().from(schema.alertChannels)
-    .where(eq(schema.alertChannels.userId, userId))
     .all()
     .map(ch => ({
       ...ch,
@@ -68,10 +67,10 @@ export function deleteChannel(userId: string, channelId: string): boolean {
   const db = getDb();
   // Also delete associated rules
   db.delete(schema.alertRules)
-    .where(and(eq(schema.alertRules.userId, userId), eq(schema.alertRules.channelId, channelId)))
+    .where(eq(schema.alertRules.channelId, channelId))
     .run();
   const result = db.delete(schema.alertChannels)
-    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
+    .where(eq(schema.alertChannels.id, channelId))
     .run();
   return result.changes > 0;
 }
@@ -80,7 +79,7 @@ export function toggleChannel(userId: string, channelId: string, enabled: boolea
   const db = getDb();
   db.update(schema.alertChannels)
     .set({ enabled, updatedAt: new Date() })
-    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
+    .where(eq(schema.alertChannels.id, channelId))
     .run();
 }
 
@@ -109,14 +108,13 @@ export function createRule(
 export function listRules(userId: string) {
   const db = getDb();
   return db.select().from(schema.alertRules)
-    .where(eq(schema.alertRules.userId, userId))
     .all();
 }
 
 export function deleteRule(userId: string, ruleId: string): boolean {
   const db = getDb();
   const result = db.delete(schema.alertRules)
-    .where(and(eq(schema.alertRules.id, ruleId), eq(schema.alertRules.userId, userId)))
+    .where(eq(schema.alertRules.id, ruleId))
     .run();
   return result.changes > 0;
 }
@@ -127,13 +125,12 @@ export function listAlertEvents(userId: string, limit = 50, serviceId?: string) 
   const db = getDb();
   if (serviceId) {
     return db.select().from(schema.alertEvents)
-      .where(and(eq(schema.alertEvents.userId, userId), eq(schema.alertEvents.serviceId, serviceId)))
+      .where(eq(schema.alertEvents.serviceId, serviceId))
       .orderBy(desc(schema.alertEvents.createdAt))
       .limit(limit)
       .all();
   }
   return db.select().from(schema.alertEvents)
-    .where(eq(schema.alertEvents.userId, userId))
     .orderBy(desc(schema.alertEvents.createdAt))
     .limit(limit)
     .all();
@@ -364,7 +361,7 @@ async function dispatchToChannel(
 export async function testChannel(userId: string, channelId: string): Promise<{ success: boolean; error?: string }> {
   const db = getDb();
   const channel = db.select().from(schema.alertChannels)
-    .where(and(eq(schema.alertChannels.id, channelId), eq(schema.alertChannels.userId, userId)))
+    .where(eq(schema.alertChannels.id, channelId))
     .get();
 
   if (!channel) return { success: false, error: 'Channel not found' };
@@ -393,7 +390,6 @@ export async function sendWindlassWeeklyDigest(
 
   if (!opts?.skipCooldown) {
     const cfg = db.select().from(schema.windlassConfig)
-      .where(eq(schema.windlassConfig.userId, userId))
       .get();
     const last = cfg?.lastWeeklyDigestAt ? new Date(cfg.lastWeeklyDigestAt).getTime() : 0;
     if (last && Date.now() - last < 6 * 24 * 60 * 60 * 1000) {
@@ -402,10 +398,7 @@ export async function sendWindlassWeeklyDigest(
   }
 
   const channels = db.select().from(schema.alertChannels)
-    .where(and(
-      eq(schema.alertChannels.userId, userId),
-      eq(schema.alertChannels.enabled, true),
-    ))
+    .where(eq(schema.alertChannels.enabled, true))
     .all()
     .filter(ch => ch.type === 'email' || ch.type === 'telegram');
 

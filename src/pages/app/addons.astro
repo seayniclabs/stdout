@@ -10,10 +10,8 @@ if (!user) return Astro.redirect('/app/login');
 const userId = Astro.locals.workspace?.ownerId || user.id;
 const db = getDb();
 
-// Get tenant preferences for cache
-const prefs = db.select().from(schema.tenantPreferences)
-  .where(eq(schema.tenantPreferences.userId, user.id))
-  .get();
+// Get system settings for cache
+const prefs = db.select().from(schema.systemSettings).get();
 
 // Fetch products (cached 24hr, 2s timeout, static fallback)
 const allAddons = await fetchAddons(
@@ -23,16 +21,13 @@ const allAddons = await fetchAddons(
 
 // Cache the result if fresh
 if (allAddons.length > 0 && prefs) {
-  db.update(schema.tenantPreferences)
+  db.update(schema.systemSettings)
     .set({ addonsCache: JSON.stringify(allAddons), addonsCacheAt: new Date() })
-    .where(eq(schema.tenantPreferences.userId, user.id))
     .run();
 }
 
 // Get detected services from stacks for ranking
-const stacks = db.select().from(schema.stacks)
-  .where(eq(schema.stacks.userId, user.id))
-  .all();
+const stacks = db.select().from(schema.stacks).all();
 
 const detectedServices: string[] = [];
 for (const stack of stacks) {

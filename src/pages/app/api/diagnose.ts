@@ -146,9 +146,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       const ftsResults = rawDb.prepare(
         `SELECT r.content FROM resolutions r
          JOIN incidents i ON r.incident_id = i.id
-         WHERE i.user_id = ? AND i.id != ?
+         WHERE i.id != ?
          ORDER BY r.created_at DESC LIMIT 3`
-      ).all(locals.user.id, incidentId);
+      ).all(incidentId);
       for (const row of ftsResults) {
         if (row.content) pastResolutions.push(row.content);
       }

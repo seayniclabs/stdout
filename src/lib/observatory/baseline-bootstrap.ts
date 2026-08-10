@@ -51,7 +51,7 @@ export async function establishProvisionalBaselines(userId: string): Promise<Bas
   const tenant = getDb();
 
   const stacks = tenant.all(sql`
-    SELECT id, name FROM stacks WHERE user_id = ${userId}
+    SELECT id, name FROM stacks
   `) as Array<{ id: string; name: string }>;
 
   if (stacks.length === 0) {

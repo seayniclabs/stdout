@@ -273,9 +273,9 @@ async function isAlertSuppressed(alert: Alert, userId: string): Promise<boolean>
   if (alert.fingerprint) {
     const duplicate = db.prepare(`
       SELECT id FROM alerts
-      WHERE user_id = ? AND fingerprint = ? AND created_at > ?
+      WHERE fingerprint = ? AND created_at > ?
       LIMIT 1
-    `).get(userId, alert.fingerprint, Date.now() - 3600000);
+    `).get(alert.fingerprint, Date.now() - 3600000);
 
     if (duplicate) {
       return true; // Duplicate alert
@@ -298,8 +298,8 @@ export function getAlertRoutes(userId: string): AlertRoute[] {
 
   try {
     const rows = db.prepare(`
-      SELECT * FROM alert_routes WHERE user_id = ? ORDER BY name ASC
-    `).all(userId) as Array<{
+      SELECT * FROM alert_routes ORDER BY name ASC
+    `).all() as Array<{
       id: string;
       user_id: string;
       name: string;
@@ -371,9 +371,9 @@ export function upsertAlertRoute(route: Omit<AlertRoute, 'created_at' | 'updated
 /**
  * Delete an alert route
  */
-export function deleteAlertRoute(routeId: string, userId: string): void {
+export function deleteAlertRoute(routeId: string, _userId?: string): void {
   const db = getSqlite();
-  db.prepare(`DELETE FROM alert_routes WHERE id = ? AND user_id = ?`).run(routeId, userId);
+  db.prepare(`DELETE FROM alert_routes WHERE id = ?`).run(routeId);
 }
 
 /**
@@ -384,8 +384,8 @@ export function getRecentAlerts(userId: string, limit: number = 50): Alert[] {
 
   try {
     const rows = db.prepare(`
-      SELECT * FROM alerts WHERE user_id = ? ORDER BY created_at DESC LIMIT ?
-    `).all(userId, limit) as Array<{
+      SELECT * FROM alerts ORDER BY created_at DESC LIMIT ?
+    `).all(limit) as Array<{
       id: string;
       severity: string;
       title: string;

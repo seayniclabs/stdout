@@ -135,7 +135,7 @@ async function retrieveLibraryDocs(
   let includePublic = false;
   try {
     const pref = db.get(sql`
-      SELECT rag_include_public FROM tenant_preferences WHERE user_id = ${userId}
+      SELECT rag_include_public FROM system_settings WHERE id = 'instance'
     `) as { rag_include_public: number } | undefined;
     includePublic = !!pref?.rag_include_public;
   } catch { /* column may not exist on very old DBs — default off */ }
@@ -163,8 +163,7 @@ async function retrieveLibraryDocs(
       // No symptoms — return a few most-recent runbooks/postmortems as general context.
       rows = db.all(sql`
         SELECT id, title, doc_type, source, content FROM docs
-        WHERE user_id = ${userId}
-          AND source IN (${sql.raw(sourceList)})
+        WHERE source IN (${sql.raw(sourceList)})
           AND doc_type IN ('runbook','postmortem','guide')
         ORDER BY updated_at DESC LIMIT 3
       `) as any[];
@@ -172,8 +171,7 @@ async function retrieveLibraryDocs(
       const like = `%${terms[0]}%`;
       rows = db.all(sql`
         SELECT id, title, doc_type, source, content FROM docs
-        WHERE user_id = ${userId}
-          AND source IN (${sql.raw(sourceList)})
+        WHERE source IN (${sql.raw(sourceList)})
           AND (lower(title) LIKE ${like} OR lower(tags) LIKE ${like} OR lower(content) LIKE ${like})
         ORDER BY updated_at DESC LIMIT 5
       `) as any[];
@@ -444,8 +442,7 @@ async function retrieveSimilarIncidents(
     FROM incidents i
     JOIN incidents_fts fts ON fts.rowid = i.rowid
     LEFT JOIN resolutions r ON r.incident_id = i.id
-    WHERE i.user_id = ${userId}
-      AND i.resolved_at IS NOT NULL
+    WHERE i.resolved_at IS NOT NULL
       AND incidents_fts MATCH ${searchTerms}
     ORDER BY i.resolved_at DESC
     LIMIT 5

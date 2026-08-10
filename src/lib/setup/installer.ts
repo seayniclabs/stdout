@@ -202,7 +202,7 @@ export async function runScannerSetup(
     onProgress(70, 'Checking for existing scan data...');
 
     const stackCount = await db.get(sql`
-      SELECT COUNT(*) as count FROM stacks WHERE user_id = ${userId}
+      SELECT COUNT(*) as count FROM stacks
     `) as { count: number } | undefined;
 
     if (stackCount && stackCount.count > 0) {
@@ -405,17 +405,23 @@ export async function runObservatorySetup(
 
     // Check if agent config already exists
     const existingConfig = await db.get(sql`
-      SELECT id FROM agent_config WHERE user_id = ${userId}
+      SELECT id FROM agent_config LIMIT 1
     `);
 
     if (!existingConfig) {
       await db.run(sql`
         INSERT INTO agent_config (
-          id, user_id, agent_name, provider, endpoint, model,
-          enabled, proactive_notifications, created_at, updated_at
+          id,
+          agent_name,
+          provider,
+          endpoint,
+          model,
+          enabled,
+          proactive_notifications,
+          created_at,
+          updated_at
         ) VALUES (
           ${agentId},
-          ${userId},
           'Riggins',
           'ollama',
           'http://172.17.0.1:11434',

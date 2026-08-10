@@ -121,10 +121,7 @@ export function saveProviderKey(
 
   // Check for existing key for this provider
   const existing = db.select().from(schema.aiProviderKeys)
-    .where(and(
-      eq(schema.aiProviderKeys.userId, userId),
-      eq(schema.aiProviderKeys.provider, providerId),
-    ))
+    .where(eq(schema.aiProviderKeys.provider, providerId))
     .get();
 
   if (existing) {
@@ -174,17 +171,13 @@ export function listProviderKeys(userId: string) {
     createdAt: schema.aiProviderKeys.createdAt,
     updatedAt: schema.aiProviderKeys.updatedAt,
   }).from(schema.aiProviderKeys)
-    .where(eq(schema.aiProviderKeys.userId, userId))
     .all();
 }
 
 export function deleteProviderKey(userId: string, keyId: string): boolean {
   const db = getDb();
   const result = db.delete(schema.aiProviderKeys)
-    .where(and(
-      eq(schema.aiProviderKeys.id, keyId),
-      eq(schema.aiProviderKeys.userId, userId),
-    ))
+    .where(eq(schema.aiProviderKeys.id, keyId))
     .run();
   return result.changes > 0;
 }
@@ -193,7 +186,6 @@ export function getDecryptedKey(userId: string, providerId: string): string | nu
   const db = getDb();
   const row = db.select().from(schema.aiProviderKeys)
     .where(and(
-      eq(schema.aiProviderKeys.userId, userId),
       eq(schema.aiProviderKeys.provider, providerId),
       eq(schema.aiProviderKeys.status, 'active'),
     ))
@@ -255,20 +247,14 @@ export async function validateKey(userId: string, providerId: string): Promise<{
         lastValidatedAt: now,
         updatedAt: now,
       })
-      .where(and(
-        eq(schema.aiProviderKeys.userId, userId),
-        eq(schema.aiProviderKeys.provider, providerId),
-      ))
+      .where(eq(schema.aiProviderKeys.provider, providerId))
       .run();
 
     return { valid, error: valid ? undefined : 'API key validation failed' };
   } catch (error: unknown) {
     db.update(schema.aiProviderKeys)
       .set({ status: 'invalid', lastValidatedAt: now, updatedAt: now })
-      .where(and(
-        eq(schema.aiProviderKeys.userId, userId),
-        eq(schema.aiProviderKeys.provider, providerId),
-      ))
+      .where(eq(schema.aiProviderKeys.provider, providerId))
       .run();
 
     return { valid: false, error: error instanceof Error ? error.message : String(error) || 'Connection failed' };
@@ -294,10 +280,7 @@ export function resolveForDiagnostics(userId: string, tier: 'free' | 'paid'): Re
 
   // Check for active user keys (prefer Anthropic, then others)
   const userKeys = db.select().from(schema.aiProviderKeys)
-    .where(and(
-      eq(schema.aiProviderKeys.userId, userId),
-      eq(schema.aiProviderKeys.status, 'active'),
-    ))
+    .where(eq(schema.aiProviderKeys.status, 'active'))
     .all();
 
   for (const key of userKeys) {

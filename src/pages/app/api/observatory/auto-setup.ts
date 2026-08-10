@@ -48,10 +48,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       // Fetch latest stack import
       const latestImport = db.prepare(`
         SELECT imported_data FROM stack_imports
-        WHERE user_id = ?
         ORDER BY created_at DESC
         LIMIT 1
-      `).get(locals.user.id) as any;
+      `).get() as any;
 
       if (!latestImport) {
         // No scan data exists - trigger automatic Docker scan
@@ -67,11 +66,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
           const now = new Date().toISOString();
 
           db.prepare(`
-            INSERT INTO stack_imports (id, user_id, source, stack_id, imported_data, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO stack_imports (id, source, stack_id, imported_data, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
           `).run(
             importId,
-            locals.user.id,
             'docker',
             null,
             JSON.stringify(scanData),
@@ -95,8 +93,8 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     }
 
     // Get or create default stack
-    let stack = db.prepare('SELECT id, name FROM stacks WHERE user_id = ? ORDER BY created_at LIMIT 1')
-      .get(locals.user.id) as any;
+    let stack = db.prepare('SELECT id, name FROM stacks ORDER BY created_at LIMIT 1')
+      .get() as any;
 
     if (!stack) {
       const { nanoid } = await import('nanoid');
@@ -104,11 +102,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       const now = new Date().toISOString();
 
       db.prepare(`
-        INSERT INTO stacks (id, user_id, name, description, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO stacks (id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
       `).run(
         stackId,
-        locals.user.id,
         'My Infrastructure',
         'Auto-generated stack from Observatory AI',
         now,
@@ -156,7 +153,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     // Start all created monitors
     if (totalCreated > 0) {
       const { startMonitor } = await import('../../../../lib/hud');
-      const monitors = db.prepare('SELECT id FROM monitors WHERE user_id = ?').all(locals.user.id) as any[];
+      const monitors = db.prepare('SELECT id FROM monitors').all() as any[];
 
       for (const monitor of monitors) {
         try {

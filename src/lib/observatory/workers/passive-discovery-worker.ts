@@ -105,18 +105,18 @@ async function tick(): Promise<void> {
 export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
   const db = getDb();
   try {
-    const existing = db.get(sql`SELECT id FROM scanner_schedule WHERE user_id = ${userId} LIMIT 1`) as { id: string } | undefined;
+    const existing = db.get(sql`SELECT id FROM scanner_schedule LIMIT 1`) as { id: string } | undefined;
     if (existing) return false;
     const id = `sched_${userId}`;
 
     // Use raw SQLite instead of Drizzle sql template - NLM lesson: sql template doesn't work reliably with .run()
     const rawDb = (db as any).$client;
     const stmt = rawDb.prepare(`
-      INSERT INTO scanner_schedule (id, user_id, interval, hour, minute, weekday, enabled, modules, subnets, updated_at)
-      VALUES (?, ?, 'daily', 3, 0, 0, 1, '["network","docker","metrics"]', NULL, ?)
+      INSERT INTO scanner_schedule (id, interval, hour, minute, weekday, enabled, modules, subnets, updated_at)
+      VALUES (?, 'daily', 3, 0, 0, 1, '["network","docker","metrics"]', NULL, ?)
       ON CONFLICT(id) DO NOTHING
     `);
-    stmt.run(id, userId, Date.now());
+    stmt.run(id, Date.now());
     return true;
   } catch (error: unknown) {
     console.error('[passive-discovery-worker] failed to seed default schedule:', error instanceof Error ? error.message : String(error));
