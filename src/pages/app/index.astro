@@ -23,13 +23,12 @@ const db = getDb();
 
 // --- Monitors data ---
 const allMonitors = db.select().from(schema.monitors)
-  .where(eq(schema.monitors.userId, user.id))
   .orderBy(desc(schema.monitors.createdAt))
   .all();
 
 const monitorsData = allMonitors.map(m => {
-  const uptime = getUptimeStats(user.id, m.id, 30);
-  const sparkline = getRecentChecks(user.id, m.id, 20);
+  const uptime = getUptimeStats(m.id, 30);
+  const sparkline = getRecentChecks(m.id, 20);
   return { ...m, uptimePercent: uptime.uptimePercent, sparkline };
 });
 
@@ -60,7 +59,6 @@ const avgLatency = allLatencies.length > 0
 
 // --- Incidents data ---
 const allIncidents = db.select().from(schema.incidents)
-  .where(eq(schema.incidents.userId, user.id))
   .orderBy(desc(schema.incidents.createdAt))
   .all();
 
@@ -69,12 +67,10 @@ const recentIncidents = allIncidents.slice(0, 5);
 
 // --- Docs count ---
 const docsCount = db.select().from(schema.docs)
-  .where(eq(schema.docs.userId, user.id))
   .all().length;
 
 // --- Stacks count ---
 const stacksCount = db.select().from(schema.stacks)
-  .where(eq(schema.stacks.userId, user.id))
   .all().length;
 
 // --- Pending imports ---

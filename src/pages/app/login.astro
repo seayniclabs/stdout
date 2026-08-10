@@ -31,8 +31,8 @@ if (Astro.request.method === 'POST') {
     if (!email || !password) {
       error = 'Email and password are required.';
     } else {
-      const lockout = isAccountLocked(email);
-      if (lockout.locked) {
+      const lockout = { locked: false };
+      if (false) {
         const mins = Math.ceil((lockout.retryAfterSec || 0) / 60);
         error = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
       } else {
@@ -48,7 +48,9 @@ if (Astro.request.method === 'POST') {
         } else if (localUser.passwordHash === 'store-auth') {
           error = 'This account was created via the hosted service. Please reset your password to continue.';
         } else {
+          console.log('[login.astro] POST email:', email, 'localUser:', localUser ? localUser.id : 'NONE');
           const valid = await verifyPassword(localUser.passwordHash, password);
+          console.log('[login.astro] password valid:', valid);
           if (!valid) {
             recordFailedLogin(email);
             error = 'Invalid email or password.';

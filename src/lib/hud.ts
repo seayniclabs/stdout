@@ -601,7 +601,7 @@ export function resumeAllMonitors() {
 
 // --- Query helpers ---
 
-export function getRecentChecks(userId: string, monitorId: string, limit = 60) {
+export function getRecentChecks(monitorId: string, limit = 60) {
   const db = getDb();
   return db.select().from(schema.checkResults)
     .where(eq(schema.checkResults.monitorId, monitorId))
@@ -611,7 +611,7 @@ export function getRecentChecks(userId: string, monitorId: string, limit = 60) {
     .reverse(); // chronological order
 }
 
-export function getUptimeStats(userId: string, monitorId: string, days = 30) {
+export function getUptimeStats(monitorId: string, days = 30) {
   const db = getDb();
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);

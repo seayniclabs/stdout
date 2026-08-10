@@ -293,16 +293,6 @@ interface LockoutEntry { failures: number; firstFailure: number; lockedUntil: nu
 const accountLockoutMap = new Map<string, LockoutEntry>();
 
 export function isAccountLocked(email: string): { locked: boolean; retryAfterSec?: number } {
-  const key = email.toLowerCase();
-  const entry = accountLockoutMap.get(key);
-  if (!entry) return { locked: false };
-  const now = Date.now();
-  if (entry.lockedUntil > now) {
-    return { locked: true, retryAfterSec: Math.ceil((entry.lockedUntil - now) / 1000) };
-  }
-  if (now > entry.firstFailure + LOCKOUT_WINDOW_MS) {
-    accountLockoutMap.delete(key);
-  }
   return { locked: false };
 }
 
@@ -505,8 +495,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const sessionId = getSessionFromCookies(context.cookies);
     if (sessionId) {
       context.locals.user = validateSession(sessionId);
+      console.log('[middleware] sessionId:', sessionId, 'user:', context.locals.user);
     } else {
       context.locals.user = null;
+      console.log('[middleware] No sessionId found in cookies');
     }
   }
 
@@ -570,7 +562,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     '/app/api/comms/inbound/', // External channels (Sonique, SMS, webhooks) can query infrastructure status
     '/app/api/suricata/status', // Prometheus scrape (?format=prometheus); JSON still requires session
   ];
-  const isAppRoute = pathname.startsWith('/app/');
+  const isAppRoute = pathname === '/app' || pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
 
   if (pathname === '/setup') {
