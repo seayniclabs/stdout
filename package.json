@@ -42,7 +42,7 @@
     "astro": "^7.0.10",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1",
-    "nanoid": "^5.1.6",
+    "nanoid": "^5.1.16",
     "octokit": "^5.0.5",
     "postgres": "^3.4.9",
     "resend": "^6.9.3",
