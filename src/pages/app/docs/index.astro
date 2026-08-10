@@ -9,24 +9,26 @@ if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
 
-// Fetch user's own docs
-const userDocs = db.select().from(schema.docs)
-  .where(eq(schema.docs.userId, user.id))
+// Fetch all docs (Open-Notebook: single-instance, no userId)
+const allDocs = db.select().from(schema.docs)
   .orderBy(desc(schema.docs.updatedAt))
   .all();
 
-// Community docs feature not yet implemented
-const communityDocs: typeof userDocs = [];
+// Separate by visibility: private (user-created) vs public (community)
+const userDocs = allDocs.filter(d => d.visibility === 'private');
+const communityDocs = allDocs.filter(d => d.visibility === 'public');
 
 const typeLabels: Record<string, string> = {
   runbook: 'Runbook',
-  postmortem: 'Post-Mortem',
+  'post-mortem': 'Post-Mortem',
+  postmortem: 'Post-Mortem',  // Legacy
   guide: 'Guide',
   note: 'Note',
 };
 
 const typeColors: Record<string, string> = {
   runbook: '#3B82F6',
+  'post-mortem': '#EF4444',
   postmortem: '#EF4444',
   guide: '#22C55E',
   note: '#5A5A72',
@@ -34,6 +36,7 @@ const typeColors: Record<string, string> = {
 
 const typeDimColors: Record<string, string> = {
   runbook: 'rgba(59, 130, 246, 0.12)',
+  'post-mortem': 'rgba(239, 68, 68, 0.12)',
   postmortem: 'rgba(239, 68, 68, 0.12)',
   guide: 'rgba(34, 197, 94, 0.12)',
   note: 'rgba(90, 90, 114, 0.12)',
@@ -44,22 +47,25 @@ const communityColor = '#A855F7';
 const communityDimColor = 'rgba(168, 85, 247, 0.12)';
 
 // Count docs by type (user docs only)
-const typeCounts: Record<string, number> = { runbook: 0, postmortem: 0, guide: 0, note: 0 };
+const typeCounts: Record<string, number> = { runbook: 0, postmortem: 0, 'post-mortem': 0, guide: 0, note: 0 };
 for (const doc of userDocs) {
-  if (typeCounts[doc.docType] !== undefined) typeCounts[doc.docType]++;
+  if (typeCounts[doc.type] !== undefined) typeCounts[doc.type]++;
 }
 
 // StdOut docs: community guides tagged as getting-started, or with "StdOut" in title
-const stdoutDocs = communityDocs.filter(d =>
-  d.title?.toLowerCase().includes('stdout') ||
-  d.title?.toLowerCase().includes('getting started') ||
-  d.title?.toLowerCase().includes('scanner') ||
-  d.title?.toLowerCase().includes('setup') ||
-  d.tags?.toLowerCase().includes('stdout') ||
-  d.tags?.toLowerCase().includes('getting-started')
-);
+const stdoutDocs = communityDocs.filter(d => {
+  const tags = d.tags ? (typeof d.tags === 'string' ? JSON.parse(d.tags) : d.tags) : [];
+  return (
+    d.title?.toLowerCase().includes('stdout') ||
+    d.title?.toLowerCase().includes('getting started') ||
+    d.title?.toLowerCase().includes('scanner') ||
+    d.title?.toLowerCase().includes('setup') ||
+    tags.includes('stdout') ||
+    tags.includes('getting-started')
+  );
+});
 // If no tagged docs found, fall back to all community guides
-const stdoutDocsDisplay = stdoutDocs.length > 0 ? stdoutDocs : communityDocs.filter(d => d.docType === 'guide');
+const stdoutDocsDisplay = stdoutDocs.length > 0 ? stdoutDocs : communityDocs.filter(d => d.type === 'guide');
 
 // Recently updated (last 5 from user docs only, since community docs are empty)
 const recentlyUpdated = [...userDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
