@@ -1,14 +1,8 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-export * from './central-schema';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
-// NOTE: tenant-schema has duplicate exports of many tables also in this file
-// Only export scannerSchedule from tenant-schema to fix passive-discovery-worker
-export { scannerSchedule } from './tenant-schema';
 import { incidents } from './monitoring-schema';
-import { users } from './central-schema';
-
 
 // ============================================================================
 // UNIFIED SCHEMA FOR SELF-HOSTED StdOut
@@ -26,6 +20,87 @@ import { users } from './central-schema';
 // ============================================================================
 
 // --- USERS & AUTHENTICATION ---
+
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  passwordHash: text('password_hash').notNull(),
+  displayName: text('display_name'),
+  role: text('role', {
+    enum: ['superadmin', 'admin', 'member'],
+  }).notNull().default('member'),
+  emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
+  emailVerifiedAt: integer('email_verified_at', { mode: 'timestamp' }),
+  privacyAcceptedAt: integer('privacy_accepted_at', { mode: 'timestamp' }),
+  dpaAcceptedAt: integer('dpa_accepted_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const passwordResets = sqliteTable('password_resets', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  usedAt: integer('used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const emailVerifications = sqliteTable('email_verifications', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: text('token').notNull().unique(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  usedAt: integer('used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const apiTokens = sqliteTable('api_tokens', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  tokenHash: text('token_hash').notNull(),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const userSettings = sqliteTable('user_settings', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  key: text('key').notNull(),
+  value: text('value').notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const commsChannels = sqliteTable('comms_channels', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
+  channelType: text('channel_type', {
+    enum: ['slack', 'sms', 'webhook', 'email', 'websocket'],
+  }).notNull(),
+  name: text('name').notNull(),
+  config: text('config').notNull(),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const commsMessages = sqliteTable('comms_messages', {
+  id: text('id').primaryKey(),
+  channelId: text('channel_id').notNull(),
+  direction: text('direction', {
+    enum: ['inbound', 'outbound'],
+  }).notNull(),
+  content: text('content').notNull(),
+  metadata: text('metadata'),
+  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+});
 
 
 
@@ -344,7 +419,18 @@ export const satelliteReports = sqliteTable('satellite_reports', {
   receivedAt: integer('received_at', { mode: 'timestamp' }).notNull(),
 });
 
-// NOTE: scannerSchedule is now defined in tenant-schema.ts - import from there
+export const scannerSchedule = sqliteTable('scanner_schedule', {
+  id: text('id').primaryKey(),
+  userId: text('user_id'),
+  interval: text('interval').notNull().default('daily'),
+  hour: integer('hour').notNull().default(3),
+  minute: integer('minute').notNull().default(0),
+  weekday: integer('weekday').notNull().default(0),
+  enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
+  modules: text('modules').notNull().default('["docker","metrics"]'),
+  subnets: text('subnets'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
 
 // --- WINDLASS (Network Diagnostic Toolbox) ---
 

@@ -12,7 +12,7 @@
  */
 
 import { getDb } from '../db';
-import { discoveredHosts, stacks } from '../db/tenant-schema';
+import { discoveredHosts, stacks } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';

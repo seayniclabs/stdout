@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { users } from './central-schema';
+import { users } from './schema';
 
 // NOTE: users and sessions tables are defined in central-schema.ts
 // Do not duplicate them here - import instead

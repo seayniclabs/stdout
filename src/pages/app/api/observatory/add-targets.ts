@@ -3,7 +3,7 @@ export const prerender = false;
 
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../../lib/db';
-import { discoveredServices, discoveredHosts } from '../../../../lib/db/tenant-schema';
+import { discoveredServices, discoveredHosts } from '../../../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { promises as fs } from 'node:fs';
 import { requireAuth, checkRBAC } from '../../../../lib/rbac';

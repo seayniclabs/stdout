@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
-import { users } from './central-schema';
+import { users } from './schema';
 import { incidents } from './monitoring-schema';
 
 export const observatoryStandardPatterns = sqliteTable('observatory_standard_patterns', {

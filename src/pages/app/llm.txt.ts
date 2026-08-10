@@ -1,6 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../lib/db';
-import { stacks, docs, monitors, windlassServices } from '../../lib/db/tenant-schema';
+import { stacks, docs, monitors, windlassServices } from '../../lib/db/schema';
 import { count, eq, sql } from 'drizzle-orm';
 
 export const GET: APIRoute = async ({ locals }) => {

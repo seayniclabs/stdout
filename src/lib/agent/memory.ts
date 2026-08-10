@@ -10,9 +10,7 @@
 
 import { getDb, getSqlite } from '../db';
 import { eq, desc } from 'drizzle-orm';
-import { stacks } from '../db/tenant-schema';
-import { dataSources } from '../db/tenant-schema';
-import { agentConversations } from '../db/central-schema';
+import { stacks, dataSources, agentConversations } from '../db/schema';
 import type { ConversationMessage } from './types';
 
 export interface Memory {

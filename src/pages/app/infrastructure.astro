@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getDb, schema } from '../../lib/db';
-import { discoveredHosts, discoveredServices } from '../../lib/db/tenant-schema';
+import { discoveredHosts, discoveredServices } from '../../lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 const session = Astro.locals.user;
