@@ -171,6 +171,24 @@ export const OBSERVATORY_TOOLS: Tool[] = [
       required: ['query'],
     },
   },
+  {
+    name: 'query_documentation',
+    description: 'Search the local knowledge base for troubleshooting guides, post-mortems, and runbooks. Use to find previous incidents with similar symptoms or to learn from past resolutions. Returns relevant documents with excerpts and relevance scores.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: {
+          type: 'string',
+          description: 'Natural language question or keywords (e.g. "high CPU usage", "database connection timeout", "OOM killed")',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of results to return (default: 5)',
+        },
+      },
+      required: ['question'],
+    },
+  },
 ];
 
 /**
@@ -426,6 +444,43 @@ export async function executeTool(
             })),
             source: 'Community Knowledge Base'
           }
+        };
+      }
+
+      case 'query_documentation': {
+        // Phase 3.1: Query local knowledge base (post-mortems, runbooks, guides)
+        const { searchKnowledgeBase } = await import('$lib/open-notebook/rag-engine');
+
+        const results = await searchKnowledgeBase(parameters.question, {
+          limit: parameters.limit || 5,
+          minRelevance: 0.2,
+          includeChunks: true,
+        });
+
+        if (results.length === 0) {
+          return {
+            success: true,
+            result: {
+              sources: [],
+              message: 'No relevant documentation found. This might be a new issue.',
+            },
+          };
+        }
+
+        return {
+          success: true,
+          result: {
+            sources: results.map(r => ({
+              title: r.title,
+              type: r.type,
+              excerpt: r.excerpt,
+              relevance: Math.round(r.relevance * 100) / 100,
+              docId: r.docId,
+              chunkIndex: r.chunkIndex,
+            })),
+            count: results.length,
+            query: parameters.question,
+          },
         };
       }
 
