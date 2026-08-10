@@ -92,24 +92,57 @@ const licenseNotice = getLicenseNotice();
       <!-- Workspace Branding -->
       <section class="section">
         <h2>Workspace Branding</h2>
-        <p class="section-desc">Customize how StdOut looks for your workspace. Solo tier and above.</p>
+        <p class="section-desc">Customize how StdOut looks for your workspace.</p>
         <div class="brand-form">
           <label>
             <span>Workspace name</span>
             <input type="text" id="brandName" placeholder="e.g. My Lab" class="settings-input" />
           </label>
+
           <label>
-            <span>Accent color</span>
-            <div class="color-row">
-              <input type="color" id="brandColor" value="#F97316" class="color-picker" />
-              <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
+            <span>Logo (Optional)</span>
+            <div class="logo-upload-area-settings" id="logoUploadAreaSettings">
+              <div class="logo-preview-settings" id="logoPreviewSettings" style="display: none;">
+                <img src="" alt="Logo preview" id="logoPreviewImageSettings" />
+                <button type="button" class="remove-logo-settings" id="removeLogoSettings" aria-label="Remove logo">×</button>
+              </div>
+              <div class="upload-prompt-settings" id="uploadPromptSettings">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p>Drag & drop your logo here</p>
+                <p class="hint">or <button type="button" class="link-button-settings" id="browseFilesSettings">browse files</button></p>
+                <p class="hint">PNG, SVG, or JPEG • Max 2MB</p>
+              </div>
+              <input type="file" id="logoFileInputSettings" accept="image/png,image/svg+xml,image/jpeg,image/jpg" style="display: none;" />
             </div>
           </label>
+
           <label>
-            <span>Logo URL <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
-            <input type="text" id="brandLogo" placeholder="https://example.com/logo.png" class="settings-input" />
+            <span>Accent Color</span>
+            <div class="color-picker-settings">
+              <div class="color-presets-settings">
+                <button type="button" class="color-preset-settings" data-color="#10B981" style="background: #10B981;" title="Emerald"></button>
+                <button type="button" class="color-preset-settings" data-color="#6366F1" style="background: #6366F1;" title="Indigo"></button>
+                <button type="button" class="color-preset-settings" data-color="#3B82F6" style="background: #3B82F6;" title="Blue"></button>
+                <button type="button" class="color-preset-settings active" data-color="#F97316" style="background: #F97316;" title="Orange (default)"></button>
+                <button type="button" class="color-preset-settings" data-color="#8B5CF6" style="background: #8B5CF6;" title="Violet"></button>
+                <button type="button" class="color-preset-settings" data-color="#EC4899" style="background: #EC4899;" title="Rose"></button>
+              </div>
+              <div class="custom-color-settings">
+                <label for="brandColorHex">Custom:</label>
+                <input type="color" id="brandColor" value="#F97316" class="color-picker" />
+                <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
+              </div>
+            </div>
           </label>
-          <button id="saveBrandingBtn" class="btn btn-primary btn-sm">Save branding</button>
+
+          <div style="display: flex; gap: 0.75rem;">
+            <button id="saveBrandingBtn" class="btn btn-primary btn-sm">Save branding</button>
+            <button id="resetBrandingBtn" class="btn btn-secondary btn-sm">Reset to defaults</button>
+          </div>
           <div id="brandingStatus" class="backup-status"></div>
         </div>
       </section>
@@ -596,24 +629,184 @@ const licenseNotice = getLicenseNotice();
   const brandName = document.getElementById('brandName') as HTMLInputElement;
   const brandColor = document.getElementById('brandColor') as HTMLInputElement;
   const brandColorHex = document.getElementById('brandColorHex') as HTMLInputElement;
-  const brandLogo = document.getElementById('brandLogo') as HTMLInputElement;
   const saveBrandingBtn = document.getElementById('saveBrandingBtn')!;
+  const resetBrandingBtn = document.getElementById('resetBrandingBtn')!;
   const brandingStatusEl = document.getElementById('brandingStatus')!;
 
-  brandColor?.addEventListener('input', () => { brandColorHex.value = brandColor.value; });
-  brandColorHex?.addEventListener('input', () => { if (/^#[0-9a-fA-F]{6}$/.test(brandColorHex.value)) brandColor.value = brandColorHex.value; });
+  // Logo upload elements
+  const uploadAreaSettings = document.getElementById('logoUploadAreaSettings');
+  const fileInputSettings = document.getElementById('logoFileInputSettings') as HTMLInputElement;
+  const browseButtonSettings = document.getElementById('browseFilesSettings');
+  const logoPreviewSettings = document.getElementById('logoPreviewSettings');
+  const logoPreviewImageSettings = document.getElementById('logoPreviewImageSettings') as HTMLImageElement;
+  const uploadPromptSettings = document.getElementById('uploadPromptSettings');
+  const removeLogoSettings = document.getElementById('removeLogoSettings');
+
+  let currentLogoUrl = '';
+
+  // Color picker sync
+  brandColor?.addEventListener('input', () => {
+    brandColorHex.value = brandColor.value;
+    updateColorPresetActive(brandColor.value);
+  });
+  brandColorHex?.addEventListener('input', () => {
+    if (/^#[0-9a-fA-F]{6}$/.test(brandColorHex.value)) {
+      brandColor.value = brandColorHex.value;
+      updateColorPresetActive(brandColorHex.value);
+    }
+  });
+
+  // Logo upload: prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadAreaSettings?.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  // Highlight drop area on drag
+  ['dragenter', 'dragover'].forEach(eventName => {
+    uploadAreaSettings?.addEventListener(eventName, () => {
+      uploadAreaSettings.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    uploadAreaSettings?.addEventListener(eventName, () => {
+      uploadAreaSettings.classList.remove('drag-over');
+    });
+  });
+
+  // Handle dropped files
+  uploadAreaSettings?.addEventListener('drop', (e: DragEvent) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleLogoUploadSettings(files[0]);
+    }
+  });
+
+  // Handle click to browse
+  browseButtonSettings?.addEventListener('click', () => {
+    fileInputSettings?.click();
+  });
+
+  uploadAreaSettings?.addEventListener('click', (e) => {
+    if (e.target === uploadAreaSettings || (e.target as HTMLElement).closest('.upload-prompt-settings')) {
+      fileInputSettings?.click();
+    }
+  });
+
+  // Handle file input change
+  fileInputSettings?.addEventListener('change', (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      handleLogoUploadSettings(files[0]);
+    }
+  });
+
+  // Remove logo
+  removeLogoSettings?.addEventListener('click', () => {
+    currentLogoUrl = '';
+    logoPreviewSettings!.style.display = 'none';
+    uploadPromptSettings!.style.display = 'block';
+    if (fileInputSettings) fileInputSettings.value = '';
+  });
+
+  async function handleLogoUploadSettings(file: File) {
+    // Validate file type
+    const validTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      brandingStatusEl.textContent = 'Invalid file type. Only PNG, SVG, and JPEG are allowed.';
+      brandingStatusEl.className = 'backup-status error';
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      brandingStatusEl.textContent = 'File too large. Maximum size is 2MB.';
+      brandingStatusEl.className = 'backup-status error';
+      return;
+    }
+
+    // Upload file
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await fetch('/app/api/upload-logo', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        brandingStatusEl.textContent = error.error || 'Failed to upload logo. Please try again.';
+        brandingStatusEl.className = 'backup-status error';
+        return;
+      }
+
+      const result = await response.json();
+      currentLogoUrl = result.logoUrl;
+
+      // Show preview
+      logoPreviewImageSettings.src = result.logoUrl;
+      logoPreviewSettings!.style.display = 'block';
+      uploadPromptSettings!.style.display = 'none';
+
+      brandingStatusEl.textContent = 'Logo uploaded. Click "Save branding" to apply.';
+      brandingStatusEl.className = 'backup-status success';
+
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      brandingStatusEl.textContent = 'Failed to upload logo. Please try again.';
+      brandingStatusEl.className = 'backup-status error';
+    }
+  }
+
+  // Color preset handling
+  const colorPresetsSettings = document.querySelectorAll('.color-preset-settings');
+
+  colorPresetsSettings.forEach(preset => {
+    preset.addEventListener('click', () => {
+      const color = preset.getAttribute('data-color');
+      if (color) {
+        brandColor.value = color;
+        brandColorHex.value = color;
+        updateColorPresetActive(color);
+      }
+    });
+  });
+
+  function updateColorPresetActive(color: string) {
+    colorPresetsSettings.forEach(p => {
+      const presetColor = p.getAttribute('data-color');
+      p.classList.toggle('active', presetColor === color);
+    });
+  }
 
   async function loadPreferences() {
     try {
       const res = await fetch('/app/api/preferences');
       const data = await res.json();
       if (data.branding) {
-        if (data.branding.workspace_name || data.branding.workspaceName) brandName.value = data.branding.workspace_name || data.branding.workspaceName || '';
+        if (data.branding.workspace_name || data.branding.workspaceName) {
+          brandName.value = data.branding.workspace_name || data.branding.workspaceName || '';
+        }
         if (data.branding.accent_color || data.branding.accentColor) {
           const c = data.branding.accent_color || data.branding.accentColor;
-          brandColor.value = c; brandColorHex.value = c;
+          brandColor.value = c;
+          brandColorHex.value = c;
+          updateColorPresetActive(c);
         }
-        if (data.branding.logo_url || data.branding.logoUrl) brandLogo.value = data.branding.logo_url || data.branding.logoUrl || '';
+        if (data.branding.logo_url || data.branding.logoUrl) {
+          const logoUrl = data.branding.logo_url || data.branding.logoUrl;
+          if (logoUrl) {
+            currentLogoUrl = logoUrl;
+            logoPreviewImageSettings.src = logoUrl;
+            logoPreviewSettings!.style.display = 'block';
+            uploadPromptSettings!.style.display = 'none';
+          }
+        }
       }
 
       const notifListEl = document.getElementById('notifList')!;
@@ -656,10 +849,16 @@ const licenseNotice = getLicenseNotice();
 
   saveBrandingBtn?.addEventListener('click', async () => {
     brandingStatusEl.textContent = 'Saving...';
+    brandingStatusEl.className = 'backup-status';
     try {
       await fetch('/app/api/preferences', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'update_branding', workspaceName: brandName.value, accentColor: brandColorHex.value, logoUrl: brandLogo?.value || '' }),
+        body: JSON.stringify({
+          action: 'update_branding',
+          workspaceName: brandName.value,
+          accentColor: brandColorHex.value,
+          logoUrl: currentLogoUrl || ''
+        }),
       });
       brandingStatusEl.textContent = 'Saved. Reload to see changes.';
       brandingStatusEl.className = 'backup-status success';
@@ -669,6 +868,38 @@ const licenseNotice = getLicenseNotice();
       });
     } catch {
       brandingStatusEl.textContent = 'Failed.';
+      brandingStatusEl.className = 'backup-status error';
+    }
+  });
+
+  // Reset branding button
+  resetBrandingBtn?.addEventListener('click', async () => {
+    brandingStatusEl.textContent = 'Resetting...';
+    brandingStatusEl.className = 'backup-status';
+    try {
+      await fetch('/app/api/preferences', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update_branding',
+          workspaceName: 'StdOut',
+          accentColor: '#F97316',
+          logoUrl: ''
+        }),
+      });
+      // Update UI to reflect defaults
+      brandName.value = 'StdOut';
+      brandColor.value = '#F97316';
+      brandColorHex.value = '#F97316';
+      currentLogoUrl = '';
+      logoPreviewSettings!.style.display = 'none';
+      uploadPromptSettings!.style.display = 'block';
+      if (fileInputSettings) fileInputSettings.value = '';
+      updateColorPresetActive('#F97316');
+
+      brandingStatusEl.textContent = 'Reset to defaults. Reload to see changes.';
+      brandingStatusEl.className = 'backup-status success';
+    } catch {
+      brandingStatusEl.textContent = 'Failed to reset.';
       brandingStatusEl.className = 'backup-status error';
     }
   });
@@ -1755,9 +1986,169 @@ const licenseNotice = getLicenseNotice();
   .btn-sm { padding: 5px 10px; font-size: 11px; }
   .btn-primary { background: var(--accent-btn); color: #fff; }
   .btn-primary:hover { background: var(--accent-light); }
+  .btn-secondary { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
   .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
   .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
   .btn-danger { background: transparent; color: var(--critical); border: 1px solid rgba(239,68,68,0.2); }
   .btn-danger:hover { background: var(--critical-dim); }
   .btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── Logo upload (settings page) ── */
+  .logo-upload-area-settings {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(15, 23, 42, 0.3);
+    position: relative;
+    min-height: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .logo-upload-area-settings:hover {
+    border-color: var(--accent);
+    background: rgba(15, 23, 42, 0.5);
+  }
+
+  .logo-upload-area-settings.drag-over {
+    border-color: var(--accent);
+    background: rgba(249, 115, 22, 0.1);
+    transform: scale(1.01);
+  }
+
+  .logo-preview-settings {
+    position: relative;
+    display: inline-block;
+    max-width: 180px;
+  }
+
+  .logo-preview-settings img {
+    max-width: 100%;
+    max-height: 100px;
+    display: block;
+    margin: 0 auto;
+    border-radius: 4px;
+  }
+
+  .remove-logo-settings {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--critical);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease;
+  }
+
+  .remove-logo-settings:hover {
+    background: #DC2626;
+  }
+
+  .upload-prompt-settings svg {
+    margin: 0 auto 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .upload-prompt-settings p {
+    margin: 0.4rem 0;
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .upload-prompt-settings .hint {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .link-button-settings {
+    background: none;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    font: inherit;
+  }
+
+  .link-button-settings:hover {
+    color: var(--accent-light);
+  }
+
+  /* ── Color picker (settings page) ── */
+  .color-picker-settings {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .color-presets-settings {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .color-preset-settings {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+
+  .color-preset-settings:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .color-preset-settings.active {
+    border-color: white;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.5);
+  }
+
+  .custom-color-settings {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .custom-color-settings label {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  .custom-color-settings input[type="color"] {
+    width: 50px;
+    height: 36px;
+    border-radius: 6px;
+    border: 2px solid var(--border);
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  .custom-color-settings input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  .custom-color-settings input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 4px;
+  }
 </style>
