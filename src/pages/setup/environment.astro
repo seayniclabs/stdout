@@ -2,19 +2,21 @@
 export const prerender = false;
 import Layout from '../../layouts/SetupLayout.astro';
 import SetupProgress from '../../components/SetupProgress.astro';
-// import { getSession } from '../../lib/auth';
 import { getSetupProgress, completeStep, SetupStep, setSetupConfig } from '../../lib/setup';
 import { validateCsrf } from '../../middleware';
+import { getDb } from '../../lib/db';
+import * as schema from '../../lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const progress = await getSetupProgress();
-// Allow access to environment page regardless of current step for testing
-// (In production, you might want stricter flow control)
 
 let error = '';
 let environmentName = '';
+let logoUrl = '';
+let accentColor = '#F97316'; // Default orange
 
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
@@ -24,15 +26,48 @@ if (Astro.request.method === 'POST') {
     error = 'Invalid form submission. Please try again.';
   } else {
     environmentName = (form.get('environmentName') as string || '').trim();
+    logoUrl = (form.get('logoUrl') as string || '').trim();
+    accentColor = (form.get('accentColor') as string || '#F97316').trim();
 
     if (!environmentName) {
       error = 'Environment name is required.';
     } else {
-      // Save environment name
-      await setSetupConfig('environment_name', environmentName);
+      // Save branding to system_settings table
+      const db = getDb();
+
+      // Check if system_settings row exists
+      const existing = await db.select()
+        .from(schema.systemSettings)
+        .where(eq(schema.systemSettings.id, 'instance'))
+        .get();
+
+      if (existing) {
+        // Update existing
+        await db.update(schema.systemSettings)
+          .set({
+            workspaceName: environmentName,
+            logoUrl: logoUrl || null,
+            accentColor: accentColor,
+            updatedAt: new Date()
+          })
+          .where(eq(schema.systemSettings.id, 'instance'))
+          .run();
+      } else {
+        // Insert new
+        await db.insert(schema.systemSettings)
+          .values({
+            id: 'instance',
+            workspaceName: environmentName,
+            logoUrl: logoUrl || null,
+            accentColor: accentColor,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          })
+          .run();
+      }
 
       // Mark Step 2 complete
-      await completeStep(SetupStep.Environment, { environmentName });
+      await completeStep(SetupStep.Environment, { environmentName, logoUrl, accentColor });
 
       // Proceed to next step (License)
       return Astro.redirect('/setup/license');
@@ -41,20 +76,22 @@ if (Astro.request.method === 'POST') {
 }
 ---
 
-<Layout title="Name Your Environment">
+<Layout title="Branding & Environment">
   <div class="auth-page">
     <SetupProgress currentStep={2} totalSteps={3} />
 
-    <h1>Name Your Environment</h1>
-    <p class="auth-subtitle">What should we call this StdOut installation?</p>
+    <h1>Branding & Environment</h1>
+    <p class="auth-subtitle">Customize StdOut with your workspace name, logo, and colors</p>
 
     {error && <div class="auth-error">{error}</div>}
 
-    <form method="POST" class="auth-form">
+    <form method="POST" class="auth-form" id="brandingForm">
       <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
+      <input type="hidden" name="logoUrl" id="logoUrlInput" value={logoUrl} />
+      <input type="hidden" name="accentColor" id="accentColorInput" value={accentColor} />
 
       <label>
-        <span>Environment Name</span>
+        <span>Workspace Name</span>
         <input
           type="text"
           name="environmentName"
@@ -64,6 +101,46 @@ if (Astro.request.method === 'POST') {
           autofocus
         />
         <span class="hint">Examples: "Home Lab", "Production", "Development", "Staging"</span>
+      </label>
+
+      <label>
+        <span>Logo (Optional)</span>
+        <div class="logo-upload-area" id="logoUploadArea">
+          <div class="logo-preview" id="logoPreview" style={logoUrl ? '' : 'display: none;'}>
+            <img src={logoUrl} alt="Logo preview" id="logoPreviewImage" />
+            <button type="button" class="remove-logo" id="removeLogo" aria-label="Remove logo">×</button>
+          </div>
+          <div class="upload-prompt" id="uploadPrompt" style={logoUrl ? 'display: none;' : ''}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <p>Drag & drop your logo here</p>
+            <p class="hint">or <button type="button" class="link-button" id="browseFiles">browse files</button></p>
+            <p class="hint">PNG, SVG, or JPEG • Max 2MB</p>
+          </div>
+          <input type="file" id="logoFileInput" accept="image/png,image/svg+xml,image/jpeg,image/jpg" style="display: none;" />
+        </div>
+      </label>
+
+      <label>
+        <span>Accent Color</span>
+        <div class="color-picker">
+          <div class="color-presets">
+            <button type="button" class="color-preset" data-color="#10B981" style="background: #10B981;" title="Emerald"></button>
+            <button type="button" class="color-preset" data-color="#6366F1" style="background: #6366F1;" title="Indigo"></button>
+            <button type="button" class="color-preset" data-color="#3B82F6" style="background: #3B82F6;" title="Blue"></button>
+            <button type="button" class="color-preset active" data-color="#F97316" style="background: #F97316;" title="Orange (default)"></button>
+            <button type="button" class="color-preset" data-color="#8B5CF6" style="background: #8B5CF6;" title="Violet"></button>
+            <button type="button" class="color-preset" data-color="#EC4899" style="background: #EC4899;" title="Rose"></button>
+          </div>
+          <div class="custom-color">
+            <label for="customColor">Custom:</label>
+            <input type="color" id="customColor" value={accentColor} />
+          </div>
+        </div>
+        <span class="hint">Choose a color for buttons, links, and accents</span>
       </label>
 
       <div class="setup-actions">
@@ -123,4 +200,298 @@ if (Astro.request.method === 'POST') {
   .setup-actions button {
     flex: 1;
   }
+
+  /* Logo upload styles */
+  .logo-upload-area {
+    border: 2px dashed var(--color-border);
+    border-radius: 8px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: rgba(15, 23, 42, 0.5);
+    position: relative;
+  }
+
+  .logo-upload-area:hover {
+    border-color: var(--color-primary);
+    background: rgba(15, 23, 42, 0.7);
+  }
+
+  .logo-upload-area.drag-over {
+    border-color: var(--color-primary);
+    background: rgba(249, 115, 22, 0.1);
+    transform: scale(1.02);
+  }
+
+  .logo-preview {
+    position: relative;
+    display: inline-block;
+    max-width: 200px;
+  }
+
+  .logo-preview img {
+    max-width: 100%;
+    max-height: 120px;
+    display: block;
+    margin: 0 auto;
+    border-radius: 4px;
+  }
+
+  .remove-logo {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--color-danger);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .remove-logo:hover {
+    background: #DC2626;
+  }
+
+  .upload-prompt svg {
+    margin: 0 auto 1rem;
+    color: var(--color-text-muted);
+  }
+
+  .upload-prompt p {
+    margin: 0.5rem 0;
+    color: var(--color-text);
+  }
+
+  .link-button {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+    font: inherit;
+  }
+
+  .link-button:hover {
+    color: var(--color-primary-hover);
+  }
+
+  /* Color picker styles */
+  .color-picker {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .color-presets {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .color-preset {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+
+  .color-preset:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .color-preset.active {
+    border-color: white;
+    box-shadow: 0 0 0 2px var(--color-bg-secondary);
+  }
+
+  .custom-color {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .custom-color label {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin: 0;
+  }
+
+  .custom-color input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px solid var(--color-border);
+    cursor: pointer;
+    padding: 2px;
+  }
+
+  .custom-color input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  .custom-color input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 6px;
+  }
 </style>
+
+<script>
+  // Logo upload handling
+  const uploadArea = document.getElementById('logoUploadArea');
+  const fileInput = document.getElementById('logoFileInput');
+  const browseButton = document.getElementById('browseFiles');
+  const logoPreview = document.getElementById('logoPreview');
+  const logoPreviewImage = document.getElementById('logoPreviewImage') as HTMLImageElement;
+  const uploadPrompt = document.getElementById('uploadPrompt');
+  const removeLogo = document.getElementById('removeLogo');
+  const logoUrlInput = document.getElementById('logoUrlInput') as HTMLInputElement;
+
+  // Prevent default drag behaviors
+  ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+    uploadArea?.addEventListener(eventName, (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
+
+  // Highlight drop area on drag
+  ['dragenter', 'dragover'].forEach(eventName => {
+    uploadArea?.addEventListener(eventName, () => {
+      uploadArea.classList.add('drag-over');
+    });
+  });
+
+  ['dragleave', 'drop'].forEach(eventName => {
+    uploadArea?.addEventListener(eventName, () => {
+      uploadArea.classList.remove('drag-over');
+    });
+  });
+
+  // Handle dropped files
+  uploadArea?.addEventListener('drop', (e: DragEvent) => {
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      handleLogoUpload(files[0]);
+    }
+  });
+
+  // Handle click to browse
+  browseButton?.addEventListener('click', () => {
+    fileInput?.click();
+  });
+
+  uploadArea?.addEventListener('click', (e) => {
+    if (e.target === uploadArea || (e.target as HTMLElement).closest('.upload-prompt')) {
+      fileInput?.click();
+    }
+  });
+
+  // Handle file input change
+  fileInput?.addEventListener('change', (e) => {
+    const files = (e.target as HTMLInputElement).files;
+    if (files && files.length > 0) {
+      handleLogoUpload(files[0]);
+    }
+  });
+
+  // Remove logo
+  removeLogo?.addEventListener('click', () => {
+    logoUrlInput.value = '';
+    logoPreview!.style.display = 'none';
+    uploadPrompt!.style.display = 'block';
+    if (fileInput) fileInput.value = '';
+  });
+
+  async function handleLogoUpload(file: File) {
+    // Validate file type
+    const validTypes = ['image/png', 'image/svg+xml', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      alert('Invalid file type. Only PNG, SVG, and JPEG are allowed.');
+      return;
+    }
+
+    // Validate file size (2MB max)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('File too large. Maximum size is 2MB.');
+      return;
+    }
+
+    // Upload file
+    const formData = new FormData();
+    formData.append('logo', file);
+
+    try {
+      const response = await fetch('/setup/api/upload-logo', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Failed to upload logo. Please try again.');
+        return;
+      }
+
+      const result = await response.json();
+      logoUrlInput.value = result.logoUrl;
+
+      // Show preview
+      logoPreviewImage.src = result.logoUrl;
+      logoPreview!.style.display = 'block';
+      uploadPrompt!.style.display = 'none';
+
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      alert('Failed to upload logo. Please try again.');
+    }
+  }
+
+  // Color picker handling
+  const colorPresets = document.querySelectorAll('.color-preset');
+  const customColorInput = document.getElementById('customColor') as HTMLInputElement;
+  const accentColorInput = document.getElementById('accentColorInput') as HTMLInputElement;
+
+  colorPresets.forEach(preset => {
+    preset.addEventListener('click', () => {
+      const color = preset.getAttribute('data-color');
+      if (color) {
+        setAccentColor(color);
+        updateActivePreset(preset as HTMLElement);
+      }
+    });
+  });
+
+  customColorInput?.addEventListener('input', (e) => {
+    const color = (e.target as HTMLInputElement).value;
+    setAccentColor(color);
+    clearActivePresets();
+  });
+
+  function setAccentColor(color: string) {
+    accentColorInput.value = color;
+    customColorInput.value = color;
+  }
+
+  function updateActivePreset(activePreset: HTMLElement) {
+    colorPresets.forEach(p => p.classList.remove('active'));
+    activePreset.classList.add('active');
+  }
+
+  function clearActivePresets() {
+    colorPresets.forEach(p => p.classList.remove('active'));
+  }
+</script>
