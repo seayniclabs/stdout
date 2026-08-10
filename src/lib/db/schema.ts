@@ -219,9 +219,8 @@ export const ticketingConnectors = sqliteTable('ticketing_connectors', {
 
 export const docs = sqliteTable('docs', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   type: text('type', {
-    enum: ['runbook', 'note', 'guide'],
+    enum: ['runbook', 'note', 'guide', 'post-mortem'],
   }).notNull(),
   title: text('title').notNull(),
   slug: text('slug').notNull().unique(),
@@ -230,14 +229,25 @@ export const docs = sqliteTable('docs', {
   visibility: text('visibility', {
     enum: ['private', 'workspace', 'public'],
   }).notNull().default('private'),
+  // Phase 3.1: Open-Notebook RAG fields
+  chunks: text('chunks'), // JSON array of chunked content
+  embeddings: text('embeddings'), // JSON array of vectors
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+export const docChunks = sqliteTable('doc_chunks', {
+  id: text('id').primaryKey(),
+  docId: text('doc_id').notNull(),
+  chunkIndex: integer('chunk_index').notNull(),
+  content: text('content').notNull(),
+  embedding: text('embedding'), // JSON vector
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const docEmbeddings = sqliteTable('doc_embeddings', {
   id: text('id').primaryKey(),
   docId: text('doc_id').notNull(),
-  userId: text('user_id').notNull(),
   embedding: text('embedding').notNull(), // JSON array
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
