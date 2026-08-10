@@ -355,7 +355,7 @@ function extractJSONPath(data: unknown, path: string): unknown {
 
 const checkTimers: Map<string, ReturnType<typeof setInterval>> = new Map();
 
-export function startMonitor(userId: string, monitorId: string) {
+export function startMonitor(monitorId: string) {
   stopMonitor(monitorId); // clear any existing timer
 
   const db = getDb();
@@ -365,11 +365,11 @@ export function startMonitor(userId: string, monitorId: string) {
   if (!monitor || monitor.paused || monitor.maintenance) return;
 
   // Run immediately
-  runCheck(userId, monitorId);
+  runCheck(monitorId);
 
   // Then on interval
   const timer = setInterval(() => {
-    runCheck(userId, monitorId);
+    runCheck(monitorId);
   }, monitor.intervalSeconds * 1000);
 
   checkTimers.set(monitorId, timer);
@@ -403,13 +403,13 @@ export function startAllMonitors() {
     .all();
 
   for (const monitor of monitors) {
-    startMonitor(monitor.userId, monitor.id);
+    startMonitor(monitor.id);
   }
 
   console.log(`[HUD] Auto-started ${monitors.length} active monitors`);
 }
 
-async function runCheck(userId: string, monitorId: string) {
+async function runCheck(monitorId: string) {
   const db = getDb();
   const monitor = db.select().from(schema.monitors)
     .where(eq(schema.monitors.id, monitorId)).get();
@@ -423,9 +423,8 @@ async function runCheck(userId: string, monitorId: string) {
   db.insert(schema.checkResults).values({
     id: nanoid(),
     monitorId,
-    userId,
-    success: result.status === 'healthy',
-    responseTime: result.responseTimeMs,
+    status: result.status,
+    responseTimeMs: result.responseTimeMs,
     statusCode: result.statusCode || null,
     error: result.error || null,
     checkedAt: now,
@@ -477,7 +476,6 @@ async function runCheck(userId: string, monitorId: string) {
 
     db.insert(schema.incidents).values({
       id: incidentId,
-      userId,
       stackId: monitor.stackId || null,
       title,
       description,
@@ -489,14 +487,14 @@ async function runCheck(userId: string, monitorId: string) {
     }).run();
 
     // Fire notifications
-    notify(userId, {
+    notify({
       event: 'service_down',
       title,
       body: `${monitor.name} (${monitor.type}://${monitor.target}) failed ${newFailures} consecutive checks. ${errorDetail}`,
       url: `/app/incidents/${incidentId}`,
     }).catch(() => {}); // non-blocking
 
-    notify(userId, {
+    notify({
       event: 'incident_created',
       title,
       body: `Auto-created incident for ${monitor.name}. ${errorDetail}`,
@@ -508,10 +506,7 @@ async function runCheck(userId: string, monitorId: string) {
   if (newStatus === 'healthy' && previousStatus === 'down') {
     // Find the most recent auto-created incident for this monitor
     const recentIncident = db.select().from(schema.incidents)
-      .where(and(
-        eq(schema.incidents.userId, userId),
-        eq(schema.incidents.status, 'active'),
-      ))
+      .where(eq(schema.incidents.status, 'active'))
       .orderBy(desc(schema.incidents.createdAt))
       .all()
       .find(i => i.title === `${monitor.name} is down` && i.tags?.includes('hud'));
@@ -529,7 +524,6 @@ async function runCheck(userId: string, monitorId: string) {
       db.insert(schema.resolutions).values({
         id: nanoid(),
         incidentId: recentIncident.id,
-        userId,
         content: `Service recovered automatically.\n\n**Downtime:** ${downtimeStr}\n**Recovered at:** ${now.toISOString()}\n\n*Auto-resolved by HUD monitor.*`,
         createdAt: now,
       }).run();
@@ -543,7 +537,7 @@ async function runCheck(userId: string, monitorId: string) {
     }
 
     // Fire recovery notification
-    notify(userId, {
+    notify({
       event: 'service_recovered',
       title: `${monitor.name} recovered`,
       body: `${monitor.name} (${monitor.type}://${monitor.target}) is back up. Response: ${result.responseTimeMs}ms.`,
@@ -580,7 +574,6 @@ async function runCheck(userId: string, monitorId: string) {
     db.insert(schema.uptimeDaily).values({
       id: nanoid(),
       monitorId,
-      userId,
       date: dateStr,
       successCount: result.status !== 'down' ? 1 : 0,
       failureCount: result.status === 'down' ? 1 : 0,
