@@ -68,7 +68,7 @@ if (user) {
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
   <link rel="sitemap" href="/sitemap-index.xml" />
-  <meta name="theme-color" content="#F97316" />
+  <meta name="theme-color" content={accentOverride || '#F97316'} />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="manifest" href="/manifest.json" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -76,7 +76,20 @@ if (user) {
   <meta name="apple-mobile-web-app-title" content="StdOut" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <style>@import '../styles/fonts.css';</style>
-  {accentOverride && <style set:html={`:root { --accent: ${accentOverride}; --accent-light: ${accentOverride}; --accent-dim: ${accentOverride}1f; --accent-glow: ${accentOverride}40; }`}></style>}
+  {accentOverride && (
+    <style set:html={`
+      :root {
+        --accent: ${accentOverride};
+        --accent-light: color-mix(in srgb, ${accentOverride} 85%, white);
+        --accent-dim: ${accentOverride}1f;
+        --accent-glow: ${accentOverride}40;
+        --accent-btn: ${accentOverride};
+        --color-primary: ${accentOverride};
+        --color-primary-hover: color-mix(in srgb, ${accentOverride} 85%, black);
+        --color-primary-light: color-mix(in srgb, ${accentOverride} 10%, white);
+      }
+    `}></style>
+  )}
   <meta name="csrf-token" content={csrfToken} />
   <script>
     if ('serviceWorker' in navigator) {
