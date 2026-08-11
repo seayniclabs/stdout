@@ -8,17 +8,15 @@ if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
 
-// Get user's incidents
+// Get user's incidents (single-instance: no user_id filter needed)
 const userIncidents = db
   .select()
   .from(schema.incidents)
-  .where(eq(schema.incidents.userId, user.id))
   .orderBy(desc(schema.incidents.createdAt))
   .all();
 
 // Get stacks for service name lookup
-const allStacks = db.select().from(schema.stacks)
-  .where(eq(schema.stacks.userId, user.id)).all();
+const allStacks = db.select().from(schema.stacks).all();
 const stackMap = Object.fromEntries(allStacks.map(s => [s.id, s.name]));
 
 // Get diagnoses for AI diagnosis indicator
