@@ -2,7 +2,6 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 
 export const stacks = sqliteTable('stacks', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
   previousDescription: text('previous_description'),
@@ -12,7 +11,6 @@ export const stacks = sqliteTable('stacks', {
 
 export const discoveredHosts = sqliteTable('discovered_hosts', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   stackId: text('stack_id'),
   ipAddress: text('ip_address').notNull().unique(),
   hostname: text('hostname'),
@@ -26,7 +24,6 @@ export const discoveredHosts = sqliteTable('discovered_hosts', {
 export const discoveredServices = sqliteTable('discovered_services', {
   id: text('id').primaryKey(),
   hostId: text('host_id').notNull(),
-  userId: text('user_id').notNull(),
   port: integer('port').notNull(),
   protocol: text('protocol').notNull().default('tcp'),
   serviceName: text('service_name'),
@@ -38,7 +35,6 @@ export const discoveredServices = sqliteTable('discovered_services', {
 
 export const incidents = sqliteTable('incidents', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   stackId: text('stack_id'),
   title: text('title').notNull(),
   description: text('description').notNull(),
@@ -57,7 +53,6 @@ export const incidents = sqliteTable('incidents', {
 export const resolutions = sqliteTable('resolutions', {
   id: text('id').primaryKey(),
   incidentId: text('incident_id').notNull(),
-  userId: text('user_id').notNull(),
   content: text('content').notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
@@ -77,7 +72,6 @@ export const diagnoses = sqliteTable('diagnoses', {
 
 export const monitors = sqliteTable('monitors', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   name: text('name').notNull(),
   type: text('type', {
     enum: ['http', 'ping', 'port', 'dns', 'ssl'],
