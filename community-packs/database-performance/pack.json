@@ -1,0 +1,87 @@
+{
+  "pack": {
+    "id": "database-performance",
+    "title": "Database Performance",
+    "description": "Curated database performance guides",
+    "version": "1.0.0",
+    "author": "Seaynic Labs",
+    "category": "database",
+    "tags": [
+      "database-performance"
+    ]
+  },
+  "docs": [
+    {
+      "id": "slow-queries",
+      "title": "Database Slow Query Diagnosis and Optimization",
+      "slug": "database-slow-query-diagnosis-and-optimization",
+      "content": "# Database Slow Query Diagnosis and Optimization\n\n## Overview\nSlow queries are the #1 cause of database performance issues. This guide covers identification, analysis, and optimization.\n\n## PostgreSQL Slow Query Analysis\n\n### Enable Slow Query Logging\n```sql\n-- postgresql.conf\nlog_min_duration_statement = 1000  -- Log queries taking >1s\nlog_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '\nlog_checkpoints = on\nlog_connections = on\nlog_disconnections = on\nlog_lock_waits = on\n```\n\n### Find Slow Queries\n```sql\n-- pg_stat_statements extension (install first)\nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;\n\n-- Top 10 slowest queries by total time\nSELECT \n  query,\n  calls,\n  total_exec_time,\n  mean_exec_time,\n  max_exec_time\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 10;\n\n-- Queries with highest average time\nSELECT \n  query,\n  calls,\n  mean_exec_time,\n  stddev_exec_time\nFROM pg_stat_statements\nORDER BY mean_exec_time DESC\nLIMIT 10;\n```\n\n### Analyze Query Plan\n```sql\nEXPLAIN ANALYZE\nSELECT * FROM orders \nWHERE customer_id = 12345 \n  AND created_at > '2024-01-01';\n```\n\nLook for:\n- **Seq Scan** on large tables (missing index)\n- High **cost** estimates\n- **Nested Loop** with many rows\n- **Sort** operations on large datasets\n\n### Common Slow Query Patterns\n\n#### 1. Missing Index\n```sql\n-- Problem: Full table scan\nSELECT * FROM orders WHERE customer_id = 123;\n\n-- Solution: Add index\nCREATE INDEX idx_orders_customer_id ON orders(customer_id);\n```\n\n#### 2. Non-Selective Index\n```sql\n-- Problem: Index not used because column has low cardinality\nSELECT * FROM users WHERE is_active = true;  -- 99% of users are active\n\n-- Solution: Partial index\nCREATE INDEX idx_active_users ON users(created_at) \nWHERE is_active = true;\n```\n\n#### 3. OR Conditions\n```sql\n-- Problem: Can't use indexes efficiently\nSELECT * FROM products \nWHERE category_id = 5 OR manufacturer_id = 10;\n\n-- Solution: UNION\nSELECT * FROM products WHERE category_id = 5\nUNION\nSELECT * FROM products WHERE manufacturer_id = 10;\n```\n\n#### 4. Function on Indexed Column\n```sql\n-- Problem: Index not used\nSELECT * FROM users WHERE LOWER(email) = 'user@example.com';\n\n-- Solution: Function-based index\nCREATE INDEX idx_users_email_lower ON users(LOWER(email));\n```\n\n#### 5. SELECT * with Large BLOB/TEXT\n```sql\n-- Problem: Fetching large columns you don't need\nSELECT * FROM documents WHERE user_id = 123;\n\n-- Solution: Select only needed columns\nSELECT id, title, created_at FROM documents WHERE user_id = 123;\n```\n\n## MySQL/MariaDB Slow Query Analysis\n\n### Enable Slow Query Log\n```ini\n# my.cnf\nslow_query_log = 1\nslow_query_log_file = /var/log/mysql/slow-query.log\nlong_query_time = 1\nlog_queries_not_using_indexes = 1\n```\n\n### Analyze Slow Query Log\n```bash\n# Install pt-query-digest (Percona Toolkit)\npt-query-digest /var/log/mysql/slow-query.log\n```\n\n### Find Queries Not Using Indexes\n```sql\nSELECT * FROM information_schema.PROCESSLIST \nWHERE command != 'Sleep' \n  AND time > 5\nORDER BY time DESC;\n```\n\n### Query Plan Analysis\n```sql\nEXPLAIN SELECT * FROM orders WHERE customer_id = 123;\n```\n\nLook for:\n- `type: ALL` (full table scan - bad)\n- `type: index` (index scan - acceptable)\n- `type: ref` or `type: eq_ref` (index lookup - good)\n\n## SQLite Slow Query Analysis\n\n### Enable Query Profiling\n```sql\n.timer on\n.eqp on  -- Show query plan\n```\n\n### Analyze Query Plan\n```sql\nEXPLAIN QUERY PLAN\nSELECT * FROM orders WHERE customer_id = 123;\n```\n\n### Create Indexes\n```sql\nCREATE INDEX idx_orders_customer_id ON orders(customer_id);\n\n-- Composite index for multiple columns\nCREATE INDEX idx_orders_customer_date \nON orders(customer_id, created_at);\n```\n\n### Vacuum Database\n```sql\nVACUUM;  -- Rebuild database file\nANALYZE;  -- Update query planner statistics\n```\n\n## General Optimization Strategies\n\n### 1. Index Strategy\n```sql\n-- Composite index column order matters\n-- Put most selective column first\nCREATE INDEX idx_orders_lookup \nON orders(status, customer_id, created_at);\n\n-- Use INCLUDE for covering indexes (PostgreSQL)\nCREATE INDEX idx_orders_covering \nON orders(customer_id) \nINCLUDE (total_amount, created_at);\n```\n\n### 2. Query Rewriting\n```sql\n-- Instead of NOT IN (slow)\nSELECT * FROM orders WHERE customer_id NOT IN (\n  SELECT id FROM banned_customers\n);\n\n-- Use LEFT JOIN with NULL check\nSELECT o.* FROM orders o\nLEFT JOIN banned_customers b ON o.customer_id = b.id\nWHERE b.id IS NULL;\n```\n\n### 3. Pagination\n```sql\n-- Don't use OFFSET for large datasets\nSELECT * FROM orders ORDER BY id LIMIT 100 OFFSET 10000;  -- Slow\n\n-- Use keyset pagination\nSELECT * FROM orders \nWHERE id > 10000  -- Last seen ID\nORDER BY id \nLIMIT 100;\n```\n\n### 4. Batch Operations\n```sql\n-- Instead of many single inserts\nINSERT INTO logs (user_id, action) VALUES (1, 'login');\nINSERT INTO logs (user_id, action) VALUES (2, 'login');\n\n-- Batch insert\nINSERT INTO logs (user_id, action) VALUES \n(1, 'login'),\n(2, 'login'),\n(3, 'logout');\n```\n\n## Connection Pool Tuning\n\n### PostgreSQL\n```\nmax_connections = 100\nshared_buffers = 256MB  -- 25% of RAM\neffective_cache_size = 1GB  -- 50-75% of RAM\nwork_mem = 10MB  -- Per query sort/hash operation\n```\n\n### Application Connection Pool\n```python\n# SQLAlchemy example\nengine = create_engine(\n    'postgresql://user:pass@localhost/db',\n    pool_size=20,\n    max_overflow=10,\n    pool_pre_ping=True,\n    pool_recycle=3600\n)\n```\n\n## Monitoring Queries in Production\n\n### PostgreSQL\n```sql\n-- Active queries\nSELECT pid, usename, state, query, now() - query_start AS duration\nFROM pg_stat_activity\nWHERE state != 'idle'\nORDER BY duration DESC;\n\n-- Kill long-running query\nSELECT pg_terminate_backend(12345);  -- Replace with actual PID\n```\n\n### MySQL\n```sql\n-- Active queries\nSHOW FULL PROCESSLIST;\n\n-- Kill query\nKILL 12345;\n```\n\n## Prevention Checklist\n\n- [ ] Enable slow query logging\n- [ ] Set up pg_stat_statements (PostgreSQL)\n- [ ] Index all foreign keys\n- [ ] Create indexes for WHERE/JOIN/ORDER BY columns\n- [ ] Use EXPLAIN on all complex queries before deployment\n- [ ] Monitor query performance in production\n- [ ] Set up alerts for queries >5 seconds\n- [ ] Review query plans monthly\n- [ ] Keep database statistics up to date (ANALYZE)\n- [ ] Regular VACUUM (PostgreSQL) or OPTIMIZE TABLE (MySQL)\n",
+      "category": "database",
+      "tags": [
+        "database-performance"
+      ],
+      "chunks": [
+        {
+          "index": 0,
+          "content": "# Database Slow Query Diagnosis and Optimization\n\n## Overview\nSlow queries are the #1 cause of database performance issues. This guide covers identification, analysis, and optimization.\n\n## PostgreSQL Slow Query Analysis\n\n### Enable Slow Query Logging\n```sql\n-- postgresql.conf\nlog_min_duration_statement = 1000  -- Log queries taking >1s\nlog_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '\nlog_checkpoints = on\nlog_connections = on\nlog_disconnections = on\nlog_lock_waits = on\n```\n\n### Find Slow Queries\n```sql\n-- pg_stat_statements extension (install first)\nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;",
+          "startOffset": 0,
+          "endOffset": 625
+        },
+        {
+          "index": 1,
+          "content": "l\n-- pg_stat_statements extension (install first)\nCREATE EXTENSION IF NOT EXISTS pg_stat_statements;\n\n-- Top 10 slowest queries by total time\nSELECT \n  query,\n  calls,\n  total_exec_time,\n  mean_exec_time,\n  max_exec_time\nFROM pg_stat_statements\nORDER BY total_exec_time DESC\nLIMIT 10;\n\n-- Queries with highest average time\nSELECT \n  query,\n  calls,\n  mean_exec_time,\n  stddev_exec_time\nFROM pg_stat_statements\nORDER BY mean_exec_time DESC\nLIMIT 10;\n```\n\n### Analyze Query Plan\n```sql\nEXPLAIN ANALYZE\nSELECT * FROM orders \nWHERE customer_id = 12345 \n  AND created_at > '2024-01-01';\n```\n\nLook for:\n- **Seq Scan** on large tables (missing index)\n- High **cost** estimates\n- **Nested Loop** with many rows\n- **Sort** operations on large datasets\n\n### Common Slow Query Patterns",
+          "startOffset": 184,
+          "endOffset": 958
+        },
+        {
+          "index": 2,
+          "content": "Nested Loop** with many rows\n- **Sort** operations on large datasets\n\n### Common Slow Query Patterns\n\n#### 1. Missing Index\n```sql\n-- Problem: Full table scan\nSELECT * FROM orders WHERE customer_id = 123;\n\n-- Solution: Add index\nCREATE INDEX idx_orders_customer_id ON orders(customer_id);\n```\n\n#### 2. Non-Selective Index\n```sql\n-- Problem: Index not used because column has low cardinality\nSELECT * FROM users WHERE is_active = true;  -- 99% of users are active\n\n-- Solution: Partial index\nCREATE INDEX idx_active_users ON users(created_at) \nWHERE is_active = true;\n```\n\n#### 3. OR Conditions\n```sql\n-- Problem: Can't use indexes efficiently\nSELECT * FROM products \nWHERE category_id = 5 OR manufacturer_id = 10;",
+          "startOffset": 288,
+          "endOffset": 1001
+        },
+        {
+          "index": 3,
+          "content": "Can't use indexes efficiently\nSELECT * FROM products \nWHERE category_id = 5 OR manufacturer_id = 10;\n\n-- Solution: UNION\nSELECT * FROM products WHERE category_id = 5\nUNION\nSELECT * FROM products WHERE manufacturer_id = 10;\n```\n\n#### 4. Function on Indexed Column\n```sql\n-- Problem: Index not used\nSELECT * FROM users WHERE LOWER(email) = 'user@example.com';\n\n-- Solution: Function-based index\nCREATE INDEX idx_users_email_lower ON users(LOWER(email));\n```\n\n#### 5. SELECT * with Large BLOB/TEXT\n```sql\n-- Problem: Fetching large columns you don't need\nSELECT * FROM documents WHERE user_id = 123;\n\n-- Solution: Select only needed columns\nSELECT id, title, created_at FROM documents WHERE user_id = 123;\n```\n\n## MySQL/MariaDB Slow Query Analysis",
+          "startOffset": 414,
+          "endOffset": 1158
+        },
+        {
+          "index": 4,
+          "content": "id, title, created_at FROM documents WHERE user_id = 123;\n```\n\n## MySQL/MariaDB Slow Query Analysis\n\n### Enable Slow Query Log\n```ini\n# my.cnf\nslow_query_log = 1\nslow_query_log_file = /var/log/mysql/slow-query.log\nlong_query_time = 1\nlog_queries_not_using_indexes = 1\n```\n\n### Analyze Slow Query Log\n```bash\n# Install pt-query-digest (Percona Toolkit)\npt-query-digest /var/log/mysql/slow-query.log\n```\n\n### Find Queries Not Using Indexes\n```sql\nSELECT * FROM information_schema.PROCESSLIST \nWHERE command != 'Sleep' \n  AND time > 5\nORDER BY time DESC;\n```\n\n### Query Plan Analysis\n```sql\nEXPLAIN SELECT * FROM orders WHERE customer_id = 123;\n```\n\nLook for:\n- `type: ALL` (full table scan - bad)\n- `type: index` (index scan - acceptable)\n- `type: ref` or `type: eq_ref` (index lookup - good)",
+          "startOffset": 586,
+          "endOffset": 1377
+        },
+        {
+          "index": 5,
+          "content": "bad)\n- `type: index` (index scan - acceptable)\n- `type: ref` or `type: eq_ref` (index lookup - good)\n\n## SQLite Slow Query Analysis\n\n### Enable Query Profiling\n```sql\n.timer on\n.eqp on  -- Show query plan\n```\n\n### Analyze Query Plan\n```sql\nEXPLAIN QUERY PLAN\nSELECT * FROM orders WHERE customer_id = 123;\n```\n\n### Create Indexes\n```sql\nCREATE INDEX idx_orders_customer_id ON orders(customer_id);\n\n-- Composite index for multiple columns\nCREATE INDEX idx_orders_customer_date \nON orders(customer_id, created_at);\n```\n\n### Vacuum Database\n```sql\nVACUUM;  -- Rebuild database file\nANALYZE;  -- Update query planner statistics\n```\n\n## General Optimization Strategies",
+          "startOffset": 617,
+          "endOffset": 1279
+        },
+        {
+          "index": 6,
+          "content": "d database file\nANALYZE;  -- Update query planner statistics\n```\n\n## General Optimization Strategies\n\n### 1. Index Strategy\n```sql\n-- Composite index column order matters\n-- Put most selective column first\nCREATE INDEX idx_orders_lookup \nON orders(status, customer_id, created_at);\n\n-- Use INCLUDE for covering indexes (PostgreSQL)\nCREATE INDEX idx_orders_covering \nON orders(customer_id) \nINCLUDE (total_amount, created_at);\n```\n\n### 2. Query Rewriting\n```sql\n-- Instead of NOT IN (slow)\nSELECT * FROM orders WHERE customer_id NOT IN (\n  SELECT id FROM banned_customers\n);\n\n-- Use LEFT JOIN with NULL check\nSELECT o.* FROM orders o\nLEFT JOIN banned_customers b ON o.customer_id = b.id\nWHERE b.id IS NULL;\n```",
+          "startOffset": 798,
+          "endOffset": 1507
+        },
+        {
+          "index": 7,
+          "content": "ELECT o.* FROM orders o\nLEFT JOIN banned_customers b ON o.customer_id = b.id\nWHERE b.id IS NULL;\n```\n\n### 3. Pagination\n```sql\n-- Don't use OFFSET for large datasets\nSELECT * FROM orders ORDER BY id LIMIT 100 OFFSET 10000;  -- Slow\n\n-- Use keyset pagination\nSELECT * FROM orders \nWHERE id > 10000  -- Last seen ID\nORDER BY id \nLIMIT 100;\n```\n\n### 4. Batch Operations\n```sql\n-- Instead of many single inserts\nINSERT INTO logs (user_id, action) VALUES (1, 'login');\nINSERT INTO logs (user_id, action) VALUES (2, 'login');\n\n-- Batch insert\nINSERT INTO logs (user_id, action) VALUES \n(1, 'login'),\n(2, 'login'),\n(3, 'logout');\n```\n\n## Connection Pool Tuning",
+          "startOffset": 929,
+          "endOffset": 1582
+        },
+        {
+          "index": 8,
+          "content": "(user_id, action) VALUES \n(1, 'login'),\n(2, 'login'),\n(3, 'logout');\n```\n\n## Connection Pool Tuning\n\n### PostgreSQL\n```\nmax_connections = 100\nshared_buffers = 256MB  -- 25% of RAM\neffective_cache_size = 1GB  -- 50-75% of RAM\nwork_mem = 10MB  -- Per query sort/hash operation\n```\n\n### Application Connection Pool\n```python\n# SQLAlchemy example\nengine = create_engine(\n    'postgresql://user:pass@localhost/db',\n    pool_size=20,\n    max_overflow=10,\n    pool_pre_ping=True,\n    pool_recycle=3600\n)\n```\n\n## Monitoring Queries in Production\n\n### PostgreSQL\n```sql\n-- Active queries\nSELECT pid, usename, state, query, now() - query_start AS duration\nFROM pg_stat_activity\nWHERE state != 'idle'\nORDER BY duration DESC;",
+          "startOffset": 1108,
+          "endOffset": 1822
+        },
+        {
+          "index": 9,
+          "content": "now() - query_start AS duration\nFROM pg_stat_activity\nWHERE state != 'idle'\nORDER BY duration DESC;\n\n-- Kill long-running query\nSELECT pg_terminate_backend(12345);  -- Replace with actual PID\n```\n\n### MySQL\n```sql\n-- Active queries\nSHOW FULL PROCESSLIST;\n\n-- Kill query\nKILL 12345;\n```\n\n## Prevention Checklist\n\n- [ ] Enable slow query logging\n- [ ] Set up pg_stat_statements (PostgreSQL)\n- [ ] Index all foreign keys\n- [ ] Create indexes for WHERE/JOIN/ORDER BY columns\n- [ ] Use EXPLAIN on all complex queries before deployment\n- [ ] Monitor query performance in production\n- [ ] Set up alerts for queries >5 seconds\n- [ ] Review query plans monthly\n- [ ] Keep database statistics up to date (ANALYZE)\n- [ ] Regular VACUUM (PostgreSQL) or OPTIMIZE TABLE (MySQL)",
+          "startOffset": 1204,
+          "endOffset": 1969
+        }
+      ]
+    }
+  ]
+}

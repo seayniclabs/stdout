@@ -1,0 +1,93 @@
+{
+  "pack": {
+    "id": "network-diagnostics",
+    "title": "Network Diagnostics",
+    "description": "Curated network diagnostics guides",
+    "version": "1.0.0",
+    "author": "Seaynic Labs",
+    "category": "network",
+    "tags": [
+      "network-diagnostics"
+    ]
+  },
+  "docs": [
+    {
+      "id": "packet-loss",
+      "title": "Network Packet Loss Diagnosis and Resolution",
+      "slug": "network-packet-loss-diagnosis-and-resolution",
+      "content": "# Network Packet Loss Diagnosis and Resolution\n\n## Overview\nPacket loss causes application timeouts, poor VoIP quality, and degraded user experience. This guide covers diagnosis at every layer.\n\n## Symptoms of Packet Loss\n- Intermittent connection failures\n- High latency spikes\n- Retransmissions in TCP connections\n- Poor video/audio quality (VoIP, streaming)\n- Slow file transfers despite high bandwidth\n\n## Quick Diagnosis\n\n### Ping Test\n```bash\n# Test packet loss to remote host\nping -c 100 example.com\n\n# Look for:\n# 100 packets transmitted, 95 received, 5% packet loss\n```\n\nAcceptable loss: <1% for most applications, <0.1% for VoIP\n\n### MTR (My Traceroute)\n```bash\n# Continuous ping + traceroute\nmtr -r -c 100 example.com\n\n# Shows packet loss at each hop\n```\n\n### iPerf Bandwidth Test\n```bash\n# Server side\niperf3 -s\n\n# Client side\niperf3 -c <server-ip> -t 60 -i 5\n\n# Look for retransmissions\n```\n\n## Layer-by-Layer Diagnosis\n\n### Layer 1: Physical Issues\n\n#### Cable Problems\n```bash\n# Check interface errors\nip -s link show eth0\n\n# Look for:\n# RX errors: dropped, overrun, frame\n# TX errors: dropped, carrier, collisions\n```\n\nCommon causes:\n- Damaged Ethernet cables\n- Bad connectors (loose, corroded)\n- Cable length >100m for Ethernet\n- EMI (electromagnetic interference) near power lines\n\n**Test:** Replace cable, test with known-good cable\n\n#### Interface Speed Mismatch\n```bash\n# Check negotiated speed\nethtool eth0 | grep Speed\nethtool eth0 | grep Duplex\n\n# Force specific speed (if auto-negotiation fails)\nethtool -s eth0 speed 1000 duplex full autoneg on\n```\n\n### Layer 2: Switch/Network Issues\n\n#### Port Saturation\n```bash\n# Monitor interface bandwidth\niftop -i eth0\nnload eth0\n\n# Check for sustained >80% utilization\n```\n\n#### Switch Port Errors\nAccess switch management interface and check:\n- CRC errors on port\n- Input/output discards\n- Buffer overflows\n- Port flapping (up/down)\n\n#### VLAN Misconfig\n```bash\n# Check VLAN assignments\nip link show | grep vlan\nbridge vlan show\n```\n\n### Layer 3: Routing Issues\n\n#### Routing Loops\n```bash\n# Check TTL decrements\ntraceroute -m 30 example.com\n\n# Look for:\n# - Same hops repeating\n# - TTL expired in transit\n```\n\n#### Asymmetric Routing\n```bash\n# Trace path TO destination\ntraceroute example.com\n\n# Trace path FROM destination (on remote host)\ntraceroute <your-ip>\n\n# Different paths can cause stateful firewall drops\n```\n\n#### ICMP Rate Limiting\n```bash\n# Some routers rate-limit ICMP\n# May show false packet loss for ping\n# Test with TCP:\nhping3 -S -p 80 -c 100 example.com\n```\n\n### Layer 4: Firewall/NAT Issues\n\n#### Connection Tracking Table Full\n```bash\n# Check conntrack table usage (Linux)\ncat /proc/sys/net/netfilter/nf_conntrack_count\ncat /proc/sys/net/netfilter/nf_conntrack_max\n\n# If count ≈ max, increase limit\nsysctl -w net.netfilter.nf_conntrack_max=262144\n```\n\n#### Firewall Drops\n```bash\n# Check dropped packets (iptables)\niptables -nvL | grep DROP\niptables -nvL -t nat | grep DROP\n\n# Check firewall logs\njournalctl -k | grep DROP\ntail -f /var/log/syslog | grep UFW\n```\n\n## Network Interface Statistics\n\n### Linux\n```bash\n# Detailed interface stats\nnetstat -i\n\n# Packet drops by queue\ncat /proc/net/softnet_stat\n\n# Ring buffer stats\nethtool -S eth0 | grep -i drop\nethtool -S eth0 | grep -i error\n```\n\n### Increase Ring Buffer Size\n```bash\n# Check current size\nethtool -g eth0\n\n# Increase (if supported)\nethtool -G eth0 rx 4096 tx 4096\n```\n\n## WiFi-Specific Issues\n\n### Signal Strength\n```bash\n# Check WiFi signal (Linux)\niwconfig wlan0\n\n# Look for:\n# Link Quality=60/70  Signal level=-50 dBm\n```\n\nSignal levels:\n- -30 dBm: Excellent\n- -50 dBm: Good\n- -60 dBm: Fair\n- -70 dBm: Weak (expect packet loss)\n- -80 dBm: Very weak\n\n### Channel Interference\n```bash\n# Scan for nearby networks\niwlist wlan0 scan | grep -E 'ESSID|Channel|Quality'\n\n# Change to less crowded channel\niwconfig wlan0 channel 6\n```\n\n### WiFi Driver Issues\n```bash\n# Check for WiFi driver errors\ndmesg | grep -i wifi\ndmesg | grep -i firmware\n\n# Update WiFi driver (Ubuntu example)\nsudo apt update\nsudo apt install linux-firmware\n```\n\n## Common Fixes\n\n### 1. Network Interface Tuning (Linux)\n```bash\n# Increase receive buffer\nsysctl -w net.core.rmem_max=134217728\nsysctl -w net.core.rmem_default=134217728\n\n# Increase transmit buffer\nsysctl -w net.core.wmem_max=134217728\nsysctl -w net.core.wmem_default=134217728\n\n# TCP tuning\nsysctl -w net.ipv4.tcp_rmem=\"4096 87380 134217728\"\nsysctl -w net.ipv4.tcp_wmem=\"4096 65536 134217728\"\nsysctl -w net.ipv4.tcp_window_scaling=1\n```\n\n### 2. QoS/Traffic Shaping\n```bash\n# Prioritize low-latency traffic (Linux tc)\ntc qdisc add dev eth0 root handle 1: prio bands 3\n\n# VoIP traffic to high-priority band\ntc filter add dev eth0 protocol ip parent 1:0 prio 1 \\\n  u32 match ip dport 5060 0xffff flowid 1:1\n```\n\n### 3. MTU Optimization\n```bash\n# Find path MTU\ntracepath example.com\n\n# Set interface MTU\nip link set dev eth0 mtu 1500\n\n# Test different MTU sizes\nping -M do -s 1472 example.com  # 1472 + 28 = 1500\n```\n\n### 4. DNS Issues Appearing as Packet Loss\n```bash\n# If only DNS queries fail\n# Test direct IP connection\nping 1.1.1.1\n\n# If works, it's DNS not packet loss\n# Change DNS server\necho \"nameserver 1.1.1.1\" > /etc/resolv.conf\n```\n\n## ISP/Upstream Issues\n\n### Test to Multiple Destinations\n```bash\n# If loss only to one destination:\nmtr google.com\nmtr cloudflare.com\nmtr <your-isp-dns>\n\n# If loss to all destinations → local issue\n# If loss only beyond ISP → ISP/upstream issue\n```\n\n### Contact ISP Checklist\nBefore calling ISP, gather:\n- MTR report showing loss location\n- Speed test results\n- Time of day when issue occurs\n- Duration of issue\n- Modem signal levels (if cable/DSL)\n\n## Monitoring for Packet Loss\n\n### Smokeping\n```bash\n# Install Smokeping for continuous monitoring\napt install smokeping\n\n# Configure targets in /etc/smokeping/config.d/Targets\n```\n\n### Grafana + Prometheus\n```yaml\n# Prometheus blackbox_exporter config\nmodules:\n  icmp:\n    prober: icmp\n    timeout: 5s\n    icmp:\n      preferred_ip_protocol: ip4\n```\n\nQuery packet loss:\n```promql\nrate(probe_icmp_duration_seconds_count[5m]) - \nrate(probe_success_count[5m])\n```\n\n## Prevention Checklist\n\n- [ ] Monitor interface errors daily\n- [ ] Set alerts for >1% packet loss\n- [ ] Use redundant network paths when possible\n- [ ] Regular cable quality checks\n- [ ] Keep firmware updated (routers, switches, NICs)\n- [ ] Document network topology\n- [ ] Implement QoS for latency-sensitive applications\n- [ ] Monitor bandwidth utilization\n- [ ] Test failover paths quarterly\n",
+      "category": "network",
+      "tags": [
+        "network-diagnostics"
+      ],
+      "chunks": [
+        {
+          "index": 0,
+          "content": "# Network Packet Loss Diagnosis and Resolution\n\n## Overview\nPacket loss causes application timeouts, poor VoIP quality, and degraded user experience. This guide covers diagnosis at every layer.\n\n## Symptoms of Packet Loss\n- Intermittent connection failures\n- High latency spikes\n- Retransmissions in TCP connections\n- Poor video/audio quality (VoIP, streaming)\n- Slow file transfers despite high bandwidth\n\n## Quick Diagnosis\n\n### Ping Test\n```bash\n# Test packet loss to remote host\nping -c 100 example.com\n\n# Look for:\n# 100 packets transmitted, 95 received, 5% packet loss\n```\n\nAcceptable loss: <1% for most applications, <0.1% for VoIP\n\n### MTR (My Traceroute)\n```bash\n# Continuous ping + traceroute\nmtr -r -c 100 example.com\n\n# Shows packet loss at each hop\n```",
+          "startOffset": 0,
+          "endOffset": 765
+        },
+        {
+          "index": 1,
+          "content": "``bash\n# Continuous ping + traceroute\nmtr -r -c 100 example.com\n\n# Shows packet loss at each hop\n```\n\n### iPerf Bandwidth Test\n```bash\n# Server side\niperf3 -s\n\n# Client side\niperf3 -c <server-ip> -t 60 -i 5\n\n# Look for retransmissions\n```\n\n## Layer-by-Layer Diagnosis\n\n### Layer 1: Physical Issues\n\n#### Cable Problems\n```bash\n# Check interface errors\nip -s link show eth0\n\n# Look for:\n# RX errors: dropped, overrun, frame\n# TX errors: dropped, carrier, collisions\n```\n\nCommon causes:\n- Damaged Ethernet cables\n- Bad connectors (loose, corroded)\n- Cable length >100m for Ethernet\n- EMI (electromagnetic interference) near power lines\n\n**Test:** Replace cable, test with known-good cable",
+          "startOffset": 58,
+          "endOffset": 744
+        },
+        {
+          "index": 2,
+          "content": "(electromagnetic interference) near power lines\n\n**Test:** Replace cable, test with known-good cable\n\n#### Interface Speed Mismatch\n```bash\n# Check negotiated speed\nethtool eth0 | grep Speed\nethtool eth0 | grep Duplex\n\n# Force specific speed (if auto-negotiation fails)\nethtool -s eth0 speed 1000 duplex full autoneg on\n```\n\n### Layer 2: Switch/Network Issues\n\n#### Port Saturation\n```bash\n# Monitor interface bandwidth\niftop -i eth0\nnload eth0\n\n# Check for sustained >80% utilization\n```\n\n#### Switch Port Errors\nAccess switch management interface and check:\n- CRC errors on port\n- Input/output discards\n- Buffer overflows\n- Port flapping (up/down)\n\n#### VLAN Misconfig\n```bash\n# Check VLAN assignments\nip link show | grep vlan\nbridge vlan show\n```\n\n### Layer 3: Routing Issues",
+          "startOffset": 175,
+          "endOffset": 953
+        },
+        {
+          "index": 3,
+          "content": "# Check VLAN assignments\nip link show | grep vlan\nbridge vlan show\n```\n\n### Layer 3: Routing Issues\n\n#### Routing Loops\n```bash\n# Check TTL decrements\ntraceroute -m 30 example.com\n\n# Look for:\n# - Same hops repeating\n# - TTL expired in transit\n```\n\n#### Asymmetric Routing\n```bash\n# Trace path TO destination\ntraceroute example.com\n\n# Trace path FROM destination (on remote host)\ntraceroute <your-ip>\n\n# Different paths can cause stateful firewall drops\n```\n\n#### ICMP Rate Limiting\n```bash\n# Some routers rate-limit ICMP\n# May show false packet loss for ping\n# Test with TCP:\nhping3 -S -p 80 -c 100 example.com\n```\n\n### Layer 4: Firewall/NAT Issues",
+          "startOffset": 255,
+          "endOffset": 905
+        },
+        {
+          "index": 4,
+          "content": "s for ping\n# Test with TCP:\nhping3 -S -p 80 -c 100 example.com\n```\n\n### Layer 4: Firewall/NAT Issues\n\n#### Connection Tracking Table Full\n```bash\n# Check conntrack table usage (Linux)\ncat /proc/sys/net/netfilter/nf_conntrack_count\ncat /proc/sys/net/netfilter/nf_conntrack_max\n\n# If count ≈ max, increase limit\nsysctl -w net.netfilter.nf_conntrack_max=262144\n```\n\n#### Firewall Drops\n```bash\n# Check dropped packets (iptables)\niptables -nvL | grep DROP\niptables -nvL -t nat | grep DROP\n\n# Check firewall logs\njournalctl -k | grep DROP\ntail -f /var/log/syslog | grep UFW\n```\n\n## Network Interface Statistics\n\n### Linux\n```bash\n# Detailed interface stats\nnetstat -i\n\n# Packet drops by queue\ncat /proc/net/softnet_stat\n\n# Ring buffer stats\nethtool -S eth0 | grep -i drop\nethtool -S eth0 | grep -i error\n```",
+          "startOffset": 430,
+          "endOffset": 1232
+        },
+        {
+          "index": 5,
+          "content": "softnet_stat\n\n# Ring buffer stats\nethtool -S eth0 | grep -i drop\nethtool -S eth0 | grep -i error\n```\n\n### Increase Ring Buffer Size\n```bash\n# Check current size\nethtool -g eth0\n\n# Increase (if supported)\nethtool -G eth0 rx 4096 tx 4096\n```\n\n## WiFi-Specific Issues\n\n### Signal Strength\n```bash\n# Check WiFi signal (Linux)\niwconfig wlan0\n\n# Look for:\n# Link Quality=60/70  Signal level=-50 dBm\n```\n\nSignal levels:\n- -30 dBm: Excellent\n- -50 dBm: Good\n- -60 dBm: Fair\n- -70 dBm: Weak (expect packet loss)\n- -80 dBm: Very weak\n\n### Channel Interference\n```bash\n# Scan for nearby networks\niwlist wlan0 scan | grep -E 'ESSID|Channel|Quality'\n\n# Change to less crowded channel\niwconfig wlan0 channel 6\n```",
+          "startOffset": 506,
+          "endOffset": 1205
+        },
+        {
+          "index": 6,
+          "content": "can | grep -E 'ESSID|Channel|Quality'\n\n# Change to less crowded channel\niwconfig wlan0 channel 6\n```\n\n### WiFi Driver Issues\n```bash\n# Check for WiFi driver errors\ndmesg | grep -i wifi\ndmesg | grep -i firmware\n\n# Update WiFi driver (Ubuntu example)\nsudo apt update\nsudo apt install linux-firmware\n```\n\n## Common Fixes\n\n### 1. Network Interface Tuning (Linux)\n```bash\n# Increase receive buffer\nsysctl -w net.core.rmem_max=134217728\nsysctl -w net.core.rmem_default=134217728\n\n# Increase transmit buffer\nsysctl -w net.core.wmem_max=134217728\nsysctl -w net.core.wmem_default=134217728\n\n# TCP tuning\nsysctl -w net.ipv4.tcp_rmem=\"4096 87380 134217728\"\nsysctl -w net.ipv4.tcp_wmem=\"4096 65536 134217728\"\nsysctl -w net.ipv4.tcp_window_scaling=1\n```",
+          "startOffset": 615,
+          "endOffset": 1355
+        },
+        {
+          "index": 7,
+          "content": "7728\"\nsysctl -w net.ipv4.tcp_wmem=\"4096 65536 134217728\"\nsysctl -w net.ipv4.tcp_window_scaling=1\n```\n\n### 2. QoS/Traffic Shaping\n```bash\n# Prioritize low-latency traffic (Linux tc)\ntc qdisc add dev eth0 root handle 1: prio bands 3\n\n# VoIP traffic to high-priority band\ntc filter add dev eth0 protocol ip parent 1:0 prio 1 \\\n  u32 match ip dport 5060 0xffff flowid 1:1\n```\n\n### 3. MTU Optimization\n```bash\n# Find path MTU\ntracepath example.com\n\n# Set interface MTU\nip link set dev eth0 mtu 1500\n\n# Test different MTU sizes\nping -M do -s 1472 example.com  # 1472 + 28 = 1500\n```\n\n### 4. DNS Issues Appearing as Packet Loss\n```bash\n# If only DNS queries fail\n# Test direct IP connection\nping 1.1.1.1",
+          "startOffset": 745,
+          "endOffset": 1441
+        },
+        {
+          "index": 8,
+          "content": "Appearing as Packet Loss\n```bash\n# If only DNS queries fail\n# Test direct IP connection\nping 1.1.1.1\n\n# If works, it's DNS not packet loss\n# Change DNS server\necho \"nameserver 1.1.1.1\" > /etc/resolv.conf\n```\n\n## ISP/Upstream Issues\n\n### Test to Multiple Destinations\n```bash\n# If loss only to one destination:\nmtr google.com\nmtr cloudflare.com\nmtr <your-isp-dns>\n\n# If loss to all destinations → local issue\n# If loss only beyond ISP → ISP/upstream issue\n```\n\n### Contact ISP Checklist\nBefore calling ISP, gather:\n- MTR report showing loss location\n- Speed test results\n- Time of day when issue occurs\n- Duration of issue\n- Modem signal levels (if cable/DSL)\n\n## Monitoring for Packet Loss\n\n### Smokeping\n```bash\n# Install Smokeping for continuous monitoring\napt install smokeping",
+          "startOffset": 852,
+          "endOffset": 1632
+        },
+        {
+          "index": 9,
+          "content": "cket Loss\n\n### Smokeping\n```bash\n# Install Smokeping for continuous monitoring\napt install smokeping\n\n# Configure targets in /etc/smokeping/config.d/Targets\n```\n\n### Grafana + Prometheus\n```yaml\n# Prometheus blackbox_exporter config\nmodules:\n  icmp:\n    prober: icmp\n    timeout: 5s\n    icmp:\n      preferred_ip_protocol: ip4\n```\n\nQuery packet loss:\n```promql\nrate(probe_icmp_duration_seconds_count[5m]) - \nrate(probe_success_count[5m])\n```\n\n## Prevention Checklist",
+          "startOffset": 912,
+          "endOffset": 1377
+        },
+        {
+          "index": 10,
+          "content": "probe_icmp_duration_seconds_count[5m]) - \nrate(probe_success_count[5m])\n```\n\n## Prevention Checklist\n\n- [ ] Monitor interface errors daily\n- [ ] Set alerts for >1% packet loss\n- [ ] Use redundant network paths when possible\n- [ ] Regular cable quality checks\n- [ ] Keep firmware updated (routers, switches, NICs)\n- [ ] Document network topology\n- [ ] Implement QoS for latency-sensitive applications\n- [ ] Monitor bandwidth utilization\n- [ ] Test failover paths quarterly",
+          "startOffset": 1284,
+          "endOffset": 1756
+        }
+      ]
+    }
+  ]
+}

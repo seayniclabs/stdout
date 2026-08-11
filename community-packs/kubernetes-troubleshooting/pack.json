@@ -1,0 +1,105 @@
+{
+  "pack": {
+    "id": "kubernetes-troubleshooting",
+    "title": "Kubernetes Troubleshooting",
+    "description": "Curated kubernetes troubleshooting guides",
+    "version": "1.0.0",
+    "author": "Seaynic Labs",
+    "category": "kubernetes",
+    "tags": [
+      "kubernetes-troubleshooting"
+    ]
+  },
+  "docs": [
+    {
+      "id": "pod-crashes",
+      "title": "Kubernetes Pod CrashLoopBackOff Troubleshooting",
+      "slug": "kubernetes-pod-crashloopbackoff-troubleshooting",
+      "content": "# Kubernetes Pod CrashLoopBackOff Troubleshooting\n\n## Overview\nCrashLoopBackOff indicates a pod is repeatedly crashing and Kubernetes is backing off on restart attempts.\n\n## Common Causes\n\n### 1. Application Error\n- Application exits immediately due to runtime errors\n- Missing required environment variables\n- Configuration file errors\n\n### 2. Resource Limits\n- Container runs out of memory (OOMKilled)\n- CPU throttling causing timeouts\n- Disk space exhausted\n\n### 3. Dependency Issues\n- Database connection failures\n- Missing secrets or ConfigMaps\n- Network policies blocking traffic\n\n## Diagnostic Steps\n\n### Check Pod Status\n```bash\nkubectl get pods -n <namespace>\nkubectl describe pod <pod-name> -n <namespace>\n```\n\nLook for:\n- Exit codes (0=normal, 1=error, 137=OOMKilled)\n- Restart count\n- Last state reason\n\n### View Logs\n```bash\n# Current logs\nkubectl logs <pod-name> -n <namespace>\n\n# Previous container logs\nkubectl logs <pod-name> -n <namespace> --previous\n```\n\n### Check Events\n```bash\nkubectl get events -n <namespace> --sort-by='.lastTimestamp'\n```\n\n### Resource Usage\n```bash\nkubectl top pod <pod-name> -n <namespace>\nkubectl describe node <node-name>\n```\n\n## Common Fixes\n\n### OOMKilled (Exit Code 137)\nIncrease memory limits in deployment:\n```yaml\nresources:\n  requests:\n    memory: \"256Mi\"\n  limits:\n    memory: \"512Mi\"\n```\n\n### Missing Environment Variables\nCheck pod environment:\n```bash\nkubectl exec -it <pod-name> -- env\n```\n\nVerify ConfigMaps and Secrets are mounted correctly.\n\n### Liveness Probe Failures\nAdjust probe timing:\n```yaml\nlivenessProbe:\n  initialDelaySeconds: 60  # Increase if app needs more startup time\n  periodSeconds: 10\n  timeoutSeconds: 5\n  failureThreshold: 3\n```\n\n### Database Connection Issues\n1. Verify service DNS resolves:\n```bash\nkubectl exec -it <pod-name> -- nslookup <service-name>\n```\n\n2. Check network policies:\n```bash\nkubectl get networkpolicies -n <namespace>\n```\n\n3. Test connection from pod:\n```bash\nkubectl exec -it <pod-name> -- nc -zv <service-name> <port>\n```\n\n## Prevention\n\n1. **Set appropriate resource limits** - Don't set memory limits too low\n2. **Use readiness probes** - Prevent traffic before app is ready\n3. **Configure liveness probes carefully** - Don't fail pods during normal startup\n4. **Use init containers** - For dependency checks before main container starts\n5. **Monitor resource usage** - Set up alerts for high memory/CPU\n6. **Implement graceful shutdown** - Handle SIGTERM properly\n\n## Related Issues\n- ImagePullBackOff (wrong image or registry auth issues)\n- Pending (scheduling issues, no resources available)\n- Error (configuration errors preventing container start)\n",
+      "category": "kubernetes",
+      "tags": [
+        "kubernetes-troubleshooting"
+      ],
+      "chunks": [
+        {
+          "index": 0,
+          "content": "# Kubernetes Pod CrashLoopBackOff Troubleshooting\n\n## Overview\nCrashLoopBackOff indicates a pod is repeatedly crashing and Kubernetes is backing off on restart attempts.\n\n## Common Causes\n\n### 1. Application Error\n- Application exits immediately due to runtime errors\n- Missing required environment variables\n- Configuration file errors\n\n### 2. Resource Limits\n- Container runs out of memory (OOMKilled)\n- CPU throttling causing timeouts\n- Disk space exhausted\n\n### 3. Dependency Issues\n- Database connection failures\n- Missing secrets or ConfigMaps\n- Network policies blocking traffic\n\n## Diagnostic Steps\n\n### Check Pod Status\n```bash\nkubectl get pods -n <namespace>\nkubectl describe pod <pod-name> -n <namespace>\n```",
+          "startOffset": 0,
+          "endOffset": 719
+        },
+        {
+          "index": 1,
+          "content": "od Status\n```bash\nkubectl get pods -n <namespace>\nkubectl describe pod <pod-name> -n <namespace>\n```\n\nLook for:\n- Exit codes (0=normal, 1=error, 137=OOMKilled)\n- Restart count\n- Last state reason\n\n### View Logs\n```bash\n# Current logs\nkubectl logs <pod-name> -n <namespace>\n\n# Previous container logs\nkubectl logs <pod-name> -n <namespace> --previous\n```\n\n### Check Events\n```bash\nkubectl get events -n <namespace> --sort-by='.lastTimestamp'\n```\n\n### Resource Usage\n```bash\nkubectl top pod <pod-name> -n <namespace>\nkubectl describe node <node-name>\n```\n\n## Common Fixes\n\n### OOMKilled (Exit Code 137)\nIncrease memory limits in deployment:\n```yaml\nresources:\n  requests:\n    memory: \"256Mi\"\n  limits:\n    memory: \"512Mi\"\n```",
+          "startOffset": 95,
+          "endOffset": 818
+        },
+        {
+          "index": 2,
+          "content": "in deployment:\n```yaml\nresources:\n  requests:\n    memory: \"256Mi\"\n  limits:\n    memory: \"512Mi\"\n```\n\n### Missing Environment Variables\nCheck pod environment:\n```bash\nkubectl exec -it <pod-name> -- env\n```\n\nVerify ConfigMaps and Secrets are mounted correctly.\n\n### Liveness Probe Failures\nAdjust probe timing:\n```yaml\nlivenessProbe:\n  initialDelaySeconds: 60  # Increase if app needs more startup time\n  periodSeconds: 10\n  timeoutSeconds: 5\n  failureThreshold: 3\n```\n\n### Database Connection Issues\n1. Verify service DNS resolves:\n```bash\nkubectl exec -it <pod-name> -- nslookup <service-name>\n```\n\n2. Check network policies:\n```bash\nkubectl get networkpolicies -n <namespace>\n```\n\n3. Test connection from pod:\n```bash\nkubectl exec -it <pod-name> -- nc -zv <service-name> <port>\n```\n\n## Prevention",
+          "startOffset": 200,
+          "endOffset": 998
+        },
+        {
+          "index": 3,
+          "content": "ion from pod:\n```bash\nkubectl exec -it <pod-name> -- nc -zv <service-name> <port>\n```\n\n## Prevention\n\n1. **Set appropriate resource limits** - Don't set memory limits too low\n2. **Use readiness probes** - Prevent traffic before app is ready\n3. **Configure liveness probes carefully** - Don't fail pods during normal startup\n4. **Use init containers** - For dependency checks before main container starts\n5. **Monitor resource usage** - Set up alerts for high memory/CPU\n6. **Implement graceful shutdown** - Handle SIGTERM properly\n\n## Related Issues\n- ImagePullBackOff (wrong image or registry auth issues)\n- Pending (scheduling issues, no resources available)\n- Error (configuration errors preventing container start)",
+          "startOffset": 630,
+          "endOffset": 1349
+        }
+      ]
+    },
+    {
+      "id": "service-discovery",
+      "title": "Kubernetes Service Discovery and DNS Issues",
+      "slug": "kubernetes-service-discovery-and-dns-issues",
+      "content": "# Kubernetes Service Discovery and DNS Issues\n\n## Overview\nService discovery failures prevent pods from communicating with each other or external services.\n\n## Common Symptoms\n- `nslookup: can't resolve '<service-name>'`\n- `dial tcp: lookup <service-name> on 10.96.0.10:53: no such host`\n- Connection timeouts despite service existing\n- Intermittent connectivity issues\n\n## DNS Resolution in Kubernetes\n\n### Default DNS Names\n```\n<service-name>                          # Same namespace\n<service-name>.<namespace>              # Cross-namespace (short)\n<service-name>.<namespace>.svc.cluster.local  # Fully qualified\n```\n\n### CoreDNS Pods\n```bash\nkubectl get pods -n kube-system -l k8s-app=kube-dns\nkubectl logs -n kube-system -l k8s-app=kube-dns\n```\n\n## Diagnostic Steps\n\n### 1. Verify Service Exists\n```bash\nkubectl get svc -n <namespace>\nkubectl describe svc <service-name> -n <namespace>\n```\n\nCheck:\n- Service has endpoints (actual pods selected)\n- Port configurations match deployment\n\n### 2. Test DNS Resolution\nFrom inside a pod:\n```bash\nkubectl exec -it <pod-name> -- nslookup <service-name>\nkubectl exec -it <pod-name> -- nslookup <service-name>.<namespace>.svc.cluster.local\n```\n\n### 3. Check Service Endpoints\n```bash\nkubectl get endpoints <service-name> -n <namespace>\n```\n\nIf endpoints list is empty:\n- Check pod labels match service selector\n- Verify pods are in Running state\n- Check readiness probe status\n\n### 4. Verify Network Policies\n```bash\nkubectl get networkpolicies -n <namespace>\nkubectl describe networkpolicy <policy-name> -n <namespace>\n```\n\nNetwork policies can block traffic between pods.\n\n### 5. Test Direct Pod IP Connection\n```bash\n# Get pod IP\nkubectl get pod <pod-name> -o wide\n\n# Test connection from another pod\nkubectl exec -it <client-pod> -- curl http://<pod-ip>:<port>\n```\n\nIf direct IP works but service DNS doesn't → DNS issue.\nIf direct IP fails → network policy or pod issue.\n\n## Common Fixes\n\n### Service Selector Mismatch\n```yaml\n# Service must match deployment labels\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-app\nspec:\n  selector:\n    app: my-app  # Must match deployment pod labels\n  ports:\n  - port: 80\n    targetPort: 8080\n```\n\n### CoreDNS Issues\nRestart CoreDNS pods:\n```bash\nkubectl rollout restart deployment/coredns -n kube-system\n```\n\nCheck CoreDNS ConfigMap:\n```bash\nkubectl get configmap coredns -n kube-system -o yaml\n```\n\n### DNS Policy Override\nIn pod spec:\n```yaml\ndnsPolicy: ClusterFirst  # Default - use cluster DNS\n# Or:\ndnsPolicy: Default  # Use node's DNS resolver\n```\n\n### NetworkPolicy Blocking Traffic\nAllow traffic to service:\n```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: allow-app-traffic\nspec:\n  podSelector:\n    matchLabels:\n      app: my-app\n  ingress:\n  - from:\n    - podSelector: {}  # Allow from all pods in namespace\n    ports:\n    - protocol: TCP\n      port: 8080\n```\n\n## Headless Services\nFor direct pod-to-pod communication:\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-app-headless\nspec:\n  clusterIP: None  # Headless service\n  selector:\n    app: my-app\n  ports:\n  - port: 8080\n```\n\nDNS returns pod IPs instead of service IP:\n```bash\nnslookup my-app-headless\n# Returns: 10.244.1.5, 10.244.2.8, 10.244.3.12\n```\n\n## External Service Access\n\n### ExternalName Service\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: external-database\nspec:\n  type: ExternalName\n  externalName: db.example.com\n```\n\nPods can use `external-database` DNS name to reach external host.\n\n### Service with External IPs\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: external-api\nspec:\n  type: ClusterIP\n  externalIPs:\n  - 192.168.1.100\n  ports:\n  - port: 443\n```\n\n## Prevention\n\n1. **Use fully qualified domain names** in production\n2. **Set up network policies early** - Don't add them after deployment\n3. **Monitor CoreDNS health** - Set up alerts for CoreDNS pod crashes\n4. **Use readiness probes** - Pods only get endpoints when ready\n5. **Document service dependencies** - Track what talks to what\n",
+      "category": "kubernetes",
+      "tags": [
+        "kubernetes-troubleshooting"
+      ],
+      "chunks": [
+        {
+          "index": 0,
+          "content": "# Kubernetes Service Discovery and DNS Issues\n\n## Overview\nService discovery failures prevent pods from communicating with each other or external services.\n\n## Common Symptoms\n- `nslookup: can't resolve '<service-name>'`\n- `dial tcp: lookup <service-name> on 10.96.0.10:53: no such host`\n- Connection timeouts despite service existing\n- Intermittent connectivity issues\n\n## DNS Resolution in Kubernetes\n\n### Default DNS Names\n```\n<service-name>                          # Same namespace\n<service-name>.<namespace>              # Cross-namespace (short)\n<service-name>.<namespace>.svc.cluster.local  # Fully qualified\n```\n\n### CoreDNS Pods\n```bash\nkubectl get pods -n kube-system -l k8s-app=kube-dns\nkubectl logs -n kube-system -l k8s-app=kube-dns\n```\n\n## Diagnostic Steps",
+          "startOffset": 0,
+          "endOffset": 771
+        },
+        {
+          "index": 1,
+          "content": "-system -l k8s-app=kube-dns\nkubectl logs -n kube-system -l k8s-app=kube-dns\n```\n\n## Diagnostic Steps\n\n### 1. Verify Service Exists\n```bash\nkubectl get svc -n <namespace>\nkubectl describe svc <service-name> -n <namespace>\n```\n\nCheck:\n- Service has endpoints (actual pods selected)\n- Port configurations match deployment\n\n### 2. Test DNS Resolution\nFrom inside a pod:\n```bash\nkubectl exec -it <pod-name> -- nslookup <service-name>\nkubectl exec -it <pod-name> -- nslookup <service-name>.<namespace>.svc.cluster.local\n```\n\n### 3. Check Service Endpoints\n```bash\nkubectl get endpoints <service-name> -n <namespace>\n```\n\nIf endpoints list is empty:\n- Check pod labels match service selector\n- Verify pods are in Running state\n- Check readiness probe status",
+          "startOffset": 124,
+          "endOffset": 874
+        },
+        {
+          "index": 2,
+          "content": "pod labels match service selector\n- Verify pods are in Running state\n- Check readiness probe status\n\n### 4. Verify Network Policies\n```bash\nkubectl get networkpolicies -n <namespace>\nkubectl describe networkpolicy <policy-name> -n <namespace>\n```\n\nNetwork policies can block traffic between pods.\n\n### 5. Test Direct Pod IP Connection\n```bash\n# Get pod IP\nkubectl get pod <pod-name> -o wide\n\n# Test connection from another pod\nkubectl exec -it <client-pod> -- curl http://<pod-ip>:<port>\n```\n\nIf direct IP works but service DNS doesn't → DNS issue.\nIf direct IP fails → network policy or pod issue.\n\n## Common Fixes",
+          "startOffset": 271,
+          "endOffset": 887
+        },
+        {
+          "index": 3,
+          "content": "service DNS doesn't → DNS issue.\nIf direct IP fails → network policy or pod issue.\n\n## Common Fixes\n\n### Service Selector Mismatch\n```yaml\n# Service must match deployment labels\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-app\nspec:\n  selector:\n    app: my-app  # Must match deployment pod labels\n  ports:\n  - port: 80\n    targetPort: 8080\n```\n\n### CoreDNS Issues\nRestart CoreDNS pods:\n```bash\nkubectl rollout restart deployment/coredns -n kube-system\n```\n\nCheck CoreDNS ConfigMap:\n```bash\nkubectl get configmap coredns -n kube-system -o yaml\n```\n\n### DNS Policy Override\nIn pod spec:\n```yaml\ndnsPolicy: ClusterFirst  # Default - use cluster DNS\n# Or:\ndnsPolicy: Default  # Use node's DNS resolver\n```",
+          "startOffset": 520,
+          "endOffset": 1227
+        },
+        {
+          "index": 4,
+          "content": "y: ClusterFirst  # Default - use cluster DNS\n# Or:\ndnsPolicy: Default  # Use node's DNS resolver\n```\n\n### NetworkPolicy Blocking Traffic\nAllow traffic to service:\n```yaml\napiVersion: networking.k8s.io/v1\nkind: NetworkPolicy\nmetadata:\n  name: allow-app-traffic\nspec:\n  podSelector:\n    matchLabels:\n      app: my-app\n  ingress:\n  - from:\n    - podSelector: {}  # Allow from all pods in namespace\n    ports:\n    - protocol: TCP\n      port: 8080\n```\n\n## Headless Services\nFor direct pod-to-pod communication:\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: my-app-headless\nspec:\n  clusterIP: None  # Headless service\n  selector:\n    app: my-app\n  ports:\n  - port: 8080\n```",
+          "startOffset": 866,
+          "endOffset": 1542
+        },
+        {
+          "index": 5,
+          "content": "spec:\n  clusterIP: None  # Headless service\n  selector:\n    app: my-app\n  ports:\n  - port: 8080\n```\n\nDNS returns pod IPs instead of service IP:\n```bash\nnslookup my-app-headless\n# Returns: 10.244.1.5, 10.244.2.8, 10.244.3.12\n```\n\n## External Service Access\n\n### ExternalName Service\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: external-database\nspec:\n  type: ExternalName\n  externalName: db.example.com\n```\n\nPods can use `external-database` DNS name to reach external host.\n\n### Service with External IPs\n```yaml\napiVersion: v1\nkind: Service\nmetadata:\n  name: external-api\nspec:\n  type: ClusterIP\n  externalIPs:\n  - 192.168.1.100\n  ports:\n  - port: 443\n```\n\n## Prevention",
+          "startOffset": 994,
+          "endOffset": 1676
+        },
+        {
+          "index": 6,
+          "content": "i\nspec:\n  type: ClusterIP\n  externalIPs:\n  - 192.168.1.100\n  ports:\n  - port: 443\n```\n\n## Prevention\n\n1. **Use fully qualified domain names** in production\n2. **Set up network policies early** - Don't add them after deployment\n3. **Monitor CoreDNS health** - Set up alerts for CoreDNS pod crashes\n4. **Use readiness probes** - Pods only get endpoints when ready\n5. **Document service dependencies** - Track what talks to what",
+          "startOffset": 1320,
+          "endOffset": 1746
+        }
+      ]
+    }
+  ]
+}
