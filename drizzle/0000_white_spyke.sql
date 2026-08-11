@@ -277,13 +277,13 @@ CREATE TABLE `observatory_agent_runs` (
 --> statement-breakpoint
 CREATE TABLE `observatory_baselines` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
-	`monitor_id` text NOT NULL,
-	`metric` text NOT NULL,
-	`baseline_value` text NOT NULL,
-	`unit` text,
-	`confidence_score` integer DEFAULT 50 NOT NULL,
-	`last_calculated_at` integer NOT NULL,
+	`stack_id` text NOT NULL,
+	`metric_name` text NOT NULL,
+	`mean` real NOT NULL,
+	`std_dev` real NOT NULL,
+	`sample_count` integer NOT NULL,
+	`window_start` integer NOT NULL,
+	`window_end` integer NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );

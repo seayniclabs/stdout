@@ -83,27 +83,21 @@ export async function establishProvisionalBaselines(userId: string): Promise<Bas
         }
 
         const id = `bl_prov_${stack.id}_${m.metric}`;
-        const monitorId = 'observatory';
-        const baselineValue = String(m.mean);
         const sampleCount = 1;
-        // Need to provide values for old columns (user_id, monitor_id, baseline_value) even though they're legacy
-        // The schema has both old columns (from original design) and new columns (from statistical baseline expansion)
-        // Using raw SQLite client with ON CONFLICT(id) since (stack_id, metric_name) doesn't have UNIQUE constraint
+        // Phase 1.1: simplified schema without user_id, monitor_id, baseline_value
         central.prepare(`
           INSERT INTO observatory_baselines
-            (id, user_id, monitor_id, stack_id, metric_name, baseline_value, mean, std_dev, sample_count, window_start, window_end, last_calculated_at, created_at, updated_at)
+            (id, stack_id, metric_name, mean, std_dev, sample_count, window_start, window_end, created_at, updated_at)
           VALUES
-            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
             mean = excluded.mean,
             std_dev = excluded.std_dev,
-            baseline_value = excluded.baseline_value,
             window_start = excluded.window_start,
             window_end = excluded.window_end,
-            last_calculated_at = excluded.last_calculated_at,
             updated_at = excluded.updated_at
         `).run(
-          id, userId, monitorId, stack.id, m.metric, baselineValue, m.mean, m.stdDev, sampleCount, windowStart, now, now, now, now
+          id, stack.id, m.metric, m.mean, m.stdDev, sampleCount, windowStart, now, now, now
         );
         baselinesWritten++;
         wroteForStack = true;
