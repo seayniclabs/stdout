@@ -120,7 +120,7 @@ export async function retrieveKnowledge(
  * Sources, by policy (Charlie 2026-06-12):
  *   - internal docs (source='user'|'fork') → ALWAYS included.
  *   - community docs (source='community')  → ALWAYS included (they're already sanitized + gated).
- *   - public/external resources            → ONLY when the admin set tenant_preferences
+ *   - public/external resources            → ONLY when the admin enables it in system settings
  *                                            .rag_include_public = 1 (off by default).
  *
  * Matches by symptom/title keyword overlap (LIKE). Returns short snippets to keep prompt size down.
