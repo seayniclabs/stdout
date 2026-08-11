@@ -98,6 +98,16 @@ async function tryClaudeCLI(prompt: string, context?: string): Promise<AgentResp
       let stdout = '';
       let stderr = '';
 
+      proc.on('error', (err) => {
+        // Handle ENOENT (command not found) silently - claude CLI not installed
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+          resolve(null);
+        } else {
+          console.warn('[agent-auto-router] Claude CLI spawn error:', err.message);
+          resolve(null);
+        }
+      });
+
       proc.stdout.on('data', (data) => {
         stdout += data.toString();
       });
@@ -146,6 +156,16 @@ async function tryGeminiCLI(prompt: string, context?: string): Promise<AgentResp
 
       let stdout = '';
       let stderr = '';
+
+      proc.on('error', (err) => {
+        // Handle ENOENT (command not found) silently - agy CLI not installed
+        if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+          resolve(null);
+        } else {
+          console.warn('[agent-auto-router] Gemini CLI spawn error:', err.message);
+          resolve(null);
+        }
+      });
 
       proc.stdout.on('data', (data) => {
         stdout += data.toString();
