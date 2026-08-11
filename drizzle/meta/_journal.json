@@ -134,6 +134,20 @@
       "when": 1785614400000,
       "tag": "0019_add_docs_chunks",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1785700800000,
+      "tag": "0020_update_scanner_schedule",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785787200000,
+      "tag": "0021_rebuild_scanner_schedule",
+      "breakpoints": true
     }
   ]
 }

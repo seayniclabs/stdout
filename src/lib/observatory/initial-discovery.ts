@@ -31,11 +31,14 @@ const STATE_HOST_COUNT = 'observatory_discovery_host_count';
 async function setState(key: string, value: string): Promise<void> {
   const db = getDb();
   const now = Date.now();
-  await db.run(sql`
+  // Use raw SQLite instead of Drizzle sql template - sql template with db.run() doesn't support UPSERT
+  const rawDb = (db as any).$client;
+  const stmt = rawDb.prepare(`
     INSERT INTO system_state (key, value, updated_at)
-    VALUES (${key}, ${value}, ${now})
+    VALUES (?, ?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
   `);
+  stmt.run(key, value, now);
 }
 
 export async function getDiscoveryState(): Promise<string> {
