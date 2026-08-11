@@ -1,8 +1,11 @@
 # StdOut
 
+**v1.0 - Production Ready** 🎉
+
 **Autonomous IT for SMB ops teams.** Your infrastructure assistant that learns your stack, remembers every fix, and handles the repetitive work so your team can focus on what matters.
 
-**License**: Personal use only. Commercial use requires a license. See [LICENSE](LICENSE) for details.
+**Status:** ✅ Production Ready (v1.0 released August 11, 2026)  
+**License:** Personal use only. Commercial use requires a license. See [LICENSE](LICENSE) for details.
 
 ---
 
@@ -26,7 +29,7 @@ Stop solving the same problem twice. Stop losing knowledge when team members lea
 ```bash
 docker run -d \
   --name stdout \
-  -p 3000:3000 \
+  -p 8112:4321 \
   -v ~/stdout-data:/app/data \
   --restart unless-stopped \
   charlieseay/stdout:latest
@@ -34,21 +37,41 @@ docker run -d \
 
 **3-step setup wizard:**
 
-1. Open http://localhost:3000
-2. Create admin account (name, email, password)
-3. Brand your environment (workspace name, logo, color)
+1. Open http://localhost:8112
+2. Create admin account + activate license (free dev license available)
+3. Name your environment + generate scanner token
 
 That's it. You're running StdOut.
 
 **Everything works out of the box:**
 
-- ✅ SQLite database (no PostgreSQL setup required)
-- ✅ Knowledge base with 4 community packs pre-loaded
-- ✅ Auto-learning from your incident resolutions
-- ✅ AI-powered RAG search across all docs
-- ✅ License optional (activate later if needed)
+- ✅ SQLite database (zero external dependencies)
+- ✅ Knowledge base with 5 community troubleshooting packs pre-loaded
+- ✅ Auto-learning worker (generates post-mortems from resolved incidents)
+- ✅ AI-powered full-text search (SQLite FTS5)
+- ✅ Observatory autonomous monitoring system
+- ✅ Riggins AI assistant (auto-routes to best available AI)
 
 **No configuration files. No environment variables. No decisions.**
+
+---
+
+## 🎉 What's New in v1.0
+
+**Production-ready release with complete feature set:**
+
+- ✅ **100% E2E tested** - All critical features validated
+- ✅ **20 database migrations** - Complete schema from day one
+- ✅ **5 community knowledge packs** - Production-ready troubleshooting guides
+- ✅ **Single-container deployment** - No external dependencies
+- ✅ **Observatory autonomous system** - Watcher + analyst agents operational
+- ✅ **Auto-learning worker** - Generates post-mortems from incidents
+- ✅ **Riggins AI assistant** - Multi-provider auto-routing
+- ✅ **Full-text search** - SQLite FTS5 with semantic chunking
+- ✅ **Secure authentication** - argon2id + session management
+- ✅ **RBAC** - Admin/operator/viewer roles
+
+**See [RELEASE-NOTES-v1.0.md](RELEASE-NOTES-v1.0.md) for complete details.**
 
 ---
 
@@ -58,7 +81,7 @@ That's it. You're running StdOut.
 
 ```
 ┌─────────────────────────────────────────┐
-│           StdOut  (port 3000)            │
+│           StdOut  (port 8112)            │
 │                                          │
 │  ┌────────────────────────────────────┐ │
 │  │  Dashboard · Incidents · HUD       │ │
@@ -66,9 +89,9 @@ That's it. You're running StdOut.
 │                                          │
 │  ┌────────────────────────────────────┐ │
 │  │  Knowledge Base (SQLite FTS5)      │ │
-│  │  • Community packs (4 included)    │ │
+│  │  • Community packs (5 included)    │ │
 │  │  • Auto-learning post-mortems      │ │
-│  │  • RAG search engine               │ │
+│  │  • Full-text search engine         │ │
 │  └────────────────────────────────────┘ │
 │                                          │
 │  ┌────────────────────────────────────┐ │
