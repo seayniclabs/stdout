@@ -86,9 +86,13 @@ if (user) {
   <style>@import '../styles/fonts.css';</style>
   <meta name="csrf-token" content={csrfToken} />
 
-  <!-- Branding color override -->
+  <!-- Branding color override via JS -->
   {accentOverride && (
-    <style>{`:root{--accent:${accentOverride};--accent-light:color-mix(in srgb,${accentOverride} 85%,white);--accent-btn:${accentOverride};--color-primary:${accentOverride};}`}</style>
+    <script is:inline define:vars={{ brandColor: accentOverride }}>
+      const style = document.createElement('style');
+      style.textContent = `:root{--accent:${brandColor};--accent-light:color-mix(in srgb,${brandColor} 85%,white);--accent-btn:${brandColor};--color-primary:${brandColor};}`;
+      document.head.appendChild(style);
+    </script>
   )}
 
   <script>
