@@ -33,11 +33,9 @@ if (Astro.request.method === 'POST') {
     const description = (form.get('description') as string || '').trim();
 
     // RBAC check for write actions
-    if (ws && !ws.isOwnWorkspace) {
-      const neededAction = action === 'delete' ? 'delete' : (action === 'create' ? 'create' : 'edit');
-      if (!canPerform(ws.role, neededAction)) {
-        error = `${ws.role} role cannot ${neededAction} stacks.`;
-      }
+    const neededAction = action === 'delete' ? 'delete' : (action === 'create' ? 'create' : 'edit');
+    if (!canPerform(user.role, neededAction)) {
+      error = `${user.role} role cannot ${neededAction} stacks.`;
     }
 
     if (!error && action === 'create' && name) {
