@@ -27,9 +27,10 @@ const allMonitors = db.select().from(schema.monitors)
   .all();
 
 const monitorsData = allMonitors.map(m => {
-  const uptime = getUptimeStats(m.id, 30);
-  const sparkline = getRecentChecks(m.id, 20);
-  return { ...m, uptimePercent: uptime.uptimePercent, sparkline };
+  // TEMP DISABLED: causing page timeout
+  // const uptime = getUptimeStats(m.id, 30);
+  // const sparkline = getRecentChecks(m.id, 20);
+  return { ...m, uptimePercent: 0, sparkline: [] };
 });
 
 const servicesUp = monitorsData.filter(m => m.currentStatus === 'healthy').length;
