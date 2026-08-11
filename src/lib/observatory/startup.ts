@@ -152,11 +152,15 @@ async function recordStartupTime(success: boolean): Promise<void> {
     `);
 
     // Upsert last startup time
-    await db.run(sql`
+    // Use raw SQLite instead of Drizzle sql template - sql template with db.run() doesn't support UPSERT
+    const rawDb = (db as any).$client;
+
+    let stmt = rawDb.prepare(`
       INSERT INTO system_state (key, value, updated_at)
-      VALUES ('observatory_last_startup', ${nowStr}, ${now})
+      VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `);
+    stmt.run('observatory_last_startup', nowStr, now);
 
     // Record total startup count
     const countRow = await db.get(
@@ -166,19 +170,11 @@ async function recordStartupTime(success: boolean): Promise<void> {
     const count = countRow ? parseInt(countRow.value, 10) + 1 : 1;
     const countStr = count.toString();
 
-    await db.run(sql`
-      INSERT INTO system_state (key, value, updated_at)
-      VALUES ('observatory_startup_count', ${countStr}, ${now})
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-    `);
+    stmt.run('observatory_startup_count', countStr, now);
 
     // Record last successful startup
     if (success) {
-      await db.run(sql`
-        INSERT INTO system_state (key, value, updated_at)
-        VALUES ('observatory_last_successful_startup', ${nowStr}, ${now})
-        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-      `);
+      stmt.run('observatory_last_successful_startup', nowStr, now);
     }
   } catch (error) {
     console.error('[Observatory Startup] Failed to record startup time:', error);

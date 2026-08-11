@@ -138,31 +138,28 @@ export async function discoverDataSources(
     const { getDb } = await import('../db');
     const { sql } = await import('drizzle-orm');
     const db = getDb();
+    // Use raw SQLite instead of Drizzle sql template - sql template with db.run() doesn't support UPSERT
+    const rawDb = (db as any).$client;
 
     for (const source of discovered) {
       try {
         const sourceId = `ds_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const now = Date.now();
 
-        await db.run(sql`
+        const stmt = rawDb.prepare(`
           INSERT INTO data_sources (
             id, type, name, url, port, discovered_via, enabled, created_at
           ) VALUES (
-            ${sourceId},
-            ${source.type},
-            ${source.name},
-            ${source.url},
-            ${source.port},
-            ${source.discovered_via},
-            1,
-            ${Date.now()}
+            ?, ?, ?, ?, ?, ?, 1, ?
           )
           ON CONFLICT (url) DO UPDATE SET
-            type = ${source.type},
-            name = ${source.name},
-            port = ${source.port},
-            discovered_via = ${source.discovered_via},
-            updated_at = ${Date.now()}
+            type = excluded.type,
+            name = excluded.name,
+            port = excluded.port,
+            discovered_via = excluded.discovered_via,
+            updated_at = ?
         `);
+        stmt.run(sourceId, source.type, source.name, source.url, source.port, source.discovered_via, now, now);
       } catch (error: unknown) {
         warnings.push(`Failed to save ${source.name}: ${error instanceof Error ? error.message : String(error)}`);
       }

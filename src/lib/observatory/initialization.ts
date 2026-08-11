@@ -387,11 +387,14 @@ async function triggerInitialNetworkScan(userId: string): Promise<void> {
 
     // Mark in system_state that initial scan was triggered
     const centralDb = getDb();
-    await centralDb.run(sql`
+    // Use raw SQLite instead of Drizzle sql template - sql template with db.run() doesn't support UPSERT
+    const rawDb = (centralDb as any).$client;
+    const stmt = rawDb.prepare(`
       INSERT INTO system_state (key, value, updated_at)
-      VALUES ('observatory_initial_scan_triggered', ${Date.now().toString()}, ${Date.now()})
+      VALUES (?, ?, ?)
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
     `);
+    stmt.run('observatory_initial_scan_triggered', Date.now().toString(), Date.now());
 
     // Actually RUN the discovery — the autonomic vision requires scanners to start collecting
     // on their own, not wait for a human to click. runInitialDiscovery persists hosts and emits
