@@ -50,19 +50,8 @@ if (user) {
     if (prefs?.accentColor && /^#[0-9a-fA-F]{3,8}$/.test(prefs.accentColor)) {
       accentOverride = prefs.accentColor;
       // Build CSS string in frontmatter where template literals work
-      accentOverrideCSS = `
-        :root {
-          --accent-override: ${accentOverride};
-          --accent-light-override: color-mix(in srgb, ${accentOverride} 85%, white);
-          --accent-bright-override: color-mix(in srgb, ${accentOverride} 120%, white);
-          --accent-dim-override: ${accentOverride}1f;
-          --accent-glow-override: ${accentOverride}40;
-          --accent-btn-override: ${accentOverride};
-          --color-primary: ${accentOverride};
-          --color-primary-hover: color-mix(in srgb, ${accentOverride} 85%, black);
-          --color-primary-light: color-mix(in srgb, ${accentOverride} 10%, white);
-        }
-      `;
+      accentOverrideCSS = `:root{--accent-override:${accentOverride};--accent-light-override:color-mix(in srgb,${accentOverride} 85%,white);--accent-bright-override:color-mix(in srgb,${accentOverride} 120%,white);--accent-dim-override:${accentOverride}1f;--accent-glow-override:${accentOverride}40;--accent-btn-override:${accentOverride};--color-primary:${accentOverride};--color-primary-hover:color-mix(in srgb,${accentOverride} 85%,black);--color-primary-light:color-mix(in srgb,${accentOverride} 10%,white);}`;
+      console.log('[Layout] accentOverrideCSS built:', accentOverrideCSS.substring(0, 100));
     }
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
   } catch (err) {
@@ -98,7 +87,9 @@ if (user) {
   <meta name="csrf-token" content={csrfToken} />
 
   <!-- Branding color override -->
-  {accentOverrideCSS && <style set:html={accentOverrideCSS}></style>}
+  {accentOverride && (
+    <style>{`:root{--accent:${accentOverride};--accent-light:color-mix(in srgb,${accentOverride} 85%,white);--accent-btn:${accentOverride};--color-primary:${accentOverride};}`}</style>
+  )}
 
   <script>
     if ('serviceWorker' in navigator) {

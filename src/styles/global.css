@@ -40,14 +40,13 @@
   --text-secondary:#A0A0B8;
   --text-muted:    #6E6E88;
 
-  /* Brand accent — Default to Coral, overridable via Layout.astro */
-  --accent-default: #F97316;
-  --accent:        var(--accent-override, var(--accent-default));
-  --accent-light:  var(--accent-light-override, #FB923C);
-  --accent-bright: var(--accent-bright-override, #FF8C3A);
-  --accent-dim:    var(--accent-dim-override, rgba(249, 115, 22, 0.12));
-  --accent-glow:   var(--accent-glow-override, rgba(249, 115, 22, 0.4));
-  --accent-btn:    var(--accent-btn-override, #C2410C);
+  /* Brand accent — Coral (overridable) */
+  --accent:        #F97316;
+  --accent-light:  #FB923C;
+  --accent-bright: #FF8C3A;
+  --accent-dim:    rgba(249, 115, 22, 0.12);
+  --accent-glow:   rgba(249, 115, 22, 0.4);
+  --accent-btn:    #C2410C;
 
   /* Secondary accents — Awwwards palette */
   --cyan:          #40E5D1;
