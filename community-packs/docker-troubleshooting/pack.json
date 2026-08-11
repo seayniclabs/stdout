@@ -1,0 +1,57 @@
+{
+  "pack": {
+    "id": "docker-troubleshooting",
+    "title": "Docker Troubleshooting",
+    "description": "Curated docker troubleshooting guides",
+    "version": "1.0.0",
+    "author": "Seaynic Labs",
+    "category": "docker",
+    "tags": [
+      "docker-troubleshooting"
+    ]
+  },
+  "docs": [
+    {
+      "id": "container-restart-loop",
+      "title": "Troubleshooting Container Restart Loops",
+      "slug": "troubleshooting-container-restart-loops",
+      "content": "# Troubleshooting Container Restart Loops\n\n## Symptoms\n\nContainer repeatedly crashes and restarts every few seconds or minutes. Docker shows status as \"Restarting\" or container uptime keeps resetting to seconds.\n\n## Common Causes\n\n### 1. Application Crash on Startup\n\n**Diagnosis:**\n```bash\ndocker logs <container-name> --tail 100\n```\n\nLook for:\n- Uncaught exceptions\n- Missing environment variables\n- Failed dependency connections\n- Permission errors\n\n**Resolution:**\n```bash\n# Check last exit code\ndocker inspect <container-name> --format='{{.State.ExitCode}}'\n\n# Common exit codes:\n# 1 = Application error\n# 137 = OOMKilled (out of memory)\n# 139 = Segmentation fault\n# 143 = SIGTERM (graceful shutdown)\n```\n\n### 2. Missing Environment Variables\n\n**Diagnosis:**\n```bash\ndocker inspect <container-name> --format='{{range .Config.Env}}{{println .}}{{end}}'\n```\n\n**Resolution:**\n- Check docker-compose.yml or run command for required env vars\n- Add missing variables to .env file or compose file\n- Restart container with proper configuration\n\n### 3. Health Check Failures\n\n**Diagnosis:**\n```bash\ndocker inspect <container-name> --format='{{json .State.Health}}' | jq\n```\n\n**Resolution:**\n```yaml\n# Adjust health check in docker-compose.yml\nhealthcheck:\n  test: [\"CMD\", \"curl\", \"-f\", \"http://localhost/health\"]\n  interval: 30s\n  timeout: 10s\n  retries: 3\n  start_period: 40s  # Increase for slow-starting apps\n```\n\n### 4. Port Conflicts\n\n**Diagnosis:**\n```bash\n# Check what's using the port\nsudo lsof -i :8080\nnetstat -tuln | grep 8080\n```\n\n**Resolution:**\n- Change exposed port in docker-compose.yml\n- Stop conflicting service\n- Use different host port mapping\n\n### 5. Volume Mount Issues\n\n**Diagnosis:**\n```bash\ndocker inspect <container-name> --format='{{range .Mounts}}{{println .Source}}{{end}}'\n```\n\n**Resolution:**\n```bash\n# Check permissions\nls -la /path/to/volume\n\n# Fix permissions\nsudo chown -R 1000:1000 /path/to/volume\n\n# Or run container as root (not recommended)\ndocker run --user root ...\n```\n\n## Prevention\n\n1. **Add proper health checks** to all containers\n2. **Use restart policies wisely**:\n   ```yaml\n   restart: unless-stopped  # Not \"always\" for debugging\n   ```\n3. **Set resource limits** to prevent OOM:\n   ```yaml\n   deploy:\n     resources:\n       limits:\n         memory: 512M\n       reservations:\n         memory: 256M\n   ```\n4. **Log aggregation** - ship logs to central location\n5. **Graceful shutdown** - handle SIGTERM properly\n\n## Quick Fix Checklist\n\n- [ ] Check logs: `docker logs <container>`\n- [ ] Check exit code: `docker inspect --format='{{.State.ExitCode}}'`\n- [ ] Verify env vars are set\n- [ ] Check health check configuration\n- [ ] Verify port availability\n- [ ] Check volume permissions\n- [ ] Review resource limits (memory/CPU)\n- [ ] Test with `restart: \"no\"` to prevent loop during debugging\n\n## Related Issues\n\n- [OOMKilled Containers](./oom-killed.md)\n- [Docker Compose Health Checks](./health-checks.md)\n- [Volume Permission Errors](./volume-permissions.md)\n",
+      "category": "docker",
+      "tags": [
+        "docker-troubleshooting"
+      ],
+      "chunks": [
+        {
+          "index": 0,
+          "content": "# Troubleshooting Container Restart Loops\n\n## Symptoms\n\nContainer repeatedly crashes and restarts every few seconds or minutes. Docker shows status as \"Restarting\" or container uptime keeps resetting to seconds.\n\n## Common Causes\n\n### 1. Application Crash on Startup\n\n**Diagnosis:**\n\n```bash\ndocker logs <container-name> --tail 100\n\n```\n\nLook for:\n- Uncaught exceptions\n- Missing environment variables\n- Failed dependency connections\n- Permission errors\n\n**Resolution:**\n\n```bash\n\n# Check last exit code\ndocker inspect <container-name> --format='{{.State.ExitCode}}'\n\n# Common exit codes:\n\n# 1 = Application error\n\n# 137 = OOMKilled (out of memory)\n\n# 139 = Segmentation fault\n\n# 143 = SIGTERM (graceful shutdown)\n\n```\n\n### 2. Missing Environment Variables\n\n**Diagnosis:**",
+          "startOffset": 0,
+          "endOffset": 772
+        },
+        {
+          "index": 1,
+          "content": "Missing Environment Variables\n\n**Diagnosis:**\n\n```bash\ndocker inspect <container-name> --format='{{range .Config.Env}}{{println .}}{{end}}'\n\n```\n\n**Resolution:**\n- Check docker-compose.yml or run command for required env vars\n- Add missing variables to .env file or compose file\n- Restart container with proper configuration\n\n### 3. Health Check Failures\n\n**Diagnosis:**\n\n```bash\ndocker inspect <container-name> --format='{{json .State.Health}}' | jq\n\n```\n\n**Resolution:**\n\n```yaml\n\n# Adjust health check in docker-compose.yml\nhealthcheck:\n  test: [\"CMD\", \"curl\", \"-f\", \"http://localhost/health\"]\n  interval: 30s\n  timeout: 10s\n  retries: 3\n  start_period: 40s  # Increase for slow-starting apps\n\n```\n\n### 4. Port Conflicts\n\n**Diagnosis:**\n\n```bash",
+          "startOffset": 39,
+          "endOffset": 787
+        },
+        {
+          "index": 2,
+          "content": "Port Conflicts\n\n**Diagnosis:**\n\n```bash\n\n# Check what's using the port\nsudo lsof -i :8080\nnetstat -tuln | grep 8080\n\n```\n\n**Resolution:**\n- Change exposed port in docker-compose.yml\n- Stop conflicting service\n- Use different host port mapping\n\n### 5. Volume Mount Issues\n\n**Diagnosis:**\n\n```bash\ndocker inspect <container-name> --format='{{range .Mounts}}{{println .Source}}{{end}}'\n\n```\n\n**Resolution:**\n\n```bash\n\n# Check permissions\nls -la /path/to/volume\n\n# Fix permissions\nsudo chown -R 1000:1000 /path/to/volume\n\n# Or run container as root (not recommended)\ndocker run --user root ...\n\n```\n\n## Prevention\n\n1. **Add proper health checks** to all containers\n2. **Use restart policies wisely**:\n\n```yaml\n   restart: unless-stopped  # Not \"always\" for debugging",
+          "startOffset": 54,
+          "endOffset": 816
+        },
+        {
+          "index": 3,
+          "content": "**Use restart policies wisely**:\n\n```yaml\n   restart: unless-stopped  # Not \"always\" for debugging\n\n```\n3. **Set resource limits** to prevent OOM:\n\n```yaml\n   deploy:\n     resources:\n       limits:\n         memory: 512M\n       reservations:\n         memory: 256M\n\n```\n4. **Log aggregation** - ship logs to central location\n5. **Graceful shutdown** - handle SIGTERM properly\n\n## Quick Fix Checklist\n\n- [ ] Check logs: `docker logs <container>`\n- [ ] Check exit code: `docker inspect --format='{{.State.ExitCode}}'`\n- [ ] Verify env vars are set\n- [ ] Check health check configuration\n- [ ] Verify port availability\n- [ ] Check volume permissions\n- [ ] Review resource limits (memory/CPU)\n- [ ] Test with `restart: \"no\"` to prevent loop during debugging\n\n## Related Issues",
+          "startOffset": 100,
+          "endOffset": 870
+        },
+        {
+          "index": 4,
+          "content": "its (memory/CPU)\n- [ ] Test with `restart: \"no\"` to prevent loop during debugging\n\n## Related Issues\n\n- [OOMKilled Containers](./oom-killed.md)\n- [Docker Compose Health Checks](./health-checks.md)\n- [Volume Permission Errors](./volume-permissions.md)",
+          "startOffset": 250,
+          "endOffset": 500
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "pack": {
+    "id": "linux-server-hardening",
+    "title": "Linux Server Hardening",
+    "description": "Curated linux server hardening guides",
+    "version": "1.0.0",
+    "author": "Seaynic Labs",
+    "category": "linux",
+    "tags": [
+      "linux-server-hardening"
+    ]
+  },
+  "docs": []
+}
