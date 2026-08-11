@@ -1,103 +1,112 @@
 # StdOut Installation Guide
 
-## Prerequisites
+**Version:** 1.0.0  
+**Last Updated:** 2026-08-11
 
-- Docker Engine 20.10+ (or Docker Desktop)
-- 2GB RAM minimum, 4GB recommended
-- 10GB disk space
-- Linux, macOS, or Windows with WSL2
+## Overview
 
-## Quick Start (Docker Compose)
+StdOut is a self-hosted infrastructure monitoring platform with AI-powered incident diagnosis. This guide covers installation on Docker, configuration, and initial setup.
 
-### 1. Clone Repository
+## System Requirements
 
-```bash
-git clone https://github.com/seayniclabs/stdout.git
-cd stdout
-```
+### Minimum Requirements
+- **CPU:** 2 cores
+- **RAM:** 2GB
+- **Storage:** 10GB free space
+- **OS:** Linux, macOS, or Windows with Docker
 
-### 2. Generate Secrets
+### Recommended for Production
+- **CPU:** 4+ cores
+- **RAM:** 4GB+
+- **Storage:** 50GB+ (for logs and metrics)
+- **OS:** Ubuntu 22.04 LTS or later
 
-```bash
-# Generate session encryption key
-export SECRET_KEY=$(openssl rand -hex 32)
+### Required Software
+- Docker 20.10+ or Docker Desktop
+- SQLite 3.x (included in container)
 
-# Create environment file
-cat > .env << EOF
-# Required
-SECRET_KEY=${SECRET_KEY}
-DB_PATH=/data/stdout.db
-APP_URL=http://localhost:8112
+## Quick Start (5 Minutes)
 
-# Optional - BYO-AI (provide your own AI)
-# Ollama (default, runs locally)
-OLLAMA_URL=http://172.17.0.1:11434
-OBSERVATORY_ANALYST_MODEL=qwen2.5:14b-instruct-q4_K_M
-OBSERVATORY_WATCHER_MODEL=llama3.2:3b-instruct-q4_K_M
-
-# OR Claude API
-ANTHROPIC_API_KEY=sk-ant-...
-
-# OR Gemini API  
-GEMINI_API_KEY=...
-
-# Optional services
-RESEND_API_KEY=...  # Email notifications
-WINDLASS_URL=http://windlass:8116  # Scheduler (included in compose)
-EOF
-```
-
-### 3. Start Stack
+### 1. Pull and Run
 
 ```bash
-docker-compose up -d
+# Pull latest image
+docker pull charlieseay/stdout:latest
+
+# Create data directory
+mkdir -p ~/stdout-data
+
+# Run container
+docker run -d \
+  --name stdout \
+  -p 3000:3000 \
+  -v ~/stdout-data:/app/data \
+  --restart unless-stopped \
+  charlieseay/stdout:latest
 ```
 
-### 4. Access StdOut
+### 2. Complete Setup Wizard
 
-Open http://localhost:8112 in your browser.
+1. Open http://localhost:3000 in your browser
+2. **Step 1:** Create admin account (name, email, password)
+3. **Step 2:** Brand your environment (workspace name, logo, theme color)
+4. **Step 3:** Activate license or skip for now
 
-**First-time setup:**
-1. Create your admin account (first user is automatically admin)
-2. Configure AI provider in Settings → AI Providers
-3. Create your first monitor or import from scanner
+That's it! You're running StdOut.
 
 ## Installation Methods
 
 ### Method 1: Docker Compose (Recommended)
 
-Full stack with Windlass scheduler, mDNS discovery, and Observatory AI.
+Create `docker-compose.yml`:
 
-```bash
-docker-compose up -d
+```yaml
+version: '3.8'
+
+services:
+  stdout:
+    image: charlieseay/stdout:latest
+    container_name: stdout
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - NODE_ENV=production
+      - DB_PATH=/app/data/stdout.db
+      - TZ=America/Chicago  # Your timezone
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 ```
 
-**Services included:**
-- StdOut (port 8112)
-- Windlass scheduler (port 8116)
-- Avahi mDNS (`stdout.local` discovery)
-- Observatory Sentinel AI backend
+Start the stack:
 
-**Data persistence:**
 ```bash
-./data/stdout.db          # Main database
-./data/backups/           # Database backups
-./windlass-config/        # Windlass schedules
+docker compose up -d
 ```
+
+Access at: http://localhost:3000
 
 ### Method 2: Standalone Docker
 
-Minimal single-container deployment.
+Single command deployment:
 
 ```bash
 docker run -d \
   --name stdout \
+  -p 3000:3000 \
+  -v ~/stdout-data:/app/data \
+  -e TZ=America/Chicago \
   --restart unless-stopped \
-  -p 8112:3000 \
-  -v $(pwd)/data:/data \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -e SECRET_KEY=$(openssl rand -hex 32) \
-  -e DB_PATH=/data/stdout.db \
+  charlieseay/stdout:latest
+```
+
+Access at: http://localhost:3000
   -e APP_URL=http://localhost:8112 \
   -e OLLAMA_URL=http://172.17.0.1:11434 \
   charlieseay/stdout:latest

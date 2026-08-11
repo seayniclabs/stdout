@@ -19,59 +19,78 @@ Stop solving the same problem twice. Stop losing knowledge when team members lea
 
 ---
 
-## Quick Start
+## Quick Start (5 Minutes)
+
+**One command to run:**
 
 ```bash
-mkdir stdout && cd stdout
-
-curl -o docker-compose.yml https://raw.githubusercontent.com/seayniclabs/stdout/main/docker-compose.yml
-curl -o .env.example https://raw.githubusercontent.com/seayniclabs/stdout/main/.env.example
-cp .env.example .env
-# Edit .env: set APP_URL and SECRET_KEY (32+ random characters)
-
-docker compose up -d
+docker run -d \
+  --name stdout \
+  -p 3000:3000 \
+  -v ~/stdout-data:/app/data \
+  --restart unless-stopped \
+  charlieseay/stdout:latest
 ```
 
-Open `APP_URL` (default `http://localhost:8112`), create your admin account, name your environment, and you're done. Everything else is **fully automated**:
+**3-step setup wizard:**
 
-- ✅ Network scanning runs in background
-- ✅ Service discovery auto-connects
-- ✅ Ticketing system auto-detected from env vars (or uses built-in)
-- ✅ License is optional (activate later in Settings)
-- ✅ No manual configuration required
+1. Open http://localhost:3000
+2. Create admin account (name, email, password)
+3. Brand your environment (workspace name, logo, color)
 
-Setup completes in **2 steps** instead of 8. No decisions, no "Skip for Now" buttons.
+That's it. You're running StdOut.
+
+**Everything works out of the box:**
+
+- ✅ SQLite database (no PostgreSQL setup required)
+- ✅ Knowledge base with 4 community packs pre-loaded
+- ✅ Auto-learning from your incident resolutions
+- ✅ AI-powered RAG search across all docs
+- ✅ License optional (activate later if needed)
+
+**No configuration files. No environment variables. No decisions.**
 
 ---
 
 ## Architecture
 
-StdOut is one Docker container with three optional components:
-
-1. **StdOut Core** (port 8112) - Incident management, dashboard, AI diagnostics, knowledge base
-2. **Windlass** (port 8116) - Schedule-aware service manager *(optional)*
-3. **Observatory** (port 8080) - Proactive monitoring with AI agents *(optional)*
+**StdOut v1.0 is a single self-contained Docker image.**
 
 ```
 ┌─────────────────────────────────────────┐
-│           StdOut  (port 8112)            │
-│  Dashboard · Incidents · HUD · KB · AI  │
-└─────────────────┬───────────────────────┘
-                  │  optional HTTP poll
-                  ▼
-┌─────────────────────────────────────────┐
-│         Windlass Engine  (port 8116)     │
-│  Schedule-aware service manager          │
-│  Runs on your host, manages containers  │
-└─────────────────────────────────────────┘
-                  │  auto-creates incidents
-                  ▼
-┌─────────────────────────────────────────┐
-│      Observatory Monitor  (port 8080)    │
-│  Watcher (3B) + Analyst (14B) AI agents │
-│  Prometheus · Loki · Tempo observability│
+│           StdOut  (port 3000)            │
+│                                          │
+│  ┌────────────────────────────────────┐ │
+│  │  Dashboard · Incidents · HUD       │ │
+│  └────────────────────────────────────┘ │
+│                                          │
+│  ┌────────────────────────────────────┐ │
+│  │  Knowledge Base (SQLite FTS5)      │ │
+│  │  • Community packs (4 included)    │ │
+│  │  • Auto-learning post-mortems      │ │
+│  │  • RAG search engine               │ │
+│  └────────────────────────────────────┘ │
+│                                          │
+│  ┌────────────────────────────────────┐ │
+│  │  Observatory AI (Riggins)          │ │
+│  │  • Infrastructure Q&A              │ │
+│  │  • Incident diagnosis              │ │
+│  │  • Knowledge base search           │ │
+│  └────────────────────────────────────┘ │
+│                                          │
+│  ┌────────────────────────────────────┐ │
+│  │  SQLite Database                   │ │
+│  │  /app/data/stdout.db               │ │
+│  └────────────────────────────────────┘ │
 └─────────────────────────────────────────┘
 ```
+
+**What's Inside:**
+- Node.js + Astro SSR
+- SQLite with FTS5 full-text search
+- Built-in knowledge base with 4 community packs
+- Auto-learning system (incident → post-mortem)
+- Riggins AI assistant (queries your knowledge base)
 
 ---
 
