@@ -18,7 +18,6 @@ export const observatoryStandardPatterns = sqliteTable('observatory_standard_pat
 
 export const observatoryCustomPatterns = sqliteTable('observatory_custom_patterns', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   category: text('category').notNull(),
   title: text('title').notNull(),
   pattern: text('pattern').notNull(),
@@ -47,7 +46,6 @@ export const observatoryBaselines = sqliteTable('observatory_baselines', {
 
 export const observatoryAgentRuns = sqliteTable('observatory_agent_runs', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   agentType: text('agent_type', {
     enum: ['watcher', 'analyst', 'executor'],
   }).notNull(),
@@ -62,7 +60,6 @@ export const observatoryAgentRuns = sqliteTable('observatory_agent_runs', {
 
 export const observatoryFeedback = sqliteTable('observatory_feedback', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   incidentId: text('incident_id').notNull(),
   diagnosisId: text('diagnosis_id'),
   feedbackType: text('feedback_type', {
@@ -74,7 +71,6 @@ export const observatoryFeedback = sqliteTable('observatory_feedback', {
 
 export const observatoryPendingFixes = sqliteTable('observatory_pending_fixes', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   incidentId: text('incident_id').notNull(),
   fixType: text('fix_type').notNull(),
   fixCommand: text('fix_command').notNull(),
@@ -91,7 +87,6 @@ export const observatoryPendingFixes = sqliteTable('observatory_pending_fixes', 
 
 export const remediationPlaybooks = sqliteTable('remediation_playbooks', {
   id: text('id').primaryKey(),
-  userId: text('user_id').notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
   trigger: text('trigger').notNull(), // JSON: { type, pattern }
@@ -114,7 +109,6 @@ export const remediationExecutions = sqliteTable('remediation_executions', {
   id: text('id').primaryKey(),
   playbookId: text('playbook_id').notNull().references(() => remediationPlaybooks.id),
   incidentId: text('incident_id').notNull().references(() => incidents.id),
-  userId: text('user_id').notNull(),
   status: text('status', {
     enum: ['pending', 'running', 'success', 'failed', 'rolled_back', 'cancelled'],
   }).notNull().default('pending'),

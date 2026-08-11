@@ -39,11 +39,13 @@ export const users = sqliteTable('users', {
 
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const passwordResets = sqliteTable('password_resets', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   usedAt: integer('used_at', { mode: 'timestamp' }),
@@ -52,6 +54,7 @@ export const passwordResets = sqliteTable('password_resets', {
 
 export const emailVerifications = sqliteTable('email_verifications', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   token: text('token').notNull().unique(),
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   usedAt: integer('used_at', { mode: 'timestamp' }),
@@ -60,6 +63,7 @@ export const emailVerifications = sqliteTable('email_verifications', {
 
 export const apiTokens = sqliteTable('api_tokens', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   tokenHash: text('token_hash').notNull(),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
@@ -68,6 +72,7 @@ export const apiTokens = sqliteTable('api_tokens', {
 
 export const userSettings = sqliteTable('user_settings', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   key: text('key').notNull(),
   value: text('value').notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
@@ -75,6 +80,7 @@ export const userSettings = sqliteTable('user_settings', {
 
 export const commsChannels = sqliteTable('comms_channels', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   channelType: text('channel_type', {
     enum: ['slack', 'sms', 'webhook', 'email', 'websocket'],
   }).notNull(),
@@ -136,6 +142,7 @@ export const systemState = sqliteTable('system_state', {
 
 export const auditLog = sqliteTable('audit_log', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
   action: text('action').notNull(),
   details: text('details'),
   ip: text('ip'),
@@ -176,6 +183,7 @@ export const deletions = sqliteTable('deletions', {
 
 export const tickets = sqliteTable('tickets', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   type: text('type', {
     enum: ['incident', 'bug', 'feature', 'task'],
   }).notNull().default('incident'),
@@ -196,6 +204,7 @@ export const tickets = sqliteTable('tickets', {
 
 export const ticketingConnectors = sqliteTable('ticketing_connectors', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   type: text('type', {
     enum: ['linear', 'jira', 'github'],
   }).notNull(),
@@ -261,6 +270,7 @@ export const docEmbeddings = sqliteTable('doc_embeddings', {
 
 export const aiProviderKeys = sqliteTable('ai_provider_keys', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   provider: text('provider', {
     enum: ['anthropic', 'openai', 'gemini'],
   }).notNull(),
@@ -277,6 +287,7 @@ export const aiProviderKeys = sqliteTable('ai_provider_keys', {
 
 export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   incidentId: text('incident_id'),
   capability: text('capability', {
     enum: ['diagnostics', 'autofix_plan', 'autofix_apply'],
@@ -295,6 +306,7 @@ export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
 
 export const dataSources = sqliteTable('data_sources', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   type: text('type', {
     enum: ['prometheus', 'loki', 'influxdb', 'elasticsearch'],
   }).notNull(),
@@ -312,6 +324,7 @@ export const dataSources = sqliteTable('data_sources', {
 
 export const alertRules = sqliteTable('alert_rules', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   monitorId: text('monitor_id'),
   name: text('name').notNull(),
   condition: text('condition').notNull(),
@@ -323,6 +336,7 @@ export const alertRules = sqliteTable('alert_rules', {
 
 export const alertChannels = sqliteTable('alert_channels', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   type: text('type', {
     enum: ['email', 'slack', 'webhook', 'discord'],
   }).notNull(),
@@ -334,6 +348,7 @@ export const alertChannels = sqliteTable('alert_channels', {
 
 export const alertEvents = sqliteTable('alert_events', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   alertRuleId: text('alert_rule_id').notNull(),
   monitorId: text('monitor_id'),
   severity: text('severity').notNull(),
@@ -343,6 +358,7 @@ export const alertEvents = sqliteTable('alert_events', {
 
 export const notificationPreferences = sqliteTable('notification_preferences', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   channelId: text('channel_id').notNull(),
   eventType: text('event_type').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
@@ -392,6 +408,7 @@ export const systemSettings = sqliteTable('system_settings', {
 
 export const satelliteAgents = sqliteTable('satellite_agents', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   name: text('name').notNull(),
   hostname: text('hostname').notNull(),
   ipAddress: text('ip_address').notNull(),
@@ -407,12 +424,14 @@ export const satelliteAgents = sqliteTable('satellite_agents', {
 export const satelliteReports = sqliteTable('satellite_reports', {
   id: text('id').primaryKey(),
   satelliteId: text('satellite_id').notNull(),
+  userId: text('user_id').notNull(),
   metrics: text('metrics').notNull(), // JSON
   receivedAt: integer('received_at', { mode: 'timestamp' }).notNull(),
 });
 
 export const scannerSchedule = sqliteTable('scanner_schedule', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
   interval: text('interval').notNull().default('daily'),
   hour: integer('hour').notNull().default(3),
   minute: integer('minute').notNull().default(0),
@@ -427,6 +446,7 @@ export const scannerSchedule = sqliteTable('scanner_schedule', {
 
 export const windlassServices = sqliteTable('windlass_services', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   name: text('name').notNull(),
   description: text('description').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
@@ -435,6 +455,7 @@ export const windlassServices = sqliteTable('windlass_services', {
 
 export const windlassEvents = sqliteTable('windlass_events', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   serviceId: text('service_id'), // NULL = system-level event (Suricata, sync, etc.)
   eventType: text('event_type').notNull(),
   details: text('details').notNull(),
@@ -443,6 +464,7 @@ export const windlassEvents = sqliteTable('windlass_events', {
 
 export const windlassConfig = sqliteTable('windlass_config', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   endpointUrl: text('endpoint_url').notNull(), // e.g. http://localhost:8116
   syncIntervalSeconds: integer('sync_interval_seconds').notNull().default(60),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
@@ -456,6 +478,7 @@ export const windlassConfig = sqliteTable('windlass_config', {
 
 export const unknownTools = sqliteTable('unknown_tools', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   toolName: text('tool_name').notNull(),
   firstSeenAt: integer('first_seen_at', { mode: 'timestamp' }).notNull(),
   lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }).notNull(),
@@ -466,6 +489,7 @@ export const unknownTools = sqliteTable('unknown_tools', {
 
 export const communitySubmissions = sqliteTable('community_submissions', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   originalDocId: text('original_doc_id').notNull(),
   sanitizedTitle: text('sanitized_title').notNull(),
   sanitizedContent: text('sanitized_content').notNull(),
@@ -487,6 +511,7 @@ export const communitySubmissions = sqliteTable('community_submissions', {
 
 export const stackImports = sqliteTable('stack_imports', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   source: text('source', {
     enum: ['docker', 'portainer', 'traefik', 'manual'],
   }).notNull(),
@@ -500,6 +525,7 @@ export const stackImports = sqliteTable('stack_imports', {
 
 export const statusPage = sqliteTable('status_page', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull(),
   title: text('title').notNull(),
   description: text('description'),
   slug: text('slug').notNull().unique(),
@@ -517,6 +543,7 @@ export const addonInterest = sqliteTable('addon_interest', {
 
 export const featureRequests = sqliteTable('feature_requests', {
   id: text('id').primaryKey(),
+  userId: text('user_id'),
   email: text('email'),
   title: text('title').notNull(),
   description: text('description').notNull(),
@@ -534,6 +561,7 @@ export const featureRequests = sqliteTable('feature_requests', {
 
 export const entities = sqliteTable('entities', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   type: text('type', {
     enum: ['host', 'container', 'service', 'network', 'switch', 'router', 'device'],
   }).notNull(),
@@ -547,6 +575,7 @@ export const entities = sqliteTable('entities', {
 
 export const entityRelationships = sqliteTable('entity_relationships', {
   id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   sourceId: text('source_id').notNull().references(() => entities.id, { onDelete: 'cascade' }),
   targetId: text('target_id').notNull().references(() => entities.id, { onDelete: 'cascade' }),
   type: text('type', {
@@ -561,6 +590,7 @@ export const entityRelationships = sqliteTable('entity_relationships', {
 
 export const skins = sqliteTable('skins', {
   id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // null for built-in skins
   name: text('name').notNull(),
   description: text('description'),
   author: text('author'),
@@ -580,6 +610,7 @@ export const skins = sqliteTable('skins', {
 });
 
 export const userSkinPreferences = sqliteTable('user_skin_preferences', {
+  userId: text('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
   activeSkinId: text('active_skin_id').references(() => skins.id, { onDelete: 'set null' }),
   customOverrides: text('custom_overrides'), // JSON
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
