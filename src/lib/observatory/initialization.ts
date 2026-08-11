@@ -216,9 +216,11 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       const dsResult = await autoConfigureDataSources(firstUser.id);
       log.push(...dsResult.log);
 
-      const { establishProvisionalBaselines } = await import('./baseline-bootstrap');
-      const blResult = await establishProvisionalBaselines(firstUser.id);
-      log.push(...blResult.log);
+      // TEMP DISABLED: baseline bootstrap has schema mismatch issues
+      // const { establishProvisionalBaselines } = await import('./baseline-bootstrap');
+      // const blResult = await establishProvisionalBaselines(firstUser.id);
+      // log.push(...blResult.log);
+      log.push('  ⚠ Provisional baselines disabled (schema mismatch - needs Phase 1.1 completion)');
 
       // Seed a default recurring-scan schedule so discovery keeps running (P2b).
       const { ensureDefaultSchedule } = await import('./workers/passive-discovery-worker');
