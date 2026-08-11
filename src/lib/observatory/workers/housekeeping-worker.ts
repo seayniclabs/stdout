@@ -31,7 +31,7 @@ async function processPendingDiagnoses(): Promise<void> {
   const cutoff = Math.floor(Date.now() / 1000) - GRACE_PERIOD_SEC;
 
   const undiagnosed = db.all(sql`
-    SELECT i.id, i.user_id, i.title
+    SELECT i.id, i.title
     FROM incidents i
     LEFT JOIN diagnoses d ON d.incident_id = i.id
     WHERE i.status = 'active'
@@ -39,30 +39,13 @@ async function processPendingDiagnoses(): Promise<void> {
       AND i.created_at < ${cutoff}
     ORDER BY i.created_at ASC
     LIMIT 50
-  `) as Array<{ id: string; user_id: string; title: string }>;
+  `) as Array<{ id: string; title: string }>;
 
   if (undiagnosed.length === 0) return;
 
   console.log(`[housekeeping-worker] Found ${undiagnosed.length} undiagnosed incident(s), processing...`);
 
-  const byUser = new Map<string, string[]>();
-  for (const inc of undiagnosed) {
-    const ids = byUser.get(inc.user_id) || [];
-    ids.push(inc.id);
-    byUser.set(inc.user_id, ids);
-  }
-
-  for (const [userId, incidentIds] of byUser) {
-    try {
-      const { reflexForIncidents } = await import('../reflex');
-      const outcomes = await reflexForIncidents(userId, incidentIds);
-
-      const acted = outcomes.filter(o => o.diagnosed || o.applied || o.parked);
-      if (acted.length > 0) {
-        console.log(`[housekeeping-worker] ${userId}: diagnosed ${acted.length}/${incidentIds.length} incident(s)`);
-      }
-    } catch (err) {
-      console.error(`[housekeeping-worker] failed for user ${userId}:`, err);
-    }
-  }
+  // TODO: Refactor reflexForIncidents to work without userId for single-instance
+  // For now, housekeeping auto-diagnosis is disabled pending refactor
+  console.log(`[housekeeping-worker] Found ${undiagnosed.length} undiagnosed incidents (auto-diagnosis disabled in single-instance mode)`);
 }

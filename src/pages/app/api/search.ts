@@ -30,9 +30,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
       SELECT i.id, i.title, i.description, i.status, i.severity
       FROM incidents_fts fts
       JOIN incidents i ON i.rowid = fts.rowid
-      WHERE incidents_fts MATCH ? AND i.user_id = ?
+      WHERE incidents_fts MATCH ?
       ORDER BY rank LIMIT 10
-    `).all(ftsQuery, locals.user.id);
+    `).all(ftsQuery);
 
     for (const row of incidentRows) {
       results.push({

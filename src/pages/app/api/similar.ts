@@ -41,13 +41,12 @@ export const GET: APIRoute = async ({ locals, url }) => {
       JOIN incidents i ON i.rowid = fts.rowid
       LEFT JOIN resolutions r ON r.incident_id = i.id
       WHERE incidents_fts MATCH ?
-        AND i.user_id = ?
         AND i.id != ?
         AND i.status = 'resolved'
         AND r.id IS NOT NULL
       ORDER BY rank
       LIMIT 5
-    `).all(ftsQuery, locals.user.id, excludeId);
+    `).all(ftsQuery, excludeId);
 
     for (const row of rows) {
       matches.push({

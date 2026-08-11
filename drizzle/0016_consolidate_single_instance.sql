@@ -1,8 +1,3 @@
--- Migration 0016: Consolidate to Single-Instance (Remove Multi-Tenant)
--- Created: 2026-08-10
--- Purpose: Migrate tenant_preferences → system_settings, prepare for user_id column removal
-
--- Step 1: Create system_settings table
 CREATE TABLE IF NOT EXISTS system_settings (
   id TEXT PRIMARY KEY DEFAULT 'instance',
   workspace_name TEXT DEFAULT 'StdOut',
@@ -30,8 +25,7 @@ CREATE TABLE IF NOT EXISTS system_settings (
   created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
 );
-
--- Step 1.5: Ensure tenant_preferences table exists so SELECT won't fail if table was already absent
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS tenant_preferences (
   id INTEGER PRIMARY KEY,
   workspace_name TEXT,
@@ -58,8 +52,7 @@ CREATE TABLE IF NOT EXISTS tenant_preferences (
   rag_include_public INTEGER,
   updated_at INTEGER
 );
-
--- Step 2: Migrate data from tenant_preferences (take first row only for single-instance)
+--> statement-breakpoint
 INSERT OR IGNORE INTO system_settings (
   workspace_name, accent_color, logo_url, onboarding_progress,
   onboarding_dismissed, addons_dismissed, addons_hidden, addons_cache, addons_cache_at,
@@ -80,10 +73,7 @@ SELECT
 FROM tenant_preferences
 ORDER BY id
 LIMIT 1;
-
--- Step 3: Drop tenant_preferences table
+--> statement-breakpoint
 DROP TABLE IF EXISTS tenant_preferences;
 
--- Note: user_id column removal from other tables will be done via schema evolution
--- SQLite doesn't support ALTER TABLE DROP COLUMN, so those will be handled in code
 

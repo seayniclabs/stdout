@@ -35,6 +35,7 @@ try {
   console.log('✓ Database migrations complete');
 } catch (error) {
   console.error('[migrate] Migration failed:', error.message);
+  console.error('[migrate] Full error:', error);
   process.exit(1);
 }
 

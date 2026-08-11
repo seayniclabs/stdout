@@ -65,7 +65,7 @@ CREATE TABLE `api_tokens` (
 	`name` text NOT NULL,
 	`token_hash` text NOT NULL,
 	`last_used_at` integer,
-	`created_at` integer NOT NULL,
+	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `audit_log` (
@@ -354,7 +354,8 @@ CREATE TABLE `scanner_schedule` (
 --> statement-breakpoint
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
-	`expires_at` integer NOT NULL,
+	`user_id` text NOT NULL,
+	`expires_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `setup_config` (
@@ -432,6 +433,7 @@ CREATE TABLE `system_settings` (
 	`god_mode_granted_by` text,
 	`god_mode_granted_at` integer,
 	`rag_include_public` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
@@ -483,6 +485,10 @@ CREATE TABLE `users` (
 	`password_hash` text NOT NULL,
 	`display_name` text,
 	`role` text DEFAULT 'member' NOT NULL,
+	`email_verified` integer DEFAULT false NOT NULL,
+	`email_verified_at` integer,
+	`privacy_accepted_at` integer,
+	`dpa_accepted_at` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );

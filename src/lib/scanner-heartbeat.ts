@@ -161,7 +161,6 @@ async function checkStaleSatellites(): Promise<void> {
 
     emit({
       type: 'satellite.stale',
-      userId: agent.user_id,
       agentId: agent.id,
       name: agent.name,
       silentMinutes: Math.round((now - agent.last_seen) / 60),
