@@ -603,10 +603,8 @@ export function getServiceSummary(userId: string) {
 export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
   const db = getDb();
 
-  // Check if already configured
-  const existing = db.select().from(schema.windlassConfig)
-    .where(eq(schema.windlassConfig.userId, userId))
-    .get();
+  // Check if already configured (single-instance config, no userId)
+  const existing = db.select().from(schema.windlassConfig).limit(1).get();
 
   if (existing && existing.enabled) {
     console.log('[windlass] Already configured, skipping auto-detect');
@@ -635,23 +633,22 @@ export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
         if (status.services && Array.isArray(status.services)) {
           console.log(`[windlass] Auto-detected at ${endpoint}`);
 
-          // Create or update config
+          // Create or update config (single-instance, no userId)
           const now = new Date();
           if (existing) {
             db.update(schema.windlassConfig).set({
               endpointUrl: endpoint,
               enabled: true,
-              lastSyncAt: now,
+              lastSyncedAt: now,
               lastSyncStatus: 'success',
               updatedAt: now,
-            }).where(eq(schema.windlassConfig.userId, userId)).run();
+            }).where(eq(schema.windlassConfig.id, existing.id)).run();
           } else {
             db.insert(schema.windlassConfig).values({
               id: nanoid(),
-              userId,
               endpointUrl: endpoint,
               enabled: true,
-              lastSyncAt: now,
+              lastSyncedAt: now,
               lastSyncStatus: 'success',
               createdAt: now,
               updatedAt: now,

@@ -136,8 +136,8 @@ async function checkStaleSatellites(): Promise<void> {
 
   const agents = db.all(
     // @ts-ignore — raw sql on satellite_agents
-    `SELECT id, user_id, name, last_seen, alert_state FROM satellite_agents WHERE last_seen IS NOT NULL`
-  ) as Array<{ id: string; user_id: string; name: string; last_seen: number; alert_state: string }>;
+    `SELECT id, name, last_seen, alert_state FROM satellite_agents WHERE last_seen IS NOT NULL`
+  ) as Array<{ id: string; name: string; last_seen: number; alert_state: string }>;
 
   for (const agent of agents) {
     const isStale = agent.last_seen < warningThreshold;
@@ -151,7 +151,6 @@ async function checkStaleSatellites(): Promise<void> {
     db.run(`UPDATE satellite_agents SET alert_state = ? WHERE id = ?`, [newState, agent.id]);
 
     await fireAlert({
-      userId: agent.user_id,
       serviceId: null,
       eventType: 'satellite_stale',
       severity: isCritical ? 'critical' : 'warning',

@@ -147,7 +147,7 @@ function severityMeets(actual: string, minimum: string): boolean {
 // --- Core: Fire Alert ---
 
 export interface AlertInput {
-  userId: string;
+  userId?: string;  // Optional in single-instance mode (Phase 1.1)
   serviceId: string | null;
   eventType: string;
   severity: 'info' | 'warning' | 'critical';
@@ -170,10 +170,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
 
   if (input.serviceId) {
     const service = db.select().from(schema.windlassServices)
-      .where(and(
-        eq(schema.windlassServices.id, input.serviceId),
-        eq(schema.windlassServices.userId, input.userId),
-      ))
+      .where(eq(schema.windlassServices.id, input.serviceId))
       .get();
 
     if (service) {
@@ -199,10 +196,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
       if (!suppressed && (input.eventType === 'service_down' || input.eventType === 'service_up')) {
         const fiveMinAgo = new Date(now.getTime() - 5 * 60 * 1000);
         const recentEvents = db.select().from(schema.alertEvents)
-          .where(and(
-            eq(schema.alertEvents.userId, input.userId),
-            eq(schema.alertEvents.serviceId, input.serviceId),
-          ))
+          .where(eq(schema.alertEvents.serviceId, input.serviceId))
           .orderBy(desc(schema.alertEvents.createdAt))
           .limit(3)
           .all();
@@ -229,10 +223,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
   if (!suppressed) {
     // Get all enabled rules matching this service + severity
     const rules = db.select().from(schema.alertRules)
-      .where(and(
-        eq(schema.alertRules.userId, input.userId),
-        eq(schema.alertRules.enabled, true),
-      ))
+      .where(eq(schema.alertRules.enabled, true))
       .all();
 
     const matchingRules = rules.filter(r => {
@@ -244,10 +235,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
     // Get unique channels
     const channelIds = [...new Set(matchingRules.map(r => r.channelId))];
     const channels = db.select().from(schema.alertChannels)
-      .where(and(
-        eq(schema.alertChannels.userId, input.userId),
-        eq(schema.alertChannels.enabled, true),
-      ))
+      .where(eq(schema.alertChannels.enabled, true))
       .all()
       .filter(ch => channelIds.includes(ch.id));
 
@@ -265,7 +253,7 @@ export async function fireAlert(input: AlertInput): Promise<{ eventId: string; s
   // --- Record event ---
   db.insert(schema.alertEvents).values({
     id: eventId,
-    userId: input.userId,
+    userId: input.userId || null,  // Nullable in single-instance mode
     serviceId: input.serviceId,
     eventType: input.eventType,
     severity: input.severity,

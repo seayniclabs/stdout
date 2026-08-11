@@ -30,6 +30,17 @@ if (Astro.request.method === 'POST') {
   } else if (action === 'skip') {
     // User chose to skip license activation
     await completeStep(SetupStep.License, { skipped: true });
+    await completeStep(SetupStep.Complete, { setupComplete: true });
+
+    // Mark installation as complete in system_state
+    const { getDb } = await import('../../lib/db');
+    const { sql } = await import('drizzle-orm');
+    const db = getDb();
+    await db.run(sql`
+      INSERT OR REPLACE INTO system_state (key, value, updated_at)
+      VALUES ('installation_complete', 'true', ${Date.now()})
+    `);
+
     // Trigger autonomous network discovery immediately
     runInitialDiscovery(session.id).catch(err => console.error('[setup] Initial discovery failed:', err));
     return Astro.redirect('/app');
@@ -57,6 +68,17 @@ if (Astro.request.method === 'POST') {
           mode,
           edition: 'self-host',
         });
+        await completeStep(SetupStep.Complete, { setupComplete: true });
+
+        // Mark installation as complete in system_state
+        const { getDb } = await import('../../lib/db');
+        const { sql } = await import('drizzle-orm');
+        const db = getDb();
+        await db.run(sql`
+          INSERT OR REPLACE INTO system_state (key, value, updated_at)
+          VALUES ('installation_complete', 'true', ${Date.now()})
+        `);
+
         // Trigger autonomous network discovery immediately
         runInitialDiscovery(session.id).catch(err => console.error('[setup] Initial discovery failed:', err));
         return Astro.redirect('/app');
