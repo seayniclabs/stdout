@@ -296,6 +296,21 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
     log.push(`Error activating agents: ${error instanceof Error ? error.message : String(error)}`);
   }
 
+  // ── Phase 6: Auto-Learning Worker (Phase 3.1) ─────────────────────────────
+  log.push('=== PHASE 6: AUTO-LEARNING ===');
+  try {
+    const { startAutoLearningWorker } = await import('./workers/auto-learning-worker');
+    startAutoLearningWorker();
+    log.push('Auto-Learning Worker: ACTIVE — scans for resolved incidents every 5min');
+    log.push('  Post-mortems auto-generated from resolved incidents');
+    log.push('  Knowledge base grows automatically as you fix issues');
+    log.push('');
+  } catch (error: unknown) {
+    errors.push(`Failed to start auto-learning worker: ${error instanceof Error ? error.message : String(error)}`);
+    log.push(`Error starting auto-learning: ${error instanceof Error ? error.message : String(error)}`);
+    log.push('');
+  }
+
   // ── Summary ───────────────────────────────────────────────────────────────
   log.push('=== INITIALIZATION COMPLETE ===');
   const success = errors.length === 0;
