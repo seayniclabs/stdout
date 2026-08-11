@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
 
   const events = serviceId
-    ? getServiceEvents(userId, serviceId, limit)
+    ? getServiceEvents(serviceId, limit)
     : getRecentEvents(userId, limit);
 
   return new Response(JSON.stringify({ events }), {

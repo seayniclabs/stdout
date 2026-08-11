@@ -8,11 +8,11 @@ if (!user) return Astro.redirect('/app/login');
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
 const { id } = Astro.params;
-const service = id ? getService(userId, id) : null;
+const service = id ? getService(id) : null;
 
 if (!service) return Astro.redirect('/app/tools/windlass');
 
-const events = getServiceEvents(userId, id!, 50);
+const events = getServiceEvents(id!, 50);
 const containers = service.containers ? JSON.parse(service.containers) : [];
 const usageAnalytics = service.usageAnalytics ? JSON.parse(service.usageAnalytics) : null;
 const hourly = usageAnalytics?.hourly || {};

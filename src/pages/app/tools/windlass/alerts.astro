@@ -9,13 +9,13 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
-const config = getConfig(userId);
+const config = getConfig();
 if (!config) return Astro.redirect('/app/tools/windlass');
 
 const channels = listChannels(userId);
 const rules = listRules(userId);
 const events = listAlertEvents(userId, 50);
-const services = getAllServices(userId);
+const services = getAllServices();
 
 function timeAgo(date: Date | null) {
   if (!date) return 'never';

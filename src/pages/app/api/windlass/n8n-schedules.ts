@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ locals }) => {
   if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user.id;
-  const workflows = await getN8nWorkflowWindowsForDisplay(userId);
+  const workflows = await getN8nWorkflowWindowsForDisplay();
 
   return new Response(JSON.stringify({ workflows }), {
     headers: { 'Content-Type': 'application/json' },

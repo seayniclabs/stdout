@@ -370,7 +370,6 @@ export async function testChannel(userId: string, channelId: string): Promise<{ 
 }
 
 export async function sendWindlassWeeklyDigest(
-  userId: string,
   summary: { recoveredGbHours: number; serviceCount: number; weekLabel: string },
   opts?: { skipCooldown?: boolean },
 ): Promise<{ sent: boolean; skipped?: string }> {

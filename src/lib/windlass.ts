@@ -72,15 +72,15 @@ const TYPE_MAP: Record<string, string> = {
 // --- Sync ---
 
 /**
- * Fetch status.json from Windlass endpoint and sync into tenant DB.
+ * Fetch status.json from Windlass endpoint and sync into single-instance DB.
  * Returns the number of services synced, or throws on failure.
  */
-export async function syncFromEndpoint(userId: string): Promise<{ synced: number; summary: WindlassStatus['summary'] }> {
+export async function syncFromEndpoint(): Promise<{ synced: number; summary: WindlassStatus['summary'] }> {
   const db = getDb();
 
-  // Get config
+  // Get config (single-instance, no userId)
   const config = db.select().from(schema.windlassConfig)
-    .where(eq(schema.windlassConfig.userId, userId))
+    .limit(1)
     .get();
 
   if (!config || !config.enabled) {
@@ -141,7 +141,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
     }
 
     const existing = db.select().from(schema.windlassServices)
-      .where(and(eq(schema.windlassServices.id, id), eq(schema.windlassServices.userId, userId)))
+      .where(eq(schema.windlassServices.id, id))
       .get();
 
     const rawAnalytics = status.service_analytics?.[svc.name] || null;
@@ -166,7 +166,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         const eventType = svc.state === 'running' ? 'service_started'
           : svc.state === 'stopped' ? 'service_stopped'
           : 'config_changed';
-        logEvent(userId, id, eventType, `State changed: ${existing.currentState} → ${svc.state}`);
+        logEvent(id, eventType, `State changed: ${existing.currentState} → ${svc.state}`);
 
         // Fire alert for service down events
         // Alert if service was running and is now stopped or partial (degraded)
@@ -320,7 +320,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
           .where(and(eq(schema.windlassServices.id, svc.id), eq(schema.windlassServices.userId, userId)))
           .run();
 
-        logEvent(userId, svc.id, 'decommissioned', `Service auto-decommissioned: no longer appears in Windlass endpoint`);
+        logEvent( svc.id, 'decommissioned', `Service auto-decommissioned: no longer appears in Windlass endpoint`);
 
         // Fire notification
         fireAlert({
@@ -342,7 +342,7 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
         .where(and(eq(schema.windlassServices.id, svc.id), eq(schema.windlassServices.userId, userId)))
         .run();
 
-      logEvent(userId, svc.id, 'reactivated', `Service reactivated: appeared again in Windlass endpoint`);
+      logEvent( svc.id, 'reactivated', `Service reactivated: appeared again in Windlass endpoint`);
     }
   }
 
@@ -362,14 +362,14 @@ export async function syncFromEndpoint(userId: string): Promise<{ synced: number
   await maybeSendWeeklyDigest(userId);
 
   // Log sync event
-  logEvent(userId, null, 'sync_completed', `Synced ${status.services.length} services`);
+  logEvent( null, 'sync_completed', `Synced ${status.services.length} services`);
 
   return { synced: status.services.length, summary: status.summary };
 }
 
 /** n8n execution windows last synced from the Windlass engine (preferred for timeline UI). */
-export function getCachedN8nWorkflowWindows(userId: string): N8nWorkflowWindow[] {
-  const cfg = getConfig(userId);
+export function getCachedN8nWorkflowWindows(): N8nWorkflowWindow[] {
+  const cfg = getConfig();
   const raw = cfg?.n8nWorkflowWindowsJson;
   if (!raw) return [];
   try {
@@ -381,16 +381,16 @@ export function getCachedN8nWorkflowWindows(userId: string): N8nWorkflowWindow[]
 }
 
 /** Cached engine snapshot first; optional live n8n when `N8N_API_KEY` is set and cache is empty (dev / co-hosted). */
-export async function getN8nWorkflowWindowsForDisplay(userId: string): Promise<N8nWorkflowWindow[]> {
-  const cached = getCachedN8nWorkflowWindows(userId);
+export async function getN8nWorkflowWindowsForDisplay(): Promise<N8nWorkflowWindow[]> {
+  const cached = getCachedN8nWorkflowWindows();
   if (cached.length) return cached;
-  return getN8nWorkflowWindows(userId);
+  return getN8nWorkflowWindows();
 }
 
-async function maybeSendWeeklyDigest(userId: string): Promise<void> {
+async function maybeSendWeeklyDigest(): Promise<void> {
   const db = getDb();
   const config = db.select().from(schema.windlassConfig)
-    .where(eq(schema.windlassConfig.userId, userId))
+    .limit(1)
     .get();
   if (!config) return;
 
@@ -401,13 +401,12 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
   if (alreadySentThisWeek || now.getUTCDay() !== 0) return;
 
   const services = db.select().from(schema.windlassServices)
-    .where(eq(schema.windlassServices.userId, userId))
     .all();
 
   const recoveredGbHours = sumRecoveredGbHoursFromServices(services);
 
   if (recoveredGbHours <= 0) return;
-  const sent = await sendWindlassWeeklyDigest(userId, {
+  const sent = await sendWindlassWeeklyDigest({
     recoveredGbHours,
     serviceCount: services.length,
     weekLabel: sevenDaysAgo.toISOString().slice(0, 10) + ' to ' + now.toISOString().slice(0, 10),
@@ -416,11 +415,10 @@ async function maybeSendWeeklyDigest(userId: string): Promise<void> {
 
   db.update(schema.windlassConfig)
     .set({ lastWeeklyDigestAt: now, updatedAt: now })
-    .where(eq(schema.windlassConfig.userId, userId))
     .run();
 }
 
-export async function getN8nWorkflowWindows(_userId: string): Promise<N8nWorkflowWindow[]> {
+export async function getN8nWorkflowWindows(): Promise<N8nWorkflowWindow[]> {
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) return [];
 
@@ -515,13 +513,12 @@ export async function controlService(
     : action === 'stop' ? 'manual_stop'
     : 'manual_start'; // restart logs as manual_start
 
-  logEvent(userId, serviceId, eventType, `Manual ${action} requested`);
+  logEvent( serviceId, eventType, `Manual ${action} requested`);
 }
 
 // --- Events ---
 
 export function logEvent(
-  userId: string,
   serviceId: string | null,
   eventType: string,
   detail: string
@@ -529,7 +526,6 @@ export function logEvent(
   const db = getDb();
   db.insert(schema.windlassEvents).values({
     id: nanoid(),
-    userId,
     serviceId: serviceId ?? null,
     eventType: eventType as any,
     details: detail,
@@ -537,22 +533,18 @@ export function logEvent(
   }).run();
 }
 
-export function getRecentEvents(userId: string, limit = 50): unknown[] {
+export function getRecentEvents(limit = 50): unknown[] {
   const db = getDb();
   return db.select().from(schema.windlassEvents)
-    .where(eq(schema.windlassEvents.userId, userId))
     .orderBy(desc(schema.windlassEvents.createdAt))
     .limit(limit)
     .all();
 }
 
-export function getServiceEvents(userId: string, serviceId: string, limit = 20): unknown[] {
+export function getServiceEvents(serviceId: string, limit = 20): unknown[] {
   const db = getDb();
   return db.select().from(schema.windlassEvents)
-    .where(and(
-      eq(schema.windlassEvents.userId, userId),
-      eq(schema.windlassEvents.serviceId, serviceId),
-    ))
+    .where(eq(schema.windlassEvents.serviceId, serviceId))
     .orderBy(desc(schema.windlassEvents.createdAt))
     .limit(limit)
     .all();
@@ -560,32 +552,28 @@ export function getServiceEvents(userId: string, serviceId: string, limit = 20):
 
 // --- Queries ---
 
-export function getAllServices(userId: string) {
+export function getAllServices() {
   const db = getDb();
   return db.select().from(schema.windlassServices)
-    .where(eq(schema.windlassServices.userId, userId))
     .all();
 }
 
-export function getService(userId: string, serviceId: string) {
+export function getService(serviceId: string) {
   const db = getDb();
   return db.select().from(schema.windlassServices)
-    .where(and(
-      eq(schema.windlassServices.id, serviceId),
-      eq(schema.windlassServices.userId, userId),
-    ))
+    .where(eq(schema.windlassServices.id, serviceId))
     .get();
 }
 
-export function getConfig(userId: string) {
+export function getConfig() {
   const db = getDb();
   return db.select().from(schema.windlassConfig)
-    .where(eq(schema.windlassConfig.userId, userId))
+    .limit(1)
     .get();
 }
 
-export function getServiceSummary(userId: string) {
-  const services = getAllServices(userId);
+export function getServiceSummary() {
+  const services = getAllServices();
   const running = services.filter(s => s.currentState === 'running').length;
   const stopped = services.filter(s => s.currentState === 'stopped').length;
   const scheduled = services.filter(s => s.classification === 'scheduled').length;
@@ -600,7 +588,7 @@ export function getServiceSummary(userId: string) {
  * Auto-detect Windlass on common endpoints and configure if found
  * Checks localhost:8116 (default) and host.docker.internal:8116 (from container)
  */
-export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
+export async function autoDetectAndConfigure(): Promise<boolean> {
   const db = getDb();
 
   // Check if already configured (single-instance config, no userId)
@@ -657,7 +645,7 @@ export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
 
           // Run initial sync
           try {
-            await syncFromEndpoint(userId);
+            await syncFromEndpoint();
             console.log('[windlass] Initial sync complete');
           } catch (err) {
             console.error('[windlass] Initial sync failed:', err);

@@ -170,7 +170,7 @@ export function classifyNetdataAnomaly(body: Record<string, unknown>): Classifie
 
 function matchWindlassService(userId: string, hint: string | null): string | null {
   if (!hint) return null;
-  const services = getAllServices(userId);
+  const services = getAllServices();
   const needle = hint.toLowerCase().replace(/[_\s.]+/g, '-');
   for (const svc of services) {
     const name = (svc.name || '').toLowerCase();
@@ -186,13 +186,13 @@ async function sendAnomalyToWindlass(
   anomaly: ClassifiedAnomaly,
   serviceId: string | null,
 ): Promise<{ ok: boolean; action: string; detail: Record<string, unknown> | null; error?: string }> {
-  const config = getConfig(userId);
+  const config = getConfig();
   if (!config?.endpointUrl || config.enabled === false) {
     return { ok: false, action: 'none', detail: null, error: 'Windlass not configured' };
   }
 
   const serviceName = serviceId
-    ? (getAllServices(userId).find(s => s.id === serviceId)?.name || serviceId)
+    ? (getAllServices().find(s => s.id === serviceId)?.name || serviceId)
     : anomaly.serviceHint;
 
   const payload = {

@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ locals }) => {
   if (authError) return authError;
 
   const userId = locals.workspace?.ownerId || locals.user!.id;
-  const config = getConfig(userId);
+  const config = getConfig();
 
   return new Response(JSON.stringify({ config: config || null }), {
     headers: { 'Content-Type': 'application/json' },
@@ -68,7 +68,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   }
 
   const db = getDb();
-  const existing = getConfig(userId);
+  const existing = getConfig();
   const now = new Date();
 
   if (existing) {
@@ -93,7 +93,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     }).run();
   }
 
-  const config = getConfig(userId);
+  const config = getConfig();
   return new Response(JSON.stringify({ config }), {
     status: existing ? 200 : 201,
     headers: { 'Content-Type': 'application/json' },

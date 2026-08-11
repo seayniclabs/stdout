@@ -91,7 +91,7 @@ export function classifySuricataEve(
 
 function matchWindlassService(userId: string, hint: string | null): string | null {
   if (!hint) return null;
-  const services = getAllServices(userId);
+  const services = getAllServices();
   const needle = hint.toLowerCase().replace(/[_\s.]+/g, '-');
   for (const svc of services) {
     const name = (svc.name || '').toLowerCase();
@@ -172,7 +172,7 @@ function interpretWindlassResponse(
 
 /** Prefer per-user Windlass config; fall back to WINDLASS_URL (observatory compose). */
 function resolveWindlassBase(userId: string): string | null {
-  const config = getConfig(userId);
+  const config = getConfig();
   if (config?.enabled === false) return null;
   if (config?.endpointUrl) return config.endpointUrl.replace(/\/$/, '');
   const envUrl = (process.env.WINDLASS_URL || '').trim();
@@ -193,7 +193,7 @@ async function sendToWindlass(
     return { ok: false, action: 'none', detail: null, error: 'Windlass not configured' };
   }
   const serviceName = serviceId
-    ? (getAllServices(userId).find(s => s.id === serviceId)?.name || serviceId)
+    ? (getAllServices().find(s => s.id === serviceId)?.name || serviceId)
     : alert.serviceHint;
 
   const kind = alert.kind === 'ip_block' ? 'ip_block'

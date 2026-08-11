@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const userId = locals.workspace?.ownerId || locals.user.id;
 
   if (serviceId) {
-    const service = getService(userId, serviceId);
+    const service = getService(serviceId);
     if (!service) {
       return new Response(JSON.stringify({ error: 'Service not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
@@ -29,7 +29,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  const services = getAllServices(userId);
+  const services = getAllServices();
   return new Response(JSON.stringify({ services }), {
     headers: { 'Content-Type': 'application/json' },
   });
@@ -107,7 +107,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     }
 
     const db = getDb();
-    const service = getService(userId, serviceId);
+    const service = getService(serviceId);
     if (!service) {
       return new Response(JSON.stringify({ error: 'Service not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json' },
@@ -150,7 +150,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     }
 
     const db = getDb();
-    const service = getService(userId, serviceId);
+    const service = getService(serviceId);
     if (!service) {
       return new Response(JSON.stringify({ error: 'Service not found' }), {
         status: 404, headers: { 'Content-Type': 'application/json' },

@@ -14,9 +14,9 @@ if (!licenseCheck.valid) {
 }
 
 const userId = Astro.locals.workspace?.ownerId || user.id;
-const config = getConfig(userId);
-const services = getAllServices(userId);
-const summary = getServiceSummary(userId);
+const config = getConfig();
+const services = getAllServices();
+const summary = getServiceSummary();
 const events = getRecentEvents(userId, 20);
 const suggestionServices = services.filter(s => s.schedulingSuggestion);
 const estimatedRecoveredGbHours = services.reduce((sum, s) => {
