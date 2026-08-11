@@ -67,8 +67,8 @@ const stdoutDocs = communityDocs.filter(d => {
 // If no tagged docs found, fall back to all community guides
 const stdoutDocsDisplay = stdoutDocs.length > 0 ? stdoutDocs : communityDocs.filter(d => d.type === 'guide');
 
-// Recently updated (last 5 from user docs only, since community docs are empty)
-const recentlyUpdated = [...userDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
+// Recently updated (last 5 from all docs)
+const recentlyUpdated = [...allDocs].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()).slice(0, 5);
 
 // Featured: community docs + most recently updated user docs (up to 4 total)
 const featured = [
@@ -194,7 +194,7 @@ function formatDate(date: Date) {
         <button class="mobile-tab" data-filter="community">Community</button>
       </div>
 
-      {userDocs.length === 0 ? (
+      {allDocs.length === 0 ? (
         <div class="empty-state">
           <div class="empty-icon">&gt;_</div>
           <h3>Your knowledge base is empty</h3>
@@ -218,10 +218,10 @@ function formatDate(date: Date) {
               </div>
               <div class="featured-cards">
                 {featured.map(doc => (
-                  <a href={`/app/docs/${doc.id}`} class="featured-card" data-type={doc.docType} data-source={doc.source}>
+                  <a href={`/app/docs/${doc.id}`} class="featured-card" data-type={doc.type} data-source={doc.visibility === 'public' ? 'community' : 'user'}>
                     <div class="featured-card-top">
-                      <span class="type-badge" style={`color: ${doc.source === 'community' ? communityColor : typeColors[doc.docType] || '#5A5A72'}; background: ${doc.source === 'community' ? communityDimColor : typeDimColors[doc.docType] || 'rgba(90,90,114,0.12)'}`}>
-                        {doc.source === 'community' ? 'Community' : typeLabels[doc.docType] || doc.docType}
+                      <span class="type-badge" style={`color: ${doc.visibility === 'public' ? communityColor : typeColors[doc.type] || '#5A5A72'}; background: ${doc.visibility === 'public' ? communityDimColor : typeDimColors[doc.type] || 'rgba(90,90,114,0.12)'}`}>
+                        {doc.visibility === 'public' ? 'Community' : typeLabels[doc.type] || doc.type}
                       </span>
                     </div>
                     <div class="featured-card-title">{doc.title}</div>
@@ -239,42 +239,39 @@ function formatDate(date: Date) {
           <div class="docs-section">
             <div class="section-header">
               <h2 id="section-title">All Documents</h2>
-              <span class="section-count mono" id="section-count">{userDocs.length}</span>
+              <span class="section-count mono" id="section-count">{allDocs.length}</span>
             </div>
             <div class="doc-grid" id="doc-grid">
-              {userDocs.map(doc => (
+              {allDocs.map(doc => (
                 <a href={`/app/docs/${doc.id}`}
                    class="doc-card"
-                   data-type={doc.docType}
-                   data-source={doc.source}
+                   data-type={doc.type}
+                   data-source={doc.visibility === 'public' ? 'community' : 'user'}
                    data-stdout={stdoutDocsDisplay.some(s => s.id === doc.id) ? 'true' : 'false'}
                    data-title={doc.title.toLowerCase()}
                    data-tags={doc.tags?.toLowerCase() || ''}
                    data-content={truncate(doc.content, 200).toLowerCase()}>
                   <div class="doc-card-header">
-                    <div class="doc-card-icon" style={`color: ${doc.source === 'community' ? communityColor : typeColors[doc.docType] || '#5A5A72'}`}>
-                      {doc.docType === 'runbook' && (
+                    <div class="doc-card-icon" style={`color: ${doc.visibility === 'public' ? communityColor : typeColors[doc.type] || '#5A5A72'}`}>
+                      {doc.type === 'runbook' && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
                       )}
-                      {doc.docType === 'postmortem' && (
+                      {doc.type === 'postmortem' && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                       )}
-                      {doc.docType === 'guide' && (
+                      {doc.type === 'guide' && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                       )}
-                      {doc.docType === 'note' && (
+                      {doc.type === 'note' && (
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
                       )}
                     </div>
                     <div class="doc-card-badges">
-                      <span class="type-badge" style={`color: ${typeColors[doc.docType] || '#5A5A72'}; background: ${typeDimColors[doc.docType] || 'rgba(90,90,114,0.12)'}`}>
-                        {typeLabels[doc.docType] || doc.docType}
+                      <span class="type-badge" style={`color: ${typeColors[doc.type] || '#5A5A72'}; background: ${typeDimColors[doc.type] || 'rgba(90,90,114,0.12)'}`}>
+                        {typeLabels[doc.type] || doc.type}
                       </span>
-                      {doc.source === 'community' && (
+                      {doc.visibility === 'public' && (
                         <span class="type-badge" style={`color: ${communityColor}; background: ${communityDimColor}`}>Community</span>
-                      )}
-                      {doc.source === 'fork' && (
-                        <span class="type-badge" style="color: var(--accent-light); background: var(--accent-dim);">Fork</span>
                       )}
                     </div>
                   </div>
