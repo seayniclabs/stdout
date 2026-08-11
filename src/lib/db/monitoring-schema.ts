@@ -102,7 +102,6 @@ export const monitors = sqliteTable('monitors', {
 export const checkResults = sqliteTable('check_results', {
   id: text('id').primaryKey(),
   monitorId: text('monitor_id').notNull(),
-  userId: text('user_id'),
   status: text('status').notNull(),
   responseTimeMs: integer('response_time_ms'),
   latencyMs: integer('latency_ms'),
@@ -114,7 +113,6 @@ export const checkResults = sqliteTable('check_results', {
 export const uptimeDaily = sqliteTable('uptime_daily', {
   id: text('id').primaryKey(),
   monitorId: text('monitor_id').notNull(),
-  userId: text('user_id'),
   date: text('date').notNull(),
   successCount: integer('success_count').notNull().default(0),
   failureCount: integer('failure_count').notNull().default(0),
