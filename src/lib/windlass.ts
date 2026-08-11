@@ -642,7 +642,7 @@ export async function autoDetectAndConfigure(userId: string): Promise<boolean> {
               lastSyncedAt: now,
               lastSyncStatus: 'success',
               updatedAt: now,
-            }).where(eq(schema.windlassConfig.id, existing.id)).run();
+            }).run();
           } else {
             db.insert(schema.windlassConfig).values({
               id: nanoid(),
