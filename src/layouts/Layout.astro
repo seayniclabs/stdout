@@ -39,6 +39,9 @@ let workspaceName = 'StdOut';
 let accentOverride = '';
 let logoOverride = '';
 
+// Build accent override CSS
+let accentOverrideCSS = '';
+
 if (user) {
   try {
     const db = getDb();
@@ -46,9 +49,25 @@ if (user) {
     if (prefs?.workspaceName) workspaceName = prefs.workspaceName;
     if (prefs?.accentColor && /^#[0-9a-fA-F]{3,8}$/.test(prefs.accentColor)) {
       accentOverride = prefs.accentColor;
+      // Build CSS string in frontmatter where template literals work
+      accentOverrideCSS = `
+        :root {
+          --accent-override: ${accentOverride};
+          --accent-light-override: color-mix(in srgb, ${accentOverride} 85%, white);
+          --accent-bright-override: color-mix(in srgb, ${accentOverride} 120%, white);
+          --accent-dim-override: ${accentOverride}1f;
+          --accent-glow-override: ${accentOverride}40;
+          --accent-btn-override: ${accentOverride};
+          --color-primary: ${accentOverride};
+          --color-primary-hover: color-mix(in srgb, ${accentOverride} 85%, black);
+          --color-primary-light: color-mix(in srgb, ${accentOverride} 10%, white);
+        }
+      `;
     }
     if (prefs?.logoUrl) logoOverride = prefs.logoUrl;
-  } catch {}
+  } catch (err) {
+    console.error('[Layout] Failed to load branding:', err);
+  }
 }
 ---
 <!doctype html>
@@ -76,21 +95,11 @@ if (user) {
   <meta name="apple-mobile-web-app-title" content="StdOut" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <style>@import '../styles/fonts.css';</style>
-  {accentOverride && (
-    <style set:html={`
-      :root {
-        --accent: ${accentOverride};
-        --accent-light: color-mix(in srgb, ${accentOverride} 85%, white);
-        --accent-dim: ${accentOverride}1f;
-        --accent-glow: ${accentOverride}40;
-        --accent-btn: ${accentOverride};
-        --color-primary: ${accentOverride};
-        --color-primary-hover: color-mix(in srgb, ${accentOverride} 85%, black);
-        --color-primary-light: color-mix(in srgb, ${accentOverride} 10%, white);
-      }
-    `}></style>
-  )}
   <meta name="csrf-token" content={csrfToken} />
+
+  <!-- Branding color override -->
+  {accentOverrideCSS && <style set:html={accentOverrideCSS}></style>}
+
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
