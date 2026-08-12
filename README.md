@@ -24,21 +24,45 @@ Stop solving the same problem twice. Stop losing knowledge when team members lea
 
 ## Quick Start (5 Minutes)
 
-**One command to run:**
+### Option A: Docker Compose (Recommended - includes Windlass)
+
+```bash
+# Clone the repo (or download docker-compose.yml)
+git clone https://github.com/charlieseay/stdout.git
+cd stdout
+
+# Start StdOut + Windlass
+docker compose up -d
+
+# View logs
+docker compose logs -f stdout
+```
+
+**What you get:**
+- StdOut (port 8112) - Main application
+- Windlass (port 8116) - Schedule-aware service manager
+- Avahi mDNS - Broadcasts `stdout.local` on your network
+
+### Option B: Standalone Container (StdOut only)
 
 ```bash
 docker run -d \
   --name stdout \
-  -p 8112:4321 \
+  -p 8112:3000 \
   -v ~/stdout-data:/app/data \
+  -v /var/run/docker.sock:/var/run/docker.sock \
   --restart unless-stopped \
   charlieseay/stdout:latest
 ```
 
-**3-step setup wizard:**
+**Note:** Windlass not included in standalone mode. Features requiring Windlass (schedule-aware operations, mutual health monitoring) will be limited.
+
+---
+
+### Setup Wizard (3 steps)
 
 1. Open http://localhost:8112
-2. Create admin account + activate license (free dev license available)
+2. Create admin account + activate license (free dev license: `SL-DEV-STDOUT-2026`)
 3. Name your environment + generate scanner token
 
 That's it. You're running StdOut.

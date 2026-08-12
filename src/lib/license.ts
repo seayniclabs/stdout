@@ -4,12 +4,14 @@ import crypto from 'node:crypto';
 
 // SL-<base64url>.<base64url> — signed format
 const SIGNED_KEY_RE = /^SL-[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
+// SL-DEV-* — development/testing keys (no signature verification)
+const DEV_KEY_RE = /^SL-DEV-[A-Za-z0-9_-]+$/;
 // XXXX-XXXX-XXXX-XXXX — legacy segment format
 const LEGACY_KEY_RE = /^[A-Z0-9]{2,8}(-[A-Z0-9]{4,32}){1,}$/i;
 
 export function isValidLicenseKeyFormat(key: string): boolean {
   const trimmed = key.trim();
-  return SIGNED_KEY_RE.test(trimmed) || (trimmed.length >= 16 && trimmed.length <= 128 && LEGACY_KEY_RE.test(trimmed));
+  return SIGNED_KEY_RE.test(trimmed) || DEV_KEY_RE.test(trimmed) || (trimmed.length >= 16 && trimmed.length <= 128 && LEGACY_KEY_RE.test(trimmed));
 }
 
 export function getStoredLicense() {
@@ -119,6 +121,20 @@ export function verifyLicenseSignature(
 ): { valid: boolean; payload?: LicensePayload; reason?: string } {
   if (!signedKey.startsWith('SL-')) {
     return { valid: false, reason: 'Invalid license format' };
+  }
+
+  // Dev keys: SL-DEV-* (for development/testing, no signature verification)
+  if (signedKey.startsWith('SL-DEV-')) {
+    return {
+      valid: true,
+      payload: {
+        product: 'stdout-self-host',
+        email: 'dev@seayniclabs.com',
+        issued: Math.floor(Date.now() / 1000),
+        expires: null,
+        maxActivations: 999,
+      },
+    };
   }
 
   const parts = signedKey.slice(3).split('.');

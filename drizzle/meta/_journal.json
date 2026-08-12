@@ -94,13 +94,6 @@
       "breakpoints": true
     },
     {
-      "idx": 13,
-      "version": "7",
-      "when": 1785096000000,
-      "tag": "0013_add_api_tokens_expires_at",
-      "breakpoints": true
-    },
-    {
       "idx": 14,
       "version": "7",
       "when": 1785182400000,
