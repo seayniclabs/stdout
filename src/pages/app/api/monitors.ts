@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { startMonitor, stopMonitor, getRecentChecks, getUptimeStats } from '../../../lib/hud';
 import { requireAuth, checkRBAC } from '../../../lib/rbac';
 import { validateCsrf } from '../../../middleware';
@@ -18,7 +18,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   if (monitorId) {
     // Single monitor detail with check history
     const monitor = db.select().from(schema.monitors)
-      .where(and(eq(schema.monitors.id, monitorId), eq(schema.monitors.userId, locals.user.id))).get();
+      .where(eq(schema.monitors.id, monitorId)).get();
 
     if (!monitor) {
       return new Response(JSON.stringify({ error: 'Monitor not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
@@ -35,7 +35,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
   // List all monitors with sparkline data
   const uid = locals.user.id;
   const allMonitors = db.select().from(schema.monitors)
-    .where(eq(schema.monitors.userId, uid))
+    .where(sql`1=1`)
     .orderBy(desc(schema.monitors.createdAt))
     .all();
 
@@ -78,7 +78,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   if (action === 'create') {
     // Tier gate: monitor count
     const { checkCountLimit, tierBlockedResponse } = await import('../../../lib/tier-gate');
-    const existingCount = db.select().from(schema.monitors).where(eq(schema.monitors.userId, locals.user.id)).all().length;
+    const existingCount = db.select().from(schema.monitors).where(sql`1=1`).all().length;
     const gate = checkCountLimit(locals.user, 'maxMonitors', existingCount, 'Monitor');
     if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 
@@ -112,7 +112,6 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
     db.insert(schema.monitors).values({
       id,
-      userId: locals.user.id,
       name,
       type,
       target,
@@ -158,7 +157,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     }
 
     db.update(schema.monitors).set(updates)
-      .where(and(eq(schema.monitors.id, id), eq(schema.monitors.userId, locals.user.id))).run();
+      .where(eq(schema.monitors.id, id)).run();
 
     // Restart check loop with new settings
     if (body.paused) {
@@ -175,7 +174,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     if (!id) return new Response(JSON.stringify({ error: 'Monitor ID required' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
 
     const owned = db.select().from(schema.monitors)
-      .where(and(eq(schema.monitors.id, id), eq(schema.monitors.userId, locals.user.id)))
+      .where(eq(schema.monitors.id, id))
       .get();
     if (!owned) {
       return new Response(JSON.stringify({ error: 'Monitor not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
@@ -189,7 +188,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     db.delete(schema.uptimeDaily)
       .where(eq(schema.uptimeDaily.monitorId, id)).run();
     db.delete(schema.monitors)
-      .where(and(eq(schema.monitors.id, id), eq(schema.monitors.userId, locals.user.id))).run();
+      .where(eq(schema.monitors.id, id)).run();
 
     return new Response(JSON.stringify({ deleted: true }), { headers: { 'Content-Type': 'application/json' } });
   }

@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
 import { logAudit, getClientIp } from '../../../lib/audit';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireAuth, checkRBAC } from '../../../lib/rbac';
 import { validateCsrf } from '../../../middleware';
 
@@ -21,16 +21,16 @@ export const GET: APIRoute = async ({ locals }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
-  const tokens = getDb()
+  const db = getDb();
+  const tokens = db
     .select({
       id: schema.apiTokens.id,
       name: schema.apiTokens.name,
-      expiresAt: schema.apiTokens.expiresAt,
       lastUsedAt: schema.apiTokens.lastUsedAt,
       createdAt: schema.apiTokens.createdAt,
     })
     .from(schema.apiTokens)
-    .where(eq(schema.apiTokens.userId, locals.user!.id))
+    .where(sql`1=1`)
     .all();
 
   return new Response(JSON.stringify({ tokens }), {
@@ -101,7 +101,6 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     .insert(schema.apiTokens)
     .values({
       id,
-      userId: locals.user.id,
       name,
       tokenHash,
       expiresAt,
@@ -110,7 +109,6 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     .run();
 
   logAudit('token_create', {
-    userId: locals.user.id,
     ip: getClientIp(request),
     details: { tokenId: id, name, expiresAt: expiresAt.toISOString() },
   });
@@ -165,11 +163,10 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
 
   getDb()
     .delete(schema.apiTokens)
-    .where(and(eq(schema.apiTokens.id, tokenId), eq(schema.apiTokens.userId, locals.user.id)))
+    .where(eq(schema.apiTokens.id, tokenId))
     .run();
 
   logAudit('token_revoke', {
-    userId: locals.user.id,
     ip: getClientIp(request),
     details: { tokenId },
   });

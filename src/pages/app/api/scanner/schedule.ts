@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../../lib/db';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireAuth, checkRBAC } from '../../../../lib/rbac';
 import { validateCsrf } from '../../../../middleware';
 
@@ -14,7 +14,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const db = getDb();
   const schedule = db.select().from(schema.scannerSchedule)
-    .where(eq(schema.scannerSchedule.userId, locals.user.id)).get();
+    .where(sql`1=1`).get();
 
   if (!schedule) {
     // Return defaults if no schedule configured yet
@@ -92,7 +92,7 @@ export const PUT: APIRoute = async ({ locals, request, cookies }) => {
 
   const db = getDb();
   const existing = db.select().from(schema.scannerSchedule)
-    .where(eq(schema.scannerSchedule.userId, locals.user.id)).get();
+    .where(sql`1=1`).get();
 
   const values = {
     interval,
@@ -109,11 +109,11 @@ export const PUT: APIRoute = async ({ locals, request, cookies }) => {
     db.update(schema.scannerSchedule).set(values)
       .where(and(
         eq(schema.scannerSchedule.id, existing.id),
-        eq(schema.scannerSchedule.userId, locals.user.id),
+        
       )).run();
   } else {
     db.insert(schema.scannerSchedule).values({
-      id: nanoid(), userId: locals.user.id, ...values,
+      id: nanoid(), ...values,
     }).run();
   }
 

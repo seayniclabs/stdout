@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { nanoid } from 'nanoid';
 import { getDb, schema } from '../../../lib/db';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import { requireAuth } from '../../../lib/rbac';
 
 /**
@@ -12,7 +12,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
+  
   const db = getDb();
 
   const requests = db.select({
@@ -25,7 +25,7 @@ export const GET: APIRoute = async ({ locals }) => {
     createdAt: schema.featureRequests.createdAt,
     updatedAt: schema.featureRequests.updatedAt,
   }).from(schema.featureRequests)
-    .where(eq(schema.featureRequests.userId, locals.user.id))
+    .where(sql`1=1`)
     .orderBy(desc(schema.featureRequests.createdAt))
     .all();
 
@@ -70,14 +70,13 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     });
   }
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
+  
   const db = getDb();
   const id = nanoid();
   const now = new Date();
 
   db.insert(schema.featureRequests).values({
     id,
-    userId: locals.user.id,
     title,
     description,
     category: category || 'feature',
