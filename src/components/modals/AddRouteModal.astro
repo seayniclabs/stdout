@@ -28,6 +28,7 @@ const { mode = 'add', routeId } = Astro.props;
           id="routeName"
           name="name"
           placeholder="e.g., Critical Alerts → Slack"
+          autocomplete="off"
           required
         />
       </div>
@@ -68,6 +69,7 @@ const { mode = 'add', routeId } = Astro.props;
             type="text"
             id="slackChannel"
             placeholder="#alerts"
+            autocomplete="off"
           />
         </div>
       </div>

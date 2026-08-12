@@ -116,7 +116,7 @@ const licenseNotice = getLicenseNotice();
                 <p class="hint">or <button type="button" class="link-button-settings" id="browseFilesSettings">browse files</button></p>
                 <p class="hint">PNG, SVG, or JPEG • Max 2MB</p>
               </div>
-              <input type="file" id="logoFileInputSettings" accept="image/png,image/svg+xml,image/jpeg,image/jpg" style="display: none;" />
+              <input type="file" id="logoFileInputSettings" accept="image/png,image/svg+xml,image/jpeg,image/jpg" style="display: none;" aria-label="Upload logo file" />
             </div>
           </label>
 
@@ -133,7 +133,7 @@ const licenseNotice = getLicenseNotice();
               </div>
               <div class="custom-color-settings">
                 <label for="brandColorHex">Custom:</label>
-                <input type="color" id="brandColor" value="#F97316" class="color-picker" />
+                <input type="color" id="brandColor" aria-label="Select brand color" value="#F97316" class="color-picker" />
                 <input type="text" id="brandColorHex" autocomplete="off" value="#F97316" class="settings-input mono" style="width: 100px;" />
               </div>
             </div>
@@ -155,11 +155,11 @@ const licenseNotice = getLicenseNotice();
           <div class="loading mono">Loading...</div>
         </div>
         <div class="notif-add">
-          <select id="notifChannel" class="settings-input" style="width: 120px;">
+          <select id="notifChannel" class="settings-input" style="width: 120px;" aria-label="Notification channel type">
             <option value="email">Email</option>
             <option value="webhook">Webhook</option>
           </select>
-          <input type="text" id="notifDest" autocomplete="off" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
+          <input type="text" id="notifDest" autocomplete="off" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" aria-label="Notification destination" />
           <button id="addNotifBtn" class="btn btn-primary btn-sm">Add</button>
         </div>
         <div class="notif-events mono" style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
@@ -196,15 +196,15 @@ const licenseNotice = getLicenseNotice();
               <span>URL slug</span>
               <div class="slug-preview">
                 <span class="slug-base mono">/status/</span>
-                <input type="text" id="spSlug" autocomplete="off" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
+                <input type="text" id="spSlug" autocomplete="off" aria-label="Status page URL slug" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
               </div>
             </label>
-            <label>
+            <label for="spTitle">
               <span>Page title</span>
               <input type="text" id="spTitle" autocomplete="off" placeholder="Service Status" class="settings-input" />
             </label>
           </div>
-          <label>
+          <label for="spDesc">
             <span>Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
             <input type="text" id="spDesc" autocomplete="off" placeholder="Current status of my homelab services" class="settings-input" />
           </label>
@@ -276,16 +276,16 @@ const licenseNotice = getLicenseNotice();
               <button id="aiFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
             </div>
             <div class="ds-form-body">
-              <label>Provider</label>
+              <label for="aiProviderSelect">Provider</label>
               <select id="aiProviderSelect" class="settings-input">
                 <option value="">Select provider...</option>
               </select>
-              <label>API Key</label>
+              <label for="aiKeyInput">API Key</label>
               <input type="password" id="aiKeyInput" class="settings-input" placeholder="sk-..." autocomplete="off" />
-              <label>Diagnostics Model</label>
+              <label for="aiDiagModel">Diagnostics Model</label>
               <select id="aiDiagModel" class="settings-input"></select>
               <div id="aiAutofixSection" style="display:none;">
-                <label>Auto-Fix Model</label>
+                <label for="aiAutofixModel">Auto-Fix Model</label>
                 <select id="aiAutofixModel" class="settings-input"></select>
               </div>
               <div class="ds-form-actions">
@@ -306,7 +306,7 @@ const licenseNotice = getLicenseNotice();
         <p class="section-desc">Control how often the scanner runs and what it discovers. The scanner polls this configuration automatically.</p>
         <div class="scanner-form">
           <div class="scanner-row">
-            <label>
+            <label for="scanInterval">
               <span>Frequency</span>
               <select id="scanInterval" class="settings-input">
                 <option value="hourly">Hourly</option>
@@ -316,7 +316,7 @@ const licenseNotice = getLicenseNotice();
             </label>
             <label id="scanWeekdayLabel" style="display:none;">
               <span>Day</span>
-              <select id="scanWeekday" class="settings-input">
+              <select id="scanWeekday" class="settings-input" aria-label="Day of week">
                 <option value="0">Sunday</option>
                 <option value="1">Monday</option>
                 <option value="2">Tuesday</option>
@@ -329,9 +329,9 @@ const licenseNotice = getLicenseNotice();
             <label id="scanTimeLabel">
               <span>Time</span>
               <div class="time-row">
-                <input type="number" id="scanHour" min="0" max="23" value="3" class="settings-input time-input" />
+                <input type="number" id="scanHour" min="0" max="23" value="3" class="settings-input time-input"  aria-label="Hour" />
                 <span class="time-sep">:</span>
-                <input type="number" id="scanMinute" min="0" max="59" value="0" class="settings-input time-input" />
+                <input type="number" id="scanMinute" min="0" max="59" value="0" class="settings-input time-input"  aria-label="Minute" />
               </div>
             </label>
           </div>
@@ -343,7 +343,7 @@ const licenseNotice = getLicenseNotice();
             <label class="module-check"><input type="checkbox" id="modDns" /> DNS &amp; services</label>
             <label class="module-check"><input type="checkbox" id="modAuth" /> Auth detection</label>
           </div>
-          <label>
+          <label for="scanSubnets">
             <span>Subnets <span style="font-weight:400;color:var(--text-muted)">(leave empty for auto-detect)</span></span>
             <input type="text" id="scanSubnets" autocomplete="off" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
           </label>
@@ -366,11 +366,11 @@ const licenseNotice = getLicenseNotice();
         <h2>Windlass</h2>
         <p class="section-desc">Schedule-aware service management. StdOut syncs with your Windlass engine to keep the HUD and service registry current.</p>
         <div class="scanner-form">
-          <label>
+          <label for="windlassEndpointUrl">
             <span>Endpoint URL</span>
             <input type="url" id="windlassEndpointUrl" placeholder="http://host.docker.internal:8116" class="settings-input mono" />
           </label>
-          <label>
+          <label for="windlassSyncInterval">
             <span>Sync interval</span>
             <select id="windlassSyncInterval" class="settings-input">
               <option value="30">Every 30 seconds</option>
@@ -396,11 +396,11 @@ const licenseNotice = getLicenseNotice();
         <h2>Netdata Cloud</h2>
         <p class="section-desc">Ingest Netdata Cloud anomalies and route fixes through Windlass (memory/disk shed, service restart). Create an API token below, then add a webhook in Netdata Cloud with the Authorization header.</p>
         <div class="scanner-form">
-          <label>
+          <label for="netdataWebhookUrl">
             <span>Webhook URL</span>
             <input type="text" id="netdataWebhookUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
-          <label>
+          <label for="netdataAuthHeader">
             <span>Authorization header</span>
             <input type="text" id="netdataAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
@@ -414,11 +414,11 @@ const licenseNotice = getLicenseNotice();
         <h2>Suricata</h2>
         <p class="section-desc">Keystone security signal — ingest EVE JSON alerts (webhook, file-tail, or Redis list/stream), correlate by source IP within 300s, and enable Windlass IP-block / service-restart. Create an API token below, then POST alerts with the Authorization header. Background ingest: <code>SURICATA_EVE_PATH</code>, <code>SURICATA_REDIS_URL</code> + <code>SURICATA_REDIS_MODE=list|stream</code>.</p>
         <div class="scanner-form">
-          <label>
+          <label for="suricataWebhookUrl">
             <span>Webhook URL</span>
             <input type="text" id="suricataWebhookUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
-          <label>
+          <label for="suricataAuthHeader">
             <span>Authorization header</span>
             <input type="text" id="suricataAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
@@ -432,11 +432,11 @@ const licenseNotice = getLicenseNotice();
         <h2>Zeek</h2>
         <p class="section-desc">Ingest Zeek protocol logs (conn, dns, http, ssl, notice) for correlation and anomaly baselines. Create an API token below, then POST log batches with the Authorization header. Observatory can also pull from the local <code>zeek</code> sidecar.</p>
         <div class="scanner-form">
-          <label>
+          <label for="zeekIngestUrl">
             <span>Ingest URL</span>
             <input type="text" id="zeekIngestUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
-          <label>
+          <label for="zeekAuthHeader">
             <span>Authorization header</span>
             <input type="text" id="zeekAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
@@ -449,11 +449,11 @@ const licenseNotice = getLicenseNotice();
         <h2>Loki</h2>
         <p class="section-desc">Pull logs from Grafana Loki via the LogQL query API, update Observatory baselines (<code>loki_*</code>), and open incidents on error/critical bursts. Add a Loki data source below (or set <code>LOKI_URL</code>), create an API token, then POST a LogQL query with the Authorization header. Sentinel also pulls on each tick when configured.</p>
         <div class="scanner-form">
-          <label>
+          <label for="lokiIngestUrl">
             <span>Ingest URL</span>
             <input type="text" id="lokiIngestUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
-          <label>
+          <label for="lokiAuthHeader">
             <span>Authorization header</span>
             <input type="text" id="lokiAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
@@ -474,7 +474,7 @@ const licenseNotice = getLicenseNotice();
             <h3 id="dsFormTitle">Add Data Source</h3>
             <button id="dsFormCancel" class="btn btn-ghost btn-sm">Cancel</button>
           </div>
-          <label>
+          <label for="dsType">
             <span>Type</span>
             <select id="dsType" class="settings-input">
               <option value="influxdb">InfluxDB</option>
@@ -539,7 +539,7 @@ const licenseNotice = getLicenseNotice();
           <div class="loading mono">Loading tokens...</div>
         </div>
         <div class="token-create">
-          <input type="text" id="tokenNameInput" autocomplete="off" placeholder="Token name (e.g. Scanner)" class="token-input" />
+          <input type="text" id="tokenNameInput" autocomplete="off" placeholder="Token name (e.g. Scanner)" class="token-input" aria-label="Token name" />
           <button id="createTokenBtn" class="btn btn-primary btn-sm">Generate token</button>
         </div>
         <div id="tokenStatus" class="backup-status"></div>
@@ -582,7 +582,7 @@ const licenseNotice = getLicenseNotice();
           <p class="delete-warning">Deleting your account deactivates it immediately. Your data is kept for 14 days in case you need recovery (contact support). After 14 days, all data is permanently purged.</p>
           <label class="delete-confirm-label">
             <span>Type <strong>DELETE</strong> to confirm</span>
-            <input type="text" id="deleteConfirmInput" placeholder="DELETE" class="settings-input" autocomplete="off" />
+            <input type="text" id="deleteConfirmInput" placeholder="DELETE" class="settings-input" autocomplete="off" aria-label="Type DELETE to confirm" />
           </label>
           <button id="deleteAccountBtn" class="btn btn-danger" disabled>Delete account</button>
           <div id="deleteStatus" class="backup-status"></div>
