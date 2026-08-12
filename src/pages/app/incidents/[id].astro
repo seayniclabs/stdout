@@ -13,7 +13,7 @@ const { id } = Astro.params;
 const db = getDb();
 
 const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, id!)).get();
-if (!incident || incident.userId !== user.id) return Astro.redirect('/app');
+if (!incident) return Astro.redirect('/app');
 
 // Handle resolution POST
 if (Astro.request.method === 'POST') {
@@ -27,7 +27,7 @@ if (Astro.request.method === 'POST') {
         const resId = nanoid();
         const now = new Date();
         db.insert(schema.resolutions).values({
-          id: resId, incidentId: id!, userId: user.id, content, createdAt: now,
+          id: resId, incidentId: id!, content, createdAt: now,
         }).run();
 
         // Sync to FTS - get rowid AFTER insert
