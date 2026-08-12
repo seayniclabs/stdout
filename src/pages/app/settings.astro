@@ -65,7 +65,7 @@ const licenseNotice = getLicenseNotice();
         <h2>License</h2>
         <p class="section-desc">Enter your self-host license key from store.seayniclabs.com (order confirmation). Optional during evaluation.</p>
         <div class="brand-form">
-          <label>
+          <label for="licenseKey">
             <span>License key</span>
             <input type="text" id="licenseKey" placeholder="SL-..." class="settings-input mono" autocomplete="off" />
           </label>
@@ -94,7 +94,7 @@ const licenseNotice = getLicenseNotice();
         <h2>Workspace Branding</h2>
         <p class="section-desc">Customize how StdOut looks for your workspace.</p>
         <div class="brand-form">
-          <label>
+          <label for="brandName">
             <span>Workspace name</span>
             <input type="text" id="brandName" autocomplete="organization" placeholder="e.g. My Lab" class="settings-input" />
           </label>
@@ -236,9 +236,9 @@ const licenseNotice = getLicenseNotice();
         </div>
         <div id="featureRequestForm" style="display:none; margin-top: 0.75rem;">
           <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
-            <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
+            <label for="frTitle" style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
             <input type="text" id="frTitle" autocomplete="off" class="settings-input" placeholder="Short description of what you need" />
-            <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
+            <label for="frCategory" style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
             <select id="frCategory" class="settings-input">
               <option value="feature">New Feature</option>
               <option value="improvement">Improvement</option>
@@ -246,7 +246,7 @@ const licenseNotice = getLicenseNotice();
               <option value="bug">Bug Report</option>
               <option value="other">Other</option>
             </select>
-            <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Description</label>
+            <label for="frDescription" style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Description</label>
             <textarea id="frDescription" class="settings-input" rows="4" placeholder="What problem does this solve? How would you use it?"></textarea>
             <div style="display: flex; gap: 8px; margin-top: 8px;">
               <button id="frSubmitBtn" class="btn btn-primary btn-sm">Submit</button>
@@ -487,34 +487,34 @@ const licenseNotice = getLicenseNotice();
               <option value="pihole">Pi-hole</option>
             </select>
           </label>
-          <label>
+          <label for="dsName">
             <span>Name</span>
             <input type="text" id="dsName" autocomplete="off" placeholder="e.g. My InfluxDB" class="settings-input" />
           </label>
-          <label>
+          <label for="dsUrl">
             <span>URL</span>
             <input type="text" id="dsUrl" autocomplete="url" placeholder="http://localhost:8086" class="settings-input mono" />
           </label>
-          <label id="dsTokenLabel">
+          <label for="dsToken" id="dsTokenLabel">
             <span id="dsTokenLabelText">API Token</span>
             <input type="password" id="dsToken" placeholder="API token" class="settings-input mono" autocomplete="off" />
           </label>
           <div class="ds-row" id="dsGraylogFields" style="display:none;">
-            <label style="flex:1;">
+            <label for="dsUsername" style="flex:1;">
               <span>Username</span>
               <input type="text" id="dsUsername" autocomplete="username" placeholder="admin" class="settings-input mono" />
             </label>
-            <label style="flex:1;">
+            <label for="dsPassword" style="flex:1;">
               <span>Password</span>
               <input type="password" id="dsPassword" placeholder="Graylog password" class="settings-input mono" autocomplete="off" />
             </label>
           </div>
           <div class="ds-row" id="dsInfluxFields">
-            <label style="flex:1;">
+            <label for="dsOrg" style="flex:1;">
               <span>Organization</span>
               <input type="text" id="dsOrg" autocomplete="organization" placeholder="e.g. seaynic-labs" class="settings-input mono" />
             </label>
-            <label style="flex:1;">
+            <label for="dsBucket" style="flex:1;">
               <span>Bucket</span>
               <input type="text" id="dsBucket" autocomplete="off" placeholder="e.g. telegraf" class="settings-input mono" />
             </label>
