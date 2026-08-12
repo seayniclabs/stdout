@@ -12,11 +12,9 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
-const workspaceOwnerId = user.id;
-const allowedStackUserIds = new Set([user.id, workspaceOwnerId]);
 
-function stackAccessible(row: { userId: string } | null | undefined): boolean {
-  return !!row && allowedStackUserIds.has(row.userId);
+function stackAccessible(row: any | null | undefined): boolean {
+  return !!row;
 }
 
 let error = '';
@@ -41,7 +39,7 @@ if (Astro.request.method === 'POST') {
     if (!error && action === 'create' && name) {
       const id = nanoid();
       const now = new Date();
-      db.insert(schema.stacks).values({ id, userId: user.id, name, description, createdAt: now, updatedAt: now }).run();
+      db.insert(schema.stacks).values({ id, name, description, createdAt: now, updatedAt: now }).run();
     } else if (!error && action === 'update') {
       const stackId = form.get('stackId') as string;
       if (stackId && name) {
@@ -61,10 +59,7 @@ if (Astro.request.method === 'POST') {
             description,
             previousDescription: existing.description,
             updatedAt: new Date(),
-          }).where(and(
-            eq(schema.stacks.id, stackId),
-            eq(schema.stacks.userId, existing.userId),
-          )).run();
+          }).where(eq(schema.stacks.id, stackId)).run();
         }
       }
     } else if (!error && action === 'restore') {
@@ -79,10 +74,7 @@ if (Astro.request.method === 'POST') {
             description: existing.previousDescription,
             previousDescription: null,
             updatedAt: new Date(),
-          }).where(and(
-            eq(schema.stacks.id, stackId),
-            eq(schema.stacks.userId, existing.userId),
-          )).run();
+          }).where(eq(schema.stacks.id, stackId)).run();
         }
       }
     } else if (!error && action === 'delete') {
@@ -92,10 +84,7 @@ if (Astro.request.method === 'POST') {
         if (!stackAccessible(existing)) {
           error = 'Stack not found.';
         } else if (existing) {
-          db.delete(schema.stacks).where(and(
-            eq(schema.stacks.id, stackId),
-            eq(schema.stacks.userId, existing.userId),
-          )).run();
+          db.delete(schema.stacks).where(eq(schema.stacks.id, stackId)).run();
         }
       }
     } else if (!error && action === 'reimport') {
@@ -125,24 +114,14 @@ if (Astro.request.method === 'POST') {
 }
 
 const editId = Astro.url.searchParams.get('edit');
-const userStacks = db.select().from(schema.stacks)
-  .where(
-    workspaceOwnerId !== user.id
-      ? or(
-          eq(schema.stacks.userId, user.id),
-          eq(schema.stacks.userId, workspaceOwnerId),
-        )
-      : eq(schema.stacks.userId, user.id),
-  )
-  .all();
+const userStacks = db.select().from(schema.stacks).all();
 if (editId) {
   editingStack = userStacks.find(s => s.id === editId);
   showCreateForm = false;
 }
 
 // Get monitor count (to detect stacks-deleted-but-monitors-exist state)
-const monitorCount = db.select().from(schema.monitors)
-  .where(eq(schema.monitors.userId, user.id)).all().length;
+const monitorCount = db.select().from(schema.monitors).all().length;
 
 // Get pending imports
 const pendingImports = db.select().from(schema.stackImports)
@@ -161,8 +140,7 @@ const recentImports = db.select().from(schema.stackImports)
 const lastScanTime = recentImports.length > 0 ? recentImports[0].createdAt : null;
 
 // Get incidents per stack
-const allIncidents = db.select().from(schema.incidents)
-  .where(eq(schema.incidents.userId, user.id)).all();
+const allIncidents = db.select().from(schema.incidents).all();
 const incidentsByStack = new Map<string, number>();
 const activeIncidentsByStack = new Map<string, number>();
 for (const inc of allIncidents) {
@@ -245,17 +223,11 @@ const stackCards: StackCard[] = userStacks.map(stack => {
 
   // Count discovered devices and services for this stack
   const deviceCount = db.select().from(schema.discoveredHosts)
-    .where(and(
-      eq(schema.discoveredHosts.userId, user.id),
-      or(eq(schema.discoveredHosts.stackId, stack.id), eq(schema.discoveredHosts.stackId, null))
-    ))
+    .where(or(eq(schema.discoveredHosts.stackId, stack.id), eq(schema.discoveredHosts.stackId, null)))
     .all().length;
 
   const serviceCount = db.select().from(schema.monitors)
-    .where(and(
-      eq(schema.monitors.userId, user.id),
-      or(eq(schema.monitors.stackId, stack.id), eq(schema.monitors.stackId, null))
-    ))
+    .where(or(eq(schema.monitors.stackId, stack.id), eq(schema.monitors.stackId, null)))
     .all().length;
 
   // Calculate health percentage
@@ -263,7 +235,6 @@ const stackCards: StackCard[] = userStacks.map(stack => {
   const healthyMonitors = totalMonitors > 0
     ? db.select().from(schema.monitors)
         .where(and(
-          eq(schema.monitors.userId, user.id),
           eq(schema.monitors.currentStatus, 'healthy'),
           or(eq(schema.monitors.stackId, stack.id), eq(schema.monitors.stackId, null))
         ))
@@ -274,7 +245,6 @@ const stackCards: StackCard[] = userStacks.map(stack => {
 
   // Get last scan time from most recent stack import
   const lastImport = db.select().from(schema.stackImports)
-    .where(eq(schema.stackImports.userId, user.id))
     .orderBy(desc(schema.stackImports.createdAt))
     .limit(1).get();
 
