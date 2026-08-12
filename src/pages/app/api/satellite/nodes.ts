@@ -27,7 +27,6 @@ export const GET: APIRoute = async ({ locals }) => {
   const rows = db.all(sql`
     SELECT id, name, hostname, ip_address, last_seen_at, created_at
     FROM satellite_agents
-    WHERE user_id = ${locals.user.id}
     ORDER BY created_at DESC
   `) as any[];
 
@@ -82,8 +81,8 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
   const db = getDb();
   db.run(sql`
-    INSERT INTO satellite_agents (id, user_id, name, hostname, ip_address, api_key, created_at)
-    VALUES (${id}, ${locals.user.id}, ${name}, ${hostname}, ${ipAddress}, ${tokenHash}, ${now})
+    INSERT INTO satellite_agents (id, name, hostname, ip_address, api_key, created_at)
+    VALUES (${id}, ${name}, ${hostname}, ${ipAddress}, ${tokenHash}, ${now})
   `);
 
   logAudit('satellite_node_register', {
@@ -127,9 +126,9 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
   }
 
   const db = getDb();
-  // Verify ownership before delete
+  // Verify node exists before delete
   const existing = db.get(sql`
-    SELECT id FROM satellite_agents WHERE id = ${nodeId} AND user_id = ${locals.user.id}
+    SELECT id FROM satellite_agents WHERE id = ${nodeId}
   `) as any;
 
   if (!existing) {
