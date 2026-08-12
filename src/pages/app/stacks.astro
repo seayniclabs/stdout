@@ -331,7 +331,7 @@ function timeAgo(date: Date) {
           <input type="hidden" name="stackId" value={editingStack.id} />
           <label>
             <span>Name</span>
-            <input type="text" name="name" value={editingStack.name} required />
+            <input type="text" name="name" autocomplete="off" value={editingStack.name} required />
           </label>
           <label>
             <span>Description <span style="font-weight:400; color:var(--text-muted); font-size:0.8em;">(Markdown — imported by scanner)</span></span>
@@ -372,7 +372,7 @@ function timeAgo(date: Date) {
           <input type="hidden" name="action" value="create" />
           <label>
             <span>Name</span>
-            <input type="text" name="name" id="stackNameInput" required placeholder="e.g. Mac Mini Lab" />
+            <input type="text" name="name" id="stackNameInput" autocomplete="off" required placeholder="e.g. Mac Mini Lab" />
           </label>
           <label>
             <span>Description</span>

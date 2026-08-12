@@ -29,10 +29,10 @@ if (!Astro.locals.user) return Astro.redirect('/app/login');
         <input type="text" id="nodeName" placeholder="centaur-n8n-1" autocomplete="off" />
 
         <label for="nodeDesc">Description</label>
-        <input type="text" id="nodeDesc" placeholder="Hetzner VPS — Talos bidding workflows" />
+        <input type="text" id="nodeDesc" autocomplete="off" placeholder="Hetzner VPS — Talos bidding workflows" />
 
         <label for="nodeTags">Tags (comma-separated)</label>
-        <input type="text" id="nodeTags" placeholder="hetzner, talos, production" />
+        <input type="text" id="nodeTags" autocomplete="off" placeholder="hetzner, talos, production" />
       </div>
       <div class="modal-footer">
         <button class="btn-ghost" id="cancelModal">Cancel</button>

@@ -96,7 +96,7 @@ const licenseNotice = getLicenseNotice();
         <div class="brand-form">
           <label>
             <span>Workspace name</span>
-            <input type="text" id="brandName" placeholder="e.g. My Lab" class="settings-input" />
+            <input type="text" id="brandName" autocomplete="organization" placeholder="e.g. My Lab" class="settings-input" />
           </label>
 
           <label>
@@ -134,7 +134,7 @@ const licenseNotice = getLicenseNotice();
               <div class="custom-color-settings">
                 <label for="brandColorHex">Custom:</label>
                 <input type="color" id="brandColor" value="#F97316" class="color-picker" />
-                <input type="text" id="brandColorHex" value="#F97316" class="settings-input mono" style="width: 100px;" />
+                <input type="text" id="brandColorHex" autocomplete="off" value="#F97316" class="settings-input mono" style="width: 100px;" />
               </div>
             </div>
           </label>
@@ -159,7 +159,7 @@ const licenseNotice = getLicenseNotice();
             <option value="email">Email</option>
             <option value="webhook">Webhook</option>
           </select>
-          <input type="text" id="notifDest" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
+          <input type="text" id="notifDest" autocomplete="off" placeholder="email@example.com or https://..." class="settings-input" style="flex:1;" />
           <button id="addNotifBtn" class="btn btn-primary btn-sm">Add</button>
         </div>
         <div class="notif-events mono" style="font-size: 11px; color: var(--text-muted); margin-top: 6px;">
@@ -196,17 +196,17 @@ const licenseNotice = getLicenseNotice();
               <span>URL slug</span>
               <div class="slug-preview">
                 <span class="slug-base mono">/status/</span>
-                <input type="text" id="spSlug" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
+                <input type="text" id="spSlug" autocomplete="off" placeholder="my-lab" class="settings-input mono" style="flex:1;" />
               </div>
             </label>
             <label>
               <span>Page title</span>
-              <input type="text" id="spTitle" placeholder="Service Status" class="settings-input" />
+              <input type="text" id="spTitle" autocomplete="off" placeholder="Service Status" class="settings-input" />
             </label>
           </div>
           <label>
             <span>Description <span style="font-weight:400;color:var(--text-muted)">(optional)</span></span>
-            <input type="text" id="spDesc" placeholder="Current status of my homelab services" class="settings-input" />
+            <input type="text" id="spDesc" autocomplete="off" placeholder="Current status of my homelab services" class="settings-input" />
           </label>
           <div class="sp-monitors">
             <span class="module-label">Monitors to display</span>
@@ -237,7 +237,7 @@ const licenseNotice = getLicenseNotice();
         <div id="featureRequestForm" style="display:none; margin-top: 0.75rem;">
           <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem;">
             <label style="display: block; font-size: 12px; font-weight: 600; margin-bottom: 4px;">Title</label>
-            <input type="text" id="frTitle" class="settings-input" placeholder="Short description of what you need" />
+            <input type="text" id="frTitle" autocomplete="off" class="settings-input" placeholder="Short description of what you need" />
             <label style="display: block; font-size: 12px; font-weight: 600; margin: 8px 0 4px;">Category</label>
             <select id="frCategory" class="settings-input">
               <option value="feature">New Feature</option>
@@ -345,7 +345,7 @@ const licenseNotice = getLicenseNotice();
           </div>
           <label>
             <span>Subnets <span style="font-weight:400;color:var(--text-muted)">(leave empty for auto-detect)</span></span>
-            <input type="text" id="scanSubnets" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
+            <input type="text" id="scanSubnets" autocomplete="off" placeholder="e.g. 192.168.0.0/24, 10.0.0.0/24" class="settings-input" />
           </label>
           <div class="scanner-actions">
             <label class="scanner-toggle">
@@ -398,11 +398,11 @@ const licenseNotice = getLicenseNotice();
         <div class="scanner-form">
           <label>
             <span>Webhook URL</span>
-            <input type="text" id="netdataWebhookUrl" class="settings-input mono" readonly />
+            <input type="text" id="netdataWebhookUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
           <label>
             <span>Authorization header</span>
-            <input type="text" id="netdataAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+            <input type="text" id="netdataAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
           <p class="section-desc" style="margin:0;">Warning/critical alerts create incidents and call Windlass <code>/anomaly.json</code>. Append <code>?autoFix=0</code> to ingest without acting, or <code>?dryRun=1</code> to classify only.</p>
           <div id="netdataStatus" class="backup-status"></div>
@@ -416,11 +416,11 @@ const licenseNotice = getLicenseNotice();
         <div class="scanner-form">
           <label>
             <span>Webhook URL</span>
-            <input type="text" id="suricataWebhookUrl" class="settings-input mono" readonly />
+            <input type="text" id="suricataWebhookUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
           <label>
             <span>Authorization header</span>
-            <input type="text" id="suricataAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+            <input type="text" id="suricataAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
           <p class="section-desc" style="margin:0;">Body: a Suricata EVE alert object, <code>{`{ "events": [...] }`}</code>, or NDJSON. Severity 1 (high) or correlated alerts (≥3 from the same IP in 5m) trigger IP block. Append <code>?autoFix=0</code> to ingest without acting, or <code>?dryRun=1</code> to classify only.</p>
           <div id="suricataStatus" class="backup-status"></div>
@@ -434,11 +434,11 @@ const licenseNotice = getLicenseNotice();
         <div class="scanner-form">
           <label>
             <span>Ingest URL</span>
-            <input type="text" id="zeekIngestUrl" class="settings-input mono" readonly />
+            <input type="text" id="zeekIngestUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
           <label>
             <span>Authorization header</span>
-            <input type="text" id="zeekAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+            <input type="text" id="zeekAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
           <p class="section-desc" style="margin:0;">Body: <code>{`{ "conn": "...", "dns": "...", "http": "...", "ssl": "...", "notice": "..." }`}</code> (TSV or JSONL). Use <code>?dryRun=1</code> to parse only, <code>?pull=1</code> to read local sidecar logs, or <code>?analyze=1</code> to run Zeek on the latest pcap first.</p>
         </div>
@@ -451,11 +451,11 @@ const licenseNotice = getLicenseNotice();
         <div class="scanner-form">
           <label>
             <span>Ingest URL</span>
-            <input type="text" id="lokiIngestUrl" class="settings-input mono" readonly />
+            <input type="text" id="lokiIngestUrl" autocomplete="off" class="settings-input mono" readonly />
           </label>
           <label>
             <span>Authorization header</span>
-            <input type="text" id="lokiAuthHeader" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
+            <input type="text" id="lokiAuthHeader" autocomplete="off" class="settings-input mono" readonly value="Authorization: Bearer stdout_scan_&lt;your-token&gt;" />
           </label>
           <p class="section-desc" style="margin:0;">Body: <code>{`{ "query": "{job=\\"stdout\\"} |= \\"error\\"", "minutes": 15 }`}</code> or <code>{`{ "job": "stdout", "minutes": 5 }`}</code>. Lookback is capped at 24h (unbounded ranges are rejected). Pre-fetched streams/logs also accepted. Use <code>?dryRun=1</code> to parse only, or <code>?noIncidents=1</code> for baselines only. Sentinel pulls every 5 minutes when configured.</p>
         </div>
@@ -489,11 +489,11 @@ const licenseNotice = getLicenseNotice();
           </label>
           <label>
             <span>Name</span>
-            <input type="text" id="dsName" placeholder="e.g. My InfluxDB" class="settings-input" />
+            <input type="text" id="dsName" autocomplete="off" placeholder="e.g. My InfluxDB" class="settings-input" />
           </label>
           <label>
             <span>URL</span>
-            <input type="text" id="dsUrl" placeholder="http://localhost:8086" class="settings-input mono" />
+            <input type="text" id="dsUrl" autocomplete="url" placeholder="http://localhost:8086" class="settings-input mono" />
           </label>
           <label id="dsTokenLabel">
             <span id="dsTokenLabelText">API Token</span>
@@ -502,7 +502,7 @@ const licenseNotice = getLicenseNotice();
           <div class="ds-row" id="dsGraylogFields" style="display:none;">
             <label style="flex:1;">
               <span>Username</span>
-              <input type="text" id="dsUsername" placeholder="admin" class="settings-input mono" />
+              <input type="text" id="dsUsername" autocomplete="username" placeholder="admin" class="settings-input mono" />
             </label>
             <label style="flex:1;">
               <span>Password</span>
@@ -512,11 +512,11 @@ const licenseNotice = getLicenseNotice();
           <div class="ds-row" id="dsInfluxFields">
             <label style="flex:1;">
               <span>Organization</span>
-              <input type="text" id="dsOrg" placeholder="e.g. seaynic-labs" class="settings-input mono" />
+              <input type="text" id="dsOrg" autocomplete="organization" placeholder="e.g. seaynic-labs" class="settings-input mono" />
             </label>
             <label style="flex:1;">
               <span>Bucket</span>
-              <input type="text" id="dsBucket" placeholder="e.g. telegraf" class="settings-input mono" />
+              <input type="text" id="dsBucket" autocomplete="off" placeholder="e.g. telegraf" class="settings-input mono" />
             </label>
           </div>
           <div class="ds-actions">
@@ -539,7 +539,7 @@ const licenseNotice = getLicenseNotice();
           <div class="loading mono">Loading tokens...</div>
         </div>
         <div class="token-create">
-          <input type="text" id="tokenNameInput" placeholder="Token name (e.g. Scanner)" class="token-input" />
+          <input type="text" id="tokenNameInput" autocomplete="off" placeholder="Token name (e.g. Scanner)" class="token-input" />
           <button id="createTokenBtn" class="btn btn-primary btn-sm">Generate token</button>
         </div>
         <div id="tokenStatus" class="backup-status"></div>

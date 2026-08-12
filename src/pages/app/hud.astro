@@ -285,7 +285,7 @@ function timeAgo(date: Date) {
             <div class="hud-control-bar">
               <div class="search-wrapper">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <input type="text" id="hudSearch" placeholder="Search monitors..." />
+                <input type="text" id="hudSearch" autocomplete="off" placeholder="Search monitors..." />
               </div>
               <div class="filter-pills">
                 <button class="pill active" data-filter="all">All</button>
@@ -388,7 +388,7 @@ function timeAgo(date: Date) {
         <div class="modal-form">
           <label>
             <span>Name</span>
-            <input type="text" id="monName" placeholder="e.g. n8n, Plex, Homepage" class="modal-input" required />
+            <input type="text" id="monName" autocomplete="off" placeholder="e.g. n8n, Plex, Homepage" class="modal-input" required />
           </label>
           <div class="modal-row">
             <label style="flex:0 0 120px;">
@@ -402,7 +402,7 @@ function timeAgo(date: Date) {
             </label>
             <label style="flex:1;">
               <span>Target</span>
-              <input type="text" id="monTarget" placeholder="https://example.com or host:port" class="modal-input" required />
+              <input type="text" id="monTarget" autocomplete="url" placeholder="https://example.com or host:port" class="modal-input" required />
             </label>
           </div>
           <div class="modal-row">
