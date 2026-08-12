@@ -1,14 +1,16 @@
 import type { SessionUser } from './auth';
 
-export type Role = 'admin' | 'operator' | 'viewer';
+export type Role = 'superadmin' | 'admin' | 'operator' | 'viewer';
 
-export type RBACAction = 
+export type RBACAction =
   | 'read' | 'create' | 'edit' | 'delete'
-  | 'manage_monitors' | 'manage_settings' 
+  | 'manage_monitors' | 'manage_settings'
   | 'configure_observatory' | 'execute_playbook';
 
 const ROLE_PERMISSIONS: Record<Role, RBACAction[]> = {
-  admin: ['read', 'create', 'edit', 'delete', 'manage_monitors', 
+  superadmin: ['read', 'create', 'edit', 'delete', 'manage_monitors',
+               'manage_settings', 'configure_observatory', 'execute_playbook'],
+  admin: ['read', 'create', 'edit', 'delete', 'manage_monitors',
           'manage_settings', 'configure_observatory', 'execute_playbook'],
   operator: ['read', 'create', 'edit', 'manage_monitors', 'execute_playbook'],
   viewer: ['read']

@@ -1,0 +1,9 @@
+---
+/**
+ * Legacy KB URL - Redirect to /app/docs
+ * The Knowledge Base was renamed from "KB" to "Docs" but old links reference /app/kb
+ */
+export const prerender = false;
+
+return Astro.redirect('/app/docs', 301);
+---

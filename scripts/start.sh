@@ -19,6 +19,10 @@ node scripts/migrate.js
 echo "Seeding Observatory patterns..."
 node scripts/seed-patterns.js
 
+# Seed Community Documentation (StdOut-relevant docs and guides)
+echo "Seeding Community Documentation..."
+node scripts/seed-community-docs.js
+
 # Run init script for first-run auto-configuration (after DB exists)
 if [ -f scripts/init-setup.sh ]; then
   sh scripts/init-setup.sh

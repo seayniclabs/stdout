@@ -594,7 +594,10 @@ const licenseNotice = getLicenseNotice();
   </div>
 </Layout>
 
+<script is:inline set:html={`const CSRF_TOKEN = ${JSON.stringify(Astro.locals.csrfToken)};`}></script>
+
 <script>
+
   // ── Tab switching ──
   function initTabs() {
     const buttons = document.querySelectorAll<HTMLButtonElement>('.tab-btn');
@@ -927,7 +930,10 @@ const licenseNotice = getLicenseNotice();
     }
     const res = await fetch('/app/api/license', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': CSRF_TOKEN
+      },
       body: JSON.stringify({ key }),
     });
     const data = await res.json().catch(() => ({}));

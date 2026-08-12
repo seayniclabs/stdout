@@ -48,9 +48,29 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     });
   }
 
+  // Verify the license signature before storing
+  const { verifyLicenseSignature } = await import('../../../lib/license');
+  const verifyResult = verifyLicenseSignature(key);
+
+  if (!verifyResult.valid) {
+    return new Response(JSON.stringify({
+      error: verifyResult.reason || 'Invalid license key',
+      valid: false
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   const email = (body.email || locals.user.email).trim();
-  storeLicense(key, email);
-  return new Response(JSON.stringify({ stored: true }), {
+  storeLicense(key, email, verifyResult.payload?.product || 'self-host');
+
+  return new Response(JSON.stringify({
+    stored: true,
+    valid: true,
+    edition: verifyResult.payload?.product || 'self-host',
+    email: verifyResult.payload?.email
+  }), {
     headers: { 'Content-Type': 'application/json' },
   });
 };

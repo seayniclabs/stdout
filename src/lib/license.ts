@@ -55,6 +55,16 @@ export function requireLicense(): { valid: false; message: string } | { valid: t
       message: 'This feature requires a valid license. Please activate your license in Settings.',
     };
   }
+
+  // Verify the stored license signature
+  const verification = verifyLicenseSignature(license.key);
+  if (!verification.valid) {
+    return {
+      valid: false,
+      message: verification.reason || 'Invalid license. Please update your license key in Settings.',
+    };
+  }
+
   return { valid: true };
 }
 

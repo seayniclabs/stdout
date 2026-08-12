@@ -13,8 +13,9 @@ const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
-const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
-const { tier, limits } = getUserLimits(user);
+// Get all stacks (no userId in single-tenant mode)
+const userStacks = db.select().from(schema.stacks).all();
+const { tier, limits} = getUserLimits(user);
 
 let error = '';
 
@@ -34,11 +35,11 @@ if (Astro.request.method === 'POST') {
     if (!title || !description) {
       error = 'Title and description are required.';
     } else if (limits.maxIncidentsPerMonth !== Infinity) {
-      // Check monthly incident limit
+      // Check monthly incident limit (global count in single-tenant mode)
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       let monthCount = 0;
       if (rawDb?.prepare) {
-        const row = rawDb.prepare('SELECT COUNT(*) as cnt FROM incidents WHERE user_id = ? AND created_at > ?').get(user.id, thirtyDaysAgo.getTime());
+        const row = rawDb.prepare('SELECT COUNT(*) as cnt FROM incidents WHERE created_at > ?').get(thirtyDaysAgo.getTime());
         monthCount = row?.cnt || 0;
       }
       if (monthCount >= limits.maxIncidentsPerMonth) {
@@ -49,7 +50,7 @@ if (Astro.request.method === 'POST') {
       const id = nanoid();
       const now = new Date();
       db.insert(schema.incidents).values({
-        id, userId: user.id, stackId, title, description, severity, tags,
+        id, stackId, title, description, severity, tags,
         status: 'active', createdAt: now, updatedAt: now,
       }).run();
 
@@ -58,14 +59,14 @@ if (Astro.request.method === 'POST') {
         rawDb.prepare('INSERT INTO incidents_fts(rowid, title, description, tags) SELECT rowid, title, description, tags FROM incidents WHERE id = ?').run(id);
       }
 
-      // Notify
+      // Notify (pass user ID for notification preferences)
       notify(user.id, {
         event: severity === 'critical' ? 'severity_critical' : 'incident_created',
         title: `Incident: ${title}`,
         body: description.substring(0, 200),
         url: `/app/incidents/${id}`,
         metadata: { severity, incidentId: id },
-      });
+      }).catch(err => console.error('[incidents/new] Notify failed:', err));
 
       return Astro.redirect(`/app/incidents/${id}`);
     }

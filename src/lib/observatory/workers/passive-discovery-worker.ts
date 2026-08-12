@@ -20,7 +20,6 @@ let _started = false;
 const _lastRun = new Map<string, string>();
 
 interface ScheduleRow {
-  user_id: string;
   interval: string;   // 'hourly' | 'daily' | 'weekly' | (cron not yet supported here)
   hour: number;
   minute: number;
@@ -65,7 +64,7 @@ async function tick(): Promise<void> {
   let rows: ScheduleRow[];
   try {
     rows = db.all(sql`
-      SELECT user_id, interval, hour, minute, weekday, enabled
+      SELECT interval, hour, minute, weekday, enabled
       FROM scanner_schedule
       WHERE enabled = 1
     `) as ScheduleRow[];
@@ -80,11 +79,11 @@ async function tick(): Promise<void> {
   for (const row of rows) {
     const key = dueKey(row, now);
     if (!key) continue;
-    const dedupeKey = `${row.user_id}:${row.interval}`;
+    const dedupeKey = `${row.interval}`;
     if (_lastRun.get(dedupeKey) === key) continue; // already fired this period
     _lastRun.set(dedupeKey, key);
 
-    console.log(`[passive-discovery-worker] re-scan due for user ${row.user_id} (${row.interval}) — triggering discovery`);
+    console.log(`[passive-discovery-worker] re-scan due (${row.interval}) — triggering discovery`);
     try {
       const { runInitialDiscovery } = await import('../initial-discovery');
       // Fire-and-forget — discovery is resilient and self-logging; don't block the ticker.
