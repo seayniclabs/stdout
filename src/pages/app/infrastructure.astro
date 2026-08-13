@@ -12,11 +12,9 @@ const db = getDb();
 
 // Discovery data
 const hosts = db.select().from(discoveredHosts)
-  .where(eq(discoveredHosts.userId, session.id))
   .orderBy(discoveredHosts.ipAddress).all();
 
-const allServices = db.select().from(discoveredServices)
-  .where(eq(discoveredServices.userId, session.id)).all();
+const allServices = db.select().from(discoveredServices).all();
 
 const hostsWithServices = hosts.map(host => ({
   ...host,
