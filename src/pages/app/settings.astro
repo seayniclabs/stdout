@@ -1276,7 +1276,7 @@ const licenseNotice = getLicenseNotice();
       const res = await fetch('/app/api/data-sources');
       const data = await res.json();
       if (!data.sources || data.sources.length === 0) {
-        dsList.innerHTML = '<div class="empty mono">No data sources configured. Add monitoring, security, or observability tools to enrich incidents.</div>';
+        dsList.innerHTML = '<div class="empty mono">No data sources configured yet. Riggins will auto-discover monitoring, security, and observability tools.</div>';
         return;
       }
       dsList.innerHTML = data.sources.map((s: any) => {
@@ -1620,7 +1620,7 @@ const licenseNotice = getLicenseNotice();
           `<label class="module-check"><input type="checkbox" value="${m.id}" class="sp-mon-check" /> ${escapeHtml(m.name)}</label>`
         ).join('');
       } else {
-        spMonitorList.innerHTML = '<div class="empty mono">No monitors yet. Add monitors in HUD first.</div>';
+        spMonitorList.innerHTML = '<div class="empty mono">No monitors auto-configured yet. Riggins is scanning your infrastructure...</div>';
       }
     } catch {}
     try {

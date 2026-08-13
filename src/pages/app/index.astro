@@ -258,11 +258,11 @@ function timeAgo(date: Date) {
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
-          <a href="/app/hud" class={`onboard-step ${completedSteps.includes('monitors') ? 'done' : ''}`} data-step="monitors">
+          <a href="/app" class={`onboard-step ${completedSteps.includes('monitors') ? 'done' : ''}`} data-step="monitors">
             <div class="step-num">{completedSteps.includes('monitors') ? '\u2713' : '7'}</div>
             <div class="step-content">
-              <h4>Set up health checks</h4>
-              <p>Add monitors from your confirmed stacks (one-click suggestions on the HUD).</p>
+              <h4>Auto-monitoring active</h4>
+              <p>Riggins continuously monitors discovered services (view Dashboard for live status).</p>
             </div>
             <span class="step-arrow">&rarr;</span>
           </a>
