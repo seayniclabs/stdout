@@ -16,15 +16,11 @@ const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://stdout.s
 const nav = [
   { href: '/app', label: 'Dashboard' },
   { href: '/app/incidents', label: 'Incidents' },
-  { href: '/app/hud', label: 'HUD' },
   { href: '/app/observatory', label: 'Observatory' },
-  { href: '/app/discovery', label: 'Discovery' },
+  { href: '/app/infrastructure', label: 'Infrastructure' },
   { href: '/app/alerts', label: 'Alerts' },
-  { href: '/app/stacks', label: 'Infrastructure' },
-  { href: '/app/satellites', label: 'Satellites' },
   { href: '/app/docs', label: 'Docs' },
-  { href: '/app/tools/windlass', label: 'Windlass' },
-  { href: '/app/addons', label: 'Add-ons' },
+  { href: '/app/settings', label: 'Settings' },
 ];
 const mobileNav = [
   ...nav,
@@ -113,7 +109,7 @@ if (user) {
       ) : (
         <img src="/logo.svg" alt={workspaceName} width="24" height="24" />
       )}
-      {workspaceName}
+      <span class="topnav-brand-name">{workspaceName}</span>
     </a>
     <div class="topnav-links">
       {nav.map(({ href, label }) => (
@@ -130,7 +126,7 @@ if (user) {
       <svg class="nav-search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="8.5" cy="8.5" r="5.5" /><line x1="13" y1="13" x2="18" y2="18" />
       </svg>
-      <input type="text" name="q" class="nav-search-input" placeholder="Search incidents, docs..." autocomplete="off" id="navSearchInput" />
+      <input type="text" name="q" class="nav-search-input" placeholder="Search..." autocomplete="off" id="navSearchInput" />
       <kbd class="nav-search-kbd mono">/</kbd>
       <div class="nav-search-dropdown" id="navSearchDropdown"></div>
     </form>
@@ -145,11 +141,6 @@ if (user) {
     <div class="topnav-auth" id="authNav">
       <a href="/app/login" class="topnav-auth-link">Log in</a>
     </div>
-    <a href="/app/settings" class="topnav-gear" id="settingsGear" aria-label="Settings" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
-        <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-    </a>
 
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
       <span></span><span></span><span></span>
@@ -457,8 +448,8 @@ if (user) {
     .topnav {
       display: flex;
       align-items: center;
-      gap: 24px;
-      padding: 12px 20px;
+      gap: 20px;
+      padding: 12px 24px;
       border-bottom: 1px solid var(--border);
       background: rgba(14, 14, 24, 0.85);
       position: sticky;
@@ -471,11 +462,18 @@ if (user) {
     .topnav-brand {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
       font-weight: 700;
       font-size: 15px;
       color: var(--text);
       text-decoration: none;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .topnav-brand-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
     }
     .logo-icon {
       width: 26px; height: 26px;
@@ -492,15 +490,25 @@ if (user) {
     }
     .topnav-links {
       display: flex;
-      gap: 20px;
+      gap: 24px;
       flex: 1;
+      overflow-x: auto;
+      overflow-y: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .topnav-links::-webkit-scrollbar {
+      display: none;
     }
     .topnav-links a {
       color: var(--text-secondary);
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
       text-decoration: none;
       transition: color 150ms;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .topnav-links a:hover { color: var(--text); }
     .topnav-links a.active { color: var(--accent-light); }
@@ -508,6 +516,8 @@ if (user) {
       display: flex;
       gap: 12px;
       align-items: center;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     .topnav-auth-link {
       color: var(--text-secondary);
@@ -569,8 +579,9 @@ if (user) {
       display: flex;
       align-items: center;
       position: relative;
-      max-width: 240px;
-      flex-shrink: 1;
+      max-width: 280px;
+      min-width: 180px;
+      flex-shrink: 0;
     }
     .nav-search-icon {
       position: absolute;
