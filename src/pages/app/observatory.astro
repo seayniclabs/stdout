@@ -3,6 +3,8 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { requireLicense } from '../../lib/license';
 import NeuralBackground from '../../components/NeuralBackground.astro';
+import { getDb, schema } from '../../lib/db';
+import { desc, sql } from 'drizzle-orm';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -11,6 +13,108 @@ if (!user) return Astro.redirect('/app/login');
 const licenseCheck = requireLicense();
 if (!licenseCheck.valid) {
   return Astro.redirect('/app/settings?error=' + encodeURIComponent(licenseCheck.message));
+}
+
+const db = getDb();
+
+// Fetch recent Riggins activity from multiple sources
+const recentDiscoveries = await db.select({
+  id: schema.discoveredServices.id,
+  serviceName: schema.discoveredServices.serviceName,
+  port: schema.discoveredServices.port,
+  createdAt: schema.discoveredServices.createdAt,
+  hostId: schema.discoveredServices.hostId
+}).from(schema.discoveredServices)
+  .orderBy(desc(schema.discoveredServices.createdAt))
+  .limit(10);
+
+const recentMonitors = await db.select({
+  id: schema.monitors.id,
+  name: schema.monitors.name,
+  type: schema.monitors.type,
+  target: schema.monitors.target,
+  createdAt: schema.monitors.createdAt,
+  currentStatus: schema.monitors.currentStatus
+}).from(schema.monitors)
+  .orderBy(desc(schema.monitors.createdAt))
+  .limit(10);
+
+const recentIncidents = await db.select({
+  id: schema.incidents.id,
+  title: schema.incidents.title,
+  severity: schema.incidents.severity,
+  status: schema.incidents.status,
+  createdAt: schema.incidents.createdAt,
+  resolvedAt: schema.incidents.resolvedAt
+}).from(schema.incidents)
+  .orderBy(desc(schema.incidents.createdAt))
+  .limit(10);
+
+const recentDiagnoses = await db.select({
+  id: schema.diagnoses.id,
+  incidentId: schema.diagnoses.incidentId,
+  rootCauses: schema.diagnoses.rootCauses,
+  createdAt: schema.diagnoses.createdAt
+}).from(schema.diagnoses)
+  .orderBy(desc(schema.diagnoses.createdAt))
+  .limit(10);
+
+const recentRemediations = await db.select({
+  id: schema.remediationExecutions.id,
+  incidentId: schema.remediationExecutions.incidentId,
+  status: schema.remediationExecutions.status,
+  startedAt: schema.remediationExecutions.startedAt,
+  completedAt: schema.remediationExecutions.completedAt
+}).from(schema.remediationExecutions)
+  .where(sql`${schema.remediationExecutions.status} IN ('success', 'failed', 'running')`)
+  .orderBy(desc(schema.remediationExecutions.startedAt))
+  .limit(10);
+
+// Build unified activity feed
+const activityFeed = [
+  ...recentDiscoveries.map(d => ({
+    type: 'discover',
+    icon: '🔍',
+    text: `Auto-discovered new service: ${d.serviceName || 'unknown'}${d.port ? `:${d.port}` : ''}`,
+    timestamp: d.createdAt
+  })),
+  ...recentMonitors.map(m => ({
+    type: 'monitor',
+    icon: '✅',
+    text: `Auto-created monitor for ${m.name} (${m.type}:${m.target})`,
+    timestamp: m.createdAt
+  })),
+  ...recentDiagnoses.map(d => ({
+    type: 'diagnose',
+    icon: '🩺',
+    text: `Diagnosed incident: ${d.rootCauses.substring(0, 80)}...`,
+    timestamp: d.createdAt
+  })),
+  ...recentRemediations.filter(r => r.status === 'success').map(r => ({
+    type: 'remediate',
+    icon: '🔄',
+    text: `Auto-remediated incident ${r.incidentId}`,
+    timestamp: r.completedAt || r.startedAt
+  })),
+  ...recentIncidents.filter(i => i.resolvedAt).map(i => ({
+    type: 'learn',
+    icon: '📝',
+    text: `Generated runbook from resolved incident: ${i.title}`,
+    timestamp: i.resolvedAt!
+  }))
+].sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
+  .slice(0, 15);
+
+function timeAgo(date: Date | null | undefined): string {
+  if (!date) return 'Never';
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return `${seconds} seconds ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
 // TODO: Fetch Observatory data from Sentinel API
@@ -127,6 +231,33 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
               <div class="pending-empty">No fixes awaiting approval.</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Riggins Activity Feed (Live) -->
+      <div class="obs-card obs-activity">
+        <div class="obs-card-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <h3>Riggins Activity (Live)</h3>
+          <div class="activity-status">
+            <span class="pulse-dot"></span>
+            <span>Scanning infrastructure</span>
+          </div>
+        </div>
+        <div class="activity-feed">
+          {activityFeed.length === 0 ? (
+            <div class="pending-empty">No activity yet. Riggins is starting up...</div>
+          ) : (
+            activityFeed.map(activity => (
+              <div class={`activity-item ${activity.type}`}>
+                <div class="activity-icon">{activity.icon}</div>
+                <div class="activity-content">
+                  <div class="activity-text">{activity.text}</div>
+                  <div class="activity-time">{timeAgo(activity.timestamp)}</div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -597,6 +728,78 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
     .obs-link:hover {
       color: #22C55E;
       text-decoration: underline;
+    }
+
+    /* Activity Feed */
+    .obs-activity {
+      grid-column: 1 / -1;
+    }
+    .activity-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #94A3B8;
+      margin-left: auto;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #22C55E;
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(34, 197, 94, 0);
+      }
+    }
+    .activity-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      border-left: 3px solid transparent;
+    }
+    .activity-item.discover {
+      border-left-color: #3b82f6;
+    }
+    .activity-item.monitor {
+      border-left-color: #22C55E;
+    }
+    .activity-item.diagnose {
+      border-left-color: #f59e0b;
+    }
+    .activity-item.remediate {
+      border-left-color: #8b5cf6;
+    }
+    .activity-item.learn {
+      border-left-color: #06b6d4;
+    }
+    .activity-icon {
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .activity-content {
+      flex: 1;
+    }
+    .activity-text {
+      font-size: 14px;
+      color: #F8FAFC;
+      margin-bottom: 4px;
+    }
+    .activity-time {
+      font-size: 12px;
+      color: #64748B;
     }
 
     /* AI Agents */
