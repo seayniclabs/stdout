@@ -46,6 +46,26 @@ If already generic, return content unchanged with flagged=false.`;
  *                'community' (aggressive scrub + LLM generalization + accuracy/appropriateness gate).
  * @param userId  resolves the local Ollama / BYOK model for the LLM layer (community only).
  */
+/**
+ * Human-readable description of an unknown thrown value.
+ *
+ * `String(error)` on a plain object yields "[object Object]", which is truthy,
+ * so a trailing `|| 'unknown'` fallback never fires and the string leaks into
+ * user-facing flagReason text.
+ */
+function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message || 'unknown';
+  if (typeof error === 'string') return error || 'unknown';
+  if (error && typeof error === 'object') {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === 'string' && message) return message;
+    // Deliberately 'unknown' rather than a JSON dump: flagReason is
+    // user-facing and an arbitrary object may carry sensitive payload data.
+    return 'unknown';
+  }
+  return String(error ?? '') || 'unknown';
+}
+
 export async function sanitizeDocument(opts: {
   title: string;
   content: string;
@@ -108,7 +128,7 @@ export async function sanitizeDocument(opts: {
       sanitizedContent: scrubbed.content,
       replacements: baseReplacements,
       flagged: true,
-      flagReason: `Sanitization screening failed (${error instanceof Error ? error.message : String(error) || 'unknown'}) — needs human review.`,
+      flagReason: `Sanitization screening failed (${describeError(error)}) — needs human review.`,
       foundSecrets: scrubbed.foundSecrets,
       llmScreened: false,
     };
