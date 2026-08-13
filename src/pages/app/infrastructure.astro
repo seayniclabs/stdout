@@ -25,8 +25,8 @@ const hostsWithServices = hosts.map(host => ({
 const stacks = db.select().from(schema.stacks)
   .orderBy(desc(schema.stacks.updatedAt)).all();
 
-// Satellites data
-const satellites = db.select().from(schema.satellites).all() || [];
+// Satellites data (table doesn't exist yet)
+const satellites = [];
 
 // Discovery stats
 const totalEntities = hosts.length + allServices.length;
