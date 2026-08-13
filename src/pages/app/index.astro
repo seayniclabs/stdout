@@ -280,6 +280,21 @@ function timeAgo(date: Date) {
     {/* Dashboard content — always shown for users with data, hidden for brand-new users */}
     {!isNewUser && (
       <Fragment>
+        <!-- Autonomous Status Banner -->
+        {totalMonitors > 0 && (
+          <div class="auto-status-banner">
+            <div class="auto-status-icon">🤖</div>
+            <div class="auto-status-content">
+              <h2>Riggins is monitoring your infrastructure</h2>
+              <div class="auto-status-meta">
+                <span class="highlight">{totalMonitors} services auto-discovered</span> •
+                <span class="highlight">{servicesUp}/{totalMonitors} monitors active</span> •
+                <span>Continuous scanning enabled</span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <!-- Status overview cards -->
         <div class="overview-cards">
           <div class="ov-card">
@@ -331,13 +346,13 @@ function timeAgo(date: Date) {
             <!-- Service Health -->
             <div class="dash-section">
               <div class="dash-section-header">
-                <h2>Service Health</h2>
-                <a href="/app/hud" class="dash-link">View HUD &rarr;</a>
+                <h2>Live Monitors</h2>
+                {totalMonitors > 12 && <a href="/app" class="dash-link">View All ({totalMonitors}) &rarr;</a>}
               </div>
               {totalMonitors === 0 ? (
                 <div class="mini-empty">
-                  <p>No monitors configured yet.</p>
-                  <a href="/app/hud" class="btn btn-ghost btn-sm">Set up HUD</a>
+                  <p>🔍 Riggins is scanning your infrastructure...</p>
+                  <p class="mini-empty-sub">Auto-discovered services will appear here when found.</p>
                 </div>
               ) : (
                 <div class="svc-grid">
@@ -546,6 +561,25 @@ function timeAgo(date: Date) {
 
 <style>
   .dash { max-width: 1100px; margin: 0 auto; }
+
+  /* Autonomous Status Banner */
+  .auto-status-banner {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    margin-bottom: 24px;
+  }
+  .auto-status-icon { font-size: 32px; flex-shrink: 0; }
+  .auto-status-content h2 { font-size: 18px; margin: 0 0 4px 0; }
+  .auto-status-meta { font-size: 14px; color: var(--text-secondary); }
+  .auto-status-meta .highlight { color: var(--low); font-weight: 600; }
+
+  /* Mini empty state updates */
+  .mini-empty-sub { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
 
   /* Import banner */
   .import-banner { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius); margin-bottom: 16px; text-decoration: none; color: var(--accent-light); font-size: 13px; transition: background 150ms; }
