@@ -95,10 +95,26 @@ if (Astro.request.method === 'POST') {
 
         // Create session and log in
         const sessionId = await createSession(userId);
-        Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
+
+        // Set cookie manually in redirect response to ensure it's included
+        const cookieOpts = sessionCookieOptions(30 * 24 * 60 * 60);
+        const cookieValue = [
+          `${SESSION_COOKIE}=${sessionId}`,
+          `Path=${cookieOpts.path}`,
+          `Max-Age=${cookieOpts.maxAge}`,
+          cookieOpts.httpOnly ? 'HttpOnly' : '',
+          cookieOpts.secure ? 'Secure' : '',
+          cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
+        ].filter(Boolean).join('; ');
 
         // Redirect to next step
-        return Astro.redirect('/setup/environment');
+        return new Response(null, {
+          status: 302,
+          headers: {
+            'Location': '/setup/environment',
+            'Set-Cookie': cookieValue
+          }
+        });
       }
     }
   }

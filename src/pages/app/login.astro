@@ -58,8 +58,25 @@ if (Astro.request.method === 'POST') {
             resetLoginAttempts(email);
             const sessionId = await createSession(localUser.id);
             logAudit('login', { userId: localUser.id, ip: getClientIp(Astro.request), details: { method: 'local' } });
-            Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
-            return Astro.redirect(destination);
+
+            // Set cookie manually in redirect response to ensure it's included
+            const cookieOpts = sessionCookieOptions(30 * 24 * 60 * 60);
+            const cookieValue = [
+              `${SESSION_COOKIE}=${sessionId}`,
+              `Path=${cookieOpts.path}`,
+              `Max-Age=${cookieOpts.maxAge}`,
+              cookieOpts.httpOnly ? 'HttpOnly' : '',
+              cookieOpts.secure ? 'Secure' : '',
+              cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
+            ].filter(Boolean).join('; ');
+
+            return new Response(null, {
+              status: 302,
+              headers: {
+                'Location': destination,
+                'Set-Cookie': cookieValue
+              }
+            });
           }
         }
       }
