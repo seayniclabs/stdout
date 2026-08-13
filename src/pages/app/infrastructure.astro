@@ -3,283 +3,552 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import { getDb, schema } from '../../lib/db';
 import { discoveredHosts, discoveredServices } from '../../lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const db = getDb();
 
-// Fetch all discovered hosts with their services
-const hosts = await db
-  .select()
-  .from(discoveredHosts)
+// Discovery data
+const hosts = db.select().from(discoveredHosts)
   .where(eq(discoveredHosts.userId, session.id))
-  .orderBy(discoveredHosts.ipAddress);
+  .orderBy(discoveredHosts.ipAddress).all();
 
-const allServices = await db
-  .select()
-  .from(discoveredServices)
-  .where(eq(discoveredServices.userId, session.id));
+const allServices = db.select().from(discoveredServices)
+  .where(eq(discoveredServices.userId, session.id)).all();
 
-// Group services by host
 const hostsWithServices = hosts.map(host => ({
   ...host,
   services: allServices.filter(s => s.hostId === host.id),
 }));
+
+// Stacks data
+const stacks = db.select().from(schema.stacks)
+  .orderBy(desc(schema.stacks.updatedAt)).all();
+
+// Satellites data
+const satellites = db.select().from(schema.satellites).all() || [];
+
+// Discovery stats
+const totalEntities = hosts.length + allServices.length;
+const lastDiscoveryRun = hosts.length > 0
+  ? Math.max(...hosts.map(h => h.lastSeen.getTime()))
+  : null;
+
+function timeAgo(timestamp: number) {
+  const mins = Math.floor((Date.now() - timestamp) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 ---
 
-<Layout title="Infrastructure">
+<Layout title="Infrastructure — StdOut">
   <div class="page-container">
-    <div class="page-header">
-      <div>
-        <h1>Infrastructure</h1>
-        <p class="page-subtitle">Discovered hosts and services on your network</p>
-      </div>
-      <div class="header-actions">
-        <a href="/app/network-map" class="btn-ghost">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"/></svg>
-          Network Topology
-        </a>
-        <a href="/app/network-discovery" class="btn-secondary">
-          Scan Network
-        </a>
+    <!-- Autonomous Status Banner -->
+    <div class="auto-banner">
+      <div class="auto-icon">🤖</div>
+      <div class="auto-content">
+        <h2>Riggins is continuously monitoring your infrastructure</h2>
+        <div class="auto-meta">
+          <span class="highlight">{totalEntities} entities discovered</span> •
+          <span class="highlight">{stacks.length} stacks auto-created</span> •
+          Last scan: {lastDiscoveryRun ? timeAgo(lastDiscoveryRun) : 'Never'}
+        </div>
       </div>
     </div>
 
-    {hostsWithServices.length === 0 ? (
-      <div class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <h3>No Infrastructure Discovered</h3>
-        <p>Run a network scan to discover hosts and services.</p>
-        <a href="/app/network-discovery" class="btn-primary">
-          Start Network Scan
-        </a>
-      </div>
-    ) : (
-      <div class="hosts-grid">
-        {hostsWithServices.map((host) => (
-          <div class="host-card">
-            <div class="host-header">
-              <div class="host-info">
-                <span class="host-ip">{host.ipAddress}</span>
-                {host.hostname && (
-                  <span class="host-hostname">{host.hostname}</span>
-                )}
-              </div>
-              <span class="host-status">
-                {new Date(host.lastSeen).toLocaleDateString()}
-              </span>
-            </div>
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="discovery">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Discovery
+      </button>
+      <button class="tab" data-tab="stacks">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        Stacks ({stacks.length})
+      </button>
+      <button class="tab" data-tab="satellites">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
+        </svg>
+        Satellites ({satellites.length})
+      </button>
+    </div>
 
-            {host.services.length > 0 && (
-              <div class="services-list">
-                <h4>Services ({host.services.length})</h4>
-                <div class="services-grid">
-                  {host.services.map((service) => (
-                    <div class="service-item">
-                      <span class="service-port">{service.port}/{service.protocol}</span>
-                      <span class="service-name">
-                        {service.serviceName || 'Unknown'}
-                      </span>
-                      {service.serviceVersion && (
-                        <span class="service-version">{service.serviceVersion}</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div class="host-actions">
-              <button class="btn-text" data-host-id={host.id}>
-                Create Stack
-              </button>
-            </div>
+    <!-- Discovery Tab -->
+    <div class="tab-content active" data-content="discovery">
+      {hosts.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <h3>Riggins is scanning your infrastructure...</h3>
+          <p>Auto-discovery runs continuously. Check back in a few minutes.</p>
+          <div class="auto-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+            </svg>
+            Autonomous scanning enabled
           </div>
-        ))}
-      </div>
-    )}
+        </div>
+      ) : (
+        <div class="hosts-grid">
+          {hostsWithServices.map(host => (
+            <div class="host-card">
+              <div class="host-header">
+                <div class="host-info">
+                  <span class="host-ip">{host.ipAddress}</span>
+                  {host.hostname && <span class="host-hostname">{host.hostname}</span>}
+                </div>
+                <span class="auto-badge">Auto-found</span>
+              </div>
+              {host.services.length > 0 && (
+                <div class="services-list">
+                  <h4>Services ({host.services.length})</h4>
+                  <div class="services-grid">
+                    {host.services.map(service => (
+                      <div class="service-item">
+                        <span class="service-port">{service.port}/{service.protocol}</span>
+                        <span class="service-name">{service.serviceName || 'Unknown'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Stacks Tab -->
+    <div class="tab-content" data-content="stacks">
+      {stacks.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">📦</div>
+          <h3>Stacks auto-create from discovered entities</h3>
+          <p>Once Riggins discovers services, it automatically creates stack manifests (JSON definitions).</p>
+        </div>
+      ) : (
+        <div class="stacks-grid">
+          {stacks.map(stack => (
+            <div class="stack-card">
+              <div class="stack-header">
+                <h3>{stack.name}</h3>
+                <span class="auto-badge">Auto-created</span>
+              </div>
+              <p class="stack-description">{stack.description || 'No description'}</p>
+              <div class="stack-footer">
+                <span class="stack-count">{stack.serviceCount || 0} services</span>
+                <a href={`/app/stacks/${stack.id}`} class="btn-text">View JSON →</a>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+
+    <!-- Satellites Tab -->
+    <div class="tab-content" data-content="satellites">
+      {satellites.length === 0 ? (
+        <div class="empty-state">
+          <div class="empty-icon">🛰️</div>
+          <h3>No remote Riggins agents yet</h3>
+          <p>Satellites are remote Riggins instances that monitor infrastructure outside your main network.</p>
+          <button class="btn-primary">Deploy Satellite Agent</button>
+        </div>
+      ) : (
+        <div class="satellites-grid">
+          {satellites.map(sat => (
+            <div class="satellite-card">
+              <div class="satellite-header">
+                <h3>{sat.name}</h3>
+                <span class={`status-badge ${sat.status}`}>{sat.status}</span>
+              </div>
+              <div class="satellite-meta">
+                <span>Location: {sat.location || 'Unknown'}</span>
+                <span>Last seen: {timeAgo(sat.lastSeen?.getTime() || Date.now())}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   </div>
 </Layout>
 
 <style>
   .page-container {
-    padding: 2rem;
     max-width: 1400px;
     margin: 0 auto;
+    padding: 24px;
   }
 
-  .page-header {
+  /* Autonomous Banner */
+  .auto-banner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 2rem;
+    align-items: center;
+    gap: 16px;
   }
 
-  .page-header h1 {
-    margin: 0 0 0.5rem 0;
+  .auto-icon {
+    font-size: 32px;
+    flex-shrink: 0;
   }
 
-  .page-subtitle {
-    color: var(--color-text-muted);
-    margin: 0;
+  .auto-content h2 {
+    font-size: 18px;
+    margin: 0 0 4px 0;
   }
 
-  .header-actions {
+  .auto-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .auto-meta .highlight {
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  /* Tabs */
+  .tabs {
     display: flex;
-    gap: 1rem;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
   }
 
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  /* Tab Content */
+  .tab-content {
+    display: none;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  /* Empty State */
   .empty-state {
     text-align: center;
-    padding: 4rem 2rem;
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
+    padding: 64px 32px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
   }
 
   .empty-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
+    font-size: 64px;
+    margin-bottom: 16px;
   }
 
   .empty-state h3 {
-    margin: 0 0 0.5rem 0;
+    font-size: 20px;
+    margin-bottom: 8px;
   }
 
   .empty-state p {
-    color: var(--color-text-muted);
-    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
   }
 
+  .auto-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 107, 53, 0.15);
+    color: var(--primary);
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Host Cards */
   .hosts-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
+    gap: 16px;
   }
 
   .host-card {
-    background: rgba(15, 23, 42, 0.6);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 24px;
-    padding: 1.5rem;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
     transition: all 0.2s ease;
   }
+
   .host-card:hover {
-    border-color: rgba(255, 255, 255, 0.2);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.4);
     transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   .host-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 1rem;
-  }
-
-  .host-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
+    margin-bottom: 16px;
   }
 
   .host-ip {
     font-family: var(--font-mono);
-    font-size: 1.125rem;
+    font-size: 16px;
     font-weight: 600;
-    color: var(--color-text);
   }
 
   .host-hostname {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-  }
-
-  .host-status {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    background: var(--color-bg-subtle);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
   }
 
   .services-list h4 {
-    margin: 0 0 0.75rem 0;
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
+    font-size: 12px;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.5px;
+    color: var(--text-tertiary);
+    margin-bottom: 12px;
   }
 
   .services-grid {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
   }
 
   .service-item {
     display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem;
-    background: var(--color-bg-subtle);
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg-tertiary);
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: 13px;
   }
 
   .service-port {
     font-family: var(--font-mono);
+    color: var(--primary);
     font-weight: 600;
-    color: var(--color-primary);
-    min-width: 60px;
   }
 
-  .service-name {
-    flex: 1;
-    color: var(--color-text);
+  /* Stacks Grid */
+  .stacks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
   }
 
-  .service-version {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
+  .stack-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
   }
 
-  .host-actions {
-    padding-top: 0.5rem;
-    border-top: 1px solid var(--color-border);
+  .stack-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+
+  .stack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .stack-header h3 {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .stack-description {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 16px;
+  }
+
+  .stack-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .stack-count {
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+
+  /* Satellites Grid */
+  .satellites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .satellite-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+
+  .satellite-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .satellite-header h3 {
+    font-size: 16px;
+    margin: 0;
+  }
+
+  .status-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .status-badge.online {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--success);
+  }
+
+  .status-badge.offline {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--error);
+  }
+
+  .satellite-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  /* Buttons */
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
   }
 
   .btn-text {
     background: none;
     border: none;
-    color: var(--color-primary);
-    font-size: 0.875rem;
+    color: var(--primary);
+    font-size: 13px;
     font-weight: 500;
     cursor: pointer;
-    padding: 0;
+    text-decoration: none;
   }
 
   .btn-text:hover {
     text-decoration: underline;
   }
+
+  @media (max-width: 768px) {
+    .tabs {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+      white-space: nowrap;
+    }
+
+    .hosts-grid,
+    .stacks-grid,
+    .satellites-grid {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
 
 <script>
-  document.querySelectorAll('[data-host-id]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const hostId = (btn as HTMLElement).dataset.hostId;
-      // TODO: Implement create stack from host
-      alert(`Create stack from host ${hostId} (not yet implemented)`);
+  // Tab switching
+  const tabs = document.querySelectorAll('.tab');
+  const tabContents = document.querySelectorAll('.tab-content');
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetTab = (tab as HTMLElement).dataset.tab;
+
+      tabs.forEach(t => t.classList.remove('active'));
+      tabContents.forEach(c => c.classList.remove('active'));
+
+      tab.classList.add('active');
+      document.querySelector(`[data-content="${targetTab}"]`)?.classList.add('active');
     });
   });
 </script>
