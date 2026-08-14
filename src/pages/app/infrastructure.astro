@@ -1,6 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
+import DiscoverySummary from '../../components/DiscoverySummary.astro';
 import { getDb, schema } from '../../lib/db';
 import { discoveredHosts, discoveredServices } from '../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';

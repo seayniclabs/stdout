@@ -49,6 +49,9 @@ export class DiscoveryWorker {
       const netSaved = await this.saveNetworkHosts(networkHosts);
       console.log(`[discovery] ✅ Saved ${netSaved} network host discoveries to database`);
       
+      // Log summary
+      this.logDiscoverySummary(saved, netSaved);
+      
       // Log what was discovered
       for (let index = 0; index < containers.length; index++) {
       const container = containers[index];
@@ -114,9 +117,17 @@ export class DiscoveryWorker {
         let containerIp = "127.0.0.1";  // fallback
         try {
           const { stdout: ipResult } = await execAsync(`docker inspect ${container.id} --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"`);
-          containerIp = ipResult.trim() || "127.0.0.1";
+          const fetchedIp = ipResult.trim();
+          if (fetchedIp && fetchedIp !== "invalid IP") {
+            containerIp = fetchedIp;
+          } else {
+            // Use container ID as unique identifier when no network IP
+            containerIp = `container-${container.id}`;
+          }
         } catch (e) {
-          console.log(`[discovery]     ⚠ Could not get IP for ${container.name}, using fallback`);
+          // Use container ID as unique identifier on error
+          containerIp = `container-${container.id}`;
+          console.log(`[discovery]     ⚠ Could not get IP for ${container.name}, using container ID`);
         }
         
         const stmt = rawDb.prepare(`
@@ -236,6 +247,20 @@ export class DiscoveryWorker {
     return saved;
   }
 
+  /**
+   * Log discovery summary
+   */
+  private logDiscoverySummary(containerCount: number, networkCount: number): void {
+    console.log("");
+    console.log("╔══════════════════════════════════════════════════════════╗");
+    console.log("║          🎯 RIGGINS DISCOVERY COMPLETE                  ║");
+    console.log("╠══════════════════════════════════════════════════════════╣");
+    console.log(`║  Docker Containers: ${String(containerCount).padEnd(36)}║`);
+    console.log(`║  Network Hosts:     ${String(networkCount).padEnd(36)}║`);
+    console.log(`║  Total Discovered:  ${String(containerCount + networkCount).padEnd(36)}║`);
+    console.log("╚══════════════════════════════════════════════════════════╝");
+    console.log("");
+  }
 }
 
 export const discoveryWorker = new DiscoveryWorker();

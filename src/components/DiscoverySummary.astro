@@ -1,0 +1,128 @@
+---
+import { getDb } from "../lib/db";
+
+const db = getDb();
+
+// Get discovery stats
+const stats = {
+  totalHosts: 0,
+  containers: 0,
+  networkHosts: 0,
+  lastScan: null as Date | null,
+};
+
+try {
+  const rawDb = (db as any).$client;
+  
+  // Total hosts
+  const totalRow = rawDb.prepare("SELECT COUNT(*) as count FROM discovered_hosts").get();
+  stats.totalHosts = totalRow?.count || 0;
+  
+  // Containers
+  const containersRow = rawDb.prepare("SELECT COUNT(*) as count FROM discovered_hosts WHERE device_type = ?").get("docker-container");
+  stats.containers = containersRow?.count || 0;
+  
+  // Network hosts
+  const networkRow = rawDb.prepare("SELECT COUNT(*) as count FROM discovered_hosts WHERE device_type = ?").get("network-host");
+  stats.networkHosts = networkRow?.count || 0;
+  
+  // Last scan time
+  const lastScanRow = rawDb.prepare("SELECT MAX(discovered_at) as last_scan FROM discovered_hosts").get();
+  if (lastScanRow?.last_scan) {
+    stats.lastScan = new Date(lastScanRow.last_scan);
+  }
+} catch (error) {
+  console.error("[DiscoverySummary] Error fetching stats:", error);
+}
+
+const formatTime = (date: Date | null) => {
+  if (!date) return "never";
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  
+  if (diff < 60000) return "just now";
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+};
+---
+
+<div class="discovery-summary">
+  <div class="summary-header">
+    <h3>🔍 Infrastructure Discovery</h3>
+    <span class="last-scan">Last scan: {formatTime(stats.lastScan)}</span>
+  </div>
+  
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-value">{stats.totalHosts}</div>
+      <div class="stat-label">Total Entities</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-value">{stats.containers}</div>
+      <div class="stat-label">Docker Containers</div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-value">{stats.networkHosts}</div>
+      <div class="stat-label">Network Hosts</div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .discovery-summary {
+    background: var(--card-bg, #1a1a1a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+  }
+  
+  .summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  
+  .summary-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color, #fff);
+  }
+  
+  .last-scan {
+    font-size: 0.875rem;
+    color: var(--text-muted, #888);
+  }
+  
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+  }
+  
+  .stat-card {
+    background: var(--bg-secondary, #0a0a0a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--accent, #F97316);
+    margin-bottom: 0.5rem;
+  }
+  
+  .stat-label {
+    font-size: 0.875rem;
+    color: var(--text-muted, #888);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+</style>
