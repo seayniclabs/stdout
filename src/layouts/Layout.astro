@@ -82,6 +82,9 @@ if (user) {
   <style>@import '../styles/fonts.css';</style>
   <meta name="csrf-token" content={csrfToken} />
 
+  <!-- D3.js for topology diagram -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+
   <!-- Branding color override via JS -->
   {accentOverride && (
     <script is:inline define:vars={{ brandColor: accentOverride }}>

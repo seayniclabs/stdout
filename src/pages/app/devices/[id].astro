@@ -1,0 +1,185 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getDb } from '../../../lib/db';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getDb();
+const rawDb = (db as any).$client;
+
+const device = rawDb.prepare(`
+  SELECT
+    h.*,
+    s.name as stack_name, s.id as stack_id
+  FROM discovered_hosts h
+  LEFT JOIN stacks s ON h.stack_id = s.id
+  WHERE h.id = ?
+`).get(id);
+
+if (!device) return Astro.redirect('/app/infrastructure');
+
+const openPorts = device.open_ports ? JSON.parse(device.open_ports) : [];
+const services = device.services ? JSON.parse(device.services) : [];
+
+// Get monitors for this device
+const monitors = rawDb.prepare(`
+  SELECT id, name, type, current_status, last_check_at
+  FROM monitors
+  WHERE target = ? OR target LIKE ?
+  ORDER BY name
+`).all(device.ip_address, `%${device.ip_address}%`);
+---
+
+<Layout title={`${device.hostname || device.ip_address} — StdOut`}>
+  <div class="device-detail">
+    <div class="page-header">
+      <div>
+        <div class="device-title">
+          <h1>{device.hostname || device.ip_address}</h1>
+          <span class={`device-type-badge ${device.device_type}`}>
+            {device.device_classification || device.device_type}
+          </span>
+        </div>
+        <div class="device-meta">
+          {device.stack_name && (
+            <a href={`/app/stacks/${device.stack_id}`} class="stack-link">
+              {device.stack_name}
+            </a>
+          )}
+          <span class="discovered-time">
+            Discovered {new Date(device.first_seen * 1000).toLocaleDateString()}
+          </span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost">Ping</button>
+        <button class="btn btn-primary">Create Monitor</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="info-card">
+        <h3>Network Information</h3>
+        <dl>
+          <dt>IP Address</dt>
+          <dd class="mono">{device.ip_address}</dd>
+
+          {device.mac_address && (
+            <>
+              <dt>MAC Address</dt>
+              <dd class="mono">{device.mac_address}</dd>
+            </>
+          )}
+
+          {device.vendor && (
+            <>
+              <dt>Vendor</dt>
+              <dd>{device.vendor}</dd>
+            </>
+          )}
+
+          {device.hostname && (
+            <>
+              <dt>Hostname</dt>
+              <dd class="mono">{device.hostname}</dd>
+            </>
+          )}
+        </dl>
+      </div>
+
+      {openPorts.length > 0 && (
+        <div class="info-card">
+          <h3>Open Ports ({openPorts.length})</h3>
+          <div class="ports-grid">
+            {openPorts.map(port => (
+              <div class="port-badge">{port}</div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {services.length > 0 && (
+        <div class="info-card">
+          <h3>Detected Services ({services.length})</h3>
+          <div class="services-list">
+            {services.map(svc => (
+              <div class="service-item">
+                <span class="service-port mono">{svc.port}</span>
+                <span class="service-name">{svc.service}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {monitors.length > 0 && (
+        <div class="info-card full-width">
+          <h3>Active Monitors ({monitors.length})</h3>
+          <div class="monitors-list">
+            {monitors.map(m => (
+              <a href={`/app/monitors/${m.id}`} class="monitor-row">
+                <div class={`status-dot ${m.current_status}`}></div>
+                <span class="monitor-name">{m.name}</span>
+                <span class="monitor-type mono">{m.type}</span>
+                <span class={`status-badge ${m.current_status}`}>{m.current_status}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .device-detail { max-width: 1200px; margin: 0 auto; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .device-title { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .device-title h1 { font-size: 24px; margin: 0; }
+  .device-type-badge { font-size: 11px; padding: 4px 10px; border-radius: 12px; background: rgba(100,116,139,0.2); color: var(--text-secondary); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; }
+  .device-meta { display: flex; gap: 16px; align-items: center; }
+  .stack-link { font-size: 13px; color: var(--accent); text-decoration: none; }
+  .stack-link:hover { text-decoration: underline; }
+  .discovered-time { font-size: 12px; color: var(--text-muted); }
+  .header-actions { display: flex; gap: 8px; }
+
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+  .info-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .info-card.full-width { grid-column: 1 / -1; }
+  .info-card h3 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 16px; }
+
+  dl { display: grid; grid-template-columns: 140px 1fr; gap: 12px; }
+  dt { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  dd { font-size: 13px; color: var(--text); margin: 0; }
+
+  .ports-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 8px; }
+  .port-badge { font-family: var(--font-mono); font-size: 13px; padding: 8px 12px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); border-radius: 6px; text-align: center; color: #60a5fa; }
+
+  .services-list { display: flex; flex-direction: column; gap: 8px; }
+  .service-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(100,116,139,0.1); border-radius: 4px; }
+  .service-port { font-size: 12px; color: var(--text-secondary); }
+  .service-name { font-size: 13px; color: var(--text); }
+
+  .monitors-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .monitor-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--border); text-decoration: none; color: inherit; transition: background 150ms; }
+  .monitor-row:last-child { border-bottom: none; }
+  .monitor-row:hover { background: rgba(100,116,139,0.05); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .status-dot.healthy { background: var(--low); }
+  .status-dot.unknown { background: var(--text-muted); }
+  .monitor-name { font-size: 13px; flex: 1; }
+  .monitor-type { font-size: 11px; color: var(--text-muted); }
+  .status-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); }
+  .status-badge.healthy { background: rgba(34,197,94,0.15); color: var(--low); }
+  .status-badge.unknown { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 150ms; }
+  .btn-primary { background: var(--accent-btn); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .mono { font-family: var(--font-mono); }
+</style>

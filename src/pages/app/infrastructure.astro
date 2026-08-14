@@ -2,7 +2,7 @@
 export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import DiscoverySummary from '../../components/DiscoverySummary.astro';
-import TopologyMap from '../../components/TopologyMap.astro';
+import TopologyDiagram from '../../components/TopologyDiagram.astro';
 import { getDb, schema } from '../../lib/db';
 import { discoveredHosts, discoveredServices } from '../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -80,6 +80,12 @@ function timeAgo(timestamp: number) {
           <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
         </svg>
         Satellites ({satellites.length})
+      </button>
+      <button class="tab" data-tab="topology">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+        </svg>
+        Topology Map
       </button>
     </div>
 
@@ -179,6 +185,11 @@ function timeAgo(timestamp: number) {
           ))}
         </div>
       )}
+    </div>
+
+    <!-- Topology Map Tab -->
+    <div class="tab-content" data-content="topology">
+      <TopologyDiagram />
     </div>
   </div>
 </Layout>
