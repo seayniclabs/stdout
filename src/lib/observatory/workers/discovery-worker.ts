@@ -61,7 +61,8 @@ export class DiscoveryWorker {
       const { stdout } = await execAsync("docker ps --format \"{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}|{{.Ports}}\"");
       const containers: DiscoveredContainer[] = [];
 
-      for (const line of stdout.trim().split("\\n").filter((l) => l)) {
+      for (const line of stdout.trim().split("
+").filter((l) => l)) {
         const [id, name, image, state, portsStr] = line.split("|");
         const ports: Array<{ internal: number; external?: number }> = [];
 
