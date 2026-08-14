@@ -19,17 +19,27 @@ const hasUpdate = updateInfo?.hasUpdate ?? false;
 const licenseNotice = getLicenseNotice();
 
 const db = getDb();
+const rawDb = (db as any).$client;
 
-// --- Monitors data ---
+// --- Monitors data with hostnames ---
 const allMonitors = db.select().from(schema.monitors)
   .orderBy(desc(schema.monitors.createdAt))
   .all();
+
+// Get discovered hosts for hostname lookup
+const discoveredHosts = db.select().from(schema.discoveredHosts).all();
+const hostnameMap = new Map(discoveredHosts.map(h => [h.ipAddress, h.hostname]));
 
 const monitorsData = allMonitors.map(m => {
   // TEMP DISABLED: causing page timeout
   // const uptime = getUptimeStats(m.id, 30);
   // const sparkline = getRecentChecks(m.id, 20);
-  return { ...m, uptimePercent: 0, sparkline: [] };
+
+  // Extract IP from target and lookup hostname
+  const hostname = hostnameMap.get(m.target) || null;
+  const displayName = hostname || m.name;
+
+  return { ...m, hostname, displayName, uptimePercent: 0, sparkline: [] };
 });
 
 const servicesUp = monitorsData.filter(m => m.currentStatus === 'healthy').length;
@@ -372,7 +382,7 @@ function timeAgo(date: Date) {
                       <a href={`/app/hud/${m.id}`} class="svc-card">
                         <div class="svc-card-top">
                           <span class={`svc-dot ${statusClass}`}></span>
-                          <span class="svc-card-name">{m.name}</span>
+                          <span class="svc-card-name">{m.displayName}</span>
                         </div>
                         <div class="svc-card-spark">
                           {linePath && (
