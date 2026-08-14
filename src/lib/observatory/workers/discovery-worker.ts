@@ -99,6 +99,12 @@ export class DiscoveryWorker {
       if (firstUser) {
         const monitorsSaved = await saveMonitors(allMonitors, firstUser.id);
         console.log(`[discovery] ✅ Created ${monitorsSaved} automatic monitors`);
+        
+        // Create auto-stacks
+        console.log("[discovery] Organizing into stacks...");
+        const stacks = await createAutoStacks(allDevices);
+        const stacksSaved = await saveStacks(stacks, firstUser.id);
+        console.log(`[discovery] ✅ Created ${stacksSaved} automatic stacks`);
       }
       
       // Log summary
