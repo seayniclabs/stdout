@@ -40,6 +40,15 @@ export class DiscoveryWorker {
       const saved = await this.saveDiscoveries(containers);
       console.log(`[discovery] ✅ Saved ${saved} discoveries to database`);
       
+      // Discover network hosts
+      console.log("[discovery] Starting network scan...");
+      const networkHosts = await this.discoverNetworkHosts();
+      console.log(`[discovery] Found ${networkHosts.length} network hosts`);
+      
+      // Save network discoveries
+      const netSaved = await this.saveNetworkHosts(networkHosts);
+      console.log(`[discovery] ✅ Saved ${netSaved} network host discoveries to database`);
+      
       // Log what was discovered
       for (let index = 0; index < containers.length; index++) {
       const container = containers[index];
@@ -141,7 +150,7 @@ export class DiscoveryWorker {
   private async discoverNetworkHosts(): Promise<Array<{ip: string; hostname?: string; ports: number[]}>> {
     try {
       // Scan local network for live hosts
-      const { stdout } = await execAsync("nmap -sn 192.168.68.0/24 -oG - | grep Host:");
+      const { stdout } = await execAsync(`nmap -sn 192.168.68.0/24 -oG - | grep Host:`);
       const hosts: Array<{ip: string; hostname?: string; ports: number[]}> = [];
 
       for (const line of stdout.trim().split("\n").filter((l) => l)) {
