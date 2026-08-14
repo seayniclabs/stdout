@@ -179,6 +179,11 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
           console.log('[Observatory Init] User detected - starting deferred discovery workers...');
           await startAutonomousWorkers(userCheck.id);
           
+          // Start health worker
+          console.log('[Observatory Init] Starting health monitoring worker...');
+          const { healthWorker } = await import('./workers/health-worker');
+          healthWorker.start();
+          
           // Also trigger initial scan
           const totalHostsRow = tenantDb.get(sql`SELECT COUNT(*) as n FROM discovered_hosts`) as { n: number } | undefined;
           const totalHosts = totalHostsRow?.n ?? 0;

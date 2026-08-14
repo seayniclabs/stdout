@@ -1,0 +1,305 @@
+---
+import { getDb } from "../lib/db";
+
+const db = getDb();
+const rawDb = (db as any).$client;
+
+// Get all discovered hosts with their stack info
+const hosts = rawDb.prepare(`
+  SELECT 
+    h.id, h.ip_address, h.hostname, h.device_type, h.device_classification,
+    h.open_ports, h.services, h.mac_address, h.vendor,
+    s.name as stack_name, s.id as stack_id
+  FROM discovered_hosts h
+  LEFT JOIN stacks s ON h.stack_id = s.id
+  ORDER BY h.ip_address
+`).all();
+
+// Build nodes and links
+const nodes = hosts.map((h: any) => ({
+  id: h.id,
+  ip: h.ip_address,
+  hostname: h.hostname || h.ip_address,
+  type: h.device_classification || h.device_type || "unknown",
+  stack: h.stack_name,
+  openPorts: h.open_ports ? JSON.parse(h.open_ports) : [],
+  services: h.services ? JSON.parse(h.services) : [],
+  mac: h.mac_address,
+  vendor: h.vendor,
+}));
+
+// Build links (connections between devices)
+// For now, simple heuristic: same stack = connected, gateway connects to everything
+const links: Array<{ source: string; target: string }> = [];
+const gateway = nodes.find(n => n.ip.endsWith(".1"));
+
+if (gateway) {
+  // Gateway connects to all other nodes
+  for (const node of nodes) {
+    if (node.id !== gateway.id) {
+      links.push({ source: gateway.id, target: node.id });
+    }
+  }
+}
+
+const topologyData = { nodes, links };
+---
+
+<div class="topology-container">
+  <div class="topology-controls">
+    <button id="topology-zoom-in" class="btn-icon">+</button>
+    <button id="topology-zoom-out" class="btn-icon">−</button>
+    <button id="topology-reset" class="btn-icon">⟲</button>
+    <select id="topology-filter">
+      <option value="all">All Devices</option>
+      <option value="docker">Docker Only</option>
+      <option value="network">Network Only</option>
+    </select>
+  </div>
+  
+  <svg id="topology-map" width="100%" height="600"></svg>
+  
+  <div id="topology-tooltip" class="tooltip"></div>
+</div>
+
+<style>
+  .topology-container {
+    position: relative;
+    background: var(--bg-secondary, #0a0a0a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+  
+  .topology-controls {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 10;
+  }
+  
+  .btn-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--card-bg, #1a1a1a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 4px;
+    color: var(--text-color, #fff);
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .btn-icon:hover {
+    background: var(--accent, #F97316);
+    border-color: var(--accent, #F97316);
+  }
+  
+  #topology-filter {
+    background: var(--card-bg, #1a1a1a);
+    border: 1px solid var(--border-color, #333);
+    color: var(--text-color, #fff);
+    padding: 0.5rem;
+    border-radius: 4px;
+  }
+  
+  #topology-map {
+    display: block;
+  }
+  
+  .tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    max-width: 300px;
+    z-index: 100;
+  }
+  
+  .tooltip.visible {
+    opacity: 1;
+  }
+</style>
+
+<script define:vars={{ topologyData }}>
+  // Import D3.js from CDN (in production, bundle this)
+  import("https://cdn.jsdelivr.net/npm/d3@7/+esm").then(d3Module => {
+    const d3 = d3Module.default || d3Module;
+    
+    const { nodes, links } = topologyData;
+    
+    const svg = d3.select("#topology-map");
+    const width = svg.node().getBoundingClientRect().width;
+    const height = 600;
+    
+    // Create zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+    
+    svg.call(zoom);
+    
+    // Main group for pan/zoom
+    const g = svg.append("g");
+    
+    // Color scale by device type
+    const colorScale = {
+      "router": "#F97316",
+      "gateway": "#F97316",
+      "server": "#3B82F6",
+      "nas": "#8B5CF6",
+      "docker-container": "#10B981",
+      "docker-host": "#10B981",
+      "workstation": "#6366F1",
+      "iot": "#EC4899",
+      "web-service": "#14B8A6",
+      "unknown": "#6B7280",
+    };
+    
+    // Create force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(100))
+      .force("charge", d3.forceManyBody().strength(-300))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(30));
+    
+    // Draw links
+    const link = g.append("g")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke", "#555")
+      .attr("stroke-width", 1)
+      .attr("stroke-opacity", 0.6);
+    
+    // Draw nodes
+    const node = g.append("g")
+      .selectAll("circle")
+      .data(nodes)
+      .join("circle")
+      .attr("r", d => d.type === "gateway" || d.type === "router" ? 12 : 8)
+      .attr("fill", d => colorScale[d.type] || colorScale.unknown)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2)
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended))
+      .on("mouseover", showTooltip)
+      .on("mouseout", hideTooltip);
+    
+    // Labels
+    const label = g.append("g")
+      .selectAll("text")
+      .data(nodes)
+      .join("text")
+      .text(d => d.hostname)
+      .attr("font-size", 10)
+      .attr("fill", "#fff")
+      .attr("text-anchor", "middle")
+      .attr("dy", 25);
+    
+    // Update positions on tick
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+      
+      node
+        .attr("cx", d => d.x)
+        .attr("cy", d => d.y);
+      
+      label
+        .attr("x", d => d.x)
+        .attr("y", d => d.y);
+    });
+    
+    // Drag functions
+    function dragstarted(event) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      event.subject.fx = event.subject.x;
+      event.subject.fy = event.subject.y;
+    }
+    
+    function dragged(event) {
+      event.subject.fx = event.x;
+      event.subject.fy = event.y;
+    }
+    
+    function dragended(event) {
+      if (!event.active) simulation.alphaTarget(0);
+      event.subject.fx = null;
+      event.subject.fy = null;
+    }
+    
+    // Tooltip
+    const tooltip = d3.select("#topology-tooltip");
+    
+    function showTooltip(event, d) {
+      const html = `
+        <strong>${d.hostname}</strong><br/>
+        IP: ${d.ip}<br/>
+        Type: ${d.type}<br/>
+        ${d.mac ? `MAC: ${d.mac}<br/>` : ""}
+        ${d.vendor ? `Vendor: ${d.vendor}<br/>` : ""}
+        ${d.openPorts.length > 0 ? `Ports: ${d.openPorts.slice(0, 5).join(", ")}${d.openPorts.length > 5 ? "..." : ""}<br/>` : ""}
+        ${d.stack ? `Stack: ${d.stack}` : ""}
+      `;
+      
+      tooltip
+        .html(html)
+        .classed("visible", true)
+        .style("left", (event.pageX + 10) + "px")
+        .style("top", (event.pageY - 10) + "px");
+    }
+    
+    function hideTooltip() {
+      tooltip.classed("visible", false);
+    }
+    
+    // Controls
+    document.getElementById("topology-zoom-in").addEventListener("click", () => {
+      svg.transition().call(zoom.scaleBy, 1.3);
+    });
+    
+    document.getElementById("topology-zoom-out").addEventListener("click", () => {
+      svg.transition().call(zoom.scaleBy, 0.7);
+    });
+    
+    document.getElementById("topology-reset").addEventListener("click", () => {
+      svg.transition().call(zoom.transform, d3.zoomIdentity);
+    });
+    
+    // Filter
+    document.getElementById("topology-filter").addEventListener("change", (e) => {
+      const filter = e.target.value;
+      
+      node.style("opacity", d => {
+        if (filter === "all") return 1;
+        if (filter === "docker" && d.id.startsWith("docker-")) return 1;
+        if (filter === "network" && !d.id.startsWith("docker-")) return 1;
+        return 0.1;
+      });
+      
+      label.style("opacity", d => {
+        if (filter === "all") return 1;
+        if (filter === "docker" && d.id.startsWith("docker-")) return 1;
+        if (filter === "network" && !d.id.startsWith("docker-")) return 1;
+        return 0.1;
+      });
+    });
+  });
+</script>

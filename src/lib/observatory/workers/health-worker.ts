@@ -4,6 +4,7 @@
  */
 
 import { collectSystemMetrics, collectContainerMetrics, saveSystemMetrics } from "./system-health";
+import { checkSystemHealth, checkMonitorStatus, checkContainerHealth } from "./incident-creator";
 
 class HealthWorker {
   private intervalId: NodeJS.Timeout | null = null;
@@ -67,16 +68,16 @@ class HealthWorker {
       // - Low disk space (> 90%)
       // - Container stopped/unhealthy
       
-      if (systemMetrics.cpu.usage > 90) {
-        console.warn("[Health Worker] ⚠ HIGH CPU USAGE: ", systemMetrics.cpu.usage, "%");
-      }
+      // Auto-create incidents for issues
+      const { getDb } = await import("../../db");
+      const centralDb = getDb("central");
+      const rawCentral = (centralDb as any).$client;
+      const firstUser = rawCentral.prepare("SELECT id FROM users LIMIT 1").get() as { id: string } | undefined;
       
-      if (systemMetrics.memory.usage > 90) {
-        console.warn("[Health Worker] ⚠ HIGH MEMORY USAGE:", systemMetrics.memory.usage, "%");
-      }
-      
-      if (systemMetrics.disk.usage > 90) {
-        console.warn("[Health Worker] ⚠ LOW DISK SPACE:", systemMetrics.disk.usage, "%");
+      if (firstUser) {
+        await checkSystemHealth(systemMetrics, firstUser.id);
+        await checkMonitorStatus(firstUser.id);
+        await checkContainerHealth(firstUser.id);
       }
       
     } catch (error) {
