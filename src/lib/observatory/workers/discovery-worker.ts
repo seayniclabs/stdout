@@ -105,27 +105,34 @@ export class DiscoveryWorker {
       console.log("[discovery] No stacks found, using default");
     }
 
-    for (let index = 0; index < containers.length; index++) {
-      const container = containers[index];
+    for (const container of containers) {
       try {
         const now = Date.now();
+        const id = `docker-${container.id}`;
         
-        // Use correct column names: ip_address, stack_id, created_at, updated_at, last_seen
+        // Get actual container IP from Docker
+        let containerIp = "127.0.0.1";  // fallback
+        try {
+          const { stdout: ipResult } = await execAsync(`docker inspect ${container.id} --format "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}"`);
+          containerIp = ipResult.trim() || "127.0.0.1";
+        } catch (e) {
+          console.log(`[discovery]     ⚠ Could not get IP for ${container.name}, using fallback`);
+        }
+        
         const stmt = rawDb.prepare(`
           INSERT INTO discovered_hosts (
             id, stack_id, ip_address, hostname, device_type, created_at, updated_at, last_seen, discovered_at
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET 
             last_seen = excluded.last_seen,
-            updated_at = excluded.updated_at
+            updated_at = excluded.updated_at,
+            ip_address = excluded.ip_address
         `);
 
-        const id = `docker-${container.id}`;
-        
         stmt.run(
           id,
           stackId,
-          `127.0.0.${index + 1}`,  // Unique IP per container to avoid UNIQUE constraint
+          containerIp,
           container.name,
           "docker-container",
           now,
@@ -135,7 +142,7 @@ export class DiscoveryWorker {
         );
 
         saved++;
-        console.log(`[discovery]     ✓ Saved ${container.name} to database (ID: ${id})`);
+        console.log(`[discovery]     ✓ Saved ${container.name} (${containerIp}) to database (ID: ${id})`);
       } catch (error) {
         console.error(`[discovery]     ✗ Failed to save ${container.name}:`, error.message);
       }
@@ -143,6 +150,7 @@ export class DiscoveryWorker {
 
     return saved;
   }
+
 
   /**
    * Discover network hosts using nmap
