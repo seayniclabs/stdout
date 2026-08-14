@@ -22,6 +22,24 @@ Stop solving the same problem twice. Stop losing knowledge when team members lea
 
 ---
 
+## System Requirements
+
+**Minimum**:
+- Docker 20.10+ & Docker Compose 2.0+
+- 2GB RAM (4GB recommended)
+- 10GB disk space
+- Linux or macOS (Windows WSL2 supported)
+
+**For AI Features (Optional)**:
+- **Option 1 (Local)**: Ollama + 4GB RAM for models ([install guide](#ai-configuration))
+- **Option 2 (Cloud)**: Anthropic or OpenAI API key
+
+**Network Access**:
+- Docker socket (`/var/run/docker.sock`) for infrastructure discovery
+- Port 8112 for web UI
+
+---
+
 ## Quick Start (5 Minutes)
 
 ### Option A: Docker Compose (Recommended - includes Windlass)
@@ -246,6 +264,60 @@ Observatory adds AI-powered proactive monitoring with Prometheus, Loki, and Temp
 - Prefer external monitoring (Datadog, New Relic, etc.)
 
 See Observatory section below for setup instructions.
+
+---
+
+## AI Configuration
+
+StdOut uses a **bring-your-own-AI** model for privacy and flexibility. Choose the option that fits your needs:
+
+### Option 1: Local Ollama (Recommended)
+
+**Pros**: Private, no API costs, runs locally  
+**Cons**: Requires RAM for models (4GB+), disk space (10GB+)
+
+**Setup**:
+```bash
+# Install Ollama
+curl -fsSL https://ollama.com/install.sh | sh
+
+# Pull models (lightweight for frequent checks, larger for deep analysis)
+ollama pull llama3.2:3b-instruct-q4_K_M    # 2GB - Watcher agent
+ollama pull qwen2.5:14b-instruct-q4_K_M   # 9GB - Analyst agent
+
+# StdOut auto-detects Ollama on http://172.17.0.1:11434
+# No configuration needed!
+```
+
+### Option 2: Cloud API (Anthropic, OpenAI)
+
+**Pros**: No local resources needed, latest models  
+**Cons**: Pay per diagnosis, data leaves your network
+
+**Setup**:
+```bash
+# Copy .env.example to .env
+cp .env.example .env
+
+# Edit .env and add your API key:
+ANTHROPIC_API_KEY=sk-ant-...
+# OR
+OPENAI_API_KEY=sk-...
+
+# Comment out OLLAMA_URL to disable local LLM
+```
+
+**Get API keys**:
+- Anthropic: https://console.anthropic.com/
+- OpenAI: https://platform.openai.com/api-keys
+
+### Option 3: Hybrid (Best of Both)
+
+Use local Ollama for routine tasks, cloud API for complex analysis:
+```bash
+# Keep both OLLAMA_URL and ANTHROPIC_API_KEY in .env
+# StdOut auto-routes based on complexity
+```
 
 ---
 
