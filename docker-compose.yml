@@ -1,8 +1,7 @@
 services:
   # StdOut Incident Companion
   stdout:
-    build: .
-    image: charlieseay/stdout:latest  # Pre-built image (pull if available, build if not)
+    image: charlieseay/stdout:latest
     container_name: stdout
     restart: unless-stopped
     ports:
@@ -29,9 +28,11 @@ services:
       timeout: 5s
       retries: 3
       start_period: 20s
-    # depends_on:
-    #   windlass:
-    #     condition: service_healthy
+    # Note: depends_on disabled to allow StdOut to start even if Windlass is slow
+    # Windlass is a companion service but not required for core functionality
+    depends_on:
+      windlass:
+        condition: service_started
     networks:
       - stdout-net
 
