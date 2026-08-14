@@ -41,7 +41,8 @@ export class DiscoveryWorker {
       console.log(`[discovery] ✅ Saved ${saved} discoveries to database`);
       
       // Log what was discovered
-      for (const container of containers) {
+      for (let index = 0; index < containers.length; index++) {
+      const container = containers[index];
         console.log(`[discovery]   - ${container.name} (${container.image})`);
         for (const port of container.ports) {
           if (port.external) {
@@ -95,7 +96,8 @@ export class DiscoveryWorker {
       console.log("[discovery] No stacks found, using default");
     }
 
-    for (const container of containers) {
+    for (let index = 0; index < containers.length; index++) {
+      const container = containers[index];
       try {
         const now = Date.now();
         
@@ -114,7 +116,7 @@ export class DiscoveryWorker {
         stmt.run(
           id,
           stackId,
-          "127.0.0.1",
+          `127.0.0.${index + 1}`,  // Unique IP per container to avoid UNIQUE constraint
           container.name,
           "docker-container",
           now,
