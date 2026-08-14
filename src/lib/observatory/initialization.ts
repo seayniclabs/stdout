@@ -170,7 +170,23 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
         }
       }
     } else {
-      log.push('No users registered yet');
+      log.push('No users registered yet — discovery will start on first login');
+      
+      // Schedule a deferred initialization check for when user is created
+      setTimeout(async () => {
+        const userCheck = centralDb.get(sql`SELECT id FROM users LIMIT 1`) as { id: string } | undefined;
+        if (userCheck) {
+          console.log('[Observatory Init] User detected - starting deferred discovery workers...');
+          await startAutonomousWorkers(userCheck.id);
+          
+          // Also trigger initial scan
+          const totalHostsRow = tenantDb.get(sql`SELECT COUNT(*) as n FROM discovered_hosts`) as { n: number } | undefined;
+          const totalHosts = totalHostsRow?.n ?? 0;
+          if (totalHosts === 0) {
+            triggerInitialNetworkScan(userCheck.id);
+          }
+        }
+      }, 60000); // Check after 60 seconds
     }
     log.push('');
   } catch (error: unknown) {
