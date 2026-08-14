@@ -1,7 +1,7 @@
 services:
   # StdOut Incident Companion
   stdout:
-    build: .
+    image: charlieseay/stdout:latest
     container_name: stdout
     restart: unless-stopped
     ports:

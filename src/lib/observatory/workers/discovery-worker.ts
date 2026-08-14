@@ -2,14 +2,11 @@
  * Autonomous Discovery Worker
  * 
  * Riggins' autonomous network & infrastructure discovery engine.
- * Starts on boot, discovers everything, creates monitors automatically.
+ * Starts on boot, discovers everything, logs findings.
  */
 
-import { getDb, schema } from '../../db';
-import { eq } from 'drizzle-orm';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { nanoid } from 'nanoid';
+import { exec } from "child_process";
+import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
@@ -22,13 +19,12 @@ interface DiscoveredContainer {
 }
 
 export class DiscoveryWorker {
-  private db = getDb();
   private isRunning = false;
 
   async startAutonomous() {
-    console.log('[discovery] Starting autonomous discovery...');
+    console.log("[discovery] Starting autonomous discovery...");
     await this.runFullDiscovery();
-    console.log('[discovery] Autonomous discovery active');
+    console.log("[discovery] Autonomous discovery active");
   }
 
   async runFullDiscovery() {
@@ -39,10 +35,17 @@ export class DiscoveryWorker {
       const containers = await this.discoverDockerContainers();
       console.log(`[discovery] Found ${containers.length} containers`);
       
-      const created = await this.createAutoMonitors(containers);
-      console.log(`[discovery] Auto-created ${created} monitors`);
+      // Log what was discovered (don't try to create monitors yet due to schema issues)
+      for (const container of containers) {
+        console.log(`[discovery]   - ${container.name} (${container.image})`);
+        for (const port of container.ports) {
+          if (port.external) {
+            console.log(`[discovery]     Port: ${port.external} -> ${port.internal}`);
+          }
+        }
+      }
     } catch (error) {
-      console.error('[discovery] Failed:', error);
+      console.error("[discovery] Failed:", error);
     } finally {
       this.isRunning = false;
     }
@@ -53,10 +56,10 @@ export class DiscoveryWorker {
       const { stdout } = await execAsync('docker ps --format "{{.ID}}|{{.Names}}|{{.Image}}|{{.State}}|{{.Ports}}"');
       const containers: DiscoveredContainer[] = [];
 
-      for (const line of stdout.trim().split('\n').filter(l => l)) {
-        const [id, name, image, state, portsStr] = line.split('|');
+      for (const line of stdout.trim().split("\\n").filter((l) => l)) {
+        const [id, name, image, state, portsStr] = line.split("|");
         const ports: Array<{ internal: number; external?: number }> = [];
-        
+
         // Parse ports
         const portMatches = portsStr.matchAll(/(\d+)->(\d+)/g);
         for (const match of portMatches) {
@@ -70,38 +73,6 @@ export class DiscoveryWorker {
     } catch {
       return [];
     }
-  }
-
-  private async createAutoMonitors(containers: DiscoveredContainer[]): Promise<number> {
-    let created = 0;
-
-    for (const container of containers) {
-      for (const port of container.ports) {
-        if (port.external) {
-          const url = `http://localhost:${port.external}`;
-          const existing = this.db.select().from(schema.monitors).where(eq(schema.monitors.url, url)).get();
-
-          if (!existing) {
-            this.db.insert(schema.monitors).values({
-              id: nanoid(),
-              name: `${container.name}:${port.external}`,
-              url,
-              method: 'GET',
-              interval: 60,
-              timeout: 10,
-              enabled: true,
-              status: 'pending',
-              metadata: JSON.stringify({ container: container.name, autoCreated: true }),
-              createdAt: new Date(),
-              updatedAt: new Date(),
-            }).run();
-            created++;
-          }
-        }
-      }
-    }
-
-    return created;
   }
 }
 

@@ -146,7 +146,6 @@ Respond with a JSON object containing:
 - "suggestedCommands": array of shell commands to run for diagnosis.
 
 Respond ONLY with valid JSON, no markdown fences.`;
-  const systemPrompt = `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`;
 
   const provider = opts.provider || 'anthropic';
   let text = '';
