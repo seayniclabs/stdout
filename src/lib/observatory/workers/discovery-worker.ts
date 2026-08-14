@@ -64,6 +64,43 @@ export class DiscoveryWorker {
       const netSaved = await this.saveNetworkHosts(networkHosts);
       console.log(`[discovery] ✅ Saved ${netSaved} network host discoveries to database`);
       
+      // Create monitors for discovered devices
+      console.log("[discovery] Creating automatic monitors...");
+      const allDevices = [
+        ...containers.map((c, i) => ({
+          id: `docker-${c.id}`,
+          ip: "127.0.0.1",
+          hostname: c.name,
+          deviceType: "docker-container",
+          openPorts: c.ports.map(p => p.containerPort),
+          services: []
+        })),
+        ...networkHosts.map(h => ({
+          id: `network-${h.ip.replace(/\\./g, "-")}`,
+          ip: h.ip,
+          hostname: h.hostname,
+          deviceType: (h as any).profile?.deviceType,
+          openPorts: (h as any).profile?.openPorts || [],
+          services: (h as any).profile?.services || []
+        }))
+      ];
+      
+      const allMonitors: MonitorConfig[] = [];
+      for (const device of allDevices) {
+        const deviceMonitors = createMonitorsForDevice(device);
+        allMonitors.push(...deviceMonitors);
+      }
+      
+      // Get first user for monitors
+      const centralDb = (await import("../../db")).getDb("central");
+      const rawCentral = (centralDb as any).$client;
+      const firstUser = rawCentral.prepare("SELECT id FROM users LIMIT 1").get() as { id: string } | undefined;
+      
+      if (firstUser) {
+        const monitorsSaved = await saveMonitors(allMonitors, firstUser.id);
+        console.log(`[discovery] ✅ Created ${monitorsSaved} automatic monitors`);
+      }
+      
       // Log summary
       this.logDiscoverySummary(saved, netSaved);
       
