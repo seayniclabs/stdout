@@ -9,6 +9,8 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { nanoid } from "nanoid";
 import { profileDevices } from "./device-profiler";
+import { createMonitorsForDevice, saveMonitors } from './monitor-creator';
+import { createAutoStacks, saveStacks } from './stack-creator';
 
 const execAsync = promisify(exec);
 
