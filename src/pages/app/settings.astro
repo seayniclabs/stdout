@@ -1785,6 +1785,12 @@ const licenseNotice = getLicenseNotice();
 
   // ── Helpers ──
   function formatDate(iso: string) { try { return new Date(iso).toLocaleString(); } catch { return iso; } }
+  function escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
   function formatSize(bytes: number) {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
