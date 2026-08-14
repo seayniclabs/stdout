@@ -2,7 +2,7 @@
  * Autonomous Discovery Worker
  * 
  * Riggins autonomous network & infrastructure discovery engine.
- * Starts on boot, discovers everything, SAVES TO DATABASE.
+ * Discovers Docker containers and saves them to discovered_hosts.
  */
 
 import { exec } from "child_process";
@@ -38,7 +38,7 @@ export class DiscoveryWorker {
       
       // Save discoveries to database
       const saved = await this.saveDiscoveries(containers);
-      console.log(`[discovery] Saved ${saved} discoveries to database`);
+      console.log(`[discovery] ✅ Saved ${saved} discoveries to database`);
       
       // Log what was discovered
       for (const container of containers) {
@@ -86,39 +86,47 @@ export class DiscoveryWorker {
     const db = getDb();
     const rawDb = (db as any).$client;
 
+    // Get or create default stack
+    let stackId = "default-docker";
+    try {
+      const stack = rawDb.prepare("SELECT id FROM stacks LIMIT 1").get();
+      if (stack) stackId = stack.id;
+    } catch (e) {
+      console.log("[discovery] No stacks found, using default");
+    }
+
     for (const container of containers) {
       try {
-        // Insert into discovered_hosts using raw SQL (bypass Drizzle to avoid schema issues)
+        const now = Date.now();
+        
+        // Use correct column names: ip_address, stack_id, created_at, updated_at, last_seen
         const stmt = rawDb.prepare(`
-          INSERT OR REPLACE INTO discovered_hosts (
-            id, ip, hostname, discovered_at, last_seen, source, metadata, user_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          INSERT INTO discovered_hosts (
+            id, stack_id, ip_address, hostname, device_type, created_at, updated_at, last_seen, discovered_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET 
+            last_seen = excluded.last_seen,
+            updated_at = excluded.updated_at
         `);
 
-        const id = nanoid();
-        const now = Date.now();
-        const metadata = JSON.stringify({
-          containerName: container.name,
-          image: container.image,
-          state: container.state,
-          ports: container.ports,
-          type: "docker-container"
-        });
-
+        const id = `docker-${container.id}`;
+        
         stmt.run(
           id,
-          "127.0.0.1",  // Docker containers are local
+          stackId,
+          "127.0.0.1",
           container.name,
+          "docker-container",
           now,
           now,
-          "riggins-discovery",
-          metadata,
-          null  // Will be set by trigger or application logic
+          now,
+          now
         );
 
         saved++;
+        console.log(`[discovery]     ✓ Saved ${container.name} to database (ID: ${id})`);
       } catch (error) {
-        console.error(`[discovery] Failed to save ${container.name}:`, error);
+        console.error(`[discovery]     ✗ Failed to save ${container.name}:`, error.message);
       }
     }
 
