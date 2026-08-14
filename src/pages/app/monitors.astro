@@ -16,19 +16,18 @@ const statusFilter = Astro.url.searchParams.get('status');
 let monitors = rawDb.prepare(`
   SELECT
     id, name, type, target, current_status,
-    interval_seconds, paused, consecutive_failures,
-    last_checked_at, next_check_at
+    interval_seconds, paused, latency_ms,
+    last_checked_at
   FROM monitors
-  WHERE user_id = ?
   ORDER BY
     CASE current_status
       WHEN 'down' THEN 1
       WHEN 'degraded' THEN 2
       WHEN 'unknown' THEN 3
-      WHEN 'healthy' THEN 4
+      WHEN 'up' THEN 4
     END,
     name
-`).all(user.id);
+`).all();
 
 // Apply status filter if present
 if (statusFilter) {
@@ -36,7 +35,7 @@ if (statusFilter) {
 }
 
 const statusCounts = {
-  healthy: monitors.filter(m => m.current_status === 'healthy').length,
+  up: monitors.filter(m => m.current_status === 'up').length,
   degraded: monitors.filter(m => m.current_status === 'degraded').length,
   down: monitors.filter(m => m.current_status === 'down').length,
   unknown: monitors.filter(m => m.current_status === 'unknown').length,
@@ -50,7 +49,7 @@ const statusCounts = {
       <h1>{statusFilter ? `${statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)} Monitors` : 'All Monitors'} ({monitors.length})</h1>
       <div class="status-summary">
         <a href="/app/monitors" class={`stat ${!statusFilter ? 'active' : ''}`}>All</a>
-        <a href="/app/monitors?status=healthy" class={`stat healthy ${statusFilter === 'healthy' ? 'active' : ''}`}>{statusCounts.healthy} healthy</a>
+        <a href="/app/monitors?status=up" class={`stat up ${statusFilter === 'up' ? 'active' : ''}`}>{statusCounts.up} up</a>
         <a href="/app/monitors?status=degraded" class={`stat degraded ${statusFilter === 'degraded' ? 'active' : ''}`}>{statusCounts.degraded} degraded</a>
         <a href="/app/monitors?status=down" class={`stat down ${statusFilter === 'down' ? 'active' : ''}`}>{statusCounts.down} down</a>
         <a href="/app/monitors?status=unknown" class={`stat unknown ${statusFilter === 'unknown' ? 'active' : ''}`}>{statusCounts.unknown} pending</a>
@@ -96,24 +95,24 @@ const statusCounts = {
   .stat { font-size: 13px; padding: 4px 12px; border-radius: 12px; font-family: var(--font-mono); text-decoration: none; transition: all 150ms; opacity: 0.6; }
   .stat:hover { opacity: 1; }
   .stat.active { opacity: 1; font-weight: 600; }
-  .stat.healthy { background: rgba(34,197,94,0.15); color: var(--low); }
+  .stat.up { background: rgba(34,197,94,0.15); color: var(--low); }
   .stat.unknown { background: rgba(100,116,139,0.15); color: var(--text-muted); }
   .stat.degraded { background: rgba(251,191,36,0.15); color: var(--high); }
   .stat.down { background: rgba(239,68,68,0.15); color: var(--critical); }
   .stat.paused { background: rgba(100,116,139,0.15); color: var(--text-muted); }
-  .stat:not([class*='healthy']):not([class*='degraded']):not([class*='down']):not([class*='unknown']) { background: rgba(100,116,139,0.1); color: var(--text); }
+  .stat:not([class*='up']):not([class*='degraded']):not([class*='down']):not([class*='unknown']) { background: rgba(100,116,139,0.1); color: var(--text); }
 
   .monitors-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
   .monitor-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; transition: all 150ms; text-decoration: none; color: inherit; display: block; }
   .monitor-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
   .monitor-card.down { border-left: 3px solid var(--critical); }
   .monitor-card.degraded { border-left: 3px solid var(--high); }
-  .monitor-card.healthy { border-left: 3px solid var(--low); }
+  .monitor-card.up { border-left: 3px solid var(--low); }
   .monitor-card.paused { opacity: 0.6; }
 
   .monitor-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
   .status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-  .status-dot.healthy { background: var(--low); }
+  .status-dot.up { background: var(--low); }
   .status-dot.degraded { background: var(--high); }
   .status-dot.down { background: var(--critical); }
   .status-dot.unknown { background: var(--text-muted); animation: pulse 2s infinite; }
