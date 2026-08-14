@@ -128,6 +128,12 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
       `) as { n: number } | undefined;
       const totalHosts = totalHostsRow?.n ?? 0;
 
+      // Start autonomous discovery workers (ALWAYS run, not just when totalHosts === 0)
+      startAutonomousWorkers(firstUser.id).catch((error) => {
+        console.error("[Observatory Init] Failed to start workers:", error);
+      });
+      log.push('  ⏳ Autonomous workers started');
+
       // Auto-trigger initial network scan if no hosts discovered yet
       if (totalHosts === 0) {
         log.push('No hosts discovered yet — triggering initial network scan...');
@@ -135,11 +141,6 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
         triggerInitialNetworkScan(firstUser.id).catch((error) => {
           console.error('[Observatory Init] Failed to trigger initial scan:', error);
         });
-        // Start autonomous discovery workers
-        startAutonomousWorkers(firstUser.id).catch((error) => {
-          console.error("[Observatory Init] Failed to start workers:", error);
-        });
-
         log.push('  ⏳ Initial network scan started in background');
       }
 
