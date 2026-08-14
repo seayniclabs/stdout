@@ -1,4 +1,8 @@
 /**
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
  * Incident Auto-Creator
  * Detects issues and automatically creates incidents for Riggins to diagnose
  */
@@ -146,11 +150,10 @@ export async function checkMonitorStatus(userId: string): Promise<void> {
  * Check container health and create incidents for stopped containers
  */
 export async function checkContainerHealth(userId: string): Promise<void> {
-  const { execAsync } = await import("../exec");
   
   try {
     // Get all containers and their status
-    const { stdout } = await execAsync("docker ps -a --format \\"{{.ID}}|{{.Names}}|{{.Status}}\\"");
+    const { stdout } = await execAsync(`docker ps -a --format "{{.ID}}|{{.Names}}|{{.Status}}"`);
     
     for (const line of stdout.trim().split("\\n").filter(l => l)) {
       const [id, name, status] = line.split("|");

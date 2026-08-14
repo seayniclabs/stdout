@@ -3,7 +3,10 @@
  * Gathers: MAC, vendor, open ports, services, OS detection
  */
 
-import { execAsync } from "../exec";
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 export interface DeviceProfile {
   ip: string;
@@ -80,7 +83,7 @@ async function scanPorts(ip: string): Promise<{
   try {
     // Fast scan of common ports with service detection
     const { stdout } = await execAsync(
-      `nmap -sV -T4 --top-ports 100 ${ip} -oG - 2>/dev/null`,
+      `nmap -sV -T4 --top-ports 100 ${ip} 2>/dev/null`,
       { timeout: 30000 }
     );
     
