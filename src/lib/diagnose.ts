@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'fs';
+import { getRigginsSystemPrompt } from './riggins/system-prompt';
 
 export function getAnthropicKey(): string | null {
   const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
@@ -129,7 +130,22 @@ export async function diagnoseIncident(opts: {
       dataSourcesBlock = `\n\nThe user has the following monitoring and security tools available:\n${lines.join('\n')}\nConsider what data from these tools might help diagnose the issue, and suggest relevant queries or commands.`;
     }
   }
+  // Load Riggins's persistent system prompt
+  const rigginsPrompt = getRigginsSystemPrompt();
 
+  // Append task-specific diagnosis instructions
+  const systemPrompt = `${rigginsPrompt}
+
+## CURRENT TASK: Incident Diagnosis
+
+The user runs the following stack:
+${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}
+
+Respond with a JSON object containing:
+- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.
+- "suggestedCommands": array of shell commands to run for diagnosis.
+
+Respond ONLY with valid JSON, no markdown fences.`;
   const systemPrompt = `You are an incident diagnosis assistant. The user runs the following stack:\n${opts.stackContext}${pastResolutionsBlock}${dataSourcesBlock}\n\nRespond with a JSON object containing:\n- "rootCauses": array of strings, ranked by likelihood (most likely first). Each should be 1-2 sentences.\n- "suggestedCommands": array of shell commands to run for diagnosis.\n\nRespond ONLY with valid JSON, no markdown fences.`;
 
   const provider = opts.provider || 'anthropic';
