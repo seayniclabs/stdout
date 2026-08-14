@@ -1,5 +1,6 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
+import { diagnoseWithTools } from '../../../lib/diagnose-with-tools';
 import { diagnoseIncident } from '../../../lib/diagnose';
 import { logAudit, getClientIp } from '../../../lib/audit';
 import { notify } from '../../../lib/notify';

@@ -135,6 +135,11 @@ export async function initializeObservatory(): Promise<ObservatoryInitResult> {
         triggerInitialNetworkScan(firstUser.id).catch((error) => {
           console.error('[Observatory Init] Failed to trigger initial scan:', error);
         });
+        // Start autonomous discovery workers
+        startAutonomousWorkers(firstUser.id).catch((error) => {
+          console.error("[Observatory Init] Failed to start workers:", error);
+        });
+
         log.push('  ⏳ Initial network scan started in background');
       }
 
@@ -406,5 +411,24 @@ async function triggerInitialNetworkScan(userId: string): Promise<void> {
 
   } catch (error) {
     console.error('[Observatory Init] Failed to trigger initial scan:', error);
+  }
+}
+
+/**
+ * Start autonomous discovery workers on Observatory init
+ */
+async function startAutonomousWorkers(userId: string): Promise<void> {
+  try {
+    console.log('[Observatory Init] Starting autonomous workers...');
+
+    // Import and start discovery worker (Docker containers)
+    const { discoveryWorker } = await import('./workers/discovery-worker');
+    discoveryWorker.startAutonomous().catch((error) => {
+      console.error('[Observatory Init] Discovery worker failed:', error);
+    });
+
+    console.log('[Observatory Init] Autonomous workers started');
+  } catch (error) {
+    console.error('[Observatory Init] Failed to start autonomous workers:', error);
   }
 }
