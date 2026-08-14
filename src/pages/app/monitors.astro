@@ -17,7 +17,7 @@ let monitors = rawDb.prepare(`
   SELECT
     id, name, type, target, current_status,
     interval_seconds, paused, consecutive_failures,
-    last_check_at, next_check_at
+    last_checked_at, next_check_at
   FROM monitors
   WHERE user_id = ?
   ORDER BY
