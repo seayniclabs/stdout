@@ -134,6 +134,91 @@ export class DiscoveryWorker {
 
     return saved;
   }
+
+  /**
+   * Discover network hosts using nmap
+   */
+  private async discoverNetworkHosts(): Promise<Array<{ip: string; hostname?: string; ports: number[]}>> {
+    try {
+      // Scan local network for live hosts
+      const { stdout } = await execAsync("nmap -sn 192.168.68.0/24 -oG - | grep Host:");
+      const hosts: Array<{ip: string; hostname?: string; ports: number[]}> = [];
+
+      for (const line of stdout.trim().split("\n").filter((l) => l)) {
+        const ipMatch = line.match(/Host: ([\d.]+)/);
+        const hostnameMatch = line.match(/\((.*?)\)/);
+        
+        if (ipMatch) {
+          hosts.push({
+            ip: ipMatch[1],
+            hostname: hostnameMatch ? hostnameMatch[1] : undefined,
+            ports: []
+          });
+        }
+      }
+
+      return hosts;
+    } catch (error) {
+      console.error("[discovery] Network scan failed:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Save network hosts to database
+   */
+  private async saveNetworkHosts(hosts: Array<{ip: string; hostname?: string; ports: number[]}>): Promise<number> {
+    let saved = 0;
+    const { getDb } = await import("../../db");
+    const db = getDb();
+    const rawDb = (db as any).$client;
+
+    // Get or create default stack
+    let stackId = "default-network";
+    try {
+      const stack = rawDb.prepare("SELECT id FROM stacks LIMIT 1").get();
+      if (stack) stackId = stack.id;
+    } catch (e) {
+      console.log("[discovery] No stacks found, using default");
+    }
+
+    for (const host of hosts) {
+      try {
+        const now = Date.now();
+        const stmt = rawDb.prepare(`
+          INSERT INTO discovered_hosts (
+            id, stack_id, ip_address, hostname, device_type, created_at, updated_at, last_seen, discovered_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET 
+            last_seen = excluded.last_seen,
+            updated_at = excluded.updated_at,
+            hostname = excluded.hostname
+        `);
+
+        const id = `network-${host.ip.replace(/\./g, "-")}`;
+        
+        stmt.run(
+          id,
+          stackId,
+          host.ip,
+          host.hostname || `host-${host.ip}`,
+          "network-host",
+          now,
+          now,
+          now,
+          now
+        );
+
+        saved++;
+        console.log(`[discovery]     ✓ Saved ${host.ip} ${host.hostname ? `(${host.hostname})` : ""} to database`);
+      } catch (error) {
+        console.error(`[discovery]     ✗ Failed to save ${host.ip}:`, error.message);
+      }
+    }
+
+    return saved;
+  }
+
 }
 
 export const discoveryWorker = new DiscoveryWorker();
