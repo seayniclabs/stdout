@@ -145,8 +145,8 @@ export async function saveMonitors(monitors: MonitorConfig[], userId: string): P
       
       const stmt = rawDb.prepare(`
         INSERT INTO monitors (
-          id, name, type, config, interval, enabled, user_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          id, name, type, config, interval_seconds, user_id, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run(
