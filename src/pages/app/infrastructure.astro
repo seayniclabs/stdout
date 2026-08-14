@@ -106,7 +106,7 @@ function timeAgo(timestamp: number) {
       ) : (
         <div class="hosts-grid">
           {hostsWithServices.map(host => (
-            <div class="host-card">
+            <a href={`/app/devices/${host.id}`} class="host-card">
               <div class="host-header">
                 <div class="host-info">
                   <span class="host-ip">{host.ipAddress}</span>
@@ -127,7 +127,7 @@ function timeAgo(timestamp: number) {
                   </div>
                 </div>
               )}
-            </div>
+            </a>
           ))}
         </div>
       )}
@@ -339,11 +339,16 @@ function timeAgo(timestamp: number) {
     border-radius: 12px;
     padding: 20px;
     transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    cursor: pointer;
   }
 
   .host-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    border-color: var(--primary);
   }
 
   .host-header {

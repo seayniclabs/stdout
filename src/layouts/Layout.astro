@@ -80,10 +80,13 @@ if (user) {
   <meta name="apple-mobile-web-app-title" content="StdOut" />
   <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <style>@import '../styles/fonts.css';</style>
-  <meta name="csrf-token" content={csrfToken} />
+  <parameter name="csrf-token" content={csrfToken} />
 
   <!-- D3.js for topology diagram -->
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script
+    src="https://d3js.org/d3.v7.min.js"
+    integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i"
+    crossorigin="anonymous"></script>
 
   <!-- Branding color override via JS -->
   {accentOverride && (

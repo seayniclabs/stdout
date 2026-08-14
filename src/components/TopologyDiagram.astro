@@ -113,19 +113,36 @@ const diagramData = { nodes, links };
   const svg = d3.select('#network-diagram')
     .attr('viewBox', [0, 0, width, height]);
 
-  // Create hierarchical layout
+  // Create hierarchical layout with multi-row support
   const tierHeight = height / 5;
   const tiers = d3.group(nodes, d => d.tier);
 
-  // Position nodes in hierarchical layout
+  // Position nodes in hierarchical layout with multi-row grid for crowded tiers
   nodes.forEach(node => {
     const tier = node.tier;
     const nodesInTier = tiers.get(tier) || [];
     const index = nodesInTier.indexOf(node);
-    const spacing = width / (nodesInTier.length + 1);
 
-    node.x = spacing * (index + 1);
-    node.y = tierHeight * (tier + 1);
+    // For tiers with many nodes (>15), use multi-row grid
+    const maxPerRow = 15;
+    const nodeCount = nodesInTier.length;
+
+    if (nodeCount > maxPerRow) {
+      const rows = Math.ceil(nodeCount / maxPerRow);
+      const row = Math.floor(index / maxPerRow);
+      const col = index % maxPerRow;
+      const nodesInRow = Math.min(maxPerRow, nodeCount - (row * maxPerRow));
+      const spacing = width / (nodesInRow + 1);
+      const rowHeight = tierHeight / (rows + 1);
+
+      node.x = spacing * (col + 1);
+      node.y = tierHeight * tier + rowHeight * (row + 1);
+    } else {
+      const spacing = width / (nodeCount + 1);
+      node.x = spacing * (index + 1);
+      node.y = tierHeight * (tier + 1);
+    }
+
     node.fx = node.x; // Fix positions
     node.fy = node.y;
   });

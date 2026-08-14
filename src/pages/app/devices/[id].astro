@@ -26,7 +26,7 @@ const services = device.services ? JSON.parse(device.services) : [];
 
 // Get monitors for this device
 const monitors = rawDb.prepare(`
-  SELECT id, name, type, current_status, last_check_at
+  SELECT id, name, type, current_status, last_checked_at
   FROM monitors
   WHERE target = ? OR target LIKE ?
   ORDER BY name
