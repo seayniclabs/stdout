@@ -109,8 +109,14 @@ function timeAgo(timestamp: number) {
             <a href={`/app/devices/${host.id}`} class="host-card">
               <div class="host-header">
                 <div class="host-info">
-                  <span class="host-ip">{host.ipAddress}</span>
-                  {host.hostname && <span class="host-hostname">{host.hostname}</span>}
+                  {host.hostname ? (
+                    <>
+                      <span class="host-hostname">{host.hostname}</span>
+                      <span class="host-ip-secondary">{host.ipAddress}</span>
+                    </>
+                  ) : (
+                    <span class="host-ip">{host.ipAddress}</span>
+                  )}
                 </div>
                 <span class="auto-badge">Auto-found</span>
               </div>
@@ -358,6 +364,12 @@ function timeAgo(timestamp: number) {
     margin-bottom: 16px;
   }
 
+  .host-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
   .host-ip {
     font-family: var(--font-mono);
     font-size: 16px;
@@ -365,7 +377,13 @@ function timeAgo(timestamp: number) {
   }
 
   .host-hostname {
-    font-size: 13px;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .host-ip-secondary {
+    font-family: var(--font-mono);
+    font-size: 12px;
     color: var(--text-secondary);
   }
 

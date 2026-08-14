@@ -305,8 +305,8 @@ function timeAgo(date: Date) {
               <div class="ov-value mono">{servicesUp}<span class="ov-of">/{totalMonitors}</span></div>
               <div class="ov-label">Services Up</div>
             </div>
-            {servicesDown > 0 && <div class="ov-alert">{servicesDown} down</div>}
-            {servicesDegraded > 0 && servicesDown === 0 && <div class="ov-warn">{servicesDegraded} degraded</div>}
+            {servicesDown > 0 && <a href="/app/monitors?status=down" class="ov-alert">{servicesDown} down</a>}
+            {servicesDegraded > 0 && servicesDown === 0 && <a href="/app/monitors?status=degraded" class="ov-warn">{servicesDegraded} degraded</a>}
           </div>
 
           <div class="ov-card">
@@ -670,6 +670,12 @@ function timeAgo(date: Date) {
     background: var(--critical-dim);
     padding: 2px 6px;
     border-radius: 3px;
+    text-decoration: none;
+    transition: all 150ms;
+  }
+  .ov-alert:hover {
+    background: var(--critical);
+    color: #fff;
   }
   .ov-warn {
     position: absolute;
@@ -681,7 +687,13 @@ function timeAgo(date: Date) {
     color: var(--high);
     background: var(--high-dim);
     padding: 2px 6px;
+    text-decoration: none;
+    transition: all 150ms;
     border-radius: 3px;
+  }
+  .ov-warn:hover {
+    background: var(--high);
+    color: #000;
   }
 
   /* Dashboard grid */

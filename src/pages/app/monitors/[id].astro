@@ -1,0 +1,189 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import { getDb } from '../../../lib/db';
+
+const user = Astro.locals.user;
+if (!user) return Astro.redirect('/app/login');
+
+const { id } = Astro.params;
+const db = getDb();
+const rawDb = (db as any).$client;
+
+const monitor = rawDb.prepare(`
+  SELECT * FROM monitors WHERE id = ? AND user_id = ?
+`).get(id, user.id);
+
+if (!monitor) return Astro.redirect('/app/monitors');
+
+// Get recent checks (last 50)
+const checks = rawDb.prepare(`
+  SELECT * FROM monitor_checks
+  WHERE monitor_id = ?
+  ORDER BY checked_at DESC
+  LIMIT 50
+`).all(id);
+
+// Get related device if target is an IP/hostname
+const device = rawDb.prepare(`
+  SELECT id, hostname, ip_address, device_type
+  FROM discovered_hosts
+  WHERE ip_address = ? OR hostname = ?
+  LIMIT 1
+`).get(monitor.target, monitor.target);
+
+function timeAgo(date: Date | string) {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const ms = Date.now() - d.getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins === 1 ? '1 minute ago' : `${mins} minutes ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return hrs === 1 ? '1 hour ago' : `${hrs} hours ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? '1 day ago' : `${days} days ago`;
+}
+---
+
+<Layout title={`${monitor.name} — StdOut`}>
+  <div class="monitor-detail">
+    <div class="page-header">
+      <div>
+        <div class="monitor-title">
+          <h1>{monitor.name}</h1>
+          <span class={`status-badge ${monitor.current_status}`}>
+            {monitor.current_status}
+          </span>
+        </div>
+        <div class="monitor-meta">
+          <span class="mono">{monitor.type}</span>
+          <span>•</span>
+          <span class="mono">{monitor.target}</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost">Edit</button>
+        <button class="btn btn-ghost">Pause</button>
+        <button class="btn btn-primary">Run Check Now</button>
+      </div>
+    </div>
+
+    <div class="detail-grid">
+      <div class="info-card">
+        <h3>Monitor Configuration</h3>
+        <dl>
+          <dt>Check Interval</dt>
+          <dd>{monitor.interval_seconds}s</dd>
+
+          <dt>Timeout</dt>
+          <dd>{monitor.timeout_seconds}s</dd>
+
+          <dt>Consecutive Failures</dt>
+          <dd>{monitor.consecutive_failures}</dd>
+
+          {monitor.last_checked_at && (
+            <>
+              <dt>Last Checked</dt>
+              <dd>{timeAgo(monitor.last_checked_at)}</dd>
+            </>
+          )}
+
+          {monitor.last_response_ms && (
+            <>
+              <dt>Last Response Time</dt>
+              <dd class="mono">{monitor.last_response_ms}ms</dd>
+            </>
+          )}
+        </dl>
+      </div>
+
+      {device && (
+        <div class="info-card">
+          <h3>Related Device</h3>
+          <a href={`/app/devices/${device.id}`} class="device-link">
+            <div class="device-link-content">
+              <span class="device-hostname">{device.hostname || device.ip_address}</span>
+              <span class="device-type mono">{device.device_type}</span>
+            </div>
+            <span class="arrow">&rarr;</span>
+          </a>
+        </div>
+      )}
+
+      <div class="info-card full-width">
+        <h3>Recent Checks ({checks.length})</h3>
+        {checks.length === 0 ? (
+          <p class="empty-text">No checks yet</p>
+        ) : (
+          <div class="checks-list">
+            {checks.map(check => (
+              <div class="check-row">
+                <span class={`check-status ${check.status}`}></span>
+                <span class="check-time">{new Date(check.checked_at).toLocaleString()}</span>
+                <span class="check-status-text">{check.status}</span>
+                {check.response_time_ms && (
+                  <span class="check-latency mono">{check.response_time_ms}ms</span>
+                )}
+                {check.status_code && (
+                  <span class="check-code mono">{check.status_code}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .monitor-detail { max-width: 1200px; margin: 0 auto; }
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+  .monitor-title { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .monitor-title h1 { font-size: 24px; margin: 0; }
+  .status-badge { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-family: var(--font-mono); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status-badge.healthy { background: rgba(34,197,94,0.15); color: var(--low); }
+  .status-badge.degraded { background: rgba(251,191,36,0.15); color: var(--high); }
+  .status-badge.down { background: rgba(239,68,68,0.15); color: var(--critical); }
+  .status-badge.unknown { background: rgba(100,116,139,0.15); color: var(--text-muted); }
+  .monitor-meta { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-secondary); }
+  .header-actions { display: flex; gap: 8px; }
+
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 16px; }
+  .info-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .info-card.full-width { grid-column: 1 / -1; }
+  .info-card h3 { font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 16px; }
+
+  dl { display: grid; grid-template-columns: 160px 1fr; gap: 12px; }
+  dt { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  dd { font-size: 13px; color: var(--text); margin: 0; }
+
+  .device-link { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: rgba(100,116,139,0.05); border-radius: var(--radius-sm); text-decoration: none; color: inherit; transition: all 150ms; }
+  .device-link:hover { background: rgba(100,116,139,0.1); }
+  .device-link-content { display: flex; flex-direction: column; gap: 4px; }
+  .device-hostname { font-size: 14px; font-weight: 500; }
+  .device-type { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+  .arrow { color: var(--text-muted); }
+
+  .empty-text { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+  .checks-list { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .check-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .check-row:last-child { border-bottom: none; }
+  .check-status { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .check-status.healthy { background: var(--low); }
+  .check-status.degraded { background: var(--high); }
+  .check-status.down { background: var(--critical); }
+  .check-time { flex: 1; color: var(--text-secondary); }
+  .check-status-text { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); text-transform: uppercase; }
+  .check-status-text { background: rgba(100,116,139,0.1); color: var(--text-muted); }
+  .check-latency { color: var(--text-secondary); }
+  .check-code { color: var(--text-secondary); }
+
+  .btn { padding: 8px 16px; border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all 150ms; }
+  .btn-primary { background: var(--accent-btn); color: #fff; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--text); }
+  .mono { font-family: var(--font-mono); }
+</style>
