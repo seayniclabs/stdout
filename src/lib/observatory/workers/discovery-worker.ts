@@ -42,8 +42,23 @@ export class DiscoveryWorker {
       
       // Discover network hosts
       console.log("[discovery] Starting network scan...");
-      const networkHosts = await this.discoverNetworkHosts();
+      let networkHosts = await this.discoverNetworkHosts();
       console.log(`[discovery] Found ${networkHosts.length} network hosts`);
+      
+      // Profile discovered hosts (rich discovery)
+      console.log("[discovery] Profiling devices (MAC/ports/services)...");
+      const profiles = await profileDevices(
+        networkHosts.map(h => ({ ip: h.ip, hostname: h.hostname })),
+        3  // Profile 3 at a time to avoid overwhelming nmap
+      );
+      
+      // Attach profiles to hosts
+      networkHosts = networkHosts.map((host, i) => ({
+        ...host,
+        profile: profiles[i]
+      }));
+      
+      console.log("[discovery] Device profiling complete");
       
       // Save network discoveries
       const netSaved = await this.saveNetworkHosts(networkHosts);
@@ -225,12 +240,39 @@ export class DiscoveryWorker {
 
         const id = `network-${host.ip.replace(/\./g, "-")}`;
         
-        stmt.run(
+        // Save with profile data if available
+        const profile = (host as any).profile as DeviceProfile | undefined;
+        
+        const baseStmt = rawDb.prepare(`
+          INSERT INTO discovered_hosts (
+            id, stack_id, ip_address, hostname, mac_address, vendor,
+            device_type, device_classification, open_ports, services, os_guess,
+            created_at, updated_at, last_seen, discovered_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET 
+            last_seen = excluded.last_seen,
+            updated_at = excluded.updated_at,
+            hostname = excluded.hostname,
+            mac_address = excluded.mac_address,
+            vendor = excluded.vendor,
+            device_classification = excluded.device_classification,
+            open_ports = excluded.open_ports,
+            services = excluded.services,
+            os_guess = excluded.os_guess
+        `);
+
+        baseStmt.run(
           id,
           stackId,
           host.ip,
-          host.hostname || `host-${host.ip}`,
+          host.hostname || profile?.hostname || `host-${host.ip}`,
+          profile?.mac || null,
+          profile?.vendor || null,
           "network-host",
+          profile?.deviceType || null,
+          profile?.openPorts ? JSON.stringify(profile.openPorts) : null,
+          profile?.services ? JSON.stringify(profile.services) : null,
+          profile?.osGuess || null,
           now,
           now,
           now,
