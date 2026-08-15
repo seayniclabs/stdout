@@ -225,13 +225,6 @@
       "when": 1786651200000,
       "tag": "0031_add_scanner_schedule_user_id",
       "breakpoints": true
-    },
-    {
-      "idx": 32,
-      "version": "7",
-      "when": 1786737600000,
-      "tag": "0032_add_windlass_config_user_id",
-      "breakpoints": true
     }
   ]
 }
