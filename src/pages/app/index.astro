@@ -42,7 +42,7 @@ const monitorsData = allMonitors.map(m => {
   return { ...m, hostname, displayName, uptimePercent: 0, sparkline: [] };
 });
 
-const servicesUp = monitorsData.filter(m => m.currentStatus === 'healthy').length;
+const servicesUp = monitorsData.filter(m => m.currentStatus === 'up').length;
 const servicesDown = monitorsData.filter(m => m.currentStatus === 'down').length;
 const servicesDegraded = monitorsData.filter(m => m.currentStatus === 'degraded').length;
 const totalMonitors = allMonitors.length;
@@ -379,7 +379,7 @@ function timeAgo(date: Date) {
                     const linePath = pts.length > 1 ? `M${pts.join(' L')}` : '';
                     const sparkColor = m.currentStatus === 'degraded' ? 'yellow' : m.currentStatus === 'down' ? 'red' : 'green';
                     return (
-                      <a href={`/app/hud/${m.id}`} class="svc-card">
+                      <a href={`/app/monitors/${m.id}`} class="svc-card">
                         <div class="svc-card-top">
                           <span class={`svc-dot ${statusClass}`}></span>
                           <span class="svc-card-name">{m.displayName}</span>

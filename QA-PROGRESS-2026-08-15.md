@@ -6,7 +6,7 @@
 
 ---
 
-## ✅ COMPLETED (7/21 issues)
+## ✅ COMPLETED (9/21 issues)
 
 ### P0 — Critical (2/4)
 1. **✅ System Metrics Panel Fixed** (00:19 CT)
@@ -22,7 +22,7 @@
    - Shows real data when monitors exist
    - Commit: c244856
 
-### P1 — High Impact (3/10)
+### P1 — High Impact (5/10)
 3. **✅ Observatory Log Scrolling** (00:22 CT)
    - Added max-height and overflow-y: auto for scrolling
    - Shows empty state with helpful message
@@ -47,6 +47,16 @@
    - Critical fix - page now loads
    - Commit: 32892c7
 
+7. **✅ Dashboard Status Enum Fixed** (00:40 CT)
+   - Fixed servicesUp calculation using wrong enum value ('healthy' → 'up')
+   - Ensures dashboard metrics calculate correctly when monitors exist
+   - Commit: pending
+
+8. **✅ Monitor Card Links Fixed** (00:40 CT)
+   - Fixed monitor cards to navigate to /app/monitors/{id} instead of /app/hud/{id}
+   - Ensures clicking monitors from dashboard goes to correct detail page
+   - Commit: pending
+
 ### P2 — Polish (1/1)
 7. **✅ View HUD Button Removed** (00:09 CT)
    - Removed redundant "View HUD" button from Quick Actions
@@ -66,19 +76,16 @@
 
 ---
 
-## 📊 REMAINING WORK (14 issues)
+## 📊 REMAINING WORK (12 issues)
 
 ### P0 — Critical (1 remaining)
 - Docker Container Hosts show container instead of physical host (requires schema migration)
 
-### P1 — High Impact (7 remaining)
+### P1 — High Impact (5 remaining)
 - Auto-incident creation for degraded monitors
-- Monitor hostnames on dashboard (not just IPs)
-- Observatory log scrolling unclear
-- Agent Runs empty
 - Stack "View JSON" → hierarchical view
 - Topology diagram Mermaid redesign
-- (5 more - see QA-ISSUES-2026-08-14.md)
+- (2 more P1 items - see QA-ISSUES-2026-08-14.md)
 
 ### P2 — Polish (0 remaining)
 - ✅ All P2 issues complete
