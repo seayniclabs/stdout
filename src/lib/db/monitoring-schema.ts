@@ -16,6 +16,7 @@ export const discoveredHosts = sqliteTable('discovered_hosts', {
   hostname: text('hostname'),
   macAddress: text('mac_address'),
   vendor: text('vendor'),
+  parentHostId: text('parent_host_id'), // For Docker containers: ID of the physical host running this container
   lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

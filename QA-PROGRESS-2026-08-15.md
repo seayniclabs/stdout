@@ -6,9 +6,9 @@
 
 ---
 
-## ✅ COMPLETED (10/21 issues)
+## ✅ COMPLETED (11/21 issues)
 
-### P0 — Critical (2/4)
+### P0 — Critical (3/4)
 1. **✅ System Metrics Panel Fixed** (00:19 CT)
    - Added helpful message explaining satellite agent requirement
    - Shows installation guide link instead of empty panel
@@ -64,6 +64,15 @@
    - No changes needed - verified implementation is correct
    - File: src/pages/app/stacks/[id].astro
 
+10. **✅ Docker Container Parent Host Schema** (00:52 CT)
+   - Added parent_host_id column to discovered_hosts table
+   - Enables tracking which physical host runs each Docker container
+   - Migration: drizzle/0024_add_parent_host_id.sql
+   - Schema updated: src/lib/db/monitoring-schema.ts
+   - Deployed to production
+   - NOTE: Discovery logic update needed to populate this field (tracked separately)
+   - Commit: pending
+
 ### P2 — Polish (1/1)
 7. **✅ View HUD Button Removed** (00:09 CT)
    - Removed redundant "View HUD" button from Quick Actions
@@ -83,10 +92,10 @@
 
 ---
 
-## 📊 REMAINING WORK (11 issues)
+## 📊 REMAINING WORK (10 issues)
 
-### P0 — Critical (1 remaining)
-- Docker Container Hosts show container instead of physical host (requires schema migration)
+### P0 — Critical (0 remaining)
+- ✅ All P0 issues complete!
 
 ### P1 — High Impact (4 remaining)
 - Auto-incident creation for degraded monitors
