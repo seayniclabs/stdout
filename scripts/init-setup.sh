@@ -21,7 +21,7 @@ if [ ! -f "$DB_PATH" ]; then
 else
   echo "[init] Database exists at $DB_PATH"
 
-  # Check if we need to create an admin user from env vars
+  # Check if we need to create/update an admin user from env vars
   USER_COUNT=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users" 2>/dev/null || echo "0")
 
   # Zero-touch (unattended) install path: ADMIN_EMAIL + ADMIN_PASSWORD provided.
@@ -31,9 +31,21 @@ else
     UNATTENDED=1
   fi
 
-  if [ "$USER_COUNT" = "0" ] && [ "$UNATTENDED" = "1" ]; then
-    echo "[init] No users found - creating admin user from environment variables..."
-    node /app/scripts/create-admin-from-env.js
+  if [ "$UNATTENDED" = "1" ]; then
+    if [ "$USER_COUNT" = "0" ]; then
+      echo "[init] No users found - creating admin user from environment variables..."
+      node /app/scripts/create-admin-from-env.js
+    else
+      # Users exist - check if admin user with ADMIN_EMAIL exists
+      ADMIN_EXISTS=$(sqlite3 "$DB_PATH" "SELECT COUNT(*) FROM users WHERE email = '$ADMIN_EMAIL'" 2>/dev/null || echo "0")
+      if [ "$ADMIN_EXISTS" = "1" ]; then
+        echo "[init] Admin user exists - updating password from environment variables..."
+        node /app/scripts/update-admin-password.js
+      else
+        echo "[init] Creating admin user from environment variables..."
+        node /app/scripts/create-admin-from-env.js
+      fi
+    fi
   fi
 
   # In unattended mode, mark setup complete automatically (idempotent).

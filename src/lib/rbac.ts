@@ -4,14 +4,14 @@ export type Role = 'superadmin' | 'admin' | 'operator' | 'viewer';
 
 export type RBACAction =
   | 'read' | 'create' | 'edit' | 'delete'
-  | 'manage_monitors' | 'manage_settings'
+  | 'manage_monitors' | 'manage_settings' | 'manage_tokens'
   | 'configure_observatory' | 'execute_playbook';
 
 const ROLE_PERMISSIONS: Record<Role, RBACAction[]> = {
   superadmin: ['read', 'create', 'edit', 'delete', 'manage_monitors',
-               'manage_settings', 'configure_observatory', 'execute_playbook'],
+               'manage_settings', 'manage_tokens', 'configure_observatory', 'execute_playbook'],
   admin: ['read', 'create', 'edit', 'delete', 'manage_monitors',
-          'manage_settings', 'configure_observatory', 'execute_playbook'],
+          'manage_settings', 'manage_tokens', 'configure_observatory', 'execute_playbook'],
   operator: ['read', 'create', 'edit', 'manage_monitors', 'execute_playbook'],
   viewer: ['read']
 };

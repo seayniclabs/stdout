@@ -5,7 +5,8 @@ export const stacks = sqliteTable('stacks', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   previousDescription: text('previous_description'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  userId: text('user_id'), // Owner of this stack for multi-user support
+  createdAt: integer('created_at', { mode: 'timestamp'}).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 });
 
@@ -71,6 +72,13 @@ export const diagnoses = sqliteTable('diagnoses', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 });
 
+export const incidentEmbeddings = sqliteTable('incident_embeddings', {
+  id: text('id').primaryKey(),
+  incidentId: text('incident_id').notNull(),
+  embeddingVector: text('embedding_vector').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+});
+
 export const monitors = sqliteTable('monitors', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -83,6 +91,8 @@ export const monitors = sqliteTable('monitors', {
   expectedStatus: integer('expected_status').default(200),
   retries: integer('retries').notNull().default(3),
   stackId: text('stack_id'),
+  userId: text('user_id'), // Owner of this monitor for multi-user support
+  config: text('config'), // JSON config for monitor-specific settings
   paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
   maintenance: integer('maintenance', { mode: 'boolean' }).notNull().default(false),
   currentStatus: text('current_status', {
