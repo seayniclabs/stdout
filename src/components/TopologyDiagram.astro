@@ -7,8 +7,7 @@ const rawDb = (db as any).$client;
 // Get all discovered hosts with stack info
 const hosts = rawDb.prepare(`
   SELECT
-    h.id, h.ip_address, h.hostname, h.device_type, h.device_classification,
-    h.open_ports, h.services, h.mac_address, h.vendor,
+    h.id, h.ip_address, h.hostname, h.mac_address, h.vendor,
     s.name as stack_name, s.id as stack_id
   FROM discovered_hosts h
   LEFT JOIN stacks s ON h.stack_id = s.id
@@ -18,21 +17,12 @@ const hosts = rawDb.prepare(`
 // Classify devices into tiers for hierarchical layout
 function getTier(host: any): number {
   const ip = host.ip_address;
-  const type = host.device_type;
-  const classification = host.device_classification;
 
-  // Tier 0: Gateways and routers ONLY (top)
+  // Tier 0: Gateways (typically .1 addresses)
   if (ip.endsWith('.1')) return 0;
-  if (classification === 'router') return 0;
 
-  // Tier 1: Switches
-  if (classification === 'switch' || type === 'switch') return 1;
-
-  // Tier 3: Docker containers (bottom)
-  if (type === 'docker-container') return 3;
-
-  // Tier 2: Network hosts, servers, and other devices (middle)
-  return 2;
+  // Tier 1: All other discovered hosts
+  return 1;
 }
 
 // Build hierarchical nodes
@@ -40,11 +30,9 @@ const nodes = hosts.map((h: any) => ({
   id: h.id,
   ip: h.ip_address,
   hostname: h.hostname || h.ip_address,
-  type: h.device_classification || h.device_type || "unknown",
+  type: "host", // All discovered hosts are generic hosts for now
   stack: h.stack_name,
   tier: getTier(h),
-  openPorts: h.open_ports ? JSON.parse(h.open_ports) : [],
-  services: h.services ? JSON.parse(h.services) : [],
   mac: h.mac_address,
   vendor: h.vendor,
 }));
