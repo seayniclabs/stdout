@@ -35,7 +35,7 @@ try {
   }
 
   // Create windlass_config record
-  const now = new Date().toISOString();
+  const now = Date.now();
   db.prepare(`
     INSERT INTO windlass_config (id, user_id, endpoint_url, sync_interval_seconds, enabled, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?, ?)

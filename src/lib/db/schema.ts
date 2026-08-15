@@ -61,6 +61,7 @@ export const emailVerifications = sqliteTable('email_verifications', {
 
 export const apiTokens = sqliteTable('api_tokens', {
   id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   tokenHash: text('token_hash').notNull(),
   lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
@@ -414,6 +415,7 @@ export const satelliteReports = sqliteTable('satellite_reports', {
 
 export const scannerSchedule = sqliteTable('scanner_schedule', {
   id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   interval: text('interval').notNull().default('daily'),
   hour: integer('hour').notNull().default(3),
   minute: integer('minute').notNull().default(0),
@@ -444,6 +446,7 @@ export const windlassEvents = sqliteTable('windlass_events', {
 
 export const windlassConfig = sqliteTable('windlass_config', {
   id: text('id').primaryKey(),
+  userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   endpointUrl: text('endpoint_url').notNull(), // e.g. http://localhost:8116
   syncIntervalSeconds: integer('sync_interval_seconds').notNull().default(60),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),

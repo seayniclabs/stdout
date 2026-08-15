@@ -44,12 +44,12 @@ try {
   // 2. Trigger initial network scan if no hosts discovered
   const hostCount = db.prepare('SELECT COUNT(*) as count FROM discovered_hosts').get().count;
   if (hostCount === 0) {
-    // Schedule immediate network scan
+    // Enable scanner schedule (uses interval-based scheduling, not cron)
     db.prepare(`
-      INSERT INTO scanner_schedule (id, user_id, enabled, schedule_cron, last_run_at, next_run_at, created_at, updated_at)
-      VALUES (?, ?, 1, '0 * * * *', 0, ?, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET next_run_at = ?, updated_at = ?
-    `).run(generateId('sched_'), user.id, now, now, now, now, now);
+      INSERT INTO scanner_schedule (id, user_id, enabled, interval, hour, minute, weekday, modules, updated_at)
+      VALUES (?, ?, 1, 'daily', 3, 0, 0, '["docker","metrics"]', ?)
+      ON CONFLICT(id) DO UPDATE SET enabled = 1, updated_at = excluded.updated_at
+    `).run(generateId('sched_'), user.id, now);
     console.log('✓ Scheduled initial network scan');
   }
 
@@ -64,20 +64,17 @@ try {
     console.log('✓ Configured Windlass endpoint');
   }
 
-  // 4. Dismiss onboarding for all users
+  // 4. Dismiss onboarding in system_settings (single-instance)
   const allSteps = JSON.stringify(['license', 'environment', 'token', 'scanner', 'review', 'windlass', 'monitors', 'done']);
-  for (const u of users) {
-    const prefId = `pref_${u.id}_${now}`;
-    db.prepare(`
-      INSERT INTO tenant_preferences (id, user_id, onboarding_dismissed, onboarding_progress, updated_at)
-      VALUES (?, ?, 1, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET
-        onboarding_dismissed = 1,
-        onboarding_progress = excluded.onboarding_progress,
-        updated_at = excluded.updated_at
-    `).run(prefId, u.id, allSteps, now);
-  }
-  console.log(`✓ Dismissed onboarding for ${users.length} user(s)`);
+  db.prepare(`
+    INSERT INTO system_settings (id, onboarding_dismissed, onboarding_progress, created_at, updated_at)
+    VALUES ('instance', 1, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET
+      onboarding_dismissed = 1,
+      onboarding_progress = excluded.onboarding_progress,
+      updated_at = excluded.updated_at
+  `).run(allSteps, now, now);
+  console.log('✓ Onboarding dismissed');
 
   console.log('✓ Installation marked complete');
   process.exit(0);

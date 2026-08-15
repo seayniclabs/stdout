@@ -40,15 +40,14 @@ async function createAdmin() {
 
     // Insert admin user
     db.prepare(`
-      INSERT INTO users (id, email, password, displayName, role, isActive, createdAt, updatedAt)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO users (id, email, password_hash, display_name, role, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       email,
       hashedPassword,
       email.split('@')[0], // Use email prefix as display name
       'admin',
-      1,
       Date.now(),
       Date.now()
     );
