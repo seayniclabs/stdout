@@ -6,7 +6,7 @@
 
 ---
 
-## ✅ COMPLETED (12/21 issues)
+## ✅ COMPLETED (14/21 issues)
 
 ### P0 — Critical (3/4)
 1. **✅ System Metrics Panel Fixed** (00:19 CT)
@@ -22,7 +22,7 @@
    - Shows real data when monitors exist
    - Commit: c244856
 
-### P1 — High Impact (7/10)
+### P1 — High Impact (9/10)
 3. **✅ Observatory Log Scrolling** (00:22 CT)
    - Added max-height and overflow-y: auto for scrolling
    - Shows empty state with helpful message
@@ -81,7 +81,27 @@
    - Prevents duplicate incidents by checking for existing open incidents
    - File: src/lib/observatory/workers/incident-creator.ts
    - Deployed to production
-   - Commit: pending
+   - Commit: 2d31274
+
+12. **✅ Log Truncation Policy Display** (01:15 CT)
+   - Added "Last 100 events" indicator to Live Logs header
+   - Added "Last 50 runs" indicator to Agent Runs header
+   - Clear truncation policy visible to users
+   - File: src/pages/app/observatory.astro
+   - Deployed to production
+   - Commit: 290e855
+
+13. **✅ Mermaid Topology Diagram** (01:20 CT)
+   - Replaced D3.js hierarchical blob with Mermaid flowchart
+   - Generates dynamically from discovered_hosts data
+   - Hierarchical layout: gateways → physical hosts → containers
+   - Color-coded nodes (blue=gateway, purple=host, teal=container)
+   - Uses parent_host_id for proper container relationships
+   - Toggle view button to see raw Mermaid code
+   - Download SVG export functionality
+   - File: src/components/MermaidTopologyDiagram.astro
+   - Deployed to production
+   - Commit: 290e855
 
 ### P2 — Polish (1/1)
 7. **✅ View HUD Button Removed** (00:09 CT)
@@ -102,15 +122,13 @@
 
 ---
 
-## 📊 REMAINING WORK (9 issues)
+## 📊 REMAINING WORK (7 issues)
 
 ### P0 — Critical (0 remaining)
 - ✅ All P0 issues complete!
 
-### P1 — High Impact (3 remaining)
-- Topology diagram Mermaid redesign (P0 in issues file)
-- Topology D3.js leverage
-- Log truncation policy display
+### P1 — High Impact (1 remaining)
+- Topology D3.js enhancement (use D3 for advanced Mermaid rendering)
 
 ### P2 — Polish (0 remaining)
 - ✅ All P2 issues complete
