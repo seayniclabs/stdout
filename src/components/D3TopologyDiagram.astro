@@ -1,0 +1,341 @@
+---
+import { getDb } from "../lib/db";
+
+const db = getDb();
+const rawDb = (db as any).$client;
+
+// Get all discovered hosts with stack info
+const hosts = rawDb.prepare(`
+  SELECT
+    h.id, h.ip_address, h.hostname, h.mac_address, h.vendor, h.parent_host_id,
+    s.name as stack_name, s.id as stack_id
+  FROM discovered_hosts h
+  LEFT JOIN stacks s ON h.stack_id = s.id
+  ORDER BY h.ip_address
+`).all();
+
+// Build D3-compatible node/link structure
+const nodes = hosts.map((h: any) => {
+  const isGateway = h.ip_address.endsWith('.1');
+  const isContainer = !!h.parent_host_id;
+
+  return {
+    id: h.id,
+    label: h.hostname || h.ip_address,
+    ip: h.ip_address,
+    type: isGateway ? 'gateway' : isContainer ? 'container' : 'host',
+    stack: h.stack_name,
+    parentId: h.parent_host_id,
+    radius: isGateway ? 24 : isContainer ? 16 : 20
+  };
+});
+
+const links: any[] = [];
+const gateways = nodes.filter(n => n.type === 'gateway');
+const physicalHosts = nodes.filter(n => n.type === 'host');
+const containers = nodes.filter(n => n.type === 'container');
+
+// Connect gateway to all physical hosts
+if (gateways.length > 0) {
+  const gateway = gateways[0];
+  physicalHosts.forEach(host => {
+    links.push({ source: gateway.id, target: host.id });
+  });
+}
+
+// Connect containers to their parent hosts
+containers.forEach(container => {
+  if (container.parentId) {
+    links.push({ source: container.parentId, target: container.id });
+  }
+});
+
+const graphData = { nodes, links };
+---
+
+<div class="d3-topology-diagram">
+  <div class="diagram-header">
+    <h3>Network Topology (D3 Force Layout)</h3>
+    <div class="diagram-controls">
+      <button id="resetD3Sim" class="btn-sm">Reset Simulation</button>
+      <button id="downloadD3Svg" class="btn-sm">Download SVG</button>
+    </div>
+  </div>
+
+  <svg id="d3TopologySvg" width="100%" height="700"></svg>
+
+  <div class="diagram-legend">
+    <div class="legend-item"><span class="icon gateway">🌐</span> Gateway/Router</div>
+    <div class="legend-item"><span class="icon server">🖥️</span> Physical Host</div>
+    <div class="legend-item"><span class="icon container">🐳</span> Container</div>
+    <div class="legend-item"><span class="icon info">💡</span> Drag nodes to reposition</div>
+  </div>
+</div>
+
+<script is:inline define:vars={{ graphData }}>
+  // Load D3.js from CDN
+  const script = document.createElement('script');
+  script.src = 'https://d3js.org/d3.v7.min.js';
+  script.onload = () => initD3Topology();
+  document.head.appendChild(script);
+
+  function initD3Topology() {
+    const svg = d3.select('#d3TopologySvg');
+    const width = svg.node().getBoundingClientRect().width || 1200;
+    const height = 700;
+
+    svg.attr('viewBox', [0, 0, width, height]);
+
+    // Clear any existing content
+    svg.selectAll('*').remove();
+
+    // Create arrow markers for links
+    svg.append('defs').selectAll('marker')
+      .data(['arrow'])
+      .join('marker')
+      .attr('id', d => d)
+      .attr('viewBox', '0 -5 10 10')
+      .attr('refX', 25)
+      .attr('refY', 0)
+      .attr('markerWidth', 6)
+      .attr('markerHeight', 6)
+      .attr('orient', 'auto')
+      .append('path')
+      .attr('d', 'M0,-5L10,0L0,5')
+      .attr('fill', '#64748b');
+
+    const g = svg.append('g');
+
+    // Create zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on('zoom', (event) => {
+        g.attr('transform', event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Copy data to prevent mutation
+    const nodes = graphData.nodes.map(d => ({...d}));
+    const links = graphData.links.map(d => ({...d}));
+
+    // Color scheme
+    const colorMap = {
+      gateway: '#049fd9',
+      host: '#8b5cf6',
+      container: '#2496ed'
+    };
+
+    // Initialize force simulation
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links)
+        .id(d => d.id)
+        .distance(d => {
+          // Shorter links for containers to hosts
+          const target = nodes.find(n => n.id === d.target.id || n.id === d.target);
+          return target && target.type === 'container' ? 80 : 150;
+        }))
+      .force('charge', d3.forceManyBody()
+        .strength(-400)
+        .distanceMax(300))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collide', d3.forceCollide()
+        .radius(d => d.radius + 15)
+        .strength(0.7))
+      .force('x', d3.forceX(width / 2).strength(0.05))
+      .force('y', d3.forceY(height / 2).strength(0.05));
+
+    // Create links
+    const link = g.append('g')
+      .attr('class', 'links')
+      .selectAll('line')
+      .data(links)
+      .join('line')
+      .attr('stroke', '#334155')
+      .attr('stroke-width', 2)
+      .attr('stroke-opacity', 0.6)
+      .attr('marker-end', 'url(#arrow)');
+
+    // Create node groups
+    const node = g.append('g')
+      .attr('class', 'nodes')
+      .selectAll('g')
+      .data(nodes)
+      .join('g')
+      .attr('class', 'node')
+      .style('cursor', 'grab')
+      .call(d3.drag()
+        .on('start', dragStarted)
+        .on('drag', dragged)
+        .on('end', dragEnded));
+
+    // Add circles to nodes
+    node.append('circle')
+      .attr('r', d => d.radius)
+      .attr('fill', d => colorMap[d.type] || '#64748b')
+      .attr('stroke', '#fff')
+      .attr('stroke-width', 2);
+
+    // Add icons to nodes (using emoji as text)
+    node.append('text')
+      .attr('text-anchor', 'middle')
+      .attr('dy', 5)
+      .attr('font-size', d => d.type === 'gateway' ? 24 : d.type === 'container' ? 14 : 18)
+      .attr('fill', '#fff')
+      .attr('pointer-events', 'none')
+      .text(d => d.type === 'gateway' ? '🌐' : d.type === 'container' ? '🐳' : '🖥️');
+
+    // Add labels below nodes
+    node.append('text')
+      .attr('class', 'node-label')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => d.radius + 16)
+      .attr('font-size', 11)
+      .attr('fill', '#e2e8f0')
+      .attr('pointer-events', 'none')
+      .text(d => d.label.length > 20 ? d.label.slice(0, 18) + '...' : d.label);
+
+    // Add IP labels
+    node.append('text')
+      .attr('class', 'ip-label')
+      .attr('text-anchor', 'middle')
+      .attr('dy', d => d.radius + 28)
+      .attr('font-size', 9)
+      .attr('font-family', 'monospace')
+      .attr('fill', '#94a3b8')
+      .attr('pointer-events', 'none')
+      .text(d => d.ip);
+
+    // Update positions on each tick
+    simulation.on('tick', () => {
+      link
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+
+      node
+        .attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    // Drag functions
+    function dragStarted(event, d) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+      d3.select(this).style('cursor', 'grabbing');
+    }
+
+    function dragged(event, d) {
+      d.fx = event.x;
+      d.fy = event.y;
+    }
+
+    function dragEnded(event, d) {
+      if (!event.active) simulation.alphaTarget(0);
+      // Keep position fixed after drag (remove to let it float back)
+      // d.fx = null;
+      // d.fy = null;
+      d3.select(this).style('cursor', 'grab');
+    }
+
+    // Reset simulation button
+    document.getElementById('resetD3Sim')?.addEventListener('click', () => {
+      // Release all fixed positions
+      nodes.forEach(n => {
+        n.fx = null;
+        n.fy = null;
+      });
+      // Restart simulation with heat
+      simulation.alpha(1).restart();
+    });
+
+    // Download SVG button
+    document.getElementById('downloadD3Svg')?.addEventListener('click', () => {
+      const svgEl = document.getElementById('d3TopologySvg');
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'network-topology-d3.svg';
+      link.click();
+      URL.createObjectURL(url);
+    });
+  }
+</script>
+
+<style>
+  .d3-topology-diagram {
+    background: #0f172a;
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+  }
+
+  .diagram-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .diagram-header h3 {
+    font-size: 16px;
+    color: #e2e8f0;
+    margin: 0;
+  }
+
+  .diagram-controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-sm {
+    font-size: 11px;
+    padding: 6px 12px;
+    background: rgba(100,116,139,0.2);
+    border: 1px solid rgba(148,163,184,0.3);
+    border-radius: 4px;
+    color: #e2e8f0;
+    cursor: pointer;
+    transition: all 150ms;
+  }
+
+  .btn-sm:hover {
+    background: rgba(100,116,139,0.3);
+    border-color: rgba(148,163,184,0.5);
+  }
+
+  #d3TopologySvg {
+    background: #1e293b;
+    border-radius: 8px;
+    display: block;
+  }
+
+  .diagram-legend {
+    display: flex;
+    gap: 20px;
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(30,41,59,0.5);
+    border-radius: 6px;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: #94a3b8;
+  }
+
+  .legend-item .icon {
+    font-size: 18px;
+  }
+
+  .legend-item .icon.info {
+    font-size: 14px;
+  }
+</style>

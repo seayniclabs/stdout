@@ -3,6 +3,7 @@ export const prerender = false;
 import Layout from '../../layouts/Layout.astro';
 import DiscoverySummary from '../../components/DiscoverySummary.astro';
 import MermaidTopologyDiagram from '../../components/MermaidTopologyDiagram.astro';
+import D3TopologyDiagram from '../../components/D3TopologyDiagram.astro';
 import { getDb, schema } from '../../lib/db';
 import { discoveredHosts, discoveredServices } from '../../lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
@@ -195,7 +196,7 @@ function timeAgo(timestamp: number) {
 
     <!-- Topology Map Tab -->
     <div class="tab-content" data-content="topology">
-      <MermaidTopologyDiagram />
+      <D3TopologyDiagram />
     </div>
   </div>
 </Layout>
