@@ -142,4 +142,31 @@
 
 ---
 
-**Last Updated:** 2026-08-15 00:16 CT
+**Last Updated:** 2026-08-15 01:09 CT
+
+---
+
+## 🎯 NEXT SESSION PRIORITIES
+
+### Remaining Issues (9/21)
+1. **P0 Topology Mermaid Redesign** — 4-6 hours estimated
+   - Replace D3.js hierarchical blob with Mermaid flowchart
+   - Generate from discovery data dynamically
+   - Reference: hosting-services-flowchart pattern
+
+2. **P1 Topology D3.js Enhancement** — 2-3 hours
+   - Mermaid syntax → D3 rendering
+   - Leverage D3 topology visualization capabilities
+
+3. **P1 Log Truncation Policy** — 30 minutes
+   - Add "Last 100 entries" or similar indicator
+   - Option to see more/export
+
+### Session Stats
+- Duration: ~70 minutes active work
+- Token Usage: 115K/200K (58%)
+- Commits: 6 (all pushed)
+- Deployments: 5 production restarts
+- Browser Validation: Setup flow only (empty DB prevented full validation)
+
+**Last Updated:** 2026-08-15 01:10 CT

@@ -398,6 +398,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
         <div class="obs-card-header">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
           <h3>Live Logs</h3>
+          <span class="log-limit mono" style="font-size: 11px; color: var(--text-muted); margin-left: auto; margin-right: 0.5rem;">Last 100 events</span>
           <div class="log-controls">
             <button id="pauseLogsBtn" class="btn-icon" title="Pause">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
@@ -423,6 +424,7 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
           <h3>Agent Runs</h3>
           <span class="run-count mono" id="runCount">0</span>
+          <span class="run-limit mono" style="font-size: 11px; color: var(--text-muted); margin-left: 0.5rem;">Last 50 runs</span>
         </div>
         <div class="runs-list" id="runsList" style="max-height: 300px; overflow-y: auto;">
           <div class="empty-runs" style="padding: 1.5rem; text-align: center; color: var(--text-secondary);">
