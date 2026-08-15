@@ -141,6 +141,83 @@
       "when": 1785787200000,
       "tag": "0021_rebuild_scanner_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1785096000000,
+      "tag": "0013_placeholder",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1785268800000,
+      "tag": "0015_placeholder",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1785873600000,
+      "tag": "0022_add_user_id_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785960000000,
+      "tag": "0023_add_monitors_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1786046400000,
+      "tag": "0024_add_data_sources_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1786132800000,
+      "tag": "0025_add_incidents_user_id",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1786219200000,
+      "tag": "0026_add_user_id_indexes",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786305600000,
+      "tag": "0027_add_monitors_user_id_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786392000000,
+      "tag": "0028_add_data_sources_user_id_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786478400000,
+      "tag": "0029_add_incidents_user_id_index",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1786564800000,
+      "tag": "0030_add_monitors_config",
+      "breakpoints": true
     }
   ]
 }

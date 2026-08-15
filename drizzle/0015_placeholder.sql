@@ -1,2 +1,2 @@
 -- Placeholder migration (0015 was skipped)
--- No changes needed
+SELECT 1;
