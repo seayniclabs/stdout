@@ -405,11 +405,14 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
             <a href="#" class="obs-link">Loki →</a>
           </div>
         </div>
-        <div class="logs-stream mono" id="logsStream">
-          <div class="log-entry log-info">
-            <span class="log-time">12:34:56</span>
-            <span class="log-level">INFO</span>
-            <span class="log-msg">Observatory initialized</span>
+        <div class="logs-stream mono" id="logsStream" style="max-height: 400px; overflow-y: auto; position: relative;">
+          <div class="empty-logs" style="padding: 2rem; text-align: center; color: var(--text-secondary);">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3; margin-bottom: 0.5rem;">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <div style="font-size: 13px; margin-bottom: 0.25rem;">No system events to display</div>
+            <div style="font-size: 11px; opacity: 0.7;">Logs appear here when Riggins detects incidents, runs diagnostics, or takes actions.</div>
           </div>
         </div>
       </div>
@@ -421,9 +424,13 @@ const sentinelUrl = process.env.SENTINEL_API_URL || 'http://localhost:8081';
           <h3>Agent Runs</h3>
           <span class="run-count mono" id="runCount">0</span>
         </div>
-        <div class="runs-list" id="runsList">
-          <div class="empty-runs">
-            <span>No agent runs yet</span>
+        <div class="runs-list" id="runsList" style="max-height: 300px; overflow-y: auto;">
+          <div class="empty-runs" style="padding: 1.5rem; text-align: center; color: var(--text-secondary);">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity: 0.3; margin-bottom: 0.5rem;">
+              <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+            </svg>
+            <div style="font-size: 13px; margin-bottom: 0.25rem;">No agent runs yet</div>
+            <div style="font-size: 11px; opacity: 0.7;">Riggins' autonomous diagnostic and remediation history appears here.</div>
           </div>
         </div>
       </div>
