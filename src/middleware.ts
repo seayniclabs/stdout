@@ -565,7 +565,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAppRoute = pathname === '/app' || pathname.startsWith('/app/');
   const isPublicApp = publicAppPaths.some(p => pathname.startsWith(p));
 
-  if (pathname === '/setup') {
+  if (pathname === '/setup' || pathname === '/setup/') {
     const userCount = getUserCount();
     console.log('[middleware] /setup accessed, userCount:', userCount);
     // Only redirect to login if setup is actually complete

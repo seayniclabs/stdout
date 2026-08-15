@@ -9,7 +9,6 @@ import { validateCsrf } from '../../middleware';
 import { nanoid } from 'nanoid';
 import { eq } from 'drizzle-orm';
 import crypto from 'node:crypto';
-import { isValidLicenseKeyFormat, storeLicense } from '../../lib/license';
 import { logAudit, getClientIp } from '../../lib/audit';
 
 // If user is already logged in and setup is past step 1, redirect to current step
@@ -36,7 +35,6 @@ if (Astro.request.method === 'POST') {
     const email = (form.get('email') as string || '').trim().toLowerCase();
     const password = form.get('password') as string || '';
     const displayName = (form.get('displayName') as string || '').trim();
-    const licenseKey = (form.get('licenseKey') as string || '').trim();
     emailVal = email;
 
     if (!email || !password || !displayName) {
@@ -55,10 +53,6 @@ if (Astro.request.method === 'POST') {
       if (existingUser) {
         error = 'An account with this email already exists.';
       } else {
-        // Validate license key if provided
-        if (licenseKey && !isValidLicenseKeyFormat(licenseKey)) {
-          error = 'Invalid license key format. License keys start with SL- or use the format XXXX-XXXX-XXXX-XXXX.';
-        } else {
           // Create user
           const userId = 'usr_' + nanoid(32);
           const passwordHash = await hashPassword(password);
@@ -93,18 +87,6 @@ if (Astro.request.method === 'POST') {
         await setSetupConfig('scanner_token', rawToken);
         console.log('[setup] Scanner token saved to setup_config');
 
-        // Store license if provided
-        if (licenseKey) {
-          try {
-            storeLicense(licenseKey, email, 'self-host');
-            logAudit('license_activated', { userId, ip: getClientIp(Astro.request) });
-            console.log('[setup] License activated:', licenseKey.substring(0, 10) + '...');
-          } catch (err) {
-            // License storage failed but user is created - they can activate later
-            console.error('[setup] Failed to store license during setup:', err);
-          }
-        }
-
         // Mark account creation step as complete
         await completeStep(SetupStep.AdminAccount, {
           userId,
@@ -138,7 +120,6 @@ if (Astro.request.method === 'POST') {
       }
     }
   }
-}
 ---
 
 <Layout title="Create Your Account">
@@ -188,17 +169,6 @@ if (Astro.request.method === 'POST') {
           autocomplete="new-password"
           minlength="8"
         />
-      </label>
-
-      <label>
-        <span>License Key (optional)</span>
-        <input
-          type="text"
-          name="licenseKey"
-          placeholder="SL-..."
-          autocomplete="off"
-        />
-        <span class="hint">Enter your license key to activate premium features</span>
       </label>
 
       <button type="submit" class="btn-primary">Create Account & Continue</button>
