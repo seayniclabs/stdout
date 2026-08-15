@@ -109,34 +109,39 @@ export async function checkMonitorStatus(userId: string): Promise<void> {
   const { getDb } = await import("../../db");
   const db = getDb();
   const rawDb = (db as any).$client;
-  
+
   try {
-    // Get all failing monitors
+    // Get all failing or degraded monitors
     const failing = rawDb.prepare(`
-      SELECT id, name, type, config, last_check_status, last_check_at
+      SELECT id, name, type, target, current_status, last_checked_at
       FROM monitors
-      WHERE enabled = 1 AND last_check_status = 'down'
+      WHERE paused = 0 AND current_status IN ('down', 'degraded')
     `).all();
-    
+
     for (const monitor of failing) {
       // Check if incident already exists for this monitor
       const existing = rawDb.prepare(`
         SELECT id FROM incidents
-        WHERE title LIKE ? AND status IN ('open', 'investigating')
+        WHERE title LIKE ? AND status IN ('active', 'investigating')
         LIMIT 1
       `).get(`%${monitor.name}%`);
-      
+
       if (!existing) {
+        const isDegraded = monitor.current_status === 'degraded';
+
         await createIncident({
           type: "service_down",
-          severity: "critical",
-          title: `Service Down: ${monitor.name}`,
-          description: `Monitor "${monitor.name}" (${monitor.type}) is reporting DOWN status`,
+          severity: isDegraded ? "high" : "critical",
+          title: isDegraded ? `Service Degraded: ${monitor.name}` : `Service Down: ${monitor.name}`,
+          description: isDegraded
+            ? `Monitor "${monitor.name}" (${monitor.type}) is reporting DEGRADED status - service is partially functional but performance is impaired`
+            : `Monitor "${monitor.name}" (${monitor.type}) is reporting DOWN status - service is completely unavailable`,
           affectedEntity: monitor.id,
           metadata: {
             monitorId: monitor.id,
             monitorType: monitor.type,
-            config: JSON.parse(monitor.config || "{}"),
+            target: monitor.target,
+            status: monitor.current_status,
           },
         }, userId);
       }

@@ -6,7 +6,7 @@
 
 ---
 
-## ✅ COMPLETED (11/21 issues)
+## ✅ COMPLETED (12/21 issues)
 
 ### P0 — Critical (3/4)
 1. **✅ System Metrics Panel Fixed** (00:19 CT)
@@ -22,7 +22,7 @@
    - Shows real data when monitors exist
    - Commit: c244856
 
-### P1 — High Impact (6/10)
+### P1 — High Impact (7/10)
 3. **✅ Observatory Log Scrolling** (00:22 CT)
    - Added max-height and overflow-y: auto for scrolling
    - Shows empty state with helpful message
@@ -71,6 +71,16 @@
    - Schema updated: src/lib/db/monitoring-schema.ts
    - Deployed to production
    - NOTE: Discovery logic update needed to populate this field (tracked separately)
+   - Commit: 5871a60
+
+11. **✅ Auto-Incident Creation for Degraded Monitors** (01:02 CT)
+   - Extended checkMonitorStatus to detect 'degraded' status (was only 'down')
+   - Degraded monitors create "high" severity incidents (down = critical)
+   - Updated incident title and description to differentiate degraded vs down
+   - Health worker runs every 60 seconds, checking all non-paused monitors
+   - Prevents duplicate incidents by checking for existing open incidents
+   - File: src/lib/observatory/workers/incident-creator.ts
+   - Deployed to production
    - Commit: pending
 
 ### P2 — Polish (1/1)
@@ -92,15 +102,15 @@
 
 ---
 
-## 📊 REMAINING WORK (10 issues)
+## 📊 REMAINING WORK (9 issues)
 
 ### P0 — Critical (0 remaining)
 - ✅ All P0 issues complete!
 
-### P1 — High Impact (4 remaining)
-- Auto-incident creation for degraded monitors
-- Topology diagram Mermaid redesign
-- (2 more P1 items - see QA-ISSUES-2026-08-14.md)
+### P1 — High Impact (3 remaining)
+- Topology diagram Mermaid redesign (P0 in issues file)
+- Topology D3.js leverage
+- Log truncation policy display
 
 ### P2 — Polish (0 remaining)
 - ✅ All P2 issues complete
