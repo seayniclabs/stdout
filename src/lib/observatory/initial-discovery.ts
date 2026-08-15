@@ -43,9 +43,12 @@ async function setState(key: string, value: string): Promise<void> {
 
 export async function getDiscoveryState(): Promise<string> {
   const db = getDb();
-  const row = db.get(sql`SELECT value FROM system_state WHERE key = ${STATE_PROGRESS}`) as
-    | { value: string }
-    | undefined;
+  const row = await db
+    .select({ value: sql<string>`value` })
+    .from(sql`system_state`)
+    .where(sql`key = ${STATE_PROGRESS}`)
+    .limit(1)
+    .then(rows => rows[0]);
   return row?.value ?? 'idle';
 }
 
