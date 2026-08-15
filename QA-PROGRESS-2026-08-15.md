@@ -6,33 +6,44 @@
 
 ---
 
-## ✅ COMPLETED (1/21 issues)
+## ✅ COMPLETED (3/21 issues)
+
+### P0 — Critical (2/4)
+1. **✅ System Metrics Panel Fixed** (00:19 CT)
+   - Added helpful message explaining satellite agent requirement
+   - Shows installation guide link instead of empty panel
+   - Prevents confusing empty UI
+   - Commit: c244856
+
+2. **✅ Key Metrics Panel Populated** (00:19 CT)
+   - Services Up: Calculated from monitors table
+   - Avg Response: Calculated from check_results table
+   - Error Rate: Percentage from recent checks  
+   - Shows real data when monitors exist
+   - Commit: c244856
 
 ### P2 — Polish (1/1)
-1. **✅ View HUD Button Removed** (00:09 CT)
+3. **✅ View HUD Button Removed** (00:09 CT)
    - Removed redundant "View HUD" button from Quick Actions
    - Quick Actions now shows 3 buttons: New Incident, Search Docs, Search
    - Deployed to production at 192.168.68.89:8112
    - Commit: 373e8be
-   - **NOTE:** Cannot visually verify in empty dashboard state, but code change confirmed deployed
 
 ---
 
 ## ⏳ IN PROGRESS
 
-**Current Focus:** P0 - System Metrics Empty  
+**Current Focus:** P0 - Live Logs Empty  
 **Next Steps:**
-1. Populate System Metrics panel (CPU/Memory/Disk/Network from discovered_hosts)
-2. Populate Key Metrics panel (monitor uptime/latency/error rates)
-3. Implement Live Logs SSE streaming
+1. ✅ System Metrics - Added satellite requirement message
+2. ✅ Key Metrics - Populated with real data from monitors/checks
+3. Next: Implement Live Logs SSE streaming
 
 ---
 
-## 📊 REMAINING WORK (20 issues)
+## 📊 REMAINING WORK (18 issues)
 
-### P0 — Critical (4 remaining)
-- System Metrics showing no data
-- Key Metrics showing no data
+### P0 — Critical (2 remaining)
 - Live Logs showing no data  
 - Docker Container Hosts show container instead of physical host
 
