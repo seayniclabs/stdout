@@ -38,10 +38,12 @@ if (Astro.request.method === 'POST') {
     const licenseKey = (form.get('licenseKey') as string || '').trim();
     emailVal = email;
 
-    if (!email || !password || !displayName) {
+    if (!email || !password || !displayName || !licenseKey) {
       error = 'All fields are required.';
     } else if (password.length < 8) {
       error = 'Password must be at least 8 characters.';
+    } else if (!licenseKey.match(/^SL-/)) {
+      error = 'Invalid license key format. License keys start with SL-';
     } else {
       // Check if user already exists
       const db = getDb();
@@ -96,54 +98,80 @@ if (Astro.request.method === 'POST') {
         await completeStep(SetupStep.Environment, { environmentName, accentColor: '#F97316' });
         console.log('[setup] Auto-generated environment:', environmentName);
 
-        // Store license key if provided
-        if (licenseKey) {
-          await setSetupConfig('license_key', licenseKey);
-          await setSetupConfig('license_email', email);
-          console.log('[setup] License key saved for validation');
-        }
+        // Validate and store license key immediately
+        const { verifyLicenseSignature, storeLicense } = await import('../../lib/license');
+        const verifyResult = verifyLicenseSignature(licenseKey);
 
-        // Mark account creation step as complete
-        await completeStep(SetupStep.AdminAccount, {
-          userId,
-          email,
-          displayName,
-        });
+        if (!verifyResult.valid) {
+          error = verifyResult.reason || 'Invalid license key. Please check your purchase confirmation email.';
+          emailVal = email;
+        } else {
+          // License is valid, store it and complete setup
+          storeLicense(licenseKey, email, 'self-host');
+          await completeStep(SetupStep.License, {
+            activated: true,
+            mode: 'offline',
+            edition: 'self-host',
+          });
+          await completeStep(SetupStep.Complete, { setupComplete: true });
 
-        // Create session and log in
-        const sessionId = await createSession(userId);
+          // Mark installation as complete
+          const { getDb } = await import('../../lib/db');
+          const { sql } = await import('drizzle-orm');
+          const db = getDb();
+          await db.run(sql`
+            INSERT OR REPLACE INTO system_state (key, value, updated_at)
+            VALUES ('installation_complete', 'true', ${Date.now()})
+          `);
 
-        // Set cookie manually in redirect response to ensure it's included
-        const cookieOpts = sessionCookieOptions(30 * 24 * 60 * 60);
-        const cookieValue = [
-          `${SESSION_COOKIE}=${sessionId}`,
-          `Path=${cookieOpts.path}`,
-          `Max-Age=${cookieOpts.maxAge}`,
-          cookieOpts.httpOnly ? 'HttpOnly' : '',
-          cookieOpts.secure ? 'Secure' : '',
-          cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
-        ].filter(Boolean).join('; ');
+          console.log('[setup] License validated and activated:', licenseKey.substring(0, 10) + '...');
 
-          // Skip environment step, go straight to license
+          // Trigger autonomous network discovery
+          const { runInitialDiscovery } = await import('../../lib/observatory/initial-discovery');
+          runInitialDiscovery(userId).catch(err => console.error('[setup] Initial discovery failed:', err));
+
+          // Mark account creation step as complete
+          await completeStep(SetupStep.AdminAccount, {
+            userId,
+            email,
+            displayName,
+          });
+
+          // Create session and log in
+          const sessionId = await createSession(userId);
+
+          // Set cookie manually in redirect response to ensure it's included
+          const cookieOpts = sessionCookieOptions(30 * 24 * 60 * 60);
+          const cookieValue = [
+            `${SESSION_COOKIE}=${sessionId}`,
+            `Path=${cookieOpts.path}`,
+            `Max-Age=${cookieOpts.maxAge}`,
+            cookieOpts.httpOnly ? 'HttpOnly' : '',
+            cookieOpts.secure ? 'Secure' : '',
+            cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
+          ].filter(Boolean).join('; ');
+
+          // License validated, skip to dashboard
           return new Response(null, {
             status: 302,
             headers: {
-              'Location': '/setup/license',
+              'Location': '/app',
               'Set-Cookie': cookieValue
             }
           });
+        }
         }
       }
     }
   }
 ---
 
-<Layout title="Create Your Account">
+<Layout title="Install StdOut">
   <div class="auth-page" style="max-width: 600px;">
-    <SetupProgress currentStep={1} totalSteps={2} />
+    <SetupProgress currentStep={1} totalSteps={1} />
 
     <h1>Welcome to StdOut</h1>
-    <p class="auth-subtitle">Create your admin account and start monitoring</p>
+    <p class="auth-subtitle">Create your admin account and enter your license key</p>
 
     {error && <div class="auth-error">{error}</div>}
 
@@ -188,15 +216,16 @@ if (Astro.request.method === 'POST') {
       </label>
 
           <label>
-        <span>License Key <span class="optional">(Optional)</span></span>
+        <span>License Key</span>
         <input
           type="text"
           name="licenseKey"
           placeholder="SL-XXXX-XXXX-XXXX-XXXX"
+          required
           autocomplete="off"
           style="font-family: var(--font-mono);"
         />
-        <span class="hint">Unlocks Riggins AI Agent. <a href="https://store.seayniclabs.com/products/stdout-self-host" target="_blank" class="link-subtle">Purchase license →</a></span>
+        <span class="hint">Required to unlock Riggins AI Agent. <a href="https://store.seayniclabs.com/products/stdout-self-host" target="_blank" class="link-subtle">Purchase license →</a></span>
       </label>
 
       <button type="submit" class="btn-primary">Install StdOut</button>
