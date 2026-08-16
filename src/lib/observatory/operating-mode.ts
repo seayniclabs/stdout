@@ -28,7 +28,8 @@
  */
 
 import { getDb } from '../db';
-import { sql } from 'drizzle-orm';
+import { systemSettings } from '../db/schema';
+import { sql, eq } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
 import type { ApplyClassification } from '../autofix-apply';
 
@@ -92,14 +93,15 @@ function normMode(v: string | null | undefined, fallback: OperatingMode = 'disco
  */
 function ensurePrefsRow(_userId?: string): void {
   const db = getDb();
-  const existing = db.get(sql`SELECT id FROM system_settings WHERE id = 'instance'`) as
+  const rawDb = (db as any).$client;
+  const existing = rawDb.prepare('SELECT id FROM system_settings WHERE id = ?').get('instance') as
     | { id: string }
     | undefined;
   if (!existing) {
-    db.run(sql`
+    rawDb.prepare(`
       INSERT INTO system_settings (id, operating_mode, autopilot_enabled, autopilot_level, updated_at)
-      VALUES ('instance', 'discover', 0, 'discover', ${Date.now()})
-    `);
+      VALUES (?, ?, ?, ?, ?)
+    `).run('instance', 'discover', 0, 'discover', Date.now());
   }
 }
 
@@ -109,12 +111,13 @@ function ensurePrefsRow(_userId?: string): void {
 export function getModeState(userId: string = 'instance'): ModeState {
   ensurePrefsRow(userId);
   const db = getDb();
-  const row = db.get(sql`
+  const rawDb = (db as any).$client;
+  const row = rawDb.prepare(`
     SELECT operating_mode, autopilot_enabled, autopilot_level, autopilot_success_count,
            autopilot_fail_count, autopilot_level_since, killswitch_tripped, killswitch_reason,
            god_mode_granted, rag_include_public
-    FROM system_settings WHERE id = 'instance'
-  `) as PrefRow | undefined;
+    FROM system_settings WHERE id = ?
+  `).get('instance') as PrefRow | undefined;
 
   const manualMode = normMode(row?.operating_mode, 'discover');
   const autopilotEnabled = !!row?.autopilot_enabled;
@@ -288,19 +291,20 @@ export function recordAutonomousOutcome(
     return { killswitch: true };
   }
 
+  const rawDb = (db as any).$client;
   if (!state.autopilotEnabled) {
     if (success) {
-      db.run(sql`UPDATE system_settings SET autopilot_success_count = autopilot_success_count + 1, updated_at = ${now} WHERE id = 'instance'`);
+      rawDb.prepare('UPDATE system_settings SET autopilot_success_count = autopilot_success_count + 1, updated_at = ? WHERE id = ?').run(now, 'instance');
     } else {
-      db.run(sql`UPDATE system_settings SET autopilot_fail_count = autopilot_fail_count + 1, updated_at = ${now} WHERE id = 'instance'`);
+      rawDb.prepare('UPDATE system_settings SET autopilot_fail_count = autopilot_fail_count + 1, updated_at = ? WHERE id = ?').run(now, 'instance');
     }
     return {};
   }
 
   if (success) {
-    db.run(sql`UPDATE system_settings SET autopilot_success_count = autopilot_success_count + 1, updated_at = ${now} WHERE id = 'instance'`);
+    rawDb.prepare('UPDATE system_settings SET autopilot_success_count = autopilot_success_count + 1, updated_at = ? WHERE id = ?').run(now, 'instance');
   } else {
-    db.run(sql`UPDATE system_settings SET autopilot_fail_count = autopilot_fail_count + 1, updated_at = ${now} WHERE id = 'instance'`);
+    rawDb.prepare('UPDATE system_settings SET autopilot_fail_count = autopilot_fail_count + 1, updated_at = ? WHERE id = ?').run(now, 'instance');
   }
 
   return maybePromote(userId);
@@ -357,31 +361,31 @@ export function parkPendingFix(
   proposedBy: string,
 ): { id: string; deduped: boolean } {
   const db = getDb();
-  const existing = db.get(sql`
+  const rawDb = (db as any).$client;
+  const existing = rawDb.prepare(`
     SELECT id FROM observatory_pending_fixes
-    WHERE incident_id = ${incidentId} AND command = ${command} AND status = 'pending'
-  `) as { id: string } | undefined;
+    WHERE incident_id = ? AND command = ? AND status = ?
+  `).get(incidentId, command, 'pending') as { id: string } | undefined;
   if (existing) return { id: existing.id, deduped: true };
 
   const id = `pf_${nanoid(14)}`;
-  db.run(sql`
+  rawDb.prepare(`
     INSERT INTO observatory_pending_fixes
       (id, incident_id, command, classification, reason, proposed_by, status, created_at)
-    VALUES
-      (${id}, ${incidentId}, ${command}, ${JSON.stringify(classification)},
-       ${reason.slice(0, 500)}, ${proposedBy}, 'pending', ${Date.now()})
-  `);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, incidentId, command, JSON.stringify(classification), reason.slice(0, 500), proposedBy, 'pending', Date.now());
   return { id, deduped: false };
 }
 
 export function listPendingFixes(userId: string, status = 'pending'): PendingFix[] {
   const db = getDb();
-  const rows = db.all(sql`
+  const rawDb = (db as any).$client;
+  const rows = rawDb.prepare(`
     SELECT id, incident_id, command, classification, reason, proposed_by, status, created_at
     FROM observatory_pending_fixes
-    WHERE status = ${status}
+    WHERE status = ?
     ORDER BY created_at DESC
-  `) as Array<Record<string, any>>;
+  `).all(status) as Array<Record<string, any>>;
   return rows.map((r) => ({
     id: r.id,
     userId: userId || 'instance',
@@ -397,10 +401,11 @@ export function listPendingFixes(userId: string, status = 'pending'): PendingFix
 
 export function getPendingFix(userId: string, id: string): PendingFix | null {
   const db = getDb();
-  const r = db.get(sql`
+  const rawDb = (db as any).$client;
+  const r = rawDb.prepare(`
     SELECT id, incident_id, command, classification, reason, proposed_by, status, created_at
-    FROM observatory_pending_fixes WHERE id = ${id}
-  `) as Record<string, any> | undefined;
+    FROM observatory_pending_fixes WHERE id = ?
+  `).get(id) as Record<string, any> | undefined;
   if (!r) return null;
   return {
     id: r.id, userId: userId || 'instance', incidentId: r.incident_id, command: r.command,

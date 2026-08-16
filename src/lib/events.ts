@@ -72,11 +72,12 @@ export function emit(event: StdOutEvent): void {
 async function persistEvent(event: StdOutEvent): Promise<void> {
   try {
     const db = getDb();
+    const rawDb = (db as any).$client;
     const now = Math.floor(Date.now() / 1000);
-    db.run(sql`
+    rawDb.prepare(`
       INSERT INTO event_log (id, type, user_id, payload, created_at)
-      VALUES (${crypto.randomUUID()}, ${event.type}, ${(event as any).userId ?? null}, ${JSON.stringify(event)}, ${now})
-    `);
+      VALUES (?, ?, ?, ?, ?)
+    `).run(crypto.randomUUID(), event.type, (event as any).userId ?? null, JSON.stringify(event), now);
   } catch {
     // Table may not exist yet on first boot — not fatal
   }
