@@ -40,26 +40,35 @@ Stop solving the same problem twice. Stop losing knowledge when team members lea
 
 ---
 
-## Quick Start (5 Minutes)
+## Quick Start (2 Minutes)
 
 ### Option A: Docker Compose (Recommended - includes Windlass)
 
 ```bash
-# Clone the repo (or download docker-compose.yml)
-git clone https://github.com/charlieseay/stdout.git
-cd stdout
+# Download customer deployment files
+curl -O https://raw.githubusercontent.com/seayniclabs/stdout/main/docker-compose.customer.yml
+curl -O https://raw.githubusercontent.com/seayniclabs/stdout/main/.env.example
+
+# Rename and configure
+mv docker-compose.customer.yml docker-compose.yml
+cp .env.example .env
+
+# Edit .env - set APP_URL and generate SECRET_KEY
+# Generate key with: openssl rand -hex 32
+nano .env
 
 # Start StdOut + Windlass
 docker compose up -d
 
-# View logs
-docker compose logs -f stdout
+# Open browser and complete setup wizard
+open http://localhost:8112
 ```
 
 **What you get:**
 - StdOut (port 8112) - Main application
 - Windlass (port 8116) - Schedule-aware service manager
-- Avahi mDNS - Broadcasts `stdout.local` on your network
+- Automatic infrastructure discovery
+- 5 community knowledge packs pre-loaded
 
 ### Option B: Standalone Container (StdOut only)
 
@@ -77,13 +86,17 @@ docker run -d \
 
 ---
 
-### Setup Wizard (3 steps)
+### Setup Wizard (1 step)
 
 1. Open http://localhost:8112
-2. Create admin account + activate license (free dev license: `SL-DEV-STDOUT-2026`)
-3. Name your environment + generate scanner token
+2. Fill in:
+   - Display name
+   - Email address  
+   - Password (min 8 characters)
+   - License key (from your purchase email)
+3. Click "Install StdOut"
 
-That's it. You're running StdOut.
+That's it. Installation completes in seconds and you're redirected to the dashboard.
 
 **Everything works out of the box:**
 

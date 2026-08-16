@@ -1,0 +1,61 @@
+# StdOut Self-Hosted Edition - Customer Deployment
+# This compose file uses published Docker images (no build required)
+
+services:
+  stdout:
+    image: charlieseay/stdout:latest
+    container_name: stdout
+    restart: unless-stopped
+    ports:
+      - "8112:3000"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - STDOUT_MODE=${STDOUT_MODE:-selfhost}
+      - DB_PATH=${DB_PATH:-/app/data/stdout.db}
+      - APP_URL=${APP_URL:-http://localhost:8112}
+      - SECRET_KEY=${SECRET_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - WINDLASS_URL=${WINDLASS_URL:-http://windlass:8116}
+      - OLLAMA_URL=${OLLAMA_URL:-http://172.17.0.1:11434}
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:3000/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - stdout-net
+
+  windlass:
+    image: charlieseay/windlass:latest
+    container_name: windlass
+    restart: unless-stopped
+    ports:
+      - "8116:8116"
+    volumes:
+      - ./windlass-config:/opt/windlass
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - TZ=${TZ:-America/Chicago}
+      - WINDLASS_CONFIG=/opt/windlass
+      - WINDLASS_INTERVAL=${WINDLASS_INTERVAL:-300}
+      - STDOUT_URL=http://stdout:3000
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8116/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - stdout-net
+
+networks:
+  stdout-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.21.0.0/24

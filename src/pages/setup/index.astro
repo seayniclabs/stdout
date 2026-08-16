@@ -212,7 +212,9 @@ if (Astro.request.method === 'POST') {
           required
           autocomplete="new-password"
           minlength="8"
+          aria-describedby="password-hint"
         />
+        <span class="hint" id="password-hint">Minimum 8 characters required</span>
       </label>
 
           <label>
