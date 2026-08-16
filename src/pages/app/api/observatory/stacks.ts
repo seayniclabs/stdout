@@ -15,26 +15,27 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const userId = locals.user.id;
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   try {
-    const stacks = await db.all(sql`
+    const stacks = await rawDb.prepare(`
       SELECT
         id, name, description, type, created_at, updated_at
       FROM stacks
       ORDER BY name ASC
-    `);
+    `).all();
 
     // Get monitor count per stack
     const stacksWithCounts = await Promise.all(
       (stacks as any[]).map(async (stack) => {
-        const monitorCount = await db.get(sql`
-          SELECT COUNT(*) as count FROM monitors WHERE stack_id = ${stack.id}
-        `);
+        const monitorCount = await rawDb.prepare(`
+          SELECT COUNT(*) as count FROM monitors WHERE stack_id = ?
+        `).get(stack.id);
 
-        const incidentCount = await db.get(sql`
+        const incidentCount = await rawDb.prepare(`
           SELECT COUNT(*) as count FROM incidents
-          WHERE stack_id = ${stack.id} AND status = 'active'
-        `);
+          WHERE stack_id = ? AND status = 'active'
+        `).get(stack.id);
 
         return {
           ...stack,

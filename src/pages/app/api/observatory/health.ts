@@ -20,15 +20,16 @@ export const GET: APIRoute = async ({ locals }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // Query system_state directly via raw SQL (system_state table not in exported schema)
-  const watcherStateRow = await db.get(sql`
+  const watcherStateRow = await rawDb.prepare(`
     SELECT value FROM system_state WHERE key = 'observatory_last_run'
-  `) as { value: string } | undefined;
+  `).get() as { value: string } | undefined;
 
-  const modeStateRow = await db.get(sql`
+  const modeStateRow = await rawDb.prepare(`
     SELECT value FROM system_state WHERE key = 'observatory_mode'
-  `) as { value: string } | undefined;
+  `).get() as { value: string } | undefined;
 
   // Get pending health-monitor incidents (active + tagged)
   const pendingIncidents = db.select({

@@ -143,13 +143,13 @@ async function recordStartupTime(success: boolean): Promise<void> {
     const nowStr = now.toString();
 
     // Ensure system_state table exists
-    await db.run(sql`
+    await rawDb.prepare(`
       CREATE TABLE IF NOT EXISTS system_state (
         key TEXT PRIMARY KEY,
         value TEXT NOT NULL,
         updated_at INTEGER NOT NULL
       )
-    `);
+    `).run();
 
     // Upsert last startup time
     // Use raw SQLite instead of Drizzle sql template - sql template with db.run() doesn't support UPSERT

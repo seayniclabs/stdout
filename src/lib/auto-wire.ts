@@ -60,12 +60,12 @@ async function autoCreateHostMonitor(
   hostname: string | null,
 ): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // Check if a monitor already targets this IP
-  const existing = db.get(sql`
-    SELECT id FROM monitors WHERE target LIKE ${'%' + ip + '%'}
-    LIMIT 1
-  `) as { id: string } | undefined;
+  const existing = rawDb.prepare(`
+    SELECT id FROM monitors WHERE target LIKE ? LIMIT 1
+  `).get('%' + ip + '%') as { id: string } | undefined;
 
   if (existing) return; // already monitored
 
@@ -74,16 +74,13 @@ async function autoCreateHostMonitor(
   const now = Math.floor(Date.now() / 1000);
 
   // Try HTTP first (port 80). If the host has services we'll upgrade later.
-  db.run(sql`
+  rawDb.prepare(`
     INSERT INTO monitors (
       id, name, type, target, interval_seconds, timeout_ms,
       expected_status, retries, stack_id, paused, maintenance,
       current_status, consecutive_failures, created_at, updated_at
-    ) VALUES (
-      ${monitorId}, ${'[auto] ' + label}, 'ping', ${ip},
-      300, 5000, NULL, 2, NULL, 0, 0, 'unknown', 0, ${now}, ${now}
-    )
-  `);
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(monitorId, '[auto] ' + label, 'ping', ip, 300, 5000, null, 2, null, 0, 0, 'unknown', 0, now, now);
 
   console.log(`[auto-wire] created ping monitor for ${ip} (${label})`);
 }
@@ -97,17 +94,15 @@ async function linkSatelliteToHost(
   tags: string[],
 ): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // Try to match by hostname (case-insensitive) or IP in the agent name
   // e.g. agent named "hetzner-web-01" matches host with hostname "hetzner-web-01"
-  const host = db.get(sql`
+  const host = rawDb.prepare(`
     SELECT id, ip_address FROM discovered_hosts
-    WHERE (
-        lower(hostname) = lower(${name})
-        OR ip_address = ${name}
-      )
+    WHERE (lower(hostname) = lower(?) OR ip_address = ?)
     LIMIT 1
-  `) as { id: string; ip_address: string } | undefined;
+  `).get(name, name) as { id: string; ip_address: string } | undefined;
 
   if (!host) return;
 

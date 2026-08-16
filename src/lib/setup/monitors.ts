@@ -35,13 +35,14 @@ export async function configureMonitors(
     const { sql } = await import('drizzle-orm');
     const { nanoid } = await import('nanoid');
     const db = getDb();
+  const rawDb = (db as any).$client;
 
     onProgress(5, 'Riggins is analyzing your environment...');
 
     // Get all stacks
-    let stacks = await db.all(sql`
+    let stacks = await rawDb.prepare(`
       SELECT id, name FROM stacks
-    `) as Array<{ id: string; name: string }>;
+    `).all() as Array<{ id: string; name: string }>;
 
     output.push(`Found ${stacks.length} existing stacks`);
 
@@ -65,17 +66,17 @@ export async function configureMonitors(
 
       for (const stackDef of defaultStacks) {
         const stackId = nanoid();
-        await db.run(sql`
+        await rawDb.prepare(`
           INSERT INTO stacks (id, name, description, tags, created_at, updated_at)
-          VALUES (${stackId}, ${stackDef.name}, ${stackDef.description}, ${stackDef.tags}, ${now}, ${now})
-        `);
+          VALUES (?, ?, ?, ?, ?, ?)
+        `).run(stackId, stackDef.name, stackDef.description, stackDef.tags, now, now);
         output.push(`✓ Created stack: ${stackDef.name}`);
       }
 
       // Reload stacks
-      stacks = await db.all(sql`
+      stacks = await rawDb.prepare(`
         SELECT id, name FROM stacks
-      `) as Array<{ id: string; name: string }>;
+      `).all() as Array<{ id: string; name: string }>;
     }
 
     onProgress(30, 'Riggins is scanning your network for devices and services...');
@@ -202,10 +203,10 @@ export async function configureMonitors(
         }
 
         // Check if monitor already exists
-        const existing = await db.get(sql`
+        const existing = await rawDb.prepare(`
           SELECT id FROM monitors
-          WHERE name = ${monitorDef.name}
-        `);
+          WHERE name = ?
+        `).get(monitorDef.name);
 
         if (existing) {
           output.push(`○ Monitor already exists: ${monitorDef.name}`);
@@ -216,7 +217,7 @@ export async function configureMonitors(
         const monitorId = nanoid();
         const now = Date.now();
 
-        await db.run(sql`
+        await rawDb.prepare(`
           INSERT INTO monitors (
             id,
             stack_id,
@@ -230,19 +231,19 @@ export async function configureMonitors(
             created_at,
             updated_at
           ) VALUES (
-            ${monitorId},
-            ${stack.id},
-            ${monitorDef.name},
-            ${monitorDef.type},
-            ${monitorDef.target},
-            ${monitorDef.interval},
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
+            ?,
             0,
             'unknown',
             0,
-            ${now},
-            ${now}
+            ?,
+            ?
           )
-        `);
+        `).run(monitorId, stack.id, monitorDef.name, monitorDef.type, monitorDef.target, monitorDef.interval, now, now);
 
         monitorsCreated++;
         output.push(`✓ Created monitor: ${monitorDef.name}`);
@@ -285,7 +286,7 @@ ${initialMonitors.length > 5 ? `\n...and ${initialMonitors.length - 5} more moni
 
 I'm here 24/7, learning and watching. Let's keep your systems running smoothly together.`;
 
-      await db.run(sql`
+      await rawDb.prepare(`
         INSERT INTO incidents (
           id,
           stack_id,
@@ -296,16 +297,16 @@ I'm here 24/7, learning and watching. Let's keep your systems running smoothly t
           created_at,
           updated_at
         ) VALUES (
-          ${incidentId},
-          ${stacks[0]?.id || null},
-          ${"Hello! I'm Riggins, your Observatory AI"},
-          ${welcomeMessage},
-          ${"low"},
-          ${"active"},
-          ${now},
-          ${now}
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?
         )
-      `);
+      `).run(incidentId, stacks[0]?.id || null, "Hello! I'm Riggins, your Observatory AI", welcomeMessage, "low", "active", now, now);
 
       output.push("✓ Riggins says hello!");
     } catch {

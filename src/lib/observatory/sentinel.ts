@@ -44,6 +44,7 @@ export async function checkStackForAnomalies(
   metrics: MetricSnapshot
 ): Promise<AnomalyDetection | null> {
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // 1. Retrieve baselines for this stack
   const baselines = await retrieveBaselines(stackId);
@@ -96,7 +97,7 @@ async function retrieveBaselines(
   const db = getDb();
 
   // Query observatory_baselines table - retrieves most recent baselines within 7-day window
-  const rows = await db.all(sql`
+  const rows = await rawDb.prepare(`
     SELECT
       metric_name,
       mean,
@@ -104,10 +105,10 @@ async function retrieveBaselines(
       sample_count,
       window_end
     FROM observatory_baselines
-    WHERE stack_id = ${stackId}
-      AND window_end > ${Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60}
+    WHERE stack_id = ?
+      AND window_end > ?
     ORDER BY window_end DESC, metric_name ASC
-  `) as Array<{ metric_name: string; mean: number; std_dev: number; sample_count: number; window_end: number }>;
+  `).all(stackId, Math.floor(Date.now() / 1000) - 7 * 24 * 60 * 60) as Array<{ metric_name: string; mean: number; std_dev: number; sample_count: number; window_end: number }>;
 
   const baselines: Record<string, { mean: number; stdDev: number; sampleCount: number }> = {};
 
@@ -137,14 +138,14 @@ async function getRecentIncidents(
 
   const cutoff = Date.now() - (hoursBack * 60 * 60 * 1000);
 
-  const rows = await db.all(sql`
+  const rows = await rawDb.prepare(`
     SELECT id, title, severity, created_at
     FROM incidents
-    WHERE stack_id = ${stackId}
-      AND created_at > ${cutoff}
+    WHERE stack_id = ?
+      AND created_at > ?
     ORDER BY created_at DESC
     LIMIT 10
-  `) as any[];
+  `).all(stackId, cutoff) as any[];
 
   return rows.map(row => ({
     id: row.id,
@@ -251,7 +252,7 @@ async function recordAgentRun(
 
   const id = `run_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-  await db.run(sql`
+  await rawDb.prepare(`
     INSERT INTO observatory_agent_runs (
       id,
       agent_name,
@@ -264,18 +265,18 @@ async function recordAgentRun(
       execution_time_ms,
       created_at
     ) VALUES (
-      ${id},
-      ${run.agentName},
-      ${run.stackId || null},
-      ${run.trigger},
-      ${run.inputContext},
-      ${run.outputDecision},
-      ${run.decisionMade},
-      ${run.confidenceScore},
-      ${run.executionTimeMs},
-      ${Date.now()}
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
+      ?
     )
-  `);
+  `).run(id, run.agentName, run.stackId || null, run.trigger, run.inputContext, run.outputDecision, run.decisionMade, run.confidenceScore, run.executionTimeMs, Date.now());
 }
 
 /**
@@ -304,7 +305,7 @@ ${detection.reasoning}
 
 This incident was automatically created by Observatory. Review the metrics and consult similar past incidents for resolution guidance.`;
 
-  await db.run(sql`
+  await rawDb.prepare(`
     INSERT INTO incidents (
       id,
       stack_id,
@@ -316,23 +317,23 @@ This incident was automatically created by Observatory. Review the metrics and c
       created_at,
       updated_at
     ) VALUES (
-      ${id},
-      ${stackId},
-      ${detection.suggestedTitle || 'Observatory Anomaly Detected'},
-      ${description},
-      ${detection.severity || 'medium'},
+      ?,
+      ?,
+      ?,
+      ?,
+      ?,
       'active',
       'observatory,auto-detected',
-      ${now},
-      ${now}
+      ?,
+      ?
     )
-  `);
+  `).run(id, stackId, detection.suggestedTitle || 'Observatory Anomaly Detected', description, detection.severity || 'medium', now, now);
 
   // Sync to FTS
-  await db.run(sql`
+  await rawDb.prepare(`
     INSERT INTO incidents_fts(rowid, title, description, tags)
-    SELECT rowid, title, description, tags FROM incidents WHERE id = ${id}
-  `);
+    SELECT rowid, title, description, tags FROM incidents WHERE id = ?
+  `).run(id);
 
   return id;
 }
@@ -350,11 +351,11 @@ export async function runScheduledCheck(userId: string): Promise<{
   const db = getDb();
 
   // Get all active stacks
-  const stacks = await db.all(sql`
+  const stacks = await rawDb.prepare(`
     SELECT id, name
     FROM stacks
     ORDER BY created_at DESC
-  `) as any[];
+  `).all() as any[];
 
   let anomaliesDetected = 0;
   let incidentsCreated = 0;

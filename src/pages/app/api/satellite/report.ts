@@ -133,10 +133,11 @@ export const POST: APIRoute = async ({ request }) => {
 
   const tokenHash = hashToken(rawToken);
   const db = getDb();
+  const rawDb = (db as any).$client;
 
-  const agent = db.get(sql`
-    SELECT id, user_id, name, alert_state FROM satellite_agents WHERE api_key = ${tokenHash}
-  `) as { id: string; user_id: string; name: string; alert_state: string } | undefined;
+  const agent = rawDb.prepare(`
+    SELECT id, user_id, name, alert_state FROM satellite_agents WHERE api_key = ?
+  `).get(tokenHash) as { id: string; user_id: string; name: string; alert_state: string } | undefined;
 
   if (!agent) {
     return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
@@ -158,10 +159,10 @@ export const POST: APIRoute = async ({ request }) => {
   const reportId = nanoid();
 
   // Persist report
-  db.run(sql`
+  rawDb.prepare(`
     INSERT INTO satellite_reports (id, satellite_id, user_id, received_at, metrics)
-    VALUES (${reportId}, ${agent.id}, ${agent.user_id}, ${now}, ${JSON.stringify(report)})
-  `);
+    VALUES (?, ?, ?, ?, ?)
+  `).run(reportId, agent.id, agent.user_id, now, JSON.stringify(report));
 
   // Update agent last_seen, last_report summary, alert_state
   const summary = {
@@ -173,11 +174,11 @@ export const POST: APIRoute = async ({ request }) => {
     alertState: newAlertState,
   };
 
-  db.run(sql`
+  rawDb.prepare(`
     UPDATE satellite_agents
-    SET last_seen = ${now}, last_report = ${JSON.stringify(summary)}, alert_state = ${newAlertState}
-    WHERE id = ${agent.id}
-  `);
+    SET last_seen = ?, last_report = ?, alert_state = ?
+    WHERE id = ?
+  `).run(now, JSON.stringify(summary), newAlertState, agent.id);
 
   // Fire alerts if state changed (non-blocking)
   maybeFireAlerts(
@@ -196,7 +197,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Prune reports older than 7 days (async, don't block response)
   const sevenDaysAgo = now - 7 * 24 * 60 * 60;
-  db.run(sql`DELETE FROM satellite_reports WHERE satellite_id = ${agent.id} AND received_at < ${sevenDaysAgo}`);
+  rawDb.prepare(`DELETE FROM satellite_reports WHERE satellite_id = ? AND received_at < ?`).run(agent.id, sevenDaysAgo);
 
   return new Response(JSON.stringify({ ok: true, next_interval: 60 }), {
     headers: { 'Content-Type': 'application/json' },

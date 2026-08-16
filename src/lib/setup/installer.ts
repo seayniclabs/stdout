@@ -99,6 +99,7 @@ export async function runDatabaseInit(
   try {
     onProgress(10, 'Checking database connection...');
     const db = getDb();
+  const rawDb = (db as any).$client;
     output.push('✓ Database connection established');
 
     onProgress(30, 'Initializing central schema...');
@@ -121,11 +122,11 @@ export async function runDatabaseInit(
 
     onProgress(75, 'Seeding Observatory patterns...');
     // Check if patterns already seeded
-    const patternCount = await db.get(sql`
+    const patternCount = await rawDb.prepare(`
       SELECT COUNT(*) as count
       FROM observatory_standard_patterns
       WHERE source = 'stdlib'
-    `) as { count: number } | undefined;
+    `).get() as { count: number } | undefined;
 
     if (!patternCount || patternCount.count === 0) {
       warnings.push('Observatory patterns not seeded - run migration 0011');
@@ -180,10 +181,10 @@ export async function runScannerSetup(
     const token = `stdout_${Math.random().toString(36).substr(2, 32)}`;
     const tokenHash = await hashToken(token);
 
-    await db.run(sql`
+    await rawDb.prepare(`
       INSERT INTO api_tokens (id, user_id, name, token_hash, created_at)
-      VALUES (${tokenId}, ${userId}, 'Scanner Token', ${tokenHash}, ${Date.now()})
-    `);
+      VALUES (?, ?, 'Scanner Token', ?, ?)
+    `).run(tokenId, userId, tokenHash, Date.now());
 
     output.push('✓ Scanner API token generated');
     onProgress(30, 'Scanner token created');
@@ -201,9 +202,9 @@ export async function runScannerSetup(
 
     onProgress(70, 'Checking for existing scan data...');
 
-    const stackCount = await db.get(sql`
+    const stackCount = await rawDb.prepare(`
       SELECT COUNT(*) as count FROM stacks
-    `) as { count: number } | undefined;
+    `).get() as { count: number } | undefined;
 
     if (stackCount && stackCount.count > 0) {
       output.push(`✓ Found ${stackCount.count} existing stacks`);
@@ -404,12 +405,12 @@ export async function runObservatorySetup(
     const now = Date.now();
 
     // Check if agent config already exists
-    const existingConfig = await db.get(sql`
+    const existingConfig = await rawDb.prepare(`
       SELECT id FROM agent_config LIMIT 1
-    `);
+    `).get();
 
     if (!existingConfig) {
-      await db.run(sql`
+      await rawDb.prepare(`
         INSERT INTO agent_config (
           id,
           agent_name,
@@ -421,17 +422,17 @@ export async function runObservatorySetup(
           created_at,
           updated_at
         ) VALUES (
-          ${agentId},
+          ?,
           'Riggins',
           'ollama',
           'http://172.17.0.1:11434',
           'qwen2.5:14b-instruct-q4_K_M',
           1,
           0,
-          ${now},
-          ${now}
+          ?,
+          ?
         )
-      `);
+      `).run(agentId, now, now);
 
       output.push('✓ Riggins agent configured (auto-routing to Ollama)');
     } else {
@@ -550,7 +551,7 @@ export async function runHealthCheck(
   try {
     onProgress(20, 'Checking database...');
     const db = getDb();
-    await db.get(sql`SELECT 1`);
+    await rawDb.prepare(`SELECT 1`).get();
     output.push('✓ Database healthy');
 
     onProgress(40, 'Checking Windlass...');

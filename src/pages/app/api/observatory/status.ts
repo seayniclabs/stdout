@@ -20,6 +20,7 @@ export const GET: APIRoute = async ({ locals }) => {
 
   const centralDb = getDb();
   const db = getDb();
+  const rawDb = (db as any).$client;
   const userId = locals.user.id;
   const now = Math.floor(Date.now() / 1000);
 
@@ -31,20 +32,20 @@ export const GET: APIRoute = async ({ locals }) => {
   const lastStartupMs = watcherTickRow ? parseInt(watcherTickRow.value, 10) : null;
 
   // ── Stacks ────────────────────────────────────────────────────────────────
-  const stacks = db.all(sql`
+  const stacks = rawDb.prepare(`
     SELECT s.id, s.name, s.created_at,
       (SELECT COUNT(*) FROM discovered_hosts h WHERE h.stack_id = s.id) as host_count,
       (SELECT COUNT(*) FROM monitors m WHERE m.stack_id = s.id) as monitor_count
     FROM stacks s
     ORDER BY s.created_at DESC LIMIT 20
-  `) as Array<{ id: string; name: string; created_at: number; host_count: number; monitor_count: number }>;
+  `).all() as Array<{ id: string; name: string; created_at: number; host_count: number; monitor_count: number }>;
 
   // ── Discovered hosts ──────────────────────────────────────────────────────
-  const hosts = db.all(sql`
+  const hosts = rawDb.prepare(`
     SELECT id, ip_address, hostname, stack_id, last_seen
     FROM discovered_hosts
     ORDER BY last_seen DESC LIMIT 50
-  `) as Array<{ id: string; ip_address: string; hostname: string | null; stack_id: string | null; last_seen: number }>;
+  `).all() as Array<{ id: string; ip_address: string; hostname: string | null; stack_id: string | null; last_seen: number }>;
 
   // ── Satellite agents ──────────────────────────────────────────────────────
   const satellites = centralDb.all(sql`
@@ -55,10 +56,10 @@ export const GET: APIRoute = async ({ locals }) => {
   // ── Recent events (last 100) ──────────────────────────────────────────────
   let recentEvents: Array<{ id: string; type: string; payload: string; created_at: number }> = [];
   try {
-    recentEvents = db.all(sql`
+    recentEvents = rawDb.prepare(`
       SELECT id, type, payload, created_at FROM event_log
       ORDER BY created_at DESC LIMIT 100
-    `) as typeof recentEvents;
+    `).all() as typeof recentEvents;
   } catch {
     // event_log may not exist yet on this tenant DB — fall back to central
     try {
@@ -70,12 +71,12 @@ export const GET: APIRoute = async ({ locals }) => {
   }
 
   // ── Recent Observatory incidents ──────────────────────────────────────────
-  const autoIncidents = db.all(sql`
+  const autoIncidents = rawDb.prepare(`
     SELECT id, title, severity, status, stack_id, created_at
     FROM incidents
     WHERE tags LIKE '%observatory%'
     ORDER BY created_at DESC LIMIT 20
-  `) as Array<{ id: string; title: string; severity: string; status: string; stack_id: string | null; created_at: number }>;
+  `).all() as Array<{ id: string; title: string; severity: string; status: string; stack_id: string | null; created_at: number }>;
 
   // ── Observatory watch queue status ────────────────────────────────────────
   const watchQueue = centralDb.all(sql`

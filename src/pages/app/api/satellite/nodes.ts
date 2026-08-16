@@ -24,11 +24,12 @@ export const GET: APIRoute = async ({ locals }) => {
   if (authError) return authError;
 
   const db = getDb();
-  const rows = db.all(sql`
+  const rawDb = (db as any).$client;
+  const rows = rawDb.prepare(`
     SELECT id, name, hostname, ip_address, last_seen_at, created_at
     FROM satellite_agents
     ORDER BY created_at DESC
-  `) as any[];
+  `).all() as any[];
 
   const nodes = rows.map(r => ({
     id: r.id,
@@ -80,10 +81,10 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const now = Math.floor(Date.now() / 1000);
 
   const db = getDb();
-  db.run(sql`
+  rawDb.prepare(`
     INSERT INTO satellite_agents (id, name, hostname, ip_address, api_key, created_at)
-    VALUES (${id}, ${name}, ${hostname}, ${ipAddress}, ${tokenHash}, ${now})
-  `);
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, name, hostname, ipAddress, tokenHash, now);
 
   logAudit('satellite_node_register', {
     userId: locals.user.id,
@@ -127,15 +128,15 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
 
   const db = getDb();
   // Verify node exists before delete
-  const existing = db.get(sql`
-    SELECT id FROM satellite_agents WHERE id = ${nodeId}
-  `) as any;
+  const existing = rawDb.prepare(`
+    SELECT id FROM satellite_agents WHERE id = ?
+  `).get(nodeId) as any;
 
   if (!existing) {
     return new Response(JSON.stringify({ error: 'Node not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
   }
 
-  db.run(sql`DELETE FROM satellite_agents WHERE id = ${nodeId}`);
+  rawDb.prepare(`DELETE FROM satellite_agents WHERE id = ?`).run(nodeId);
 
   logAudit('satellite_node_deregister', {
     userId: locals.user.id,

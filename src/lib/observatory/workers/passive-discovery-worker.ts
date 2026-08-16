@@ -63,11 +63,11 @@ async function tick(): Promise<void> {
   const db = getDb();
   let rows: ScheduleRow[];
   try {
-    rows = db.all(sql`
+    rows = rawDb.prepare(`
       SELECT interval, hour, minute, weekday, enabled
       FROM scanner_schedule
       WHERE enabled = 1
-    `) as ScheduleRow[];
+    `).all() as ScheduleRow[];
   } catch (error: unknown) {
     console.error('[passive-discovery-worker] failed to read schedules:', error instanceof Error ? error.message : String(error));
     return;
@@ -104,7 +104,7 @@ async function tick(): Promise<void> {
 export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
   const db = getDb();
   try {
-    const existing = db.get(sql`SELECT id FROM scanner_schedule LIMIT 1`) as { id: string } | undefined;
+    const existing = rawDb.prepare(`SELECT id FROM scanner_schedule LIMIT 1`).get() as { id: string } | undefined;
     if (existing) return false;
     const id = `sched_${userId}`;
 

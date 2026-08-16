@@ -24,16 +24,17 @@ export const GET: APIRoute = async ({ locals, url }) => {
   }
 
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   try {
-    const baselines = await db.all(sql`
+    const baselines = await rawDb.prepare(`
       SELECT
         metric_name, baseline_value, threshold_high, threshold_low,
         confidence_score, sample_count, updated_at
       FROM baselines
-      WHERE stack_id = ${stackId}
+      WHERE stack_id = ?
       ORDER BY metric_name ASC
-    `);
+    `).all(stackId);
 
     return new Response(JSON.stringify({
       stack_id: stackId,

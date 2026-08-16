@@ -99,6 +99,7 @@ export const GET: APIRoute = async ({ locals }) => {
             try {
               const { nanoid } = await import('nanoid');
               const db = getDb();
+  const rawDb = (db as any).$client;
               const windlassUrl = process.env.WINDLASS_URL || 'http://localhost:8116';
 
               // Check if config already exists
@@ -190,11 +191,11 @@ export const GET: APIRoute = async ({ locals }) => {
         const { getDb } = await import('../../../../lib/db');
         const db = getDb();
 
-        await db.run(sql`
+        await rawDb.prepare(`
           INSERT INTO system_state (key, value, updated_at)
-          VALUES ('installation_complete', 'true', ${Date.now()})
-          ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = ${Date.now()}
-        `);
+          VALUES ('installation_complete', 'true', ?)
+          ON CONFLICT (key) DO UPDATE SET value = 'true', updated_at = ?
+        `).run(Date.now(), Date.now());
 
         // Send final state and summary
         sendEvent('complete', {

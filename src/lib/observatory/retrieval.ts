@@ -77,6 +77,7 @@ export async function retrieveKnowledge(
 ): Promise<RelevantKnowledge> {
   const startTime = Date.now();
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // 1. Retrieve standard patterns
   const standardPatterns = await retrieveStandardPatterns(context);
@@ -134,9 +135,9 @@ async function retrieveLibraryDocs(
   // Admin opt-in for public resources.
   let includePublic = false;
   try {
-    const pref = db.get(sql`
+    const pref = rawDb.prepare(`
       SELECT rag_include_public FROM system_settings WHERE id = 'instance'
-    `) as { rag_include_public: number } | undefined;
+    `).get() as { rag_include_public: number } | undefined;
     includePublic = !!pref?.rag_include_public;
   } catch { /* column may not exist on very old DBs — default off */ }
 
@@ -161,20 +162,20 @@ async function retrieveLibraryDocs(
     let rows: Array<{ id: string; title: string; doc_type: string; source: string; content: string }>;
     if (terms.length === 0) {
       // No symptoms — return a few most-recent runbooks/postmortems as general context.
-      rows = db.all(sql`
+      rows = rawDb.prepare(`
         SELECT id, title, doc_type, source, content FROM docs
-        WHERE source IN (${sql.raw(sourceList)})
+        WHERE source IN (?)
           AND doc_type IN ('runbook','postmortem','guide')
         ORDER BY updated_at DESC LIMIT 3
-      `) as any[];
+      `).all(sql.raw(sourceList)) as any[];
     } else {
       const like = `%${terms[0]}%`;
-      rows = db.all(sql`
+      rows = rawDb.prepare(`
         SELECT id, title, doc_type, source, content FROM docs
-        WHERE source IN (${sql.raw(sourceList)})
-          AND (lower(title) LIKE ${like} OR lower(tags) LIKE ${like} OR lower(content) LIKE ${like})
+        WHERE source IN (?)
+          AND (lower(title) LIKE ? OR lower(tags) LIKE ? OR lower(content) LIKE ?)
         ORDER BY updated_at DESC LIMIT 5
-      `) as any[];
+      `).all(sql.raw(sourceList), like, like, like) as any[];
     }
     return rows.map((r) => ({
       id: r.id,
@@ -286,7 +287,7 @@ async function retrieveBaselines(
 ): Promise<Baseline[]> {
   const db = getDb();
 
-  const rows = await db.all(sql`
+  const rows = await rawDb.prepare(`
     SELECT
       stack_id,
       metric_name,
@@ -299,12 +300,12 @@ async function retrieveBaselines(
       created_at,
       updated_at
     FROM observatory_baselines
-    WHERE stack_id = ${stackId}
-      AND metric_name = ${metricName}
-      AND window_end > ${Date.now() - 7 * 24 * 60 * 60 * 1000}
+    WHERE stack_id = ?
+      AND metric_name = ?
+      AND window_end > ?
     ORDER BY window_end DESC
     LIMIT 1
-  `) as any[];
+  `).all(stackId, metricName, Date.now() - 7 * 24 * 60 * 60 * 1000) as any[];
 
   return rows.map(row => ({
     stackId: row.stack_id,
@@ -431,7 +432,7 @@ async function retrieveSimilarIncidents(
 
   const searchTerms = context.symptoms.join(' OR ');
 
-  const rows = await db.all(sql`
+  const rows = await rawDb.prepare(`
     SELECT
       i.id,
       i.title,
@@ -443,10 +444,10 @@ async function retrieveSimilarIncidents(
     JOIN incidents_fts fts ON fts.rowid = i.rowid
     LEFT JOIN resolutions r ON r.incident_id = i.id
     WHERE i.resolved_at IS NOT NULL
-      AND incidents_fts MATCH ${searchTerms}
+      AND incidents_fts MATCH ?
     ORDER BY i.resolved_at DESC
     LIMIT 5
-  `) as any[];
+  `).all(searchTerms) as any[];
 
   return rows.map(row => ({
     id: row.id,

@@ -150,6 +150,7 @@ const TOOLS: Record<string, ToolDef> = {
       const {sql} = require('drizzle-orm');
       const {nanoid} = require('nanoid');
       const db = getDb();
+  const rawDb = (db as any).$client;
       const id = nanoid();
       const now = Date.now();
       db.run(sql\\\`INSERT INTO stacks (id,user_id,name,description,tags,created_at,updated_at)

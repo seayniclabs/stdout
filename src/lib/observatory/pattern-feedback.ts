@@ -55,44 +55,45 @@ export function recordPatternOutcome(opts: {
   notes?: string;
 }): FeedbackResult {
   const db = getDb();
+  const rawDb = (db as any).$client;
   const now = Date.now();
   const delta = opts.success ? UP : -DOWN;
 
   // Try custom pattern first.
-  const custom = db.get(sql`
-    SELECT id, confidence_score FROM observatory_custom_patterns WHERE id = ${opts.patternId}
-  `) as { id: string; confidence_score: number } | undefined;
+  const custom = rawDb.prepare(`
+    SELECT id, confidence_score FROM observatory_custom_patterns WHERE id = ?
+  `).get(opts.patternId) as { id: string; confidence_score: number } | undefined;
 
   let result: FeedbackResult;
 
   if (custom) {
     const oldC = custom.confidence_score ?? 0.5;
     const newC = clamp(oldC + delta);
-    db.run(sql`
+    rawDb.prepare(`
       UPDATE observatory_custom_patterns
-      SET confidence_score = ${newC},
+      SET confidence_score = ?,
           occurrences = occurrences + 1,
-          successes = successes + ${opts.success ? 1 : 0},
-          last_seen = ${now},
-          updated_at = ${now}
-      WHERE id = ${opts.patternId}
-    `);
+          successes = successes + ?,
+          last_seen = ?,
+          updated_at = ?
+      WHERE id = ?
+    `).run(newC, opts.success ? 1 : 0, now, now, opts.patternId);
     result = { patternId: custom.id, kind: 'custom', oldConfidence: oldC, newConfidence: newC, adjusted: true,
       reason: `custom pattern confidence ${oldC.toFixed(2)} → ${newC.toFixed(2)} (${opts.success ? 'success' : 'failure'})` };
   } else {
     // Auto-documented standard pattern (never curated stdlib).
-    const std = db.get(sql`
-      SELECT id, confidence_threshold, source FROM observatory_standard_patterns WHERE id = ${opts.patternId}
-    `) as { id: string; confidence_threshold: number; source: string } | undefined;
+    const std = rawDb.prepare(`
+      SELECT id, confidence_threshold, source FROM observatory_standard_patterns WHERE id = ?
+    `).get(opts.patternId) as { id: string; confidence_threshold: number; source: string } | undefined;
 
     if (std && std.source === 'auto') {
       const oldC = std.confidence_threshold ?? 0.6;
       const newC = clamp(oldC + delta);
-      db.run(sql`
+      rawDb.prepare(`
         UPDATE observatory_standard_patterns
-        SET confidence_threshold = ${newC}, updated_at = ${now}
-        WHERE id = ${opts.patternId}
-      `);
+        SET confidence_threshold = ?, updated_at = ?
+        WHERE id = ?
+      `).run(newC, now, opts.patternId);
       result = { patternId: std.id, kind: 'standard', oldConfidence: oldC, newConfidence: newC, adjusted: true,
         reason: `auto pattern confidence ${oldC.toFixed(2)} → ${newC.toFixed(2)} (${opts.success ? 'success' : 'failure'})` };
     } else if (std) {
@@ -105,15 +106,16 @@ export function recordPatternOutcome(opts: {
 
   // Audit the feedback regardless of whether confidence moved.
   try {
-    db.run(sql`
+    const rawDb = (db as any).$client;
+    rawDb.prepare(`
       INSERT INTO observatory_feedback
         (id, incident_id, agent_type, suggestion, user_action, actual_resolution, notes, created_at)
-      VALUES (
-        ${`fb_${nanoid(12)}`}, ${opts.incidentId}, ${opts.agentType ?? 'system'},
-        ${`pattern:${opts.patternId}`}, ${opts.success ? 'success' : 'failure'},
-        ${null}, ${(opts.notes ?? result.reason).slice(0, 500)}, ${now}
-      )
-    `);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      `fb_${nanoid(12)}`, opts.incidentId, opts.agentType ?? 'system',
+      `pattern:${opts.patternId}`, opts.success ? 'success' : 'failure',
+      null, (opts.notes ?? result.reason).slice(0, 500), now
+    );
   } catch { /* audit best-effort */ }
 
   return result;

@@ -34,6 +34,7 @@ export async function executeNetworkScan(
 
     // Save discovered devices
     const db = getDb();
+  const rawDb = (db as any).$client;
     let savedDevices = 0;
     let savedServices = 0;
 
@@ -42,10 +43,10 @@ export async function executeNetworkScan(
       const now = Date.now();
 
       // Check if device already exists
-      const existing = await db.get(sql`
+      const existing = await rawDb.prepare(`
         SELECT id FROM discovered_hosts
-        WHERE ip_address = ${device.ip} OR (mac_address = ${device.mac} AND mac_address IS NOT NULL)
-      `);
+        WHERE ip_address = ? OR (mac_address = ? AND mac_address IS NOT NULL)
+      `).get(device.ip, device.mac);
 
       if (!existing) {
         await db.insert(schema.discoveredHosts).values({
@@ -117,9 +118,9 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
     const db = getDb();
 
     // Get or create default stack
-    let stacks = await db.all(sql`
+    let stacks = await rawDb.prepare(`
       SELECT id, name FROM stacks
-    `) as Array<{ id: string; name: string }>;
+    `).all() as Array<{ id: string; name: string }>;
 
     if (stacks.length === 0) {
       const stackId = nanoid();
@@ -138,14 +139,14 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
     const stack = stacks[0];
 
     // Get discovered services
-    const services = await db.all(sql`
+    const services = await rawDb.prepare(`
       SELECT
         ds.id, ds.service_name as name, ds.port, ds.protocol,
         dh.ip_address, dh.hostname
       FROM discovered_services ds
       JOIN discovered_hosts dh ON ds.host_id = dh.id
       WHERE ds.port IS NOT NULL
-    `) as Array<{
+    `).all() as Array<{
       id: string;
       name: string;
       port: number;
@@ -158,10 +159,10 @@ export async function executeCreateMonitors(userId: string): Promise<CommandResu
 
     for (const service of services) {
       // Check if monitor already exists
-      const existing = await db.get(sql`
+      const existing = await rawDb.prepare(`
         SELECT id FROM monitors
-        WHERE target LIKE ${'%' + service.ip_address + '%'}
-      `);
+        WHERE target LIKE ?
+      `).get('%' + service.ip_address + '%');
 
       if (existing) continue;
 

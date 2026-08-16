@@ -208,26 +208,27 @@ export async function executeTool(
     switch (toolName) {
       case 'get_metrics': {
         const db = getDb();
+  const rawDb = (db as any).$client;
         if (parameters.stack_id) {
-          const stack = await db.get(sql`SELECT id, name, description FROM stacks WHERE id = ${parameters.stack_id}`);
+          const stack = await rawDb.prepare(`SELECT id, name, description FROM stacks WHERE id = ?`).get(parameters.stack_id);
           if (!stack) return { success: false, result: null, error: 'Stack not found' };
 
-          const metrics = await db.all(sql`
+          const metrics = await rawDb.prepare(`
             SELECT metric_name, value, unit, timestamp
-            FROM metrics WHERE stack_id = ${parameters.stack_id}
+            FROM metrics WHERE stack_id = ?
             ORDER BY timestamp DESC LIMIT 10
-          `);
+          `).all(parameters.stack_id);
           return { success: true, result: { stack, metrics: metrics || [] } };
         }
 
-        const stacks = await db.all(sql`SELECT id, name, description FROM stacks`);
+        const stacks = await rawDb.prepare(`SELECT id, name, description FROM stacks`).all();
         const result = [];
         for (const stack of stacks as any[]) {
-          const metrics = await db.all(sql`
+          const metrics = await rawDb.prepare(`
             SELECT metric_name, value, unit, timestamp
-            FROM metrics WHERE stack_id = ${stack.id}
+            FROM metrics WHERE stack_id = ?
             ORDER BY timestamp DESC LIMIT 5
-          `);
+          `).all(stack.id);
           result.push({ stack, metrics: metrics || [] });
         }
         return { success: true, result: { stacks: result } };
@@ -235,12 +236,12 @@ export async function executeTool(
 
       case 'get_baselines': {
         const db = getDb();
-        const baselines = await db.all(sql`
+        const baselines = await rawDb.prepare(`
           SELECT metric_name, baseline_value, threshold_high, threshold_low,
                  confidence_score, sample_count, updated_at
-          FROM baselines WHERE stack_id = ${parameters.stack_id}
+          FROM baselines WHERE stack_id = ?
           ORDER BY metric_name ASC
-        `);
+        `).all(parameters.stack_id);
         return { success: true, result: { stack_id: parameters.stack_id, baselines: baselines || [] } };
       }
 
@@ -265,16 +266,16 @@ export async function executeTool(
 
       case 'get_stacks': {
         const db = getDb();
-        const stacks = await db.all(sql`
+        const stacks = await rawDb.prepare(`
           SELECT id, name, description, type, created_at, updated_at
           FROM stacks
           ORDER BY name ASC
-        `);
+        `).all();
 
         const stacksWithCounts = await Promise.all(
           (stacks as any[]).map(async (stack) => {
-            const monitorCount = await db.get(sql`SELECT COUNT(*) as count FROM monitors WHERE stack_id = ${stack.id}`);
-            const incidentCount = await db.get(sql`SELECT COUNT(*) as count FROM incidents WHERE stack_id = ${stack.id} AND status = 'active'`);
+            const monitorCount = await rawDb.prepare(`SELECT COUNT(*) as count FROM monitors WHERE stack_id = ?`).get(stack.id);
+            const incidentCount = await rawDb.prepare(`SELECT COUNT(*) as count FROM incidents WHERE stack_id = ? AND status = 'active'`).get(stack.id);
             return {
               ...stack,
               monitor_count: (monitorCount as any)?.count || 0,

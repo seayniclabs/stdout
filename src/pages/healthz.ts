@@ -26,7 +26,8 @@ interface HealthResponse {
 async function checkDatabase(): Promise<'ok' | 'down'> {
   try {
     const db = getDb();
-    db.run(sql`SELECT 1`);
+  const rawDb = (db as any).$client;
+    rawDb.prepare(`SELECT 1`).run();
     return 'ok';
   } catch (e) {
     return 'down';

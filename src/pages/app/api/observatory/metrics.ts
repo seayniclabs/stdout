@@ -16,13 +16,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const userId = locals.user.id;
   const stackId = url.searchParams.get('stack_id');
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   try {
     if (stackId) {
       // Single stack metrics
-      const stack = await db.get(sql`
-        SELECT id, name, description FROM stacks WHERE id = ${stackId}
-      `);
+      const stack = await rawDb.prepare(`
+        SELECT id, name, description FROM stacks WHERE id = ?
+      `).get(stackId);
 
       if (!stack) {
         return new Response(JSON.stringify({ error: 'Stack not found' }), {
@@ -32,13 +33,13 @@ export const GET: APIRoute = async ({ locals, url }) => {
       }
 
       // Get latest metrics for this stack
-      const metrics = await db.all(sql`
+      const metrics = await rawDb.prepare(`
         SELECT metric_name, value, unit, timestamp
         FROM metrics
-        WHERE stack_id = ${stackId}
+        WHERE stack_id = ?
         ORDER BY timestamp DESC
         LIMIT 10
-      `);
+      `).all(stackId);
 
       return new Response(JSON.stringify({
         stack,
@@ -49,17 +50,17 @@ export const GET: APIRoute = async ({ locals, url }) => {
     }
 
     // All stacks with latest metrics
-    const stacks = await db.all(sql`SELECT id, name, description FROM stacks`);
+    const stacks = await rawDb.prepare(`SELECT id, name, description FROM stacks`).all();
     const result = [];
 
     for (const stack of stacks as any[]) {
-      const metrics = await db.all(sql`
+      const metrics = await rawDb.prepare(`
         SELECT metric_name, value, unit, timestamp
         FROM metrics
-        WHERE stack_id = ${stack.id}
+        WHERE stack_id = ?
         ORDER BY timestamp DESC
         LIMIT 5
-      `);
+      `).all(stack.id);
 
       result.push({
         stack,

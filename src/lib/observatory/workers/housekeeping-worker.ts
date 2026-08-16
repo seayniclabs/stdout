@@ -27,19 +27,20 @@ export function startHousekeepingWorker(): void {
  */
 async function processPendingDiagnoses(): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
   const GRACE_PERIOD_SEC = 5 * 60; // 5 minutes
   const cutoff = Math.floor(Date.now() / 1000) - GRACE_PERIOD_SEC;
 
-  const undiagnosed = db.all(sql`
+  const undiagnosed = rawDb.prepare(`
     SELECT i.id, i.title
     FROM incidents i
     LEFT JOIN diagnoses d ON d.incident_id = i.id
     WHERE i.status = 'active'
       AND d.id IS NULL
-      AND i.created_at < ${cutoff}
+      AND i.created_at < ?
     ORDER BY i.created_at ASC
     LIMIT 50
-  `) as Array<{ id: string; title: string }>;
+  `).all(cutoff) as Array<{ id: string; title: string }>;
 
   if (undiagnosed.length === 0) return;
 

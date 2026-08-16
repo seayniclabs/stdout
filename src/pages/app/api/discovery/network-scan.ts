@@ -54,6 +54,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
         // Save to database
         const db = getDb();
+  const rawDb = (db as any).$client;
         let savedDevices = 0;
         let savedServices = 0;
 
@@ -65,22 +66,22 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
             const now = Date.now();
 
             // Check if device already exists
-            const existing = await db.get(sql`
+            const existing = await rawDb.prepare(`
               SELECT id FROM discovered_hosts
-              WHERE ip_address = ${device.ip} OR mac_address = ${device.mac}
-            `);
+              WHERE ip_address = ? OR mac_address = ?
+            `).get(device.ip, device.mac);
 
             if (existing) {
               // Update existing device
-              await db.run(sql`
+              await rawDb.prepare(`
                 UPDATE discovered_hosts
-                SET hostname = ${device.hostname || null},
-                    device_type = ${device.deviceType || 'unknown'},
-                    vendor = ${device.vendor || null},
-                    os_guess = ${device.os || null},
-                    last_seen_at = ${now}
-                WHERE id = ${existing.id}
-              `);
+                SET hostname = ?,
+                    device_type = ?,
+                    vendor = ?,
+                    os_guess = ?,
+                    last_seen_at = ?
+                WHERE id = ?
+              `).run(device.hostname || null, device.deviceType || 'unknown', device.vendor || null, device.os || null, now, existing.id);
             } else {
               // Insert new device
               await db.run(sql`

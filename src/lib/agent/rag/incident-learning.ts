@@ -83,9 +83,10 @@ export async function findSimilarIncidents(
     }
 
     const db = getDb();
+  const rawDb = (db as any).$client;
 
     // Get all resolved incidents with embeddings
-    const incidents = await db.all(sql`
+    const incidents = await rawDb.prepare(`
       SELECT
         i.id,
         i.title,
@@ -100,7 +101,7 @@ export async function findSimilarIncidents(
         AND i.resolution != ''
       ORDER BY i.resolved_at DESC
       LIMIT 100
-    `);
+    `).all();
 
     // Calculate similarities
     const similarities = incidents.map((inc: any) => {
@@ -136,23 +137,23 @@ export async function embedIncident(incidentId: string): Promise<boolean> {
     const db = getDb();
 
     // Get incident details
-    const incident = await db.get(sql`
+    const incident = await rawDb.prepare(`
       SELECT id, title, description, resolution
       FROM incidents
-      WHERE id = ${incidentId}
+      WHERE id = ?
         AND status = 'resolved'
         AND resolution IS NOT NULL
         AND resolution != ''
-    `);
+    `).get(incidentId);
 
     if (!incident) {
       return false;
     }
 
     // Check if already embedded
-    const existing = await db.get(sql`
-      SELECT id FROM incident_embeddings WHERE incident_id = ${incidentId}
-    `);
+    const existing = await rawDb.prepare(`
+      SELECT id FROM incident_embeddings WHERE incident_id = ?
+    `).get(incidentId);
 
     if (existing) {
       return true; // Already embedded
@@ -170,13 +171,13 @@ export async function embedIncident(incidentId: string): Promise<boolean> {
     const embeddingBlob = new Float32Array(embedding);
     const buffer = Buffer.from(embeddingBlob.buffer);
 
-    await db.run(sql`
+    await rawDb.prepare(`
       INSERT INTO incident_embeddings (
         id, incident_id, embedding, embedding_model, created_at
       ) VALUES (
-        ${nanoid()}, ${incidentId}, ${buffer}, ${EMBEDDING_MODEL}, ${Date.now()}
+        ?, ?, ?, ?, ?
       )
-    `);
+    `).run(nanoid(), incidentId, buffer, EMBEDDING_MODEL, Date.now());
 
     return true;
   } catch (error: any) {
@@ -193,7 +194,7 @@ export async function batchEmbedIncidents(): Promise<number> {
     const db = getDb();
 
     // Find resolved incidents without embeddings
-    const unembedded = await db.all(sql`
+    const unembedded = await rawDb.prepare(`
       SELECT i.id
       FROM incidents i
       LEFT JOIN incident_embeddings ie ON i.id = ie.incident_id
@@ -202,7 +203,7 @@ export async function batchEmbedIncidents(): Promise<number> {
         AND i.resolution != ''
         AND ie.id IS NULL
       LIMIT 50
-    `);
+    `).all();
 
     let count = 0;
     for (const inc of unembedded) {

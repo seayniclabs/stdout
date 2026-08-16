@@ -346,38 +346,39 @@ const PATTERNS: KBPattern[] = [
 
 export async function seedCommunityKB(): Promise<number> {
   const db = getDb();
+  const rawDb = (db as any).$client;
   let count = 0;
   const now = Date.now();
 
   for (const pattern of PATTERNS) {
     try {
       // Check if already exists (by title)
-      const existing = await db.get(sql`
-        SELECT id FROM community_kb WHERE title = ${pattern.title}
-      `);
+      const existing = await rawDb.prepare(`
+        SELECT id FROM community_kb WHERE title = ?
+      `).get(pattern.title);
 
       if (existing) {
         continue; // Skip duplicates
       }
 
-      await db.run(sql`
+      await rawDb.prepare(`
         INSERT INTO community_kb (
           id, title, category, problem_pattern, solution,
           tags, upvotes, downvotes, source, created_at, updated_at
         ) VALUES (
-          ${nanoid()},
-          ${pattern.title},
-          ${pattern.category},
-          ${pattern.problem_pattern},
-          ${pattern.solution},
-          ${JSON.stringify(pattern.tags)},
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
+          ?,
           0,
           0,
           'seeded',
-          ${now},
-          ${now}
+          ?,
+          ?
         )
-      `);
+      `).run(nanoid(), pattern.title, pattern.category, pattern.problem_pattern, pattern.solution, JSON.stringify(pattern.tags), now, now);
 
       count++;
     } catch (error) {

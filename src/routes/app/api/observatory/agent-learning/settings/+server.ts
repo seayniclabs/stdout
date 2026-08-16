@@ -9,11 +9,12 @@ export const GET: RequestHandler = async ({ locals }) => {
   }
 
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // Get agent config for this user
-  const config = await db.get(sql`
-    SELECT * FROM agent_config WHERE user_id = ${locals.user.id}
-  `);
+  const config = await rawDb.prepare(`
+    SELECT * FROM agent_config WHERE user_id = ?
+  `).get(locals.user.id);
 
   if (!config) {
     // Return defaults
@@ -53,9 +54,9 @@ export const POST: RequestHandler = async ({ locals, request }) => {
   const db = getDb();
 
   // Get existing config
-  const existing = await db.get(sql`
-    SELECT id, extended_config FROM agent_config WHERE user_id = ${locals.user.id}
-  `);
+  const existing = await rawDb.prepare(`
+    SELECT id, extended_config FROM agent_config WHERE user_id = ?
+  `).get(locals.user.id);
 
   if (!existing) {
     return json({ error: 'Agent config not found' }, { status: 404 });
@@ -74,14 +75,14 @@ export const POST: RequestHandler = async ({ locals, request }) => {
   };
 
   // Update config
-  await db.run(sql`
+  await rawDb.prepare(`
     UPDATE agent_config
     SET
-      extended_config = ${JSON.stringify(newExtendedConfig)},
-      proactive_notifications = ${settings.proactive_suggestions ? 1 : 0},
-      updated_at = ${Date.now()}
-    WHERE id = ${existing.id}
-  `);
+      extended_config = ?,
+      proactive_notifications = ?,
+      updated_at = ?
+    WHERE id = ?
+  `).run(JSON.stringify(newExtendedConfig), settings.proactive_suggestions ? 1 : 0, Date.now(), existing.id);
 
   return json({ success: true });
 };

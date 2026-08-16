@@ -54,11 +54,12 @@ async function promQuery(baseUrl: string, query: string): Promise<number | null>
 function resolvePrometheusUrl(userId: string): string | null {
   try {
     const db = getDb();
-    const row = db.get(sql`
+  const rawDb = (db as any).$client;
+    const row = rawDb.prepare(`
       SELECT url FROM data_sources
       WHERE type = 'prometheus' AND enabled = 1
       ORDER BY updated_at DESC LIMIT 1
-    `) as { url: string } | undefined;
+    `).get() as { url: string } | undefined;
     if (row?.url) return row.url;
   } catch { /* fall through to env */ }
   return process.env.PROMETHEUS_URL || null;

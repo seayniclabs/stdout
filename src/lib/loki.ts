@@ -145,6 +145,7 @@ export async function checkLokiHealth(
 
 export function getLokiConfig(userId: string): LokiConfig | null {
   const db = getDb();
+  const rawDb = (db as any).$client;
   const sources = db.select().from(schema.dataSources)
     .where(and(
       eq(schema.dataSources.userId, userId),
@@ -273,11 +274,11 @@ function updateBaseline(
   now: number,
 ): boolean {
   const db = getDb();
-  const existing = db.get(sql`
+  const existing = rawDb.prepare(`
     SELECT id, mean, std_dev, sample_count, window_start
     FROM observatory_baselines
-    WHERE stack_id = ${stackId} AND metric_name = ${metricName}
-  `) as {
+    WHERE stack_id = ? AND metric_name = ?
+  `).get(stackId, metricName) as {
     id: string;
     mean: number;
     std_dev: number;
@@ -287,12 +288,12 @@ function updateBaseline(
 
   if (!existing) {
     const id = `bll_${nanoid(12)}_${metricName}`.slice(0, 64);
-    db.run(sql`
+    rawDb.prepare(`
       INSERT INTO observatory_baselines
         (id, stack_id, metric_name, mean, std_dev, sample_count, window_start, window_end, created_at, updated_at)
       VALUES
-        (${id}, ${stackId}, ${metricName}, ${value}, ${0}, ${1}, ${now}, ${now}, ${now}, ${now})
-    `);
+        (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, stackId, metricName, value, 0, 1, now, now, now, now);
     return true;
   }
 
@@ -304,25 +305,25 @@ function updateBaseline(
   const m2 = prevM2 + delta * delta2;
   const stdDev = n > 1 ? Math.sqrt(m2 / n) : 0;
 
-  db.run(sql`
+  rawDb.prepare(`
     UPDATE observatory_baselines
-    SET mean = ${mean},
-        std_dev = ${stdDev},
-        sample_count = ${n},
-        window_end = ${now},
-        updated_at = ${now}
-    WHERE stack_id = ${stackId} AND metric_name = ${metricName}
-  `);
+    SET mean = ?,
+        std_dev = ?,
+        sample_count = ?,
+        window_end = ?,
+        updated_at = ?
+    WHERE stack_id = ? AND metric_name = ?
+  `).run(mean, stdDev, n, now, now, stackId, metricName);
   return true;
 }
 
 function loadBaselines(stackId: string): Record<string, { mean: number; stdDev: number; sampleCount: number }> {
   const db = getDb();
-  const rows = db.all(sql`
+  const rows = rawDb.prepare(`
     SELECT metric_name, mean, std_dev, sample_count
     FROM observatory_baselines
-    WHERE stack_id = ${stackId} AND metric_name LIKE 'loki_%'
-  `) as Array<{ metric_name: string; mean: number; std_dev: number; sample_count: number }>;
+    WHERE stack_id = ? AND metric_name LIKE 'loki_%'
+  `).all(stackId) as Array<{ metric_name: string; mean: number; std_dev: number; sample_count: number }>;
 
   const out: Record<string, { mean: number; stdDev: number; sampleCount: number }> = {};
   for (const r of rows) {
@@ -374,9 +375,9 @@ export function detectLokiAnomalies(
 
 function userStackIds(userId: string): string[] {
   const db = getDb();
-  const stacks = db.all(sql`
+  const stacks = rawDb.prepare(`
     SELECT id FROM stacks ORDER BY created_at ASC
-  `) as Array<{ id: string }>;
+  `).all() as Array<{ id: string }>;
   if (stacks.length > 0) return stacks.map((s) => s.id);
   return [`loki_host_${userId}`];
 }

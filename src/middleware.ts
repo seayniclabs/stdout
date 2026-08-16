@@ -430,11 +430,12 @@ let installationComplete = false;
     }
 
     const db = getDb();
+    const rawDb = (db as any).$client;
 
     // Check if installation has been completed
-    const result = await db.get(sql`
-      SELECT value FROM system_state WHERE key = 'installation_complete'
-    `) as { value: string } | undefined;
+    const result = rawDb.prepare(`
+      SELECT value FROM system_state WHERE key = ?
+    `).get('installation_complete') as { value: string } | undefined;
 
     installationComplete = result?.value === 'true';
 
@@ -528,9 +529,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     // Re-check DB in case installation completed after startup (installer runs after app starts)
     try {
       const db = getDb();
-      const result = await db.get(sql`
-        SELECT value FROM system_state WHERE key = 'installation_complete'
-      `) as { value: string } | undefined;
+      const rawDb = (db as any).$client;
+      const result = rawDb.prepare(`
+        SELECT value FROM system_state WHERE key = ?
+      `).get('installation_complete') as { value: string } | undefined;
       installationComplete = result?.value === 'true';
     } catch {
       installationComplete = false;
