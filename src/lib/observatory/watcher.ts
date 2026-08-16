@@ -51,7 +51,8 @@ export function startWatcher(): void {
 
 async function bootstrap(): Promise<void> {
   const db = getDb();
-  const users = db.all(sql`SELECT id FROM users WHERE role != 'deleted'`) as { id: string }[];
+  const rawDb = (db as any).$client;
+  const users = rawDb.prepare(`SELECT id FROM users WHERE role != ?`).all('deleted') as { id: string }[];
 
   for (const { id: userId } of users) {
     if (_userIntervals.has(userId)) {
@@ -108,13 +109,14 @@ async function runCheckForUser(userId: string): Promise<void> {
     // anomalies were already turned into incidents by runScheduledCheck
     // emit per-stack anomaly events so Observatory status page can react
     const db = getDb();
-    const recentIncidents = db.all(sql`
+    const rawDb = (db as any).$client;
+    const recentIncidents = rawDb.prepare(`
       SELECT id, stack_id, severity, title FROM incidents
       WHERE tags LIKE '%observatory%'
-        AND created_at > ${Math.floor(Date.now() / 1000) - 300}
+        AND created_at > ?
       ORDER BY created_at DESC
       LIMIT 5
-    `) as Array<{ id: string; stack_id: string; severity: string; title: string }>;
+    `).all(Math.floor(Date.now() / 1000) - 300) as Array<{ id: string; stack_id: string; severity: string; title: string }>;
 
     const incidentIds: string[] = [];
     for (const inc of recentIncidents) {
@@ -148,11 +150,12 @@ async function runCheckForUser(userId: string): Promise<void> {
 
 async function processWatchQueue(): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
 
-  const pending = db.all(sql`
+  const pending = rawDb.prepare(`
     SELECT key, value FROM system_state
-    WHERE key LIKE 'observatory_watch:%'
-  `) as Array<{ key: string; value: string }>;
+    WHERE key LIKE ?
+  `).all('observatory_watch:%') as Array<{ key: string; value: string }>;
 
   for (const row of pending) {
     let entry: { stackId: string; userId: string; status: string; queuedAt: number; name: string };
@@ -165,32 +168,32 @@ async function processWatchQueue(): Promise<void> {
     if (entry.status !== 'pending') continue;
 
     // Mark as processing
-    db.run(sql`
+    rawDb.prepare(`
       UPDATE system_state
-      SET value = ${JSON.stringify({ ...entry, status: 'processing' })}, updated_at = ${Math.floor(Date.now() / 1000)}
-      WHERE key = ${row.key}
-    `);
+      SET value = ?, updated_at = ?
+      WHERE key = ?
+    `).run(JSON.stringify({ ...entry, status: 'processing' }), Math.floor(Date.now() / 1000), row.key);
 
     try {
       await ensureStackMonitored(entry.userId, entry.stackId, entry.name);
 
       // Mark done
-      db.run(sql`
+      rawDb.prepare(`
         UPDATE system_state
-        SET value = ${JSON.stringify({ ...entry, status: 'done', doneAt: Math.floor(Date.now() / 1000) })},
-            updated_at = ${Math.floor(Date.now() / 1000)}
-        WHERE key = ${row.key}
-      `);
+        SET value = ?,
+            updated_at = ?
+        WHERE key = ?
+      `).run(JSON.stringify({ ...entry, status: 'done', doneAt: Math.floor(Date.now() / 1000) }), Math.floor(Date.now() / 1000), row.key);
 
       console.log(`[watcher] queued stack ${entry.stackId} (${entry.name}) now being watched`);
     } catch (err) {
       console.error(`[watcher] failed to process watch queue entry ${row.key}:`, err);
-      db.run(sql`
+      rawDb.prepare(`
         UPDATE system_state
-        SET value = ${JSON.stringify({ ...entry, status: 'error', error: String(err) })},
-            updated_at = ${Math.floor(Date.now() / 1000)}
-        WHERE key = ${row.key}
-      `);
+        SET value = ?,
+            updated_at = ?
+        WHERE key = ?
+      `).run(JSON.stringify({ ...entry, status: 'error', error: String(err) }), Math.floor(Date.now() / 1000), row.key);
     }
   }
 }
@@ -199,19 +202,20 @@ async function processWatchQueue(): Promise<void> {
 
 async function ensureStackMonitored(userId: string, stackId: string, stackName: string): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
 
   // Check if the stack already has a monitor
-  const existing = db.get(sql`
-    SELECT id FROM monitors WHERE stack_id = ${stackId} LIMIT 1
-  `) as { id: string } | undefined;
+  const existing = rawDb.prepare(`
+    SELECT id FROM monitors WHERE stack_id = ? LIMIT 1
+  `).get(stackId) as { id: string } | undefined;
 
   if (existing) return;
 
   // Count hosts linked to this stack
-  const hosts = db.all(sql`
+  const hosts = rawDb.prepare(`
     SELECT id, ip_address, hostname FROM discovered_hosts
-    WHERE stack_id = ${stackId}
-  `) as Array<{ id: string; ip_address: string; hostname: string | null }>;
+    WHERE stack_id = ?
+  `).all(stackId) as Array<{ id: string; ip_address: string; hostname: string | null }>;
 
   const now = Math.floor(Date.now() / 1000);
 
@@ -220,16 +224,16 @@ async function ensureStackMonitored(userId: string, stackId: string, stackName: 
     const label = host.hostname || host.ip_address;
     const monitorId = `mon_${Date.now()}_${host.id.slice(0, 8)}`;
 
-    db.run(sql`
+    rawDb.prepare(`
       INSERT OR IGNORE INTO monitors (
         id, name, type, target, interval_seconds, timeout_ms,
         expected_status, retries, stack_id, paused, maintenance,
         current_status, consecutive_failures, created_at, updated_at
       ) VALUES (
-        ${monitorId}, ${'[auto] ' + label}, 'ping', ${host.ip_address},
-        300, 5000, NULL, 2, ${stackId}, 0, 0, 'unknown', 0, ${now}, ${now}
+        ?, ?, ?, ?,
+        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )
-    `);
+    `).run(monitorId, '[auto] ' + label, 'ping', host.ip_address, 300, 5000, null, 2, stackId, 0, 0, 'unknown', 0, now, now);
 
     emit({
       type: 'monitor.created',
