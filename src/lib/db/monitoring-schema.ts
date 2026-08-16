@@ -50,6 +50,15 @@ export const incidents = sqliteTable('incidents', {
   resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  fingerprint: text('fingerprint'),
+  duplicateOf: text('duplicate_of'),
+  occurrenceCount: integer('occurrence_count').notNull().default(1),
+  costImpact: real('cost_impact'),
+  attachments: text('attachments'),
+  aiCostUsd: real('ai_cost_usd').notNull().default(0),
+  aiTokensUsed: integer('ai_tokens_used').notNull().default(0),
+  aiProvider: text('ai_provider'),
+  userId: text('user_id'), // Owner of this incident for multi-user support
 });
 
 export const resolutions = sqliteTable('resolutions', {
