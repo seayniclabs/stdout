@@ -35,6 +35,7 @@ if (Astro.request.method === 'POST') {
     const email = (form.get('email') as string || '').trim().toLowerCase();
     const password = form.get('password') as string || '';
     const displayName = (form.get('displayName') as string || '').trim();
+    const licenseKey = (form.get('licenseKey') as string || '').trim();
     emailVal = email;
 
     if (!email || !password || !displayName) {
@@ -87,6 +88,21 @@ if (Astro.request.method === 'POST') {
         await setSetupConfig('scanner_token', rawToken);
         console.log('[setup] Scanner token saved to setup_config');
 
+        // Auto-generate environment settings (skip environment step)
+        const hostname = Astro.url.hostname;
+        const environmentName = `StdOut-${hostname.split('.')[0]}`;
+        await setSetupConfig('environment_name', environmentName);
+        await setSetupConfig('accent_color', '#F97316'); // Default orange
+        await completeStep(SetupStep.Environment, { environmentName, accentColor: '#F97316' });
+        console.log('[setup] Auto-generated environment:', environmentName);
+
+        // Store license key if provided
+        if (licenseKey) {
+          await setSetupConfig('license_key', licenseKey);
+          await setSetupConfig('license_email', email);
+          console.log('[setup] License key saved for validation');
+        }
+
         // Mark account creation step as complete
         await completeStep(SetupStep.AdminAccount, {
           userId,
@@ -108,11 +124,11 @@ if (Astro.request.method === 'POST') {
           cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
         ].filter(Boolean).join('; ');
 
-          // Redirect to next step
+          // Skip environment step, go straight to license
           return new Response(null, {
             status: 302,
             headers: {
-              'Location': '/setup/environment',
+              'Location': '/setup/license',
               'Set-Cookie': cookieValue
             }
           });
@@ -124,10 +140,10 @@ if (Astro.request.method === 'POST') {
 
 <Layout title="Create Your Account">
   <div class="auth-page" style="max-width: 600px;">
-    <SetupProgress currentStep={1} totalSteps={3} />
+    <SetupProgress currentStep={1} totalSteps={2} />
 
     <h1>Welcome to StdOut</h1>
-    <p class="auth-subtitle">Create your admin account to get started</p>
+    <p class="auth-subtitle">Create your admin account and start monitoring</p>
 
     {error && <div class="auth-error">{error}</div>}
 
@@ -171,7 +187,19 @@ if (Astro.request.method === 'POST') {
         />
       </label>
 
-      <button type="submit" class="btn-primary">Create Account & Continue</button>
+          <label>
+        <span>License Key <span class="optional">(Optional)</span></span>
+        <input
+          type="text"
+          name="licenseKey"
+          placeholder="SL-XXXX-XXXX-XXXX-XXXX"
+          autocomplete="off"
+          style="font-family: var(--font-mono);"
+        />
+        <span class="hint">Unlocks Riggins AI Agent. <a href="https://store.seayniclabs.com/products/stdout-self-host" target="_blank" class="link-subtle">Purchase license →</a></span>
+      </label>
+
+      <button type="submit" class="btn-primary">Install StdOut</button>
     </form>
   </div>
 </Layout>
@@ -194,6 +222,21 @@ if (Astro.request.method === 'POST') {
     font-size: 0.875rem;
     color: var(--color-text-muted);
     margin-top: 0.25rem;
+  }
+
+  .optional {
+    font-weight: normal;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+  }
+
+  .link-subtle {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  .link-subtle:hover {
+    text-decoration: underline;
   }
 
   .auth-page input,

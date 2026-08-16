@@ -16,8 +16,13 @@ if (progress.currentStep !== SetupStep.License) {
   return Astro.redirect('/app');
 }
 
+// Pre-fill license key and email if provided during account setup
+const { getSetupConfig } = await import('../../lib/setup');
+const savedLicenseKey = (await getSetupConfig('license_key')) || '';
+const savedEmail = (await getSetupConfig('license_email')) || session.email;
+
 let error = '';
-let licenseKey = '';
+let licenseKey = savedLicenseKey;
 let validating = false;
 
 if (Astro.request.method === 'POST') {
@@ -91,7 +96,7 @@ if (Astro.request.method === 'POST') {
 
 <Layout title="Activate License">
   <div class="auth-page" style="max-width: 600px;">
-    <SetupProgress currentStep={3} totalSteps={3} />
+    <SetupProgress currentStep={2} totalSteps={2} />
 
     <h1>Activate Your License</h1>
     <p class="auth-subtitle">Enter your license key to activate StdOut</p>
@@ -130,6 +135,7 @@ if (Astro.request.method === 'POST') {
           <input
             type="email"
             name="email"
+            value={savedEmail}
             placeholder="you@example.com"
             autocomplete="email"
           />
@@ -165,6 +171,7 @@ if (Astro.request.method === 'POST') {
           <input
             type="email"
             name="email"
+            value={savedEmail}
             placeholder="you@example.com"
             autocomplete="email"
           />
