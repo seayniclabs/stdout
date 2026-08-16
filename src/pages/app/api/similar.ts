@@ -67,7 +67,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const ftsQuery = q.split(/\s+/).filter(w => w.length > 2).map(w => `"${w}"`).join(' OR ');
     if (ftsQuery) {
       const docRows = rawDb.prepare(`
-        SELECT d.id, d.title, d.content, d.doc_type, d.source
+        SELECT d.id, d.title, d.content, d.type, d.source
         FROM docs_fts fts
         JOIN docs d ON d.rowid = fts.rowid
         WHERE docs_fts MATCH ? AND (d.user_id = ? OR d.source = 'community')
@@ -79,7 +79,7 @@ export const GET: APIRoute = async ({ locals, url }) => {
           docId: row.id,
           title: row.title,
           snippet: (row.content || '').substring(0, 200),
-          docType: row.doc_type,
+          docType: row.type,
           source: row.source || 'user',
         });
       }

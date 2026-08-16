@@ -159,19 +159,19 @@ async function retrieveLibraryDocs(
   const sourceList = allowedSources.map((s) => `'${s}'`).join(',');
 
   try {
-    let rows: Array<{ id: string; title: string; doc_type: string; source: string; content: string }>;
+    let rows: Array<{ id: string; title: string; type: string; source: string; content: string }>;
     if (terms.length === 0) {
       // No symptoms — return a few most-recent runbooks/postmortems as general context.
       rows = rawDb.prepare(`
-        SELECT id, title, doc_type, source, content FROM docs
+        SELECT id, title, type, source, content FROM docs
         WHERE source IN (?)
-          AND doc_type IN ('runbook','postmortem','guide')
+          AND type IN ('runbook','postmortem','guide','post-mortem')
         ORDER BY updated_at DESC LIMIT 3
       `).all(sql.raw(sourceList)) as any[];
     } else {
       const like = `%${terms[0]}%`;
       rows = rawDb.prepare(`
-        SELECT id, title, doc_type, source, content FROM docs
+        SELECT id, title, type, source, content FROM docs
         WHERE source IN (?)
           AND (lower(title) LIKE ? OR lower(tags) LIKE ? OR lower(content) LIKE ?)
         ORDER BY updated_at DESC LIMIT 5
@@ -180,7 +180,7 @@ async function retrieveLibraryDocs(
     return rows.map((r) => ({
       id: r.id,
       title: r.title,
-      docType: r.doc_type,
+      docType: r.type,
       source: r.source,
       snippet: (r.content || '').replace(/\s+/g, ' ').slice(0, 240),
     }));
