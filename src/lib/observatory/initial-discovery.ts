@@ -12,7 +12,7 @@
  */
 
 import { getDb } from '../db';
-import { discoveredHosts, stacks } from '../db/schema';
+import { discoveredHosts, stacks, systemState } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { sql } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
@@ -44,9 +44,9 @@ async function setState(key: string, value: string): Promise<void> {
 export async function getDiscoveryState(): Promise<string> {
   const db = getDb();
   const row = await db
-    .select({ value: sql<string>`value` })
-    .from(sql`system_state`)
-    .where(sql`key = ${STATE_PROGRESS}`)
+    .select()
+    .from(systemState)
+    .where(eq(systemState.key, STATE_PROGRESS))
     .limit(1)
     .then(rows => rows[0]);
   return row?.value ?? 'idle';
