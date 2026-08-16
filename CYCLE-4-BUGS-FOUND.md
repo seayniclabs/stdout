@@ -216,5 +216,56 @@ AJAX request to diagnosis endpoint missing CSRF token header or cookie
 
 ---
 
-**Total bugs found:** 5 (3 critical, 1 high, 1 low)  
-**Bugs fixed:** 0 (will batch fix all at end)
+---
+
+## Issue #9: AI Diagnosis Incident Lookup Fails (HIGH)
+
+**Severity:** HIGH  
+**Category:** Database / Schema Mismatch  
+**Status:** ROOT CAUSE IDENTIFIED → Bug #10
+
+**Description:**  
+AI diagnosis fails with "Incident not found" even though incident exists.
+
+**Error:** `{"error":"Incident not found"}`
+
+**Root cause:** Schema drift - see Bug #10
+
+---
+
+## Issue #10: Schema Drift in Incidents Table (CRITICAL) ✅ FIXED
+
+**Severity:** CRITICAL  
+**Category:** Schema / Migration Drift  
+**Status:** FIXED
+
+**Description:**  
+The TypeScript schema definition for the `incidents` table was missing 9 fields that were added by database migrations, causing type mismatches and runtime errors.
+
+**Missing fields:**
+- `fingerprint` (added in migration, not in schema)
+- `duplicateOf` (added in migration, not in schema)
+- `occurrenceCount` (added in migration, not in schema)
+- `costImpact` (added in migration, not in schema)
+- `attachments` (added in migration, not in schema)
+- `aiCostUsd` (added in migration, not in schema)
+- `aiTokensUsed` (added in migration, not in schema)
+- `aiProvider` (added in migration, not in schema)
+- `userId` (added in migration 0025, not in schema)
+
+**Impact:**
+- API code referenced `incident.userId` but TypeScript said field didn't exist
+- Runtime errors when accessing these fields
+- AI diagnosis broken (Bug #9 symptom)
+- Type safety compromised
+
+**Fix:**
+Added all 9 missing fields to `src/lib/db/monitoring-schema.ts`
+
+**Prevention:**
+Need process to keep schema.ts in sync with migrations
+
+---
+
+**Total bugs found:** 7 (5 critical, 1 high, 1 low)  
+**Bugs fixed:** 3 critical (Bug #5, #8, #10)
