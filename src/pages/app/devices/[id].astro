@@ -50,7 +50,7 @@ const monitors = rawDb.prepare(`
             </a>
           )}
           <span class="discovered-time">
-            Discovered {new Date(device.first_seen * 1000).toLocaleDateString()}
+            Discovered {device.discovered_at ? new Date(device.discovered_at).toLocaleDateString() : 'Unknown'}
           </span>
         </div>
       </div>
