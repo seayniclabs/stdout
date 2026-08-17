@@ -17,7 +17,12 @@ try {
       SELECT
         h.id, h.ip_address, h.hostname, h.device_type,
         h.open_ports, h.services, h.mac_address, h.vendor,
-        s.name as stack_name, s.id as stack_id
+        s.name as stack_name, s.id as stack_id,
+        CASE
+          WHEN (julianday('now') - julianday(h.last_seen / 1000, 'unixepoch')) * 24 * 60 < 5 THEN 'healthy'
+          WHEN (julianday('now') - julianday(h.last_seen / 1000, 'unixepoch')) * 24 * 60 < 30 THEN 'warning'
+          ELSE 'offline'
+        END as health_status
       FROM discovered_hosts h
       LEFT JOIN stacks s ON h.stack_id = s.id
       ORDER BY h.ip_address
@@ -39,6 +44,7 @@ const nodes = hosts.map((h: any) => ({
   services: h.services ? JSON.parse(h.services) : [],
   mac: h.mac_address,
   vendor: h.vendor,
+  health: h.health_status || "unknown",
 }));
 
 // Organize into network layers (OSI-inspired hierarchy)
@@ -105,7 +111,13 @@ const topologyData = { layers, links, nodes };
       <span class="legend-item"><span class="dot device"></span> Device</span>
     </div>
     <div class="topology-controls">
-      <button id="reset-simulation" class="btn-small">Reset Simulation</button>
+      <button id="refresh-data" class="btn-small">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        Refresh
+      </button>
+      <button id="reset-simulation" class="btn-small">Reset View</button>
       <button id="download-svg" class="btn-small">Download SVG</button>
     </div>
   </div>
@@ -181,12 +193,19 @@ const topologyData = { layers, links, nodes };
     font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .btn-small:hover {
     background: var(--accent, #F97316);
     border-color: var(--accent, #F97316);
     color: #fff;
+  }
+
+  .btn-small svg {
+    flex-shrink: 0;
   }
 
   #hierarchical-topology {
@@ -230,6 +249,34 @@ const topologyData = { layers, links, nodes };
 
   .tooltip .tooltip-section:first-of-type {
     border-top: none;
+  }
+
+  /* Health status pulse animation */
+  @keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes pulse-offline {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .node.warning circle {
+    animation: pulse-warning 2s ease-in-out infinite;
+  }
+
+  .node.offline circle {
+    animation: pulse-offline 1.5s ease-in-out infinite;
+    filter: grayscale(0.7);
+  }
+
+  .node circle {
+    transition: filter 0.3s ease;
+  }
+
+  .node:hover circle {
+    filter: brightness(1.3);
   }
 </style>
 
@@ -326,7 +373,7 @@ const topologyData = { layers, links, nodes };
       .selectAll("g")
       .data(nodes)
       .join("g")
-      .attr("class", "node")
+      .attr("class", d => `node ${d.health}`)
       .call(d3.drag()
         .on("start", dragstarted)
         .on("drag", dragged)
@@ -334,12 +381,30 @@ const topologyData = { layers, links, nodes };
       .on("mouseover", showTooltip)
       .on("mouseout", hideTooltip);
 
-    // Node circles
+    // Node circles with health status ring
+    node.append("circle")
+      .attr("r", d => (typeConfig[d.type] || typeConfig.unknown).size + 4)
+      .attr("fill", "none")
+      .attr("stroke", d => {
+        if (d.health === "healthy") return "#10B981";
+        if (d.health === "warning") return "#F59E0B";
+        if (d.health === "offline") return "#EF4444";
+        return "#6B7280";
+      })
+      .attr("stroke-width", 2)
+      .attr("opacity", 0.7);
+
     node.append("circle")
       .attr("r", d => (typeConfig[d.type] || typeConfig.unknown).size)
       .attr("fill", d => (typeConfig[d.type] || typeConfig.unknown).color)
       .attr("stroke", "#fff")
-      .attr("stroke-width", 2);
+      .attr("stroke-width", 2)
+      .style("cursor", "pointer")
+      .on("click", (event, d) => {
+        event.stopPropagation();
+        // Navigate to host detail page
+        window.location.href = `/app/infrastructure/hosts/${d.id}`;
+      });
 
     // Node labels
     node.append("text")
@@ -403,9 +468,18 @@ const topologyData = { layers, links, nodes };
         ? `<div class="tooltip-section"><strong>Services:</strong><br/>${d.services.slice(0, 5).map(s => `${s.service} (${s.port})`).join(", ")}${d.services.length > 5 ? "..." : ""}</div>`
         : "";
 
+      const healthColor = d.health === "healthy" ? "#10B981" :
+                          d.health === "warning" ? "#F59E0B" :
+                          d.health === "offline" ? "#EF4444" : "#6B7280";
+
+      const healthText = d.health === "healthy" ? "✓ Healthy" :
+                         d.health === "warning" ? "⚠ Warning" :
+                         d.health === "offline" ? "✗ Offline" : "? Unknown";
+
       const html = `
         <strong>${d.hostname}</strong>
         <div class="tooltip-section">
+          <strong>Status:</strong> <span style="color: ${healthColor}; font-weight: bold;">${healthText}</span><br/>
           <strong>Type:</strong> ${d.type}<br/>
           <strong>IP:</strong> ${d.ip}<br/>
           ${d.mac ? `<strong>MAC:</strong> ${d.mac}<br/>` : ""}
@@ -414,6 +488,9 @@ const topologyData = { layers, links, nodes };
         </div>
         ${portsList}
         ${servicesList}
+        <div class="tooltip-section" style="font-size: 0.75rem; color: #888; margin-top: 0.5rem;">
+          Click to view details
+        </div>
       `;
 
       tooltip
@@ -426,6 +503,11 @@ const topologyData = { layers, links, nodes };
     function hideTooltip() {
       tooltip.classed("visible", false);
     }
+
+    // Refresh data button
+    document.getElementById("refresh-data").addEventListener("click", () => {
+      window.location.reload();
+    });
 
     // Reset button
     document.getElementById("reset-simulation").addEventListener("click", () => {
