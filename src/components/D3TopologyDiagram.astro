@@ -93,9 +93,10 @@ const graphData = { nodes, links };
   console.log('[D3TopologyDiagram] nodes:', graphData.nodes?.length || 0);
   console.log('[D3TopologyDiagram] links:', graphData.links?.length || 0);
 
+  // BUGFIX (2026-08-17): Use cdn.jsdelivr.net instead of d3js.org (CSP policy blocks d3js.org)
   // Load D3.js from CDN
   const script = document.createElement('script');
-  script.src = 'https://d3js.org/d3.v7.min.js';
+  script.src = 'https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js';
   script.onerror = () => {
     console.error('[D3TopologyDiagram] Failed to load D3.js from CDN');
   };
