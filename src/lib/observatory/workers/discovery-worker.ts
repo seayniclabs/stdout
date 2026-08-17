@@ -289,19 +289,20 @@ export class DiscoveryWorker {
         // Save with profile data if available
         const profile = (host as any).profile as DeviceProfile | undefined;
         
+        // BUGFIX (2026-08-17): Removed device_classification column (doesn't exist in schema)
         const baseStmt = rawDb.prepare(`
           INSERT INTO discovered_hosts (
             id, stack_id, ip_address, hostname, mac_address, vendor,
-            device_type, device_classification, open_ports, services, os_guess,
+            device_type, open_ports, services, os_guess,
             created_at, updated_at, last_seen, discovered_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          ON CONFLICT(id) DO UPDATE SET 
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
             last_seen = excluded.last_seen,
             updated_at = excluded.updated_at,
             hostname = excluded.hostname,
             mac_address = excluded.mac_address,
             vendor = excluded.vendor,
-            device_classification = excluded.device_classification,
+            device_type = excluded.device_type,
             open_ports = excluded.open_ports,
             services = excluded.services,
             os_guess = excluded.os_guess
@@ -314,8 +315,7 @@ export class DiscoveryWorker {
           host.hostname || profile?.hostname || `host-${host.ip}`,
           profile?.mac || null,
           profile?.vendor || null,
-          "network-host",
-          profile?.deviceType || null,
+          profile?.deviceType || "network-host",
           profile?.openPorts ? JSON.stringify(profile.openPorts) : null,
           profile?.services ? JSON.stringify(profile.services) : null,
           profile?.osGuess || null,

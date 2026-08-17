@@ -17,7 +17,12 @@ export const discoveredHosts = sqliteTable('discovered_hosts', {
   hostname: text('hostname'),
   macAddress: text('mac_address'),
   vendor: text('vendor'),
+  deviceType: text('device_type'), // BUGFIX (2026-08-17): Added missing columns for discovery worker
+  openPorts: text('open_ports'), // JSON array
+  services: text('services'), // JSON array
+  osGuess: text('os_guess'),
   parentHostId: text('parent_host_id'), // For Docker containers: ID of the physical host running this container
+  discoveredAt: integer('discovered_at', { mode: 'timestamp' }),
   lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
