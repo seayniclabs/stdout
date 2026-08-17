@@ -13,8 +13,8 @@ export const agentConfig = sqliteTable('agent_config', {
   apiKey: text('api_key'),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   proactiveNotifications: integer('proactive_notifications', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const agentConversations = sqliteTable('agent_conversations', {
@@ -23,6 +23,6 @@ export const agentConversations = sqliteTable('agent_conversations', {
   role: text('role', { enum: ['user', 'assistant'] }).notNull(),
   content: text('content').notNull(),
   metadata: text('metadata'), // JSON: tool calls, model used, tokens, etc.
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 

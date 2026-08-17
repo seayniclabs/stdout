@@ -12,8 +12,8 @@ export const observatoryStandardPatterns = sqliteTable('observatory_standard_pat
   preventionSteps: text('prevention_steps'),
   confidenceThreshold: real('confidence_threshold').notNull(),
   source: text('source').notNull().default('stdlib'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const observatoryCustomPatterns = sqliteTable('observatory_custom_patterns', {
@@ -27,8 +27,8 @@ export const observatoryCustomPatterns = sqliteTable('observatory_custom_pattern
   severity: text('severity', {
     enum: ['critical', 'high', 'medium', 'low'],
   }).notNull().default('medium'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const observatoryBaselines = sqliteTable('observatory_baselines', {
@@ -40,8 +40,8 @@ export const observatoryBaselines = sqliteTable('observatory_baselines', {
   sampleCount: integer('sample_count').notNull(),
   windowStart: integer('window_start').notNull(),
   windowEnd: integer('window_end').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const observatoryAgentRuns = sqliteTable('observatory_agent_runs', {
@@ -55,7 +55,7 @@ export const observatoryAgentRuns = sqliteTable('observatory_agent_runs', {
   completionTokens: integer('completion_tokens'),
   outcome: text('outcome').notNull(),
   executionTimeMs: integer('execution_time_ms'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const observatoryFeedback = sqliteTable('observatory_feedback', {
@@ -66,7 +66,7 @@ export const observatoryFeedback = sqliteTable('observatory_feedback', {
     enum: ['helpful', 'not_helpful', 'incorrect', 'missing_context'],
   }).notNull(),
   comment: text('comment'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const observatoryPendingFixes = sqliteTable('observatory_pending_fixes', {
@@ -81,8 +81,8 @@ export const observatoryPendingFixes = sqliteTable('observatory_pending_fixes', 
     enum: ['pending', 'approved', 'rejected', 'applied'],
   }).notNull().default('pending'),
   approvedBy: text('approved_by'),
-  appliedAt: integer('applied_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  appliedAt: integer('applied_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const remediationPlaybooks = sqliteTable('remediation_playbooks', {
@@ -100,8 +100,8 @@ export const remediationPlaybooks = sqliteTable('remediation_playbooks', {
   tags: text('tags').notNull().default('[]'), // JSON array
   isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
   version: text('version').notNull().default('1.0.0'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   createdBy: text('created_by'),
 });
 
@@ -114,9 +114,9 @@ export const remediationExecutions = sqliteTable('remediation_executions', {
   }).notNull().default('pending'),
   dryRun: integer('dry_run', { mode: 'boolean' }).notNull().default(false),
   approvedBy: text('approved_by'),
-  approvedAt: integer('approved_at', { mode: 'timestamp' }),
-  startedAt: integer('started_at', { mode: 'timestamp' }).notNull(),
-  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  approvedAt: integer('approved_at', { mode: 'timestamp_ms' }),
+  startedAt: integer('started_at', { mode: 'timestamp_ms' }).notNull(),
+  completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
   logs: text('logs').notNull().default('[]'), // JSON array of ExecutionLog
   rollbackAttempted: integer('rollback_attempted', { mode: 'boolean' }).notNull().default(false),
   rollbackSuccess: integer('rollback_success', { mode: 'boolean' }),
@@ -133,6 +133,6 @@ export const remediationExecutionSteps = sqliteTable('remediation_execution_step
   errorMessage: text('error_message'),
   durationMs: integer('duration_ms'),
   retriesUsed: integer('retries_used').notNull().default(0),
-  executedAt: integer('executed_at', { mode: 'timestamp' }),
+  executedAt: integer('executed_at', { mode: 'timestamp_ms' }),
 });
 

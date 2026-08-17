@@ -30,33 +30,33 @@ export const users = sqliteTable('users', {
     enum: ['superadmin', 'admin', 'member'],
   }).notNull().default('member'),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
-  emailVerifiedAt: integer('email_verified_at', { mode: 'timestamp' }),
-  privacyAcceptedAt: integer('privacy_accepted_at', { mode: 'timestamp' }),
-  dpaAcceptedAt: integer('dpa_accepted_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  emailVerifiedAt: integer('email_verified_at', { mode: 'timestamp_ms' }),
+  privacyAcceptedAt: integer('privacy_accepted_at', { mode: 'timestamp_ms' }),
+  dpaAcceptedAt: integer('dpa_accepted_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const passwordResets = sqliteTable('password_resets', {
   id: text('id').primaryKey(),
   token: text('token').notNull().unique(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  usedAt: integer('used_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const emailVerifications = sqliteTable('email_verifications', {
   id: text('id').primaryKey(),
   token: text('token').notNull().unique(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  usedAt: integer('used_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+  usedAt: integer('used_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const apiTokens = sqliteTable('api_tokens', {
@@ -64,15 +64,15 @@ export const apiTokens = sqliteTable('api_tokens', {
   userId: text('user_id').references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   tokenHash: text('token_hash').notNull(),
-  lastUsedAt: integer('last_used_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  lastUsedAt: integer('last_used_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const userSettings = sqliteTable('user_settings', {
   id: text('id').primaryKey(),
   key: text('key').notNull(),
   value: text('value').notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const commsChannels = sqliteTable('comms_channels', {
@@ -83,8 +83,8 @@ export const commsChannels = sqliteTable('comms_channels', {
   name: text('name').notNull(),
   config: text('config').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const commsMessages = sqliteTable('comms_messages', {
@@ -95,7 +95,7 @@ export const commsMessages = sqliteTable('comms_messages', {
   }).notNull(),
   content: text('content').notNull(),
   metadata: text('metadata'),
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+  timestamp: integer('timestamp', { mode: 'timestamp_ms' }).notNull(),
 });
 
 
@@ -110,8 +110,8 @@ export const license = sqliteTable('license', {
   key: text('key').primaryKey(),
   email: text('email').notNull(),
   edition: text('edition').notNull().default('self-host'),
-  activatedAt: integer('activated_at', { mode: 'timestamp' }).notNull(),
-  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+  activatedAt: integer('activated_at', { mode: 'timestamp_ms' }).notNull(),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp_ms' }),
 });
 
 export const setupProgress = sqliteTable('setup_progress', {
@@ -119,21 +119,21 @@ export const setupProgress = sqliteTable('setup_progress', {
   stepNumber: integer('step_number').notNull(),
   stepName: text('step_name').notNull(),
   completed: integer('completed', { mode: 'boolean' }).notNull().default(false),
-  completedAt: integer('completed_at', { mode: 'timestamp' }),
+  completedAt: integer('completed_at', { mode: 'timestamp_ms' }),
   data: text('data'), // JSON string
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const setupConfig = sqliteTable('setup_config', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const systemState = sqliteTable('system_state', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const auditLog = sqliteTable('audit_log', {
@@ -141,13 +141,13 @@ export const auditLog = sqliteTable('audit_log', {
   action: text('action').notNull(),
   details: text('details'),
   ip: text('ip'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const deletions = sqliteTable('deletions', {
   id: text('id').primaryKey(),
   emailHash: text('email_hash').notNull(),
-  deletedAt: integer('deleted_at', { mode: 'timestamp' }).notNull(),
+  deletedAt: integer('deleted_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- INFRASTRUCTURE & MONITORING ---
@@ -191,9 +191,9 @@ export const tickets = sqliteTable('tickets', {
     enum: ['open', 'in_progress', 'resolved', 'closed'],
   }).notNull().default('open'),
   assigneeId: text('assignee_id'),
-  dueDate: integer('due_date', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  dueDate: integer('due_date', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const ticketingConnectors = sqliteTable('ticketing_connectors', {
@@ -204,8 +204,8 @@ export const ticketingConnectors = sqliteTable('ticketing_connectors', {
   name: text('name').notNull(),
   config: text('config').notNull(), // JSON
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- DOCUMENTATION ---
@@ -225,8 +225,8 @@ export const docs = sqliteTable('docs', {
   // Phase 3.1: Open-Notebook RAG fields
   chunks: text('chunks'), // JSON array of chunked content
   embeddings: text('embeddings'), // JSON array of vectors
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const docChunks = sqliteTable('doc_chunks', {
@@ -235,14 +235,14 @@ export const docChunks = sqliteTable('doc_chunks', {
   chunkIndex: integer('chunk_index').notNull(),
   content: text('content').notNull(),
   embedding: text('embedding'), // JSON vector
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const docEmbeddings = sqliteTable('doc_embeddings', {
   id: text('id').primaryKey(),
   docId: text('doc_id').notNull(),
   embedding: text('embedding').notNull(), // JSON array
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- OBSERVATORY AI ---
@@ -272,9 +272,9 @@ export const aiProviderKeys = sqliteTable('ai_provider_keys', {
   diagnosticsModel: text('diagnostics_model'),
   autofixModel: text('autofix_model'),
   platformFallback: integer('platform_fallback', { mode: 'boolean' }).notNull().default(true),
-  lastValidatedAt: integer('last_validated_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  lastValidatedAt: integer('last_validated_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
@@ -292,7 +292,7 @@ export const aiExecutionAudit = sqliteTable('ai_execution_audit', {
     enum: ['success', 'failed', 'blocked'],
   }).notNull(),
   failureReason: text('failure_reason'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const dataSources = sqliteTable('data_sources', {
@@ -305,9 +305,9 @@ export const dataSources = sqliteTable('data_sources', {
   username: text('username'),
   passwordHash: text('password_hash'),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- ALERTS & NOTIFICATIONS ---
@@ -319,8 +319,8 @@ export const alertRules = sqliteTable('alert_rules', {
   condition: text('condition').notNull(),
   threshold: text('threshold').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const alertChannels = sqliteTable('alert_channels', {
@@ -331,7 +331,7 @@ export const alertChannels = sqliteTable('alert_channels', {
   name: text('name').notNull(),
   config: text('config').notNull(), // JSON
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const alertEvents = sqliteTable('alert_events', {
@@ -340,7 +340,7 @@ export const alertEvents = sqliteTable('alert_events', {
   monitorId: text('monitor_id'),
   severity: text('severity').notNull(),
   message: text('message').notNull(),
-  sentAt: integer('sent_at', { mode: 'timestamp' }).notNull(),
+  sentAt: integer('sent_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const notificationPreferences = sqliteTable('notification_preferences', {
@@ -348,7 +348,7 @@ export const notificationPreferences = sqliteTable('notification_preferences', {
   channelId: text('channel_id').notNull(),
   eventType: text('event_type').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- SYSTEM SETTINGS (single-instance configuration) ---
@@ -365,7 +365,7 @@ export const systemSettings = sqliteTable('system_settings', {
   addonsDismissed: integer('addons_dismissed', { mode: 'boolean' }).$defaultFn(() => false),
   addonsHidden: integer('addons_hidden', { mode: 'boolean' }).$defaultFn(() => false),
   addonsCache: text('addons_cache'),
-  addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp' }),
+  addonsCacheAt: integer('addons_cache_at', { mode: 'timestamp_ms' }),
   // Observatory settings
   operatingMode: text('operating_mode', {
     enum: ['discover', 'diagnose', 'autofix'],
@@ -385,8 +385,8 @@ export const systemSettings = sqliteTable('system_settings', {
   godModeGrantedAt: integer('god_mode_granted_at'),
   ragIncludePublic: integer('rag_include_public', { mode: 'boolean' }).$defaultFn(() => true),
   // Timestamps
-  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).$defaultFn(() => new Date()),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).$defaultFn(() => new Date()),
 });
 
 
@@ -398,8 +398,8 @@ export const satelliteAgents = sqliteTable('satellite_agents', {
   hostname: text('hostname').notNull(),
   ipAddress: text('ip_address').notNull(),
   apiKey: text('api_key').notNull(),
-  lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   lastSeen: integer('last_seen'),
   lastReport: text('last_report'),
   alertState: text('alert_state').notNull().default('ok'),
@@ -410,7 +410,7 @@ export const satelliteReports = sqliteTable('satellite_reports', {
   id: text('id').primaryKey(),
   satelliteId: text('satellite_id').notNull(),
   metrics: text('metrics').notNull(), // JSON
-  receivedAt: integer('received_at', { mode: 'timestamp' }).notNull(),
+  receivedAt: integer('received_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const scannerSchedule = sqliteTable('scanner_schedule', {
@@ -423,7 +423,7 @@ export const scannerSchedule = sqliteTable('scanner_schedule', {
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
   modules: text('modules').notNull().default('["docker","metrics"]'),
   subnets: text('subnets'),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- WINDLASS (Network Diagnostic Toolbox) ---
@@ -433,7 +433,7 @@ export const windlassServices = sqliteTable('windlass_services', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const windlassEvents = sqliteTable('windlass_events', {
@@ -441,7 +441,7 @@ export const windlassEvents = sqliteTable('windlass_events', {
   serviceId: text('service_id'), // NULL = system-level event (Suricata, sync, etc.)
   eventType: text('event_type').notNull(),
   details: text('details').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const windlassConfig = sqliteTable('windlass_config', {
@@ -450,19 +450,19 @@ export const windlassConfig = sqliteTable('windlass_config', {
   endpointUrl: text('endpoint_url').notNull(), // e.g. http://localhost:8116
   syncIntervalSeconds: integer('sync_interval_seconds').notNull().default(60),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' }),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp_ms' }),
   lastSyncStatus: text('last_sync_status'),    // 'ok' | error message
-  lastWeeklyDigestAt: integer('last_weekly_digest_at', { mode: 'timestamp' }),
+  lastWeeklyDigestAt: integer('last_weekly_digest_at', { mode: 'timestamp_ms' }),
   n8nWorkflowWindowsJson: text('n8n_workflow_windows_json'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const unknownTools = sqliteTable('unknown_tools', {
   id: text('id').primaryKey(),
   toolName: text('tool_name').notNull(),
-  firstSeenAt: integer('first_seen_at', { mode: 'timestamp' }).notNull(),
-  lastSeenAt: integer('last_seen_at', { mode: 'timestamp' }).notNull(),
+  firstSeenAt: integer('first_seen_at', { mode: 'timestamp_ms' }).notNull(),
+  lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' }).notNull(),
   occurrenceCount: integer('occurrence_count').notNull().default(1),
 });
 
@@ -482,9 +482,9 @@ export const communitySubmissions = sqliteTable('community_submissions', {
   }).notNull().default('pending'),
   reviewNotes: text('review_notes'),
   version: integer('version').notNull().default(1),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
-  publishedAt: integer('published_at', { mode: 'timestamp' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+  publishedAt: integer('published_at', { mode: 'timestamp_ms' }),
 });
 
 // --- MISC ---
@@ -499,7 +499,7 @@ export const stackImports = sqliteTable('stack_imports', {
   status: text('status', {
     enum: ['pending', 'completed', 'failed'],
   }).notNull().default('pending'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const statusPage = sqliteTable('status_page', {
@@ -508,15 +508,15 @@ export const statusPage = sqliteTable('status_page', {
   description: text('description'),
   slug: text('slug').notNull().unique(),
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const addonInterest = sqliteTable('addon_interest', {
   id: text('id').primaryKey(),
   email: text('email').notNull(),
   productName: text('product_name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const featureRequests = sqliteTable('feature_requests', {
@@ -529,8 +529,8 @@ export const featureRequests = sqliteTable('feature_requests', {
   status: text('status', {
     enum: ['open', 'planned', 'in_progress', 'completed', 'declined'],
   }).notNull().default('open'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- ENTITY GRAPH DATABASE ---
@@ -543,10 +543,10 @@ export const entities = sqliteTable('entities', {
   }).notNull(),
   name: text('name').notNull(),
   properties: text('properties', { mode: 'json' }), // JSON blob for flexible metadata
-  discoveredAt: integer('discovered_at', { mode: 'timestamp' }).notNull(),
-  lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  discoveredAt: integer('discovered_at', { mode: 'timestamp_ms' }).notNull(),
+  lastSeen: integer('last_seen', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const entityRelationships = sqliteTable('entity_relationships', {
@@ -557,8 +557,8 @@ export const entityRelationships = sqliteTable('entity_relationships', {
     enum: ['runs_on', 'connects_to', 'depends_on', 'part_of', 'serves'],
   }).notNull(),
   metadata: text('metadata', { mode: 'json' }), // Optional relationship metadata (port, protocol, etc.)
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- SKINS & THEMING ---
@@ -579,14 +579,14 @@ export const skins = sqliteTable('skins', {
   thumbnail: text('thumbnail'),
   tags: text('tags'),
   installCount: integer('install_count').notNull().default(0),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const userSkinPreferences = sqliteTable('user_skin_preferences', {
   activeSkinId: text('active_skin_id').references(() => skins.id, { onDelete: 'set null' }),
   customOverrides: text('custom_overrides'), // JSON
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- COLLECTOR FOUNDATION ---
@@ -601,10 +601,10 @@ export const collectorConfigs = sqliteTable('collector_configs', {
   }).notNull(),
   config: text('config').notNull().default('{}'), // JSON — collector-specific config
   enabled: integer('enabled', { mode: 'boolean' }).notNull().default(true),
-  lastRun: integer('last_run', { mode: 'timestamp' }),
+  lastRun: integer('last_run', { mode: 'timestamp_ms' }),
   lastError: text('last_error'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const dataSourceEvents = sqliteTable('data_source_events', {
@@ -612,7 +612,7 @@ export const dataSourceEvents = sqliteTable('data_source_events', {
   entity: text('entity').notNull(),
   type: text('type').notNull(),
   attributes: text('attributes').notNull(), // JSON
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
+  timestamp: integer('timestamp', { mode: 'timestamp_ms' }).notNull(),
   sourceId: text('source_id'),
   sourceType: text('source_type').notNull(),
 });
@@ -639,7 +639,7 @@ export const costAudit = sqliteTable('cost_audit', {
   promptTokens: integer('prompt_tokens').notNull(),
   completionTokens: integer('completion_tokens').notNull(),
   costUsd: real('cost_usd').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 // --- OBSERVATORY AGENT (STEER) ---

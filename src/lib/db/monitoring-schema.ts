@@ -6,8 +6,8 @@ export const stacks = sqliteTable('stacks', {
   description: text('description').notNull(),
   previousDescription: text('previous_description'),
   userId: text('user_id'), // Owner of this stack for multi-user support
-  createdAt: integer('created_at', { mode: 'timestamp'}).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms'}).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const discoveredHosts = sqliteTable('discovered_hosts', {
@@ -22,10 +22,10 @@ export const discoveredHosts = sqliteTable('discovered_hosts', {
   services: text('services'), // JSON array
   osGuess: text('os_guess'),
   parentHostId: text('parent_host_id'), // For Docker containers: ID of the physical host running this container
-  discoveredAt: integer('discovered_at', { mode: 'timestamp' }),
-  lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  discoveredAt: integer('discovered_at', { mode: 'timestamp_ms' }),
+  lastSeen: integer('last_seen', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const discoveredServices = sqliteTable('discovered_services', {
@@ -35,9 +35,9 @@ export const discoveredServices = sqliteTable('discovered_services', {
   protocol: text('protocol').notNull().default('tcp'),
   serviceName: text('service_name'),
   serviceVersion: text('service_version'),
-  lastSeen: integer('last_seen', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  lastSeen: integer('last_seen', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const incidents = sqliteTable('incidents', {
@@ -52,9 +52,9 @@ export const incidents = sqliteTable('incidents', {
     enum: ['active', 'investigating', 'monitoring', 'resolved'],
   }).notNull().default('active'),
   tags: text('tags'),
-  resolvedAt: integer('resolved_at', { mode: 'timestamp' }),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  resolvedAt: integer('resolved_at', { mode: 'timestamp_ms' }),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
   fingerprint: text('fingerprint'),
   duplicateOf: text('duplicate_of'),
   occurrenceCount: integer('occurrence_count').notNull().default(1),
@@ -70,7 +70,7 @@ export const resolutions = sqliteTable('resolutions', {
   id: text('id').primaryKey(),
   incidentId: text('incident_id').notNull(),
   content: text('content').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const diagnoses = sqliteTable('diagnoses', {
@@ -83,14 +83,14 @@ export const diagnoses = sqliteTable('diagnoses', {
   promptTokens: integer('prompt_tokens'),
   completionTokens: integer('completion_tokens'),
   toolUsed: text('tool_used'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const incidentEmbeddings = sqliteTable('incident_embeddings', {
   id: text('id').primaryKey(),
   incidentId: text('incident_id').notNull(),
   embeddingVector: text('embedding_vector').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const monitors = sqliteTable('monitors', {
@@ -112,10 +112,10 @@ export const monitors = sqliteTable('monitors', {
   currentStatus: text('current_status', {
     enum: ['up', 'down', 'degraded', 'unknown'],
   }).notNull().default('unknown'),
-  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp' }),
+  lastCheckedAt: integer('last_checked_at', { mode: 'timestamp_ms' }),
   latencyMs: integer('latency_ms'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const checkResults = sqliteTable('check_results', {
@@ -126,7 +126,7 @@ export const checkResults = sqliteTable('check_results', {
   latencyMs: integer('latency_ms'),
   statusCode: integer('status_code'),
   error: text('error'),
-  checkedAt: integer('checked_at', { mode: 'timestamp' }).notNull(),
+  checkedAt: integer('checked_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const uptimeDaily = sqliteTable('uptime_daily', {
@@ -136,13 +136,13 @@ export const uptimeDaily = sqliteTable('uptime_daily', {
   successCount: integer('success_count').notNull().default(0),
   failureCount: integer('failure_count').notNull().default(0),
   avgResponseTime: integer('avg_response_time'),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }),
 });
 
 export const incidentOccurrences = sqliteTable('incident_occurrences', {
   id: text('id').primaryKey(),
   incidentId: text('incident_id').notNull(),
-  occurredAt: integer('occurred_at', { mode: 'timestamp' }).notNull(),
+  occurredAt: integer('occurred_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const incidents_updated = sqliteTable('incidents_updated', {
