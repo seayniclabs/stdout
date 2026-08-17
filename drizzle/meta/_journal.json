@@ -45,20 +45,6 @@
       "breakpoints": true
     },
     {
-      "idx": 6,
-      "version": "7",
-      "when": 1781797320000,
-      "tag": "0006_add_discovered_hosts_columns",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1781797380000,
-      "tag": "0007_add_discovered_at_column",
-      "breakpoints": true
-    },
-    {
       "idx": 8,
       "version": "7",
       "when": 1782670000000,
@@ -233,12 +219,5 @@
       "tag": "0032_add_api_tokens_user_id",
       "breakpoints": true
     },
-    {
-      "idx": 33,
-      "version": "7",
-      "when": 1786824000000,
-      "tag": "0033_add_discovered_hosts_parent_host_id",
-      "breakpoints": true
-    }
   ]
 }
