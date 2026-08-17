@@ -4,23 +4,37 @@ import { getDb } from "../lib/db";
 const db = getDb();
 const rawDb = (db as any).$client;
 
-// Get all discovered hosts with their stack info
-const hosts = rawDb.prepare(`
-  SELECT 
-    h.id, h.ip_address, h.hostname, h.device_type, h.device_classification,
-    h.open_ports, h.services, h.mac_address, h.vendor,
-    s.name as stack_name, s.id as stack_id
-  FROM discovered_hosts h
-  LEFT JOIN stacks s ON h.stack_id = s.id
-  ORDER BY h.ip_address
-`).all();
+// BUGFIX (2026-08-17): Check if discovered_hosts table exists before querying
+// The discovery feature is not implemented yet, so this table may not exist
+let hosts: any[] = [];
+try {
+  const tableExists = rawDb.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type='table' AND name='discovered_hosts'
+  `).get();
+
+  if (tableExists) {
+    hosts = rawDb.prepare(`
+      SELECT
+        h.id, h.ip_address, h.hostname, h.device_type,
+        h.open_ports, h.services, h.mac_address, h.vendor,
+        s.name as stack_name, s.id as stack_id
+      FROM discovered_hosts h
+      LEFT JOIN stacks s ON h.stack_id = s.id
+      ORDER BY h.ip_address
+    `).all();
+  }
+} catch (e) {
+  console.error('[TopologyMap] Error fetching hosts:', e);
+  hosts = [];
+}
 
 // Build nodes and links
 const nodes = hosts.map((h: any) => ({
   id: h.id,
   ip: h.ip_address,
   hostname: h.hostname || h.ip_address,
-  type: h.device_classification || h.device_type || "unknown",
+  type: h.device_type || "unknown",
   stack: h.stack_name,
   openPorts: h.open_ports ? JSON.parse(h.open_ports) : [],
   services: h.services ? JSON.parse(h.services) : [],
