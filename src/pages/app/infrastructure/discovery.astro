@@ -105,15 +105,41 @@ function timeAgo(timestamp: number): string {
       </div>
     ) : (
       <div class="hosts-grid">
-        {hostsWithServices.map(host => (
-          <a href={`/app/devices/${host.id}`} class="host-card">
-            <div class="host-header">
-              <div class="host-name">{host.hostname || host.ipAddress}</div>
+        {hostsWithServices.map(host => {
+          const deviceType = host.deviceType || 'unknown';
+          const lastSeen = host.lastSeen ? timeAgo(host.lastSeen.getTime()) : 'Never';
+          const openPorts = host.openPorts ? JSON.parse(host.openPorts).length : 0;
+          const serviceCount = host.services.length;
+
+          return (
+            <a href={`/app/devices/${host.id}`} class="host-card">
+              <div class="host-header">
+                <div class="host-name">{host.hostname || host.ipAddress}</div>
+                <div class="device-type-badge">{deviceType}</div>
+              </div>
               <div class="host-ip">{host.ipAddress}</div>
-            </div>
-            <div class="host-badge">AUTO-FOUND</div>
-          </a>
-        ))}
+              <div class="host-meta">
+                <div class="meta-row">
+                  <span class="meta-label">Last seen:</span>
+                  <span class="meta-value">{lastSeen}</span>
+                </div>
+                {openPorts > 0 && (
+                  <div class="meta-row">
+                    <span class="meta-label">Open ports:</span>
+                    <span class="meta-value">{openPorts}</span>
+                  </div>
+                )}
+                {serviceCount > 0 && (
+                  <div class="meta-row">
+                    <span class="meta-label">Services:</span>
+                    <span class="meta-value">{serviceCount}</span>
+                  </div>
+                )}
+              </div>
+              <div class="host-badge">AUTO-FOUND</div>
+            </a>
+          );
+        })}
       </div>
     )}
   </main>
@@ -247,19 +273,58 @@ function timeAgo(timestamp: number): string {
   }
 
   .host-header {
-    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
   }
 
   .host-name {
     font-weight: 600;
     font-size: 16px;
-    margin-bottom: 4px;
+  }
+
+  .device-type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 4px;
+    color: var(--primary);
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
   .host-ip {
     font-size: 13px;
     color: var(--text-secondary);
     font-family: var(--font-mono);
+    margin-bottom: 12px;
+  }
+
+  .host-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+  }
+
+  .meta-label {
+    color: var(--text-secondary);
+  }
+
+  .meta-value {
+    color: var(--text-primary);
+    font-weight: 500;
   }
 
   .host-badge {
