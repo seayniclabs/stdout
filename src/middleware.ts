@@ -109,16 +109,13 @@ const BEARER_PATHS = [
 
 function validateBearerToken(request: Request): { userId: string } | null {
   const authHeader = request.headers.get('authorization');
-  console.log('[validateBearerToken] authHeader:', authHeader ? authHeader.slice(0, 30) + '...' : 'null');
+  // SECURITY FIX (2026-08-16): Removed detailed token logging to prevent information disclosure
   if (!authHeader?.startsWith('Bearer ')) return null;
 
   const rawToken = authHeader.slice(7);
-  console.log('[validateBearerToken] rawToken prefix:', rawToken.slice(0, 15));
-  console.log('[validateBearerToken] prefix check:', rawToken.startsWith('stdout_scan_') ? 'PASS' : 'FAIL');
   if (!rawToken.startsWith('stdout_scan_')) return null;
 
   const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
-  console.log('[validateBearerToken] tokenHash:', tokenHash.slice(0, 20) + '...');
 
   const row = getDb()
     .select({
@@ -130,7 +127,6 @@ function validateBearerToken(request: Request): { userId: string } | null {
     .where(eq(schema.apiTokens.tokenHash, tokenHash))
     .get();
 
-  console.log('[validateBearerToken] row found:', row ? 'YES' : 'NO');
   if (!row) return null;
 
   // Check token expiration
@@ -183,10 +179,15 @@ function isOriginAllowed(originUrl: string): boolean {
   try {
     const url = new URL(originUrl);
 
-    // Allow any *.local mDNS hostname (Home Assistant style)
+    // SECURITY FIX (2026-08-16): Restrict .local domains to approved list only
+    // Previously allowed ANY .local domain, enabling potential CSRF attacks
+    const APPROVED_LOCAL_DOMAINS = ['stdout.local', 'observatory.local', 'localhost'];
     if (url.hostname.endsWith('.local')) {
-      console.log('[checkOrigin] allowing .local mDNS:', url.hostname);
-      return true;
+      const allowed = APPROVED_LOCAL_DOMAINS.includes(url.hostname);
+      if (allowed) {
+        console.log('[checkOrigin] allowing approved .local:', url.hostname);
+      }
+      return allowed;
     }
 
     // Allow private IP ranges (RFC 1918)

@@ -6,7 +6,7 @@ import { encrypt, decrypt } from '../../../lib/crypto';
 import { testConnection as testInfluxConnection } from '../../../lib/influx';
 import { testPrometheusConnection } from '../../../lib/prometheus';
 import { testSourceConnection } from '../../../lib/source-test';
-import { isBlockedTarget } from '../../../lib/hud';
+import { isBlockedTarget, isBlockedTargetAsync } from '../../../lib/hud';
 import { requireAuth, checkRBAC } from '../../../lib/rbac';
 
 const VALID_DS_TYPES = ['influxdb', 'prometheus', 'trivy', 'uptime-kuma', 'loki', 'graylog', 'crowdsec', 'pihole'] as const;
@@ -85,9 +85,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       });
     }
 
-    // SSRF protection — block internal/private network URLs
-    if (isBlockedTarget(url)) {
-      return new Response(JSON.stringify({ error: 'URL points to a private or internal address' }), {
+    // SECURITY FIX (2026-08-16): Use async DNS resolution to prevent DNS rebinding attacks
+    if (await isBlockedTargetAsync(url)) {
+      return new Response(JSON.stringify({ error: 'URL points to a private or internal address or DNS resolves to blocked IP' }), {
         status: 400, headers: { 'Content-Type': 'application/json' },
       });
     }
@@ -240,9 +240,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
       });
     }
 
-    // SSRF protection on test connection
-    if (isBlockedTarget(url)) {
-      return new Response(JSON.stringify({ ok: false, error: 'URL points to a private or internal address' }), {
+    // SECURITY FIX (2026-08-16): Use async DNS resolution for test connection too
+    if (await isBlockedTargetAsync(url)) {
+      return new Response(JSON.stringify({ ok: false, error: 'URL points to a private or internal address or DNS resolves to blocked IP' }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }

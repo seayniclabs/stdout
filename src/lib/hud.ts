@@ -5,6 +5,7 @@ import { notify } from './notify';
 import https from 'node:https';
 import http from 'node:http';
 import net from 'node:net';
+import dns from 'node:dns/promises';
 
 // --- SSRF Protection ---
 
@@ -63,6 +64,57 @@ export function isBlockedTarget(target: string): boolean {
 
   // Block IPv6 loopback
   if (hostname === '::1' || hostname === '::') return true;
+
+  return false;
+}
+
+/**
+ * SECURITY FIX (2026-08-16): Async variant that resolves DNS first to prevent DNS rebinding attacks.
+ * Use this for user-supplied URLs where DNS could change between check and request.
+ */
+export async function isBlockedTargetAsync(target: string): Promise<boolean> {
+  // First check the hostname itself
+  if (isBlockedTarget(target)) {
+    return true;
+  }
+
+  // For hostnames (not IPs), resolve DNS and validate the IP address
+  let hostname: string;
+  try {
+    if (target.startsWith('http://') || target.startsWith('https://')) {
+      hostname = new URL(target).hostname;
+    } else {
+      hostname = target.split(':')[0];
+    }
+  } catch {
+    return true;
+  }
+
+  // If it's already an IP, the synchronous check caught it
+  if (/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(hostname)) {
+    return false;
+  }
+
+  // Resolve DNS and check all returned IPs
+  try {
+    const addresses = await dns.resolve4(hostname);
+    for (const ip of addresses) {
+      // Check if this resolved IP is blocked
+      const ipMatch = ip.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (!ipMatch) continue;
+
+      const [, a, b, c, d] = ipMatch.map(Number);
+      // Block loopback, link-local, metadata endpoints
+      if (a === 127) return true;
+      if (a === 169 && b === 254) return true;
+      if (a === 0 && b === 0 && c === 0 && d === 0) return true;
+      // Note: Private IPs (10.x, 172.16-31.x, 192.168.x) are allowed for self-hosted monitoring
+    }
+  } catch (err) {
+    // DNS resolution failed - block it for safety
+    console.error('[isBlockedTargetAsync] DNS resolution failed:', err);
+    return true;
+  }
 
   return false;
 }

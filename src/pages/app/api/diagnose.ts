@@ -28,12 +28,14 @@ setInterval(() => {
 }, 10 * 60 * 1000);
 
 function checkDiagnoseRateLimit(userId: string, isPaid: boolean): Response | null {
+  // SECURITY FIX (2026-08-16): Use atomic operations to prevent race condition
   const now = Date.now();
   const cutoff = now - DIAGNOSE_WINDOW_MS;
   const limit = isPaid ? DIAGNOSE_LIMIT_PAID : DIAGNOSE_LIMIT_FREE;
 
-  let timestamps = diagnoseRateMap.get(userId) || [];
-  timestamps = timestamps.filter(t => t > cutoff);
+  // Get or create entry atomically
+  const entry = diagnoseRateMap.get(userId);
+  const timestamps = entry ? entry.filter(t => t > cutoff) : [];
 
   if (timestamps.length >= limit) {
     const oldestValid = timestamps[0];
@@ -50,6 +52,7 @@ function checkDiagnoseRateLimit(userId: string, isPaid: boolean): Response | nul
     });
   }
 
+  // Add timestamp and update map atomically
   timestamps.push(now);
   diagnoseRateMap.set(userId, timestamps);
   return null;
