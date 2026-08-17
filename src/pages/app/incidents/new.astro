@@ -8,6 +8,7 @@ import { validateCsrf } from '../../../middleware';
 import { notify } from '../../../lib/notify';
 import { getUserLimits } from '../../../lib/tiers';
 import { canPerform } from '../../../lib/rbac';
+import { validateLength, INPUT_LIMITS } from '../../../lib/validation';
 
 const user = Astro.locals.user;
 if (!user) return Astro.redirect('/app/login');
@@ -30,10 +31,19 @@ if (Astro.request.method === 'POST') {
     const stackId = (form.get('stackId') as string || '') || null;
     const tags = (form.get('tags') as string || '').trim() || null;
 
+    // SECURITY FIX (2026-08-16): Input length validation to prevent DoS via mega-strings
+    const titleValidation = validateLength(title, 'Title', 1, INPUT_LIMITS.TITLE_MAX);
+    const descValidation = validateLength(description, 'Description', 1, INPUT_LIMITS.DESCRIPTION_MAX);
+    const tagsValidation = validateLength(tags, 'Tags', 0, INPUT_LIMITS.TAGS_MAX);
+
     const rawDb = (db as any).$client;
 
-    if (!title || !description) {
-      error = 'Title and description are required.';
+    if (!titleValidation.valid) {
+      error = titleValidation.error!;
+    } else if (!descValidation.valid) {
+      error = descValidation.error!;
+    } else if (!tagsValidation.valid) {
+      error = tagsValidation.error!;
     } else if (limits.maxIncidentsPerMonth !== Infinity) {
       // Check monthly incident limit (global count in single-tenant mode)
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);

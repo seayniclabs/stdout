@@ -1,12 +1,65 @@
 import type { APIRoute } from 'astro';
 import { getDb, schema } from '../../../lib/db';
 import { requireAuth } from '../../../lib/rbac';
+import { validateLength, INPUT_LIMITS } from '../../../lib/validation';
+
+// SECURITY FIX (2026-08-16): Rate limiting for search endpoint
+const SEARCH_RATE_LIMIT = 30; // requests per minute
+const SEARCH_WINDOW_MS = 60 * 1000;
+const searchRateMap = new Map<string, number[]>();
+
+// Cleanup old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const cutoff = now - SEARCH_WINDOW_MS;
+  for (const [userId, timestamps] of searchRateMap.entries()) {
+    const valid = timestamps.filter(t => t > cutoff);
+    if (valid.length === 0) {
+      searchRateMap.delete(userId);
+    } else {
+      searchRateMap.set(userId, valid);
+    }
+  }
+}, 5 * 60 * 1000);
 
 export const GET: APIRoute = async ({ locals, url }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
+  // SECURITY FIX: Rate limiting
+  const userId = locals.user!.id;
+  const now = Date.now();
+  const cutoff = now - SEARCH_WINDOW_MS;
+  const timestamps = searchRateMap.get(userId) || [];
+  const recentSearches = timestamps.filter(t => t > cutoff);
+
+  if (recentSearches.length >= SEARCH_RATE_LIMIT) {
+    const retryAfter = Math.ceil((recentSearches[0] + SEARCH_WINDOW_MS - now) / 1000);
+    return new Response(JSON.stringify({
+      error: `Too many search requests. Try again in ${retryAfter} seconds.`
+    }), {
+      status: 429,
+      headers: {
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfter)
+      }
+    });
+  }
+
+  recentSearches.push(now);
+  searchRateMap.set(userId, recentSearches);
+
   const q = url.searchParams.get('q')?.trim();
+
+  // SECURITY FIX: Input validation
+  const validation = validateLength(q, 'Search query', 2, INPUT_LIMITS.SEARCH_QUERY_MAX);
+  if (!validation.valid) {
+    return new Response(JSON.stringify({ error: validation.error }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
   if (!q || q.length < 2) {
     return new Response(JSON.stringify({ results: [] }), {
       headers: { 'Content-Type': 'application/json' },
@@ -44,7 +97,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
         severity: row.severity,
       });
     }
-  } catch (e) { console.error('FTS search error:', e); }
+  } catch (e) {
+    // SECURITY FIX (2026-08-16): Improved error handling - log but continue
+    console.error('[search] FTS search error:', e);
+  }
 
   // Search resolutions
   try {
@@ -66,7 +122,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
         snippet: (row.content || '').substring(0, 120),
       });
     }
-  } catch (e) { console.error('FTS search error:', e); }
+  } catch (e) {
+    // SECURITY FIX (2026-08-16): Improved error handling - log but continue
+    console.error('[search] FTS search error:', e);
+  }
 
   // Search docs (user's own + community docs)
   try {
@@ -89,7 +148,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
         source: row.source || 'user',
       });
     }
-  } catch (e) { console.error('FTS search error:', e); }
+  } catch (e) {
+    // SECURITY FIX (2026-08-16): Improved error handling - log but continue
+    console.error('[search] FTS search error:', e);
+  }
 
   // Search stacks
   try {
