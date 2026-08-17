@@ -1,0 +1,448 @@
+---
+import { getDb } from "../lib/db";
+
+const db = getDb();
+const rawDb = (db as any).$client;
+
+// Fetch discovered hosts
+let hosts: any[] = [];
+try {
+  const tableExists = rawDb.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type='table' AND name='discovered_hosts'
+  `).get();
+
+  if (tableExists) {
+    hosts = rawDb.prepare(`
+      SELECT
+        h.id, h.ip_address, h.hostname, h.device_type,
+        h.open_ports, h.services, h.mac_address, h.vendor,
+        s.name as stack_name, s.id as stack_id
+      FROM discovered_hosts h
+      LEFT JOIN stacks s ON h.stack_id = s.id
+      ORDER BY h.ip_address
+    `).all();
+  }
+} catch (e) {
+  console.error('[HierarchicalTopology] Error fetching hosts:', e);
+  hosts = [];
+}
+
+// Build hierarchical structure based on device types and network topology
+const nodes = hosts.map((h: any) => ({
+  id: h.id,
+  ip: h.ip_address,
+  hostname: h.hostname || h.ip_address,
+  type: h.device_type || "unknown",
+  stack: h.stack_name,
+  openPorts: h.open_ports ? JSON.parse(h.open_ports) : [],
+  services: h.services ? JSON.parse(h.services) : [],
+  mac: h.mac_address,
+  vendor: h.vendor,
+}));
+
+// Organize into network layers (OSI-inspired hierarchy)
+const layers = {
+  edge: nodes.filter(n => n.type === "router" || n.type === "gateway"),
+  infrastructure: nodes.filter(n => n.type === "switch" || n.type === "nas"),
+  servers: nodes.filter(n => n.type === "server" || n.type === "docker-host"),
+  containers: nodes.filter(n => n.type === "docker-container" || n.id.startsWith("docker-")),
+  devices: nodes.filter(n =>
+    n.type === "workstation" ||
+    n.type === "iot" ||
+    n.type === "mobile" ||
+    n.type === "printer" ||
+    n.type === "unknown"
+  ),
+};
+
+// Build connections (hierarchical: edge → infrastructure → servers → containers/devices)
+const links: Array<{ source: string; target: string; type: string }> = [];
+
+// Edge layer connects to everything (star topology from gateway)
+const gateway = layers.edge[0];
+if (gateway) {
+  // Gateway connects to infrastructure
+  layers.infrastructure.forEach(node => {
+    links.push({ source: gateway.id, target: node.id, type: "backbone" });
+  });
+
+  // Gateway connects to servers
+  layers.servers.forEach(node => {
+    links.push({ source: gateway.id, target: node.id, type: "backbone" });
+  });
+
+  // Gateway connects to devices
+  layers.devices.forEach(node => {
+    links.push({ source: gateway.id, target: node.id, type: "access" });
+  });
+}
+
+// Servers connect to their containers
+layers.servers.forEach(server => {
+  layers.containers.forEach(container => {
+    // Heuristic: container in same IP subnet as server = hosted on that server
+    const serverSubnet = server.ip.substring(0, server.ip.lastIndexOf('.'));
+    const containerSubnet = container.ip.substring(0, container.ip.lastIndexOf('.'));
+
+    if (serverSubnet === containerSubnet) {
+      links.push({ source: server.id, target: container.id, type: "virtual" });
+    }
+  });
+});
+
+const topologyData = { layers, links, nodes };
+---
+
+<div class="hierarchical-topology-container">
+  <div class="topology-header">
+    <h3>Network Topology (D3 Force Layout)</h3>
+    <div class="topology-legend">
+      <span class="legend-item"><span class="dot router"></span> Router/Gateway</span>
+      <span class="legend-item"><span class="dot infrastructure"></span> Infrastructure</span>
+      <span class="legend-item"><span class="dot server"></span> Server</span>
+      <span class="legend-item"><span class="dot container"></span> Container</span>
+      <span class="legend-item"><span class="dot device"></span> Device</span>
+    </div>
+    <div class="topology-controls">
+      <button id="reset-simulation" class="btn-small">Reset Simulation</button>
+      <button id="download-svg" class="btn-small">Download SVG</button>
+    </div>
+  </div>
+
+  <svg id="hierarchical-topology" width="100%" height="700"></svg>
+
+  <div id="hierarchy-tooltip" class="tooltip"></div>
+</div>
+
+<style>
+  .hierarchical-topology-container {
+    background: var(--bg-secondary, #0f1419);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  .topology-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .topology-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text-primary, #e6edf3);
+  }
+
+  .topology-legend {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary, #8b949e);
+  }
+
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid #fff;
+  }
+
+  .dot.router { background: #F97316; }
+  .dot.infrastructure { background: #8B5CF6; }
+  .dot.server { background: #3B82F6; }
+  .dot.container { background: #10B981; }
+  .dot.device { background: #6B7280; }
+
+  .topology-controls {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .btn-small {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg, #161b22);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 6px;
+    color: var(--text-primary, #e6edf3);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-small:hover {
+    background: var(--accent, #F97316);
+    border-color: var(--accent, #F97316);
+    color: #fff;
+  }
+
+  #hierarchical-topology {
+    display: block;
+    background: var(--bg-primary, #0d1117);
+    border-radius: 6px;
+  }
+
+  .tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.95);
+    color: #fff;
+    padding: 1rem;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s;
+    max-width: 350px;
+    z-index: 100;
+    border: 1px solid #444;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+
+  .tooltip.visible {
+    opacity: 1;
+  }
+
+  .tooltip strong {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #F97316;
+    font-size: 1rem;
+  }
+
+  .tooltip .tooltip-section {
+    margin: 0.5rem 0;
+    padding: 0.5rem 0;
+    border-top: 1px solid #333;
+  }
+
+  .tooltip .tooltip-section:first-of-type {
+    border-top: none;
+  }
+</style>
+
+<script define:vars={{ topologyData }}>
+  // Import D3.js
+  import("https://cdn.jsdelivr.net/npm/d3@7/+esm").then(d3Module => {
+    const d3 = d3Module.default || d3Module;
+
+    const { layers, links, nodes } = topologyData;
+
+    const svg = d3.select("#hierarchical-topology");
+    const width = svg.node().getBoundingClientRect().width;
+    const height = 700;
+
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+    // Create main group for pan/zoom
+    const g = svg.append("g");
+
+    // Zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+      });
+
+    svg.call(zoom);
+
+    // Color/size mapping by type
+    const typeConfig = {
+      "router": { color: "#F97316", size: 16 },
+      "gateway": { color: "#F97316", size: 16 },
+      "switch": { color: "#8B5CF6", size: 14 },
+      "nas": { color: "#8B5CF6", size: 14 },
+      "server": { color: "#3B82F6", size: 12 },
+      "docker-host": { color: "#3B82F6", size: 12 },
+      "docker-container": { color: "#10B981", size: 10 },
+      "workstation": { color: "#6B7280", size: 10 },
+      "iot": { color: "#EC4899", size: 10 },
+      "mobile": { color: "#14B8A6", size: 10 },
+      "printer": { color: "#F59E0B", size: 10 },
+      "unknown": { color: "#6B7280", size: 8 },
+    };
+
+    // Link type styling
+    const linkStyles = {
+      "backbone": { color: "#F97316", width: 2, dash: null },
+      "access": { color: "#666", width: 1, dash: null },
+      "virtual": { color: "#10B981", width: 1, dash: "4,2" },
+    };
+
+    // Create force simulation with hierarchical forces
+    const simulation = d3.forceSimulation(nodes)
+      .force("link", d3.forceLink(links).id(d => d.id).distance(d => {
+        // Shorter links for container-server, longer for gateway connections
+        if (d.type === "virtual") return 50;
+        if (d.type === "backbone") return 150;
+        return 100;
+      }))
+      .force("charge", d3.forceManyBody().strength(d => {
+        // Stronger repulsion for larger nodes
+        if (d.type === "router" || d.type === "gateway") return -800;
+        if (d.type === "server" || d.type === "docker-host") return -400;
+        return -200;
+      }))
+      .force("center", d3.forceCenter(width / 2, height / 2))
+      .force("collision", d3.forceCollide().radius(d => {
+        const config = typeConfig[d.type] || typeConfig.unknown;
+        return config.size + 15; // Collision radius includes label space
+      }))
+      // Y-axis stratification by layer
+      .force("y", d3.forceY(d => {
+        if (d.type === "router" || d.type === "gateway") return height * 0.15;
+        if (d.type === "switch" || d.type === "nas") return height * 0.35;
+        if (d.type === "server" || d.type === "docker-host") return height * 0.55;
+        if (d.type === "docker-container" || d.id.startsWith("docker-")) return height * 0.75;
+        return height * 0.85;
+      }).strength(0.3));
+
+    // Draw links
+    const link = g.append("g")
+      .attr("class", "links")
+      .selectAll("line")
+      .data(links)
+      .join("line")
+      .attr("stroke", d => linkStyles[d.type]?.color || "#555")
+      .attr("stroke-width", d => linkStyles[d.type]?.width || 1)
+      .attr("stroke-dasharray", d => linkStyles[d.type]?.dash || null)
+      .attr("stroke-opacity", 0.6);
+
+    // Draw nodes
+    const node = g.append("g")
+      .attr("class", "nodes")
+      .selectAll("g")
+      .data(nodes)
+      .join("g")
+      .attr("class", "node")
+      .call(d3.drag()
+        .on("start", dragstarted)
+        .on("drag", dragged)
+        .on("end", dragended))
+      .on("mouseover", showTooltip)
+      .on("mouseout", hideTooltip);
+
+    // Node circles
+    node.append("circle")
+      .attr("r", d => (typeConfig[d.type] || typeConfig.unknown).size)
+      .attr("fill", d => (typeConfig[d.type] || typeConfig.unknown).color)
+      .attr("stroke", "#fff")
+      .attr("stroke-width", 2);
+
+    // Node labels
+    node.append("text")
+      .text(d => d.hostname)
+      .attr("font-size", 11)
+      .attr("fill", "#e6edf3")
+      .attr("text-anchor", "middle")
+      .attr("dy", d => (typeConfig[d.type] || typeConfig.unknown).size + 15)
+      .style("pointer-events", "none")
+      .style("user-select", "none");
+
+    // Secondary label (IP address for important nodes)
+    node.filter(d => d.type === "router" || d.type === "gateway" || d.type === "server")
+      .append("text")
+      .text(d => d.ip)
+      .attr("font-size", 9)
+      .attr("fill", "#8b949e")
+      .attr("text-anchor", "middle")
+      .attr("dy", d => (typeConfig[d.type] || typeConfig.unknown).size + 28)
+      .style("pointer-events", "none")
+      .style("user-select", "none");
+
+    // Update positions on tick
+    simulation.on("tick", () => {
+      link
+        .attr("x1", d => d.source.x)
+        .attr("y1", d => d.source.y)
+        .attr("x2", d => d.target.x)
+        .attr("y2", d => d.target.y);
+
+      node.attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    // Drag functions
+    function dragstarted(event) {
+      if (!event.active) simulation.alphaTarget(0.3).restart();
+      event.subject.fx = event.subject.x;
+      event.subject.fy = event.subject.y;
+    }
+
+    function dragged(event) {
+      event.subject.fx = event.x;
+      event.subject.fy = event.y;
+    }
+
+    function dragended(event) {
+      if (!event.active) simulation.alphaTarget(0);
+      event.subject.fx = null;
+      event.subject.fy = null;
+    }
+
+    // Tooltip
+    const tooltip = d3.select("#hierarchy-tooltip");
+
+    function showTooltip(event, d) {
+      const portsList = d.openPorts.length > 0
+        ? `<div class="tooltip-section"><strong>Open Ports (${d.openPorts.length}):</strong><br/>${d.openPorts.slice(0, 10).join(", ")}${d.openPorts.length > 10 ? "..." : ""}</div>`
+        : "";
+
+      const servicesList = d.services.length > 0
+        ? `<div class="tooltip-section"><strong>Services:</strong><br/>${d.services.slice(0, 5).map(s => `${s.service} (${s.port})`).join(", ")}${d.services.length > 5 ? "..." : ""}</div>`
+        : "";
+
+      const html = `
+        <strong>${d.hostname}</strong>
+        <div class="tooltip-section">
+          <strong>Type:</strong> ${d.type}<br/>
+          <strong>IP:</strong> ${d.ip}<br/>
+          ${d.mac ? `<strong>MAC:</strong> ${d.mac}<br/>` : ""}
+          ${d.vendor ? `<strong>Vendor:</strong> ${d.vendor}<br/>` : ""}
+          ${d.stack ? `<strong>Stack:</strong> ${d.stack}` : ""}
+        </div>
+        ${portsList}
+        ${servicesList}
+      `;
+
+      tooltip
+        .html(html)
+        .classed("visible", true)
+        .style("left", (event.pageX + 15) + "px")
+        .style("top", (event.pageY - 15) + "px");
+    }
+
+    function hideTooltip() {
+      tooltip.classed("visible", false);
+    }
+
+    // Reset button
+    document.getElementById("reset-simulation").addEventListener("click", () => {
+      simulation.alpha(1).restart();
+      svg.transition().duration(750).call(zoom.transform, d3.zoomIdentity);
+    });
+
+    // Download SVG button
+    document.getElementById("download-svg").addEventListener("click", () => {
+      const svgData = new XMLSerializer().serializeToString(svg.node());
+      const blob = new Blob([svgData], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "network-topology.svg";
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  });
+</script>

@@ -125,36 +125,28 @@ async function scanPorts(ip: string): Promise<{
 }
 
 /**
- * Guess device type from discovered data
+ * Guess device type from discovered data using enhanced classifier
  */
 function guessDeviceType(profile: Partial<DeviceProfile>): string {
-  const { services = [], hostname = "", openPorts = [] } = profile;
-  
-  // Check services
-  const serviceNames = services.map(s => s.service.toLowerCase());
-  
-  if (serviceNames.includes("http") || serviceNames.includes("https")) {
-    if (serviceNames.includes("ssh")) return "server";
-    return "web-service";
+  // Use the enhanced classifier for better accuracy
+  const { classifyDevice } = require('./enhanced-classifier');
+
+  const classification = classifyDevice({
+    ip: profile.ip || "",
+    hostname: profile.hostname,
+    mac: profile.mac,
+    vendor: profile.vendor,
+    openPorts: profile.openPorts || [],
+    services: profile.services || [],
+    osGuess: profile.osGuess,
+  });
+
+  // Log classification reasoning for debugging
+  if (classification.confidence > 0.7) {
+    console.log(`[Classifier] ${profile.ip} → ${classification.deviceType} (${Math.round(classification.confidence * 100)}% confidence)`);
   }
-  
-  if (serviceNames.includes("docker")) return "docker-host";
-  if (serviceNames.includes("smb") || serviceNames.includes("nfs")) return "nas";
-  if (serviceNames.includes("printer") || openPorts.includes(9100)) return "printer";
-  if (serviceNames.includes("router")) return "router";
-  
-  // Check hostname patterns
-  const lower = hostname.toLowerCase();
-  if (lower.includes("router") || lower.includes("gateway")) return "router";
-  if (lower.includes("nas") || lower.includes("storage")) return "nas";
-  if (lower.includes("pi") || lower.includes("raspberry")) return "iot";
-  if (lower.includes("switch")) return "switch";
-  
-  // Default based on open ports count
-  if (openPorts.length > 5) return "server";
-  if (openPorts.length > 0) return "workstation";
-  
-  return "unknown";
+
+  return classification.deviceType;
 }
 
 /**
