@@ -13,7 +13,7 @@ const stacks = db.select().from(schema.stacks)
   .where(eq(schema.stacks.source, 'auto'))
   .all();
 
-const satellites = db.select().from(schema.satellites).all();
+const satellites: any[] = []; // satellites table doesn't exist yet
 
 const lastDiscoveryRun = db.select().from(schema.systemState)
   .where(eq(schema.systemState.key, 'last_discovery_run'))

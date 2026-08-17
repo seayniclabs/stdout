@@ -23,12 +23,12 @@ const hostsWithServices = hosts.map(host => ({
   services: allServices.filter(s => s.hostId === host.id),
 }));
 
-// Get stacks and satellites count for the banner
+// Get stacks count for the banner
 const stacks = db.select().from(schema.stacks)
   .where(eq(schema.stacks.source, 'auto'))
   .all();
 
-const satellites = db.select().from(schema.satellites).all();
+const satellites: any[] = []; // satellites table doesn't exist yet
 
 // Last discovery run timestamp
 const lastDiscoveryRun = db.select().from(schema.systemState)
