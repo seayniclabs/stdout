@@ -69,8 +69,60 @@ if (Astro.request.method === 'POST') {
       // Mark Step 2 complete
       await completeStep(SetupStep.Environment, { environmentName, logoUrl, accentColor });
 
-      // Proceed to next step (License)
-      return Astro.redirect('/setup/license');
+      // Validate pending license key from Step 1
+      const { getSetupConfig } = await import('../../lib/setup');
+      const licenseKey = await getSetupConfig('pending_license_key');
+
+      if (!licenseKey) {
+        error = 'License key missing. Please restart setup.';
+      } else {
+        const { verifyLicenseSignature, storeLicense } = await import('../../lib/license');
+        const verifyResult = verifyLicenseSignature(licenseKey);
+
+        if (!verifyResult.valid) {
+          error = verifyResult.reason || 'Invalid license key. Please restart setup with a valid license.';
+        } else {
+          // License valid, complete setup
+          const userId = session?.userId;
+          const userEmail = session?.email || 'unknown@localhost';
+
+          storeLicense(licenseKey, userEmail, 'self-host');
+          await completeStep(SetupStep.License, {
+            activated: true,
+            mode: 'offline',
+            edition: 'self-host',
+          });
+          await completeStep(SetupStep.Complete, { setupComplete: true });
+
+          // Run database migrations
+          console.log('[setup] Running database migrations...');
+          const { execSync } = await import('child_process');
+          try {
+            execSync('node scripts/migrate.js', { stdio: 'inherit' });
+            console.log('[setup] ✓ Database migrations complete');
+          } catch (e) {
+            console.error('[setup] Migration failed:', e);
+          }
+
+          // Mark installation complete
+          const { sql } = await import('drizzle-orm');
+          await db.run(sql`
+            INSERT OR REPLACE INTO system_state (key, value, updated_at)
+            VALUES ('installation_complete', 'true', ${Date.now()})
+          `);
+
+          console.log('[setup] License validated and activated:', licenseKey.substring(0, 10) + '...');
+
+          // Trigger autonomous network discovery
+          if (userId) {
+            const { runInitialDiscovery } = await import('../../lib/observatory/initial-discovery');
+            runInitialDiscovery(userId).catch(err => console.error('[setup] Initial discovery failed:', err));
+          }
+
+          // Redirect to dashboard
+          return Astro.redirect('/app');
+        }
+      }
     }
   }
 }

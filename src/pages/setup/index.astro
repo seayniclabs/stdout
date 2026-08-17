@@ -90,86 +90,30 @@ if (Astro.request.method === 'POST') {
         await setSetupConfig('scanner_token', rawToken);
         console.log('[setup] Scanner token saved to setup_config');
 
-        // Auto-generate environment settings (skip environment step)
-        const hostname = Astro.url.hostname;
-        const environmentName = `StdOut-${hostname.split('.')[0]}`;
-        await setSetupConfig('environment_name', environmentName);
-        await setSetupConfig('accent_color', '#F97316'); // Default orange
-        await completeStep(SetupStep.Environment, { environmentName, accentColor: '#F97316' });
-        console.log('[setup] Auto-generated environment:', environmentName);
+        // Store license key for later validation (after environment step)
+        await setSetupConfig('pending_license_key', licenseKey);
 
-        // Validate and store license key immediately
-        const { verifyLicenseSignature, storeLicense } = await import('../../lib/license');
-        const verifyResult = verifyLicenseSignature(licenseKey);
+        // Mark Step 1 complete and redirect to Step 2 (branding/environment)
+        await completeStep(SetupStep.AdminAccount, {
+          userId,
+          email,
+          displayName,
+        });
 
-        if (!verifyResult.valid) {
-          error = verifyResult.reason || 'Invalid license key. Please check your purchase confirmation email.';
-          emailVal = email;
-        } else {
-          // License is valid, store it and complete setup
-          storeLicense(licenseKey, email, 'self-host');
-          await completeStep(SetupStep.License, {
-            activated: true,
-            mode: 'offline',
-            edition: 'self-host',
-          });
-          await completeStep(SetupStep.Complete, { setupComplete: true });
+        // Create session and redirect to environment setup (Step 2)
+        const sessionId = await createSession(userId);
+        Astro.cookies.set(SESSION_COOKIE, sessionId, sessionCookieOptions(30 * 24 * 60 * 60));
 
-          // Run database migrations to ensure schema is current
-          console.log('[setup] Running database migrations...');
-          const { execSync } = await import('child_process');
-          try {
-            execSync('node scripts/migrate.js', { stdio: 'inherit' });
-            console.log('[setup] ✓ Database migrations complete');
-          } catch (e) {
-            console.error('[setup] Migration failed:', e);
-          }
+        // Log audit trail
+        await logAudit({
+          action: 'setup.account_created',
+          details: JSON.stringify({ email, displayName }),
+          ip: getClientIp(Astro),
+          userId
+        });
 
-          // Mark installation as complete
-          const { getDb } = await import('../../lib/db');
-          const { sql } = await import('drizzle-orm');
-          const db = getDb();
-          await db.run(sql`
-            INSERT OR REPLACE INTO system_state (key, value, updated_at)
-            VALUES ('installation_complete', 'true', ${Date.now()})
-          `);
-
-          console.log('[setup] License validated and activated:', licenseKey.substring(0, 10) + '...');
-
-          // Trigger autonomous network discovery
-          const { runInitialDiscovery } = await import('../../lib/observatory/initial-discovery');
-          runInitialDiscovery(userId).catch(err => console.error('[setup] Initial discovery failed:', err));
-
-          // Mark account creation step as complete
-          await completeStep(SetupStep.AdminAccount, {
-            userId,
-            email,
-            displayName,
-          });
-
-          // Create session and log in
-          const sessionId = await createSession(userId);
-
-          // Set cookie manually in redirect response to ensure it's included
-          const cookieOpts = sessionCookieOptions(30 * 24 * 60 * 60);
-          const cookieValue = [
-            `${SESSION_COOKIE}=${sessionId}`,
-            `Path=${cookieOpts.path}`,
-            `Max-Age=${cookieOpts.maxAge}`,
-            cookieOpts.httpOnly ? 'HttpOnly' : '',
-            cookieOpts.secure ? 'Secure' : '',
-            cookieOpts.sameSite ? `SameSite=${cookieOpts.sameSite}` : ''
-          ].filter(Boolean).join('; ');
-
-          // License validated, skip to dashboard
-          return new Response(null, {
-            status: 302,
-            headers: {
-              'Location': '/app',
-              'Set-Cookie': cookieValue
-            }
-          });
-        }
+        console.log('[setup] Account created, redirecting to environment setup');
+        return Astro.redirect('/setup/environment');
         }
       }
     }
@@ -178,7 +122,7 @@ if (Astro.request.method === 'POST') {
 
 <Layout title="Install StdOut">
   <div class="auth-page" style="max-width: 600px;">
-    <SetupProgress currentStep={1} totalSteps={1} />
+    <SetupProgress currentStep={1} totalSteps={2} />
 
     <h1>Welcome to StdOut</h1>
     <p class="auth-subtitle">Create your admin account and enter your license key</p>
