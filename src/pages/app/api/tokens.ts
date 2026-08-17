@@ -21,6 +21,7 @@ export const GET: APIRoute = async ({ locals }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
+  // SECURITY FIX (2026-08-16): Filter tokens by user ID to prevent privilege escalation
   const db = getDb();
   const tokens = db
     .select({
@@ -30,7 +31,7 @@ export const GET: APIRoute = async ({ locals }) => {
       createdAt: schema.apiTokens.createdAt,
     })
     .from(schema.apiTokens)
-    .where(sql`1=1`)
+    .where(eq(schema.apiTokens.userId, locals.user!.id))
     .all();
 
   return new Response(JSON.stringify({ tokens }), {
@@ -161,9 +162,10 @@ export const DELETE: APIRoute = async ({ locals, request, cookies }) => {
     });
   }
 
+  // SECURITY FIX (2026-08-16): Verify token ownership before deletion to prevent IDOR
   getDb()
     .delete(schema.apiTokens)
-    .where(eq(schema.apiTokens.id, tokenId))
+    .where(and(eq(schema.apiTokens.id, tokenId), eq(schema.apiTokens.userId, locals.user!.id)))
     .run();
 
   logAudit('token_revoke', {

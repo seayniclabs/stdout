@@ -96,7 +96,7 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
     <!-- Description -->
     <section class="section">
       <h2>Description</h2>
-      <pre class="description-block">{current.description}</pre>
+      <div class="description-block markdown-content" id="incident-description"></div>
     </section>
 
     <!-- Status controls -->
@@ -946,4 +946,131 @@ const statusLabels: Record<string, string> = { active: 'Active', investigating: 
     gap: 0.75rem;
     justify-content: center;
   }
+
+  /* Markdown content styling */
+  .markdown-content {
+    line-height: 1.6;
+  }
+  .markdown-content h1 { font-size: 1.8em; margin: 1em 0 0.5em; font-weight: 600; }
+  .markdown-content h2 { font-size: 1.5em; margin: 1em 0 0.5em; font-weight: 600; }
+  .markdown-content h3 { font-size: 1.3em; margin: 1em 0 0.5em; font-weight: 600; }
+  .markdown-content p { margin: 0.8em 0; }
+  .markdown-content code {
+    background: var(--bg);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+  .markdown-content pre {
+    background: var(--bg);
+    padding: 12px;
+    border-radius: 4px;
+    overflow-x: auto;
+    margin: 1em 0;
+  }
+  .markdown-content pre code {
+    background: none;
+    padding: 0;
+  }
+  .markdown-content ul, .markdown-content ol {
+    margin: 0.8em 0;
+    padding-left: 2em;
+  }
+  .markdown-content li { margin: 0.3em 0; }
+  .markdown-content a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+  .markdown-content a:hover {
+    text-decoration: underline;
+  }
+  .markdown-content table {
+    border-collapse: collapse;
+    margin: 1em 0;
+    width: 100%;
+  }
+  .markdown-content th, .markdown-content td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .markdown-content th {
+    background: var(--bg);
+    font-weight: 600;
+  }
+  .markdown-content strong { font-weight: 600; }
+  .markdown-content em { font-style: italic; }
+  .markdown-content blockquote {
+    border-left: 3px solid var(--border);
+    padding-left: 1em;
+    margin: 1em 0;
+    color: var(--text-muted);
+  }
 </style>
+
+<script define:vars={{ description: current.description }}>
+  // Simple markdown-to-HTML renderer (subset of markdown for incident descriptions)
+  function renderMarkdown(text) {
+    let html = text;
+
+    // Escape HTML first
+    html = html
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+
+    // Code blocks (```language\ncode\n```)
+    html = html.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+      return `<pre><code>${code.trim()}</code></pre>`;
+    });
+
+    // Inline code (`code`)
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Headers
+    html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+    // Bold (**text**)
+    html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+
+    // Italic (*text*)
+    html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
+    // Links ([text](url))
+    html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // Unordered lists
+    html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+
+    // Ordered lists
+    html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+    // Blockquotes
+    html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // Line breaks (double newline = paragraph)
+    html = html.split('\n\n').map(para => {
+      if (para.trim() && !para.match(/^<(h[1-3]|pre|ul|ol|blockquote|table)/)) {
+        return `<p>${para}</p>`;
+      }
+      return para;
+    }).join('\n');
+
+    // Single newlines within paragraphs
+    html = html.replace(/<p>([^<]+)<\/p>/g, (match, content) => {
+      return `<p>${content.replace(/\n/g, '<br>')}</p>`;
+    });
+
+    return html;
+  }
+
+  // Render the description as markdown
+  const descEl = document.getElementById('incident-description');
+  if (descEl && description) {
+    descEl.innerHTML = renderMarkdown(description);
+  }
+</script>

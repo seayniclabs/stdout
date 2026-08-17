@@ -46,13 +46,32 @@ if (Astro.request.method === 'POST') {
         error = `Incident limit reached (${limits.maxIncidentsPerMonth}/month on ${tier} plan). Upgrade to continue.`;
       }
     }
+    console.log('[incidents/new] CHECKPOINT 1 - About to check if (!error && title && description)');
+    console.log('[incidents/new] CHECKPOINT 1 - error:', error, 'title:', title, 'description:', description);
     if (!error && title && description) {
+      console.log('[incidents/new] CHECKPOINT 2 - Inside if block, about to create incident');
       const id = nanoid();
       const now = new Date();
-      db.insert(schema.incidents).values({
+      console.log('[incidents/new] DEBUG - user object:', JSON.stringify(user, null, 2));
+      console.log('[incidents/new] DEBUG - user.id:', user.id);
+      const insertData = {
         id, stackId, title, description, severity, tags,
         status: 'active', createdAt: now, updatedAt: now,
-      }).run();
+        userId: user.id, // Multi-user support - track incident ownership
+      };
+      console.log('[incidents/new] DEBUG - insert data:', JSON.stringify(insertData, null, 2));
+
+      // TEMPORARY: Use raw SQL to bypass Drizzle ORM issue
+      rawDb.prepare(`
+        INSERT INTO incidents (
+          id, stack_id, title, description, severity, status, tags,
+          created_at, updated_at, user_id
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        id, stackId, title, description, severity, 'active', tags,
+        now.getTime(), now.getTime(), user.id
+      );
+      console.log('[incidents/new] DEBUG - Raw SQL insert executed with userId:', user.id);
 
       // Sync to FTS
       if (rawDb?.prepare) {

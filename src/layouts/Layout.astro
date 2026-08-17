@@ -9,7 +9,16 @@ interface Props {
   title?: string;
   description?: string;
 }
-const { title = 'StdOut', description = 'AI incident companion for solo developers and self-hosters.' } = Astro.props;
+const { title: rawTitle = 'StdOut', description = 'AI incident companion for solo developers and self-hosters.' } = Astro.props;
+
+// Sanitize title to prevent any potential HTML/script injection in browser title
+const title = rawTitle
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#x27;')
+  .replace(/\//g, '&#x2F;');
+
 const path = Astro.url.pathname;
 const csrfToken = Astro.locals.csrfToken;
 const canonicalURL = new URL(Astro.url.pathname, Astro.site || 'https://stdout.seayniclabs.com');

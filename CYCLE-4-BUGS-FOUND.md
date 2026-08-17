@@ -140,45 +140,32 @@ Documentation/intuition suggests `/app/knowledge` but actual route is `/app/kb` 
 
 ---
 
-## Issue #7: Markdown Not Rendered in Incident Descriptions (MEDIUM)
+## Issue #7: Markdown Not Rendered (SPLIT - PARTIAL FIX NEEDED)
 
 **Severity:** MEDIUM  
 **Category:** Feature / UX  
-**Status:** CONFIRMED
+**Status:** SPLIT VERDICT
 
-**Description:**  
-Incident descriptions support markdown input but display raw markdown instead of rendered HTML.
+**Testing Results:**
+- ✅ **Knowledge base articles**: Markdown RENDERS CORRECTLY (headings, code blocks, lists, tables)
+- ❌ **Incident descriptions**: Markdown displays as PLAIN TEXT (not tested on fresh DB, but confirmed in Cycle 4 early testing)
 
-**Evidence:**  
-Created incident with markdown:
-```
-```bash
-docker ps -a
-```
+**Evidence - Knowledge Base (WORKS):**  
+Created test article "Test Markdown Rendering" with:
+- `# Test Document` → Rendered as H1 heading ✅
+- ` ```bash\ndocker ps -a\n``` ` → Syntax highlighted code block ✅
+- Bullet list → Formatted bullets ✅
+- Table → Rendered table ✅
 
-Bullet list:
-- Item 1
-- Item 2
-
-Table:
-| Col1 | Col2 |
-|------|------|
-| A    | B    |
-```
-
-Displays as plain text, not formatted.
-
-**Expected:** Code blocks styled, bullets formatted, tables rendered as HTML  
-**Actual:** Raw markdown text
+**Evidence - Incidents (BROKEN):**  
+Earlier Cycle 4 testing showed incident with markdown displays raw text, not formatted HTML.
 
 **Impact:**  
-- Degrades UX significantly
-- Makes code examples hard to read
-- Tables unusable
-- Defeats purpose of markdown support
+- Knowledge base: EXCELLENT user experience
+- Incidents: Degraded UX when using markdown in descriptions
 
-**Fix:**  
-Add markdown-to-HTML rendering in incident detail view (likely use a library like `marked` or `remark`)
+**Fix Needed:**  
+Add markdown-to-HTML rendering only in incident detail view (knowledge base already has it)
 
 ---
 

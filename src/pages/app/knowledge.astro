@@ -1,0 +1,9 @@
+---
+/**
+ * Route alias: /app/knowledge → /app/kb → /app/docs
+ * Provides backward compatibility for the old "knowledge" route name
+ */
+export const prerender = false;
+
+return Astro.redirect('/app/kb', 301);
+---

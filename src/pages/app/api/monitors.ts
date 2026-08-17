@@ -32,10 +32,10 @@ export const GET: APIRoute = async ({ locals, url }) => {
     });
   }
 
-  // List all monitors with sparkline data
+  // SECURITY FIX (2026-08-16): Filter monitors by user ID to prevent data exposure
   const uid = locals.user.id;
   const allMonitors = db.select().from(schema.monitors)
-    .where(sql`1=1`)
+    .where(eq(schema.monitors.userId, uid))
     .orderBy(desc(schema.monitors.createdAt))
     .all();
 
@@ -76,9 +76,11 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const db = getDb();
 
   if (action === 'create') {
-    // Tier gate: monitor count
+    // SECURITY FIX (2026-08-16): Count only user's monitors for tier gate check
     const { checkCountLimit, tierBlockedResponse } = await import('../../../lib/tier-gate');
-    const existingCount = db.select().from(schema.monitors).where(sql`1=1`).all().length;
+    const existingCount = db.select().from(schema.monitors)
+      .where(eq(schema.monitors.userId, locals.user!.id))
+      .all().length;
     const gate = checkCountLimit(locals.user, 'maxMonitors', existingCount, 'Monitor');
     if (!gate.allowed) return tierBlockedResponse(gate.error!, gate.tier);
 

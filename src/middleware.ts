@@ -293,6 +293,25 @@ interface LockoutEntry { failures: number; firstFailure: number; lockedUntil: nu
 const accountLockoutMap = new Map<string, LockoutEntry>();
 
 export function isAccountLocked(email: string): { locked: boolean; retryAfterSec?: number } {
+  // SECURITY FIX (2026-08-16): Re-enabled account lockout to prevent brute-force attacks
+  const key = email.toLowerCase();
+  const entry = accountLockoutMap.get(key);
+  const now = Date.now();
+
+  if (!entry) {
+    return { locked: false };
+  }
+
+  if (entry.lockedUntil > now) {
+    const retryAfterSec = Math.ceil((entry.lockedUntil - now) / 1000);
+    return { locked: true, retryAfterSec };
+  }
+
+  // Lockout expired - clean up the entry
+  if (entry.lockedUntil > 0 && entry.lockedUntil <= now) {
+    accountLockoutMap.delete(key);
+  }
+
   return { locked: false };
 }
 

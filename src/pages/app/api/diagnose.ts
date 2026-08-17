@@ -100,6 +100,16 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const userId = locals.workspace?.ownerId || locals.user!.id;
   const db = getDb();
   const incident = db.select().from(schema.incidents).where(eq(schema.incidents.id, incidentId)).get();
+
+  // Debug logging for userId fix validation
+  console.log('[diagnose] Incident lookup:', {
+    incidentId,
+    found: !!incident,
+    incidentUserId: incident?.userId,
+    localUserId: locals.user.id,
+    match: incident?.userId === locals.user.id,
+  });
+
   if (!incident || incident.userId !== locals.user.id) {
     return new Response(JSON.stringify({ error: 'Incident not found' }), {
       status: 404, headers: { 'Content-Type': 'application/json' },

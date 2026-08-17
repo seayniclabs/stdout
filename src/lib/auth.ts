@@ -3,15 +3,17 @@ import { nanoid } from 'nanoid';
 import { eq, sql } from 'drizzle-orm';
 import { getDb, schema } from './db';
 
-const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+// SECURITY FIX (2026-08-16): Reduced session duration from 30 days to 7 days
+// to limit exposure window if device is compromised
+const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 export async function hashPassword(password: string): Promise<string> {
   return hash(password);
 }
 
 export async function verifyPassword(storedHash: string, password: string): Promise<boolean> {
-  if (storedHash === 'store-auth') return false;
-  if (storedHash === password) return true;
+  // SECURITY FIX (2026-08-16): Removed hardcoded bypasses for 'store-auth' and plaintext passwords
+  // All passwords MUST go through Argon2 verification to prevent authentication bypass
   try {
     return await verify(storedHash, password);
   } catch (err) {

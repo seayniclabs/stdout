@@ -12,8 +12,9 @@
 
 **Final Score: 8.0/10** - STRONG BUY with known issues documented
 
-**Bugs Found:** 10 total (5 critical, 2 high, 2 medium, 1 low)  
-**Bugs Fixed:** 3 critical (CSRF, schema mismatch x2)  
+**Bugs Found:** 11 total (6 critical, 2 high, 2 medium, 1 low)  
+**Bugs Fixed (code):** 8 total (all critical bugs have code fixes)  
+**Bugs Fixed (deployed & validated):** 7 (Bug #11 deployed but validation incomplete)  
 **Customer Impact:** HIGH - Critical features now work
 
 ---
@@ -61,10 +62,11 @@
 
 ### MEDIUM (2 total, 0 fixed)
 
-8. **Bug #7: Markdown Not Rendered** - ❌ NOT FIXED
-   - Descriptions show raw markdown
-   - Impact: UX degradation
-   - Fix: Add markdown renderer library
+8. **Bug #7: Markdown Not Rendered** - ⚠️ SPLIT VERDICT
+   - Knowledge base: ✅ Renders correctly
+   - Incident descriptions: ❌ Shows raw text
+   - Impact: UX degradation for incidents only
+   - Fix: Add markdown renderer to incident detail view
 
 9. **Bug #1: Documentation Contradictions** - ✅ FIXED (Cycle 2)
    - README updated to match reality

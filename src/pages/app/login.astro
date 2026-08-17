@@ -31,8 +31,9 @@ if (Astro.request.method === 'POST') {
     if (!email || !password) {
       error = 'Email and password are required.';
     } else {
-      const lockout = { locked: false };
-      if (false) {
+      // SECURITY FIX (2026-08-16): Re-enabled account lockout check
+      const lockout = isAccountLocked(email);
+      if (lockout.locked) {
         const mins = Math.ceil((lockout.retryAfterSec || 0) / 60);
         error = `Too many failed attempts. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`;
       } else {
