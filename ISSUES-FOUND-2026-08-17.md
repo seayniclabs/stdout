@@ -86,9 +86,52 @@ Used Chrome DevTools MCP to validate fixes:
 
 **Lesson:** Should have done comprehensive E2E testing BEFORE claiming "complete" in previous session.
 
+## Additional Issues Fixed (Session 2)
+
+### 6. Discovery Page Missing Information
+**Status:** ✅ Fixed  
+**Root Cause:** Discovery host cards only showed hostname/IP, missing device type, last seen, open ports, service count  
+**Fix:** Enhanced discovery page cards to display:
+- Device type badge (docker-container, gateway, unknown)
+- Last seen timestamp (human-readable: "1h ago", "13m ago")
+- Open ports count (when > 0)
+- Service count (when > 0)
+- Improved styling with metadata rows
+
+### 7. Monitor Detail Page Not Loading
+**Status:** ✅ Fixed  
+**Root Cause:** Multiple schema issues:
+- Wrong table name: `monitor_checks` (doesn't exist) → should be `check_results`
+- User filter blocking access: `WHERE user_id = ?` prevented viewing monitors in single-instance mode
+- Type mismatch: `timeAgo()` function assumed Date objects but SQLite returns numeric timestamps
+
+**Fix:**
+- Changed query to use `check_results` table
+- Removed `user_id` filter for single-instance deployment
+- Updated `timeAgo()` to handle numeric timestamps
+
+## Testing Summary - Session 2
+
+**Pages Tested & Working:**
+- ✅ Dashboard - stats, monitors, activity feed rendering
+- ✅ Incidents - empty state, new incident form
+- ✅ Observatory - autonomic control, Riggins, metrics
+- ✅ Alerts - empty states for routes and recent alerts
+- ✅ Settings - all config sections accessible
+- ✅ Infrastructure Discovery - **NOW SHOWS** device types, last seen, ports
+- ✅ Topology Map - D3 force graph rendering
+- ✅ Knowledge Base (Docs) - list view + detail pages working
+- ✅ Stack Details - navigation working, hosts visible
+- ✅ **Monitor Detail** - **NOW WORKING** - shows config, checks, related device
+- ✅ Device Detail - network info, monitors
+
+**Remaining Known Issues:**
+- Device classification accuracy still pending (needs deep scan to populate ports on existing hosts)
+
 ## Next Steps
 
-1. Implement nmap output parser to populate `open_ports` and `discovered_services`
-2. Run re-classification job on existing hosts after parser is implemented
-3. Verify device classification accuracy improves
-4. Consider adding service discovery as a separate scheduled job (vs. one-time during initial discovery)
+1. Continue E2E testing of remaining features
+2. Test form submissions (create incident, add doc, etc.)
+3. Test Riggins agent interactions
+4. Verify all buttons/links work throughout the app
+5. Test responsive design on smaller viewports
