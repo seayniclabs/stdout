@@ -347,15 +347,18 @@ export async function executeTool(
       }
 
       case 'query_documentation': {
-        // RAG: Search StdOut documentation via NotebookLM
-        const { queryDocs } = await import('./rag/notebooklm');
-        const result = await queryDocs(parameters.question);
+        // RAG: Search local knowledge base using Open-Notebook RAG engine
+        const { queryLocalKB } = await import('./rag/local-kb');
+        const result = await queryLocalKB(parameters.question, {
+          maxResults: 5,
+          includeChunks: true
+        });
 
-        if (!result.available) {
+        if (!result.available || !result.answer) {
           return {
             success: false,
             result: null,
-            error: result.error || 'Documentation search unavailable'
+            error: result.error || 'No relevant documentation found'
           };
         }
 
@@ -363,7 +366,12 @@ export async function executeTool(
           success: true,
           result: {
             answer: result.answer,
-            source: 'StdOut Documentation (NotebookLM)'
+            source: `Local Knowledge Base (${result.sources.length} document(s))`,
+            sources: result.sources.map(s => ({
+              title: s.title,
+              type: s.type,
+              relevance: s.relevance
+            }))
           }
         };
       }
