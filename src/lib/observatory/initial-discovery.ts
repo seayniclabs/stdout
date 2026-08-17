@@ -252,11 +252,24 @@ async function runDeepScan(userId: string, ips: string[]): Promise<void> {
         await db
           .update(discoveredHosts)
           .set({ hostname: nameMatch[1], updatedAt: new Date() })
-          .where(and(eq(discoveredHosts.userId, userId), eq(discoveredHosts.ipAddress, ip)));
+          .where(eq(discoveredHosts.ipAddress, ip));
       }
-      // (Open-port → discovered_services persistence handled by the existing scan-services
-      //  path; deep tier here resolves names + warms the host record. Service persistence is
-      //  wired in a follow-up so we don't duplicate the insert logic.)
+
+      // Parse open ports from nmap output
+      const portMatches = stdout.matchAll(/(\d+)\/tcp\s+open/g);
+      const openPorts: number[] = [];
+      for (const match of portMatches) {
+        openPorts.push(parseInt(match[1], 10));
+      }
+
+      // Update host with discovered open ports
+      if (openPorts.length > 0) {
+        await db
+          .update(discoveredHosts)
+          .set({ openPorts: JSON.stringify(openPorts), updatedAt: new Date() })
+          .where(eq(discoveredHosts.ipAddress, ip));
+        console.log(`[deep-scan] ${ip}: ${openPorts.length} open ports found: ${openPorts.join(',')}`);
+      }
     } catch {
       // host unreachable / timed out — skip, deep tier is best-effort
     }
