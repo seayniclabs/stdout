@@ -143,6 +143,12 @@ CREATE TABLE `discovered_hosts` (
 	`hostname` text,
 	`mac_address` text,
 	`vendor` text,
+	`device_type` text,
+	`open_ports` text,
+	`services` text,
+	`os_guess` text,
+	`parent_host_id` text,
+	`discovered_at` integer,
 	`last_seen` integer NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL

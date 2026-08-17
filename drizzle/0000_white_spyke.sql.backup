@@ -7,7 +7,6 @@ CREATE TABLE `addon_interest` (
 --> statement-breakpoint
 CREATE TABLE `ai_execution_audit` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`related_id` text,
 	`execution_type` text NOT NULL,
 	`provider` text NOT NULL,
@@ -20,7 +19,6 @@ CREATE TABLE `ai_execution_audit` (
 --> statement-breakpoint
 CREATE TABLE `ai_provider_keys` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`provider` text NOT NULL,
 	`encrypted_api_key` text NOT NULL,
 	`key_fingerprint` text NOT NULL,
@@ -35,7 +33,6 @@ CREATE TABLE `ai_provider_keys` (
 --> statement-breakpoint
 CREATE TABLE `alert_channels` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`type` text NOT NULL,
 	`name` text NOT NULL,
 	`config` text NOT NULL,
@@ -45,7 +42,6 @@ CREATE TABLE `alert_channels` (
 --> statement-breakpoint
 CREATE TABLE `alert_events` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`alert_rule_id` text NOT NULL,
 	`monitor_id` text,
 	`severity` text NOT NULL,
@@ -55,7 +51,6 @@ CREATE TABLE `alert_events` (
 --> statement-breakpoint
 CREATE TABLE `alert_rules` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`monitor_id` text,
 	`name` text NOT NULL,
 	`condition` text NOT NULL,
@@ -67,17 +62,14 @@ CREATE TABLE `alert_rules` (
 --> statement-breakpoint
 CREATE TABLE `api_tokens` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`token_hash` text NOT NULL,
 	`last_used_at` integer,
-	`created_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `audit_log` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text,
 	`action` text NOT NULL,
 	`details` text,
 	`ip` text,
@@ -97,7 +89,6 @@ CREATE TABLE `check_results` (
 --> statement-breakpoint
 CREATE TABLE `community_submissions` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`original_doc_id` text NOT NULL,
 	`sanitized_title` text NOT NULL,
 	`sanitized_content` text NOT NULL,
@@ -115,7 +106,6 @@ CREATE TABLE `community_submissions` (
 --> statement-breakpoint
 CREATE TABLE `data_sources` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`type` text NOT NULL,
 	`name` text NOT NULL,
 	`url` text NOT NULL,
@@ -148,7 +138,6 @@ CREATE TABLE `diagnoses` (
 --> statement-breakpoint
 CREATE TABLE `discovered_hosts` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`stack_id` text,
 	`ip_address` text NOT NULL,
 	`hostname` text,
@@ -163,7 +152,6 @@ CREATE UNIQUE INDEX `discovered_hosts_ip_address_unique` ON `discovered_hosts` (
 CREATE TABLE `discovered_services` (
 	`id` text PRIMARY KEY NOT NULL,
 	`host_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`port` integer NOT NULL,
 	`protocol` text DEFAULT 'tcp' NOT NULL,
 	`service_name` text,
@@ -176,14 +164,12 @@ CREATE TABLE `discovered_services` (
 CREATE TABLE `doc_embeddings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`doc_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`embedding` text NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `docs` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`type` text NOT NULL,
 	`title` text NOT NULL,
 	`slug` text NOT NULL,
@@ -197,7 +183,6 @@ CREATE TABLE `docs` (
 CREATE UNIQUE INDEX `docs_slug_unique` ON `docs` (`slug`);--> statement-breakpoint
 CREATE TABLE `feature_requests` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text,
 	`email` text,
 	`title` text NOT NULL,
 	`description` text NOT NULL,
@@ -210,7 +195,6 @@ CREATE TABLE `feature_requests` (
 --> statement-breakpoint
 CREATE TABLE `incidents` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`stack_id` text,
 	`title` text NOT NULL,
 	`description` text NOT NULL,
@@ -232,7 +216,6 @@ CREATE TABLE `license` (
 --> statement-breakpoint
 CREATE TABLE `monitors` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`type` text NOT NULL,
 	`target` text NOT NULL,
@@ -255,7 +238,6 @@ CREATE TABLE `monitors` (
 --> statement-breakpoint
 CREATE TABLE `notification_preferences` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`channel_id` text NOT NULL,
 	`event_type` text NOT NULL,
 	`enabled` integer DEFAULT true NOT NULL,
@@ -264,7 +246,6 @@ CREATE TABLE `notification_preferences` (
 --> statement-breakpoint
 CREATE TABLE `observatory_agent_runs` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`agent_type` text NOT NULL,
 	`incident_id` text,
 	`model` text NOT NULL,
@@ -290,7 +271,6 @@ CREATE TABLE `observatory_baselines` (
 --> statement-breakpoint
 CREATE TABLE `observatory_custom_patterns` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`category` text NOT NULL,
 	`title` text NOT NULL,
 	`pattern` text NOT NULL,
@@ -304,7 +284,6 @@ CREATE TABLE `observatory_custom_patterns` (
 --> statement-breakpoint
 CREATE TABLE `observatory_feedback` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`incident_id` text NOT NULL,
 	`diagnosis_id` text,
 	`feedback_type` text NOT NULL,
@@ -314,7 +293,6 @@ CREATE TABLE `observatory_feedback` (
 --> statement-breakpoint
 CREATE TABLE `observatory_pending_fixes` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`incident_id` text NOT NULL,
 	`fix_type` text NOT NULL,
 	`fix_command` text NOT NULL,
@@ -342,14 +320,12 @@ CREATE TABLE `observatory_standard_patterns` (
 CREATE TABLE `resolutions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`incident_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`content` text NOT NULL,
 	`created_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `satellite_agents` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`hostname` text NOT NULL,
 	`ip_address` text NOT NULL,
@@ -361,14 +337,12 @@ CREATE TABLE `satellite_agents` (
 CREATE TABLE `satellite_reports` (
 	`id` text PRIMARY KEY NOT NULL,
 	`satellite_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`metrics` text NOT NULL,
 	`received_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `scanner_schedule` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`scan_type` text NOT NULL,
 	`target` text NOT NULL,
 	`schedule` text NOT NULL,
@@ -381,8 +355,7 @@ CREATE TABLE `scanner_schedule` (
 CREATE TABLE `sessions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`user_id` text NOT NULL,
-	`expires_at` integer NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
+	`expires_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `setup_config` (
@@ -403,7 +376,6 @@ CREATE TABLE `setup_progress` (
 --> statement-breakpoint
 CREATE TABLE `stack_imports` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`source` text NOT NULL,
 	`stack_id` text,
 	`imported_data` text NOT NULL,
@@ -413,7 +385,6 @@ CREATE TABLE `stack_imports` (
 --> statement-breakpoint
 CREATE TABLE `stacks` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text NOT NULL,
 	`previous_description` text,
@@ -423,7 +394,6 @@ CREATE TABLE `stacks` (
 --> statement-breakpoint
 CREATE TABLE `status_page` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
 	`slug` text NOT NULL,
@@ -439,9 +409,8 @@ CREATE TABLE `system_state` (
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `tenant_preferences` (
+CREATE TABLE `system_settings` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`workspace_name` text,
 	`accent_color` text,
 	`logo_url` text,
@@ -464,12 +433,12 @@ CREATE TABLE `tenant_preferences` (
 	`god_mode_granted_by` text,
 	`god_mode_granted_at` integer,
 	`rag_include_public` integer DEFAULT false NOT NULL,
+	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE `ticketing_connectors` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`type` text NOT NULL,
 	`name` text NOT NULL,
 	`config` text NOT NULL,
@@ -480,7 +449,6 @@ CREATE TABLE `ticketing_connectors` (
 --> statement-breakpoint
 CREATE TABLE `tickets` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`type` text DEFAULT 'incident' NOT NULL,
 	`title` text NOT NULL,
 	`description` text NOT NULL,
@@ -495,7 +463,6 @@ CREATE TABLE `tickets` (
 --> statement-breakpoint
 CREATE TABLE `unknown_tools` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`tool_name` text NOT NULL,
 	`first_seen_at` integer NOT NULL,
 	`last_seen_at` integer NOT NULL,
@@ -505,7 +472,6 @@ CREATE TABLE `unknown_tools` (
 CREATE TABLE `uptime_daily` (
 	`id` text PRIMARY KEY NOT NULL,
 	`monitor_id` text NOT NULL,
-	`user_id` text NOT NULL,
 	`date` text NOT NULL,
 	`success_count` integer DEFAULT 0 NOT NULL,
 	`failure_count` integer DEFAULT 0 NOT NULL,
@@ -519,6 +485,10 @@ CREATE TABLE `users` (
 	`password_hash` text NOT NULL,
 	`display_name` text,
 	`role` text DEFAULT 'member' NOT NULL,
+	`email_verified` integer DEFAULT false NOT NULL,
+	`email_verified_at` integer,
+	`privacy_accepted_at` integer,
+	`dpa_accepted_at` integer,
 	`created_at` integer NOT NULL,
 	`updated_at` integer NOT NULL
 );
@@ -532,7 +502,6 @@ CREATE TABLE `windlass_config` (
 --> statement-breakpoint
 CREATE TABLE `windlass_events` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`service_id` text NOT NULL,
 	`event_type` text NOT NULL,
 	`details` text NOT NULL,
@@ -541,7 +510,6 @@ CREATE TABLE `windlass_events` (
 --> statement-breakpoint
 CREATE TABLE `windlass_services` (
 	`id` text PRIMARY KEY NOT NULL,
-	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text NOT NULL,
 	`enabled` integer DEFAULT true NOT NULL,

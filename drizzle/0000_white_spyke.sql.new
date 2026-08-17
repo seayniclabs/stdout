@@ -1,0 +1,19 @@
+CREATE TABLE `discovered_hosts` (
+	`id` text PRIMARY KEY NOT NULL,
+	`stack_id` text,
+	`ip_address` text NOT NULL,
+	`hostname` text,
+	`mac_address` text,
+	`vendor` text,
+	`device_type` text,
+	`open_ports` text,
+	`services` text,
+	`os_guess` text,
+	`parent_host_id` text,
+	`discovered_at` integer,
+	`last_seen` integer NOT NULL,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `discovered_hosts_ip_address_unique` ON `discovered_hosts` (`ip_address`);
