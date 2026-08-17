@@ -24,9 +24,7 @@ const hostsWithServices = hosts.map(host => ({
 }));
 
 // Get stacks count for the banner
-const stacks = db.select().from(schema.stacks)
-  .where(eq(schema.stacks.source, 'auto'))
-  .all();
+const stacks = db.select().from(schema.stacks).all();
 
 const satellites: any[] = []; // satellites table doesn't exist yet
 

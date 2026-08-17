@@ -10,7 +10,7 @@ if (!session) return Astro.redirect('/app/login');
 const db = getDb();
 
 const stacks = db.select().from(schema.stacks)
-  .where(eq(schema.stacks.source, 'auto'))
+  
   .all();
 
 const satellites: any[] = []; // satellites table doesn't exist yet

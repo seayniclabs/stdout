@@ -6,6 +6,7 @@ RUN npm ci
 COPY . .
 ARG APP_URL=http://localhost:3000
 ENV APP_URL=$APP_URL
+RUN rm -rf dist .astro node_modules/.cache node_modules/.astro
 RUN npm run build
 
 FROM node:22-alpine AS runtime
