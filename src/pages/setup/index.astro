@@ -115,6 +115,16 @@ if (Astro.request.method === 'POST') {
           });
           await completeStep(SetupStep.Complete, { setupComplete: true });
 
+          // Run database migrations to ensure schema is current
+          console.log('[setup] Running database migrations...');
+          const { execSync } = await import('child_process');
+          try {
+            execSync('node scripts/migrate.js', { stdio: 'inherit' });
+            console.log('[setup] ✓ Database migrations complete');
+          } catch (e) {
+            console.error('[setup] Migration failed:', e);
+          }
+
           // Mark installation as complete
           const { getDb } = await import('../../lib/db');
           const { sql } = await import('drizzle-orm');

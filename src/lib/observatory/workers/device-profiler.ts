@@ -81,9 +81,10 @@ async function scanPorts(ip: string): Promise<{
   osGuess?: string;
 }> {
   try {
-    // Fast scan of common ports with service detection
+    // Fast scan of common ports (without -sV since NSE scripts aren't available in Alpine)
+    // Use -sT (TCP connect) instead of -sS (SYN) - works without NET_RAW capability
     const { stdout } = await execAsync(
-      `nmap -sV -T4 --top-ports 100 ${ip} 2>/dev/null`,
+      `nmap -sT -T4 --top-ports 100 ${ip}`,
       { timeout: 30000 }
     );
     

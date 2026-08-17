@@ -1,0 +1,291 @@
+---
+export const prerender = false;
+import Layout from '../../../layouts/Layout.astro';
+import DiscoverySummary from '../../../components/DiscoverySummary.astro';
+import { getDb, schema } from '../../../lib/db';
+import { discoveredHosts, discoveredServices } from '../../../lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+const session = Astro.locals.user;
+if (!session) return Astro.redirect('/app/login');
+
+const db = getDb();
+
+// Discovery data
+const hosts = db.select().from(discoveredHosts)
+  .orderBy(discoveredHosts.ipAddress).all();
+
+const allServices = db.select().from(discoveredServices).all();
+
+// Attach services to each host
+const hostsWithServices = hosts.map(host => ({
+  ...host,
+  services: allServices.filter(s => s.hostId === host.id),
+}));
+
+// Get stacks and satellites count for the banner
+const stacks = db.select().from(schema.stacks)
+  .where(eq(schema.stacks.source, 'auto'))
+  .all();
+
+const satellites = db.select().from(schema.satellites).all();
+
+// Last discovery run timestamp
+const lastDiscoveryRun = db.select().from(schema.systemState)
+  .where(eq(schema.systemState.key, 'last_discovery_run'))
+  .get()?.updatedAt;
+
+const totalEntities = hosts.length + stacks.length + satellites.length;
+
+function timeAgo(timestamp: number): string {
+  const seconds = Math.floor((Date.now() - timestamp) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+---
+
+<Layout title="Infrastructure Discovery — StdOut">
+  <main class="infrastructure-page">
+    <!-- Autonomous Discovery Banner -->
+    <div class="auto-banner">
+      <div class="auto-icon">🤖</div>
+      <div class="auto-content">
+        <h2>Riggins is continuously monitoring your infrastructure</h2>
+        <div class="auto-meta">
+          <span class="highlight">{totalEntities} entities discovered</span> •
+          <span class="highlight">{stacks.length} stacks auto-created</span> •
+          Last scan: {lastDiscoveryRun ? timeAgo(lastDiscoveryRun) : 'Never'}
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="tabs">
+      <a href="/app/infrastructure/discovery" class="tab active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Discovery
+      </a>
+      <a href="/app/infrastructure/stacks" class="tab">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        Stacks ({stacks.length})
+      </a>
+      <a href="/app/infrastructure/satellites" class="tab">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
+        </svg>
+        Satellites ({satellites.length})
+      </a>
+      <a href="/app/infrastructure/topology" class="tab">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+        </svg>
+        Topology Map
+      </a>
+    </div>
+
+    <!-- Discovery Content -->
+    {hosts.length === 0 ? (
+      <div class="empty-state">
+        <div class="empty-icon">🔍</div>
+        <h3>Riggins is scanning your infrastructure...</h3>
+        <p>Auto-discovery runs continuously. Check back in a few minutes.</p>
+        <div class="auto-label">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Autonomous scanning enabled
+        </div>
+      </div>
+    ) : (
+      <div class="hosts-grid">
+        {hostsWithServices.map(host => (
+          <a href={`/app/devices/${host.id}`} class="host-card">
+            <div class="host-header">
+              <div class="host-name">{host.hostname || host.ipAddress}</div>
+              <div class="host-ip">{host.ipAddress}</div>
+            </div>
+            <div class="host-badge">AUTO-FOUND</div>
+          </a>
+        ))}
+      </div>
+    )}
+  </main>
+</Layout>
+
+<style>
+  .infrastructure-page {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  .auto-banner {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .auto-icon {
+    font-size: 32px;
+    flex-shrink: 0;
+  }
+
+  .auto-content h2 {
+    font-size: 18px;
+    margin: 0 0 4px 0;
+  }
+
+  .auto-meta {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .auto-meta .highlight {
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+  }
+
+  .tab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 64px 32px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+
+  .empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+
+  .empty-state h3 {
+    font-size: 20px;
+    margin-bottom: 8px;
+  }
+
+  .empty-state p {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+  }
+
+  .auto-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 8px;
+    color: var(--success);
+    font-size: 14px;
+  }
+
+  .hosts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .host-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+  }
+
+  .host-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+  }
+
+  .host-header {
+    margin-bottom: 12px;
+  }
+
+  .host-name {
+    font-weight: 600;
+    font-size: 16px;
+    margin-bottom: 4px;
+  }
+
+  .host-ip {
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+  }
+
+  .host-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 4px;
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  @media (max-width: 768px) {
+    .infrastructure-page {
+      padding: 16px;
+    }
+
+    .tab {
+      white-space: nowrap;
+    }
+
+    .hosts-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
