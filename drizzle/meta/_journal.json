@@ -218,6 +218,6 @@
       "when": 1786737600000,
       "tag": "0032_add_api_tokens_user_id",
       "breakpoints": true
-    },
+    }
   ]
 }
