@@ -151,7 +151,7 @@ function formatDate(date: Date) {
         <div class="sidebar-section">
           <div class="sidebar-label">Recently Updated</div>
           {recentlyUpdated.map(doc => (
-            <a href={`/app/docs/${doc.id}`} class="sidebar-recent">
+            <a href={`/app/doc/${doc.id}`} class="sidebar-recent">
               <span class="recent-title">{doc.title}</span>
               <span class="recent-time mono">{timeAgo(doc.updatedAt)}</span>
             </a>
@@ -218,7 +218,7 @@ function formatDate(date: Date) {
               </div>
               <div class="featured-cards">
                 {featured.map(doc => (
-                  <a href={`/app/docs/${doc.id}`} class="featured-card" data-type={doc.type} data-source={doc.visibility === 'public' ? 'community' : 'user'}>
+                  <a href={`/app/doc/${doc.id}`} class="featured-card" data-type={doc.type} data-source={doc.visibility === 'public' ? 'community' : 'user'}>
                     <div class="featured-card-top">
                       <span class="type-badge" style={`color: ${doc.visibility === 'public' ? communityColor : typeColors[doc.type] || '#5A5A72'}; background: ${doc.visibility === 'public' ? communityDimColor : typeDimColors[doc.type] || 'rgba(90,90,114,0.12)'}`}>
                         {doc.visibility === 'public' ? 'Community' : typeLabels[doc.type] || doc.type}
@@ -243,7 +243,7 @@ function formatDate(date: Date) {
             </div>
             <div class="doc-grid" id="doc-grid">
               {allDocs.map(doc => (
-                <a href={`/app/docs/${doc.id}`}
+                <a href={`/app/doc/${doc.id}`}
                    class="doc-card"
                    data-type={doc.type}
                    data-source={doc.visibility === 'public' ? 'community' : 'user'}

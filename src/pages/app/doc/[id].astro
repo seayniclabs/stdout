@@ -12,9 +12,14 @@ if (!user) return Astro.redirect('/app/login');
 const { id } = Astro.params;
 const db = getDb();
 
+console.log('[doc detail] Loading doc:', id);
 const doc = db.select().from(schema.docs).where(eq(schema.docs.id, id!)).get();
+console.log('[doc detail] Found:', doc ? `${doc.title} (visibility=${doc.visibility})` : 'NOT FOUND');
 // Allow viewing public docs (any user) or workspace docs
-if (!doc || (doc.visibility === 'private')) return Astro.redirect('/app/docs');
+if (!doc || (doc.visibility === 'private')) {
+  console.log('[doc detail] Redirecting to /app/docs - doc not found or private');
+  return Astro.redirect('/app/docs');
+}
 
 const isCommunityDoc = doc.visibility === 'public';
 const isFork = false; // No fork concept in current schema

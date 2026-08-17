@@ -13,7 +13,8 @@ const db = getDb();
 const stack = db.select().from(schema.stacks)
   .where(eq(schema.stacks.id, id!)).get();
 
-if (!stack || stack.userId !== user.id) return Astro.redirect('/app/stacks');
+// Single-instance: allow any authenticated user to view stacks
+if (!stack) return Astro.redirect('/app/stacks');
 
 // BUGFIX (2026-08-17): Fixed schema to use { mode: 'timestamp_ms' } instead of 'timestamp'
 // Drizzle 'timestamp' mode expects seconds, but we store milliseconds
