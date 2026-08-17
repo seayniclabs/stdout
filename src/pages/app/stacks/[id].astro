@@ -15,6 +15,11 @@ const stack = db.select().from(schema.stacks)
 
 if (!stack || stack.userId !== user.id) return Astro.redirect('/app/stacks');
 
+// BUGFIX (2026-08-17): Convert timestamps to proper Date objects
+// Drizzle { mode: 'timestamp' } stores ms but doesn't auto-convert on read
+const stackUpdated = new Date(stack.updatedAt as any);
+const stackUpdatedStr = stackUpdated.toLocaleDateString();
+
 const justImported = Astro.url.searchParams.get('imported') === '1';
 
 // Get incidents linked to this stack
@@ -85,7 +90,7 @@ const hasStructuredData = containers.length > 0;
     <div class="page-header">
       <div>
         <h1>{stack.name}</h1>
-        <span class="updated-at mono">Updated {stack.updatedAt.toLocaleDateString()}</span>
+        <span class="updated-at mono">Updated {stackUpdatedStr}</span>
       </div>
       <div class="header-actions">
         <a href={`/app/stacks?edit=${stack.id}`} class="btn btn-ghost btn-sm">Edit</a>
@@ -137,15 +142,18 @@ const hasStructuredData = containers.length > 0;
       <div class="discovered-section">
         <h2>Discovered Hosts ({discoveredHosts.length})</h2>
         <div class="hosts-grid">
-          {discoveredHosts.slice(0, 12).map(host => (
-            <div class="host-card">
-              <div class="host-ip mono">{host.ipAddress}</div>
-              {host.hostname && <div class="host-name">{host.hostname}</div>}
-              <div class="host-meta">
-                <span class="host-seen">Last seen {new Date(host.lastSeen * 1000).toLocaleString()}</span>
+          {discoveredHosts.slice(0, 12).map(host => {
+            const lastSeenStr = host.lastSeen ? new Date(host.lastSeen as any).toLocaleString() : 'Never';
+            return (
+              <div class="host-card">
+                <div class="host-ip mono">{host.ipAddress}</div>
+                {host.hostname && <div class="host-name">{host.hostname}</div>}
+                <div class="host-meta">
+                  <span class="host-seen">Last seen {lastSeenStr}</span>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         {discoveredHosts.length > 12 && (
           <p class="more-hosts">...and {discoveredHosts.length - 12} more hosts</p>
