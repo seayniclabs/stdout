@@ -12,6 +12,13 @@ import { initializeDegradationMode } from './lib/observatory/degradation-mode';
 import { initAutoWiring } from './lib/auto-wire';
 import { startWatcher } from './lib/observatory/watcher';
 
+// Debug logging was unconditional, so every /healthz probe wrote several lines --
+// ~16,700 lines in 24h for a service handling no real traffic. Set
+// STDOUT_DEBUG_MIDDLEWARE=1 to re-enable when debugging auth.
+const DEBUG_MW = process.env.STDOUT_DEBUG_MIDDLEWARE === '1';
+const mwLog = (...args: unknown[]) => { if (DEBUG_MW) console.log(...args); };
+
+
 // Initialize Observatory (full initialization with baseline establishment)
 (async () => {
   try {
@@ -503,7 +510,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
     if (tokenAuth) {
       // Minimal user object for API token auth
       context.locals.user = { id: tokenAuth.userId, email: '', displayName: null, role: 'member' };
-      console.log('[middleware] Bearer auth successful, locals.user set for:', pathname);
+      mwLog('[middleware] Bearer auth successful, locals.user set for:', pathname);
     } else {
       // Invalid/revoked bearer token — return 401, don't redirect to login
       return new Response(JSON.stringify({ error: 'Invalid or revoked token' }), {
@@ -516,10 +523,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
     const sessionId = getSessionFromCookies(context.cookies);
     if (sessionId) {
       context.locals.user = validateSession(sessionId);
-      console.log('[middleware] sessionId:', sessionId, 'user:', context.locals.user);
+      mwLog('[middleware] sessionId:', sessionId, 'user:', context.locals.user);
     } else {
       context.locals.user = null;
-      console.log('[middleware] No sessionId found in cookies');
+      mwLog('[middleware] No sessionId found in cookies');
     }
   }
 
@@ -589,7 +596,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (pathname === '/setup' || pathname === '/setup/') {
     const userCount = getUserCount();
-    console.log('[middleware] /setup accessed, userCount:', userCount);
+    mwLog('[middleware] /setup accessed, userCount:', userCount);
     // Only redirect to login if setup is actually complete
     // Don't redirect just because a user exists - they might be mid-setup
     if (userCount > 0) {
@@ -637,12 +644,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    console.log('[middleware] Redirecting to login:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
+    mwLog('[middleware] Redirecting to login:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
     response = context.redirect(`/app/login?redirect=${encodeURIComponent(pathname)}`);
   } else if (pathname.startsWith('/app/admin') && context.locals.user?.role !== 'superadmin') {
     response = context.redirect('/app');
   } else {
-    console.log('[middleware] Calling next() for:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
+    mwLog('[middleware] Calling next() for:', pathname, 'user:', context.locals.user ? 'YES' : 'NO');
     response = await next();
   }
 
