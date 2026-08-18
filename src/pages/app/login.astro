@@ -50,6 +50,7 @@ if (Astro.request.method === 'POST') {
           error = 'This account was created via the hosted service. Please reset your password to continue.';
         } else {
           console.log('[login.astro] POST email:', email, 'localUser:', localUser ? localUser.id : 'NONE');
+          console.log('[login.astro] password length:', password.length, 'hash:', localUser.passwordHash.substring(0, 30));
           const valid = await verifyPassword(localUser.passwordHash, password);
           console.log('[login.astro] password valid:', valid);
           if (!valid) {
@@ -92,7 +93,7 @@ if (Astro.request.method === 'POST') {
 
     {error && <div class="auth-error">{error}</div>}
 
-    <form method="POST" class="auth-form">
+    <form method="POST" action="/app/login" class="auth-form">
       <input type="hidden" name="_csrf" value={Astro.locals.csrfToken} />
       <input type="hidden" name="redirect" value={redirectTo} />
       <label>
