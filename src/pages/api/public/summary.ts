@@ -81,8 +81,20 @@ export const GET: APIRoute = async ({ request }) => {
     // counting them as healthy would overstate the fleet.
     const active = allMonitors.filter((m: any) => !m.paused && !m.maintenance);
 
+    // The schema enum says up/down/degraded/unknown, but live rows also carry
+    // 'healthy'/'offline' (verified 2026-08-19: 2 of 9 monitors were 'healthy'
+    // and fell through every bucket, so the counts summed to 7 of 9). Normalize
+    // before counting rather than trusting the enum.
+    const normalize = (raw: unknown): 'up' | 'down' | 'degraded' | 'unknown' => {
+      const s = String(raw ?? 'unknown').toLowerCase();
+      if (['up', 'healthy', 'ok', 'online', 'nominal'].includes(s)) return 'up';
+      if (['down', 'offline', 'critical', 'error', 'fail', 'failed'].includes(s)) return 'down';
+      if (['degraded', 'warn', 'warning', 'slow'].includes(s)) return 'degraded';
+      return 'unknown';
+    };
+
     const byStatus = (s: string) =>
-      active.filter((m: any) => (m.currentStatus ?? 'unknown') === s);
+      active.filter((m: any) => normalize(m.currentStatus) === s);
 
     const up = byStatus('up').length;
     const down = byStatus('down').length;
@@ -104,7 +116,10 @@ export const GET: APIRoute = async ({ request }) => {
     const services = active.map((m: any) => ({
       id: m.id,
       name: m.name,
-      status: m.currentStatus ?? 'unknown',
+      // Normalized so consumers map one vocabulary; raw_status keeps the
+      // original value for debugging.
+      status: normalize(m.currentStatus),
+      raw_status: m.currentStatus ?? null,
       type: m.type,
       target: m.target,
       latency: m.latencyMs ?? null,
