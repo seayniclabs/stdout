@@ -1,0 +1,87 @@
+---
+interface Props {
+  icon?: string;
+  title: string;
+  description: string;
+  primaryAction?: {
+    text: string;
+    href: string;
+  };
+  secondaryAction?: {
+    text: string;
+    href: string;
+  };
+}
+
+const { icon, title, description, primaryAction, secondaryAction } = Astro.props;
+---
+
+<div class="empty-state">
+  {icon && (
+    <div class="empty-icon" aria-hidden="true">{icon}</div>
+  )}
+  <h3 class="empty-title">{title}</h3>
+  <p class="empty-description">{description}</p>
+  {(primaryAction || secondaryAction) && (
+    <div class="empty-actions">
+      {primaryAction && (
+        <a href={primaryAction.href} class="btn btn-primary">
+          {primaryAction.text}
+        </a>
+      )}
+      {secondaryAction && (
+        <a href={secondaryAction.href} class="btn btn-ghost">
+          {secondaryAction.text}
+        </a>
+      )}
+    </div>
+  )}
+</div>
+
+<style>
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    max-width: 480px;
+    margin: 2rem auto;
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    line-height: 1;
+    margin-bottom: 1.5rem;
+    opacity: 0.7;
+  }
+
+  .empty-title {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary, #1a202c);
+  }
+
+  .empty-description {
+    margin: 0 0 1.5rem 0;
+    font-size: 1rem;
+    color: var(--text-secondary, #718096);
+    line-height: 1.6;
+  }
+
+  .empty-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    .empty-title {
+      color: #f7fafc;
+    }
+
+    .empty-description {
+      color: #a0aec0;
+    }
+  }
+</style>
