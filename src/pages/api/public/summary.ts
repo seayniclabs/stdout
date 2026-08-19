@@ -70,27 +70,74 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     const db = getDb();
 
-    // Get all monitors (simplified count)
+    // Read the ACTUAL monitor state. This previously counted monitors and then
+    // hardcoded healthy=total, degraded=0, down=0 ("will enhance with real data
+    // later"), so Bridge would have rendered a permanently-green board no matter
+    // what was actually broken. currentStatus/latencyMs/lastCheckedAt are
+    // already maintained by the checker.
     const allMonitors = db.select().from(schema.monitors).all();
-    const totalMonitors = allMonitors.length;
 
-    // For now, return basic stats (will enhance with real data later)
+    // Paused and maintenance monitors are deliberately not being checked;
+    // counting them as healthy would overstate the fleet.
+    const active = allMonitors.filter((m: any) => !m.paused && !m.maintenance);
+
+    const byStatus = (s: string) =>
+      active.filter((m: any) => (m.currentStatus ?? 'unknown') === s);
+
+    const up = byStatus('up').length;
+    const down = byStatus('down').length;
+    const degraded = byStatus('degraded').length;
+    const unknown = byStatus('unknown').length;
+
+    // Worst state wins, and "no data" is NOT healthy — an empty or all-unknown
+    // fleet reports unknown rather than green.
+    const overall_status =
+      active.length === 0 || unknown === active.length
+        ? ('unknown' as const)
+        : down > 0
+          ? ('down' as const)
+          : degraded > 0 || unknown > 0
+            ? ('degraded' as const)
+            : ('healthy' as const);
+
+    // Per-service detail, shaped for Bridge's infra board: {id, name, status}.
+    const services = active.map((m: any) => ({
+      id: m.id,
+      name: m.name,
+      status: m.currentStatus ?? 'unknown',
+      type: m.type,
+      target: m.target,
+      latency: m.latencyMs ?? null,
+      last_checked_at: m.lastCheckedAt ?? null,
+    }));
+
+    const critical_alerts = services
+      .filter((s) => s.status === 'down')
+      .map((s) => ({ id: s.id, name: s.name, target: s.target }));
+
     const response = {
       ok: true,
       timestamp: new Date().toISOString(),
-      overall_status: 'healthy' as const,
+      overall_status,
       services: {
-        total: totalMonitors,
-        healthy: totalMonitors,
-        degraded: 0,
-        down: 0,
+        total: active.length,
+        healthy: up,
+        degraded,
+        down,
+        unknown,
       },
       monitors: {
-        total: totalMonitors,
-        up: totalMonitors,
-        down: 0,
+        total: allMonitors.length,
+        active: active.length,
+        up,
+        down,
+        degraded,
+        unknown,
+        paused: allMonitors.length - active.length,
       },
-      critical_alerts: [],
+      // Detail array Bridge maps by id.
+      items: services,
+      critical_alerts,
       last_incident: null,
     };
 
@@ -99,7 +146,7 @@ export const GET: APIRoute = async ({ request }) => {
       headers: {
         'Content-Type': 'application/json',
         'Cache-Control': 'no-cache, max-age=30',
-        'Access-Control-Allow-Origin': 'http://localhost:8118',
+        'Access-Control-Allow-Origin': 'https://bridge.seaynicroute.com',
         'Access-Control-Allow-Methods': 'GET',
         'Access-Control-Allow-Headers': 'X-API-Key',
       },
@@ -127,7 +174,7 @@ export const OPTIONS: APIRoute = async () => {
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': 'http://localhost:8118',
+      'Access-Control-Allow-Origin': 'https://bridge.seaynicroute.com',
       'Access-Control-Allow-Methods': 'GET',
       'Access-Control-Allow-Headers': 'X-API-Key',
     },
