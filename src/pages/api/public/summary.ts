@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { getDb, schema } from '../../../../lib/db';
+import { getDb, schema } from '../../../lib/db';
 
 /**
  * Public Summary Endpoint for Bridge Integration
