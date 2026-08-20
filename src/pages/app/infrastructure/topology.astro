@@ -1,7 +1,7 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import GroupedTopologyView from '../../../components/GroupedTopologyView.astro';
+import HierarchicalTopologyMap from '../../../components/HierarchicalTopologyMap.astro';
 import { getDb, schema } from '../../../lib/db';
 import { eq } from 'drizzle-orm';
 
@@ -75,7 +75,7 @@ function timeAgo(timestamp: number): string {
     </div>
 
     <div class="topology-content">
-      <GroupedTopologyView />
+      <HierarchicalTopologyMap />
     </div>
   </main>
 </Layout>
