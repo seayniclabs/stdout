@@ -647,13 +647,119 @@ const licenseNotice = getLicenseNotice();
     });
 
     const hash = window.location.hash.slice(1);
-    const valid = ['account', 'integrations', 'data'];
+    const valid = ['account', 'ai-models', 'integrations', 'data'];
     if (valid.includes(hash)) showTab(hash);
   }
 
   initTabs();
 
+  // ── LLM Providers & Routing ──
+  async function loadLLMProviders() {
+    const listEl = document.getElementById('llmProvidersList');
+    if (!listEl) return;
 
+    try {
+      const res = await fetch('/app/api/llm/providers');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const { providers } = data;
+
+      if (!providers || providers.length === 0) {
+        listEl.innerHTML = '<div class="mono">No providers configured</div>';
+        return;
+      }
+
+      listEl.innerHTML = providers.map((provider: any) => `
+        <div class="backup-item" style="margin-bottom: 1rem; padding: 1rem; border: 1px solid var(--border); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.5rem;">
+            <div>
+              <strong style="font-size: 1.1em;">${escapeHtml(provider.name)}</strong>
+              <span class="mono" style="margin-left: 0.5rem; color: var(--text-secondary); font-size: 0.9em;">
+                ${escapeHtml(provider.providerType)}
+              </span>
+            </div>
+            <span style="padding: 0.25rem 0.75rem; background: ${provider.enabled ? 'var(--success-light)' : 'var(--border)'}; color: ${provider.enabled ? 'var(--success)' : 'var(--text-secondary)'}; border-radius: 12px; font-size: 0.85em;">
+              ${provider.enabled ? '✓ Enabled' : 'Disabled'}
+            </span>
+          </div>
+          ${provider.baseUrl ? `<div class="mono" style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 0.5rem;">${escapeHtml(provider.baseUrl)}</div>` : ''}
+          <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 0.5rem;">Priority: ${provider.priority}</div>
+          ${provider.models && provider.models.length > 0 ? `
+            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border);">
+              <div style="font-weight: 500; margin-bottom: 0.5rem;">Models (${provider.models.length}):</div>
+              ${provider.models.map((model: any) => `
+                <div style="margin-left: 1rem; margin-bottom: 0.25rem; font-size: 0.9em;">
+                  <span style="color: var(--accent);">•</span>
+                  <strong>${escapeHtml(model.displayName)}</strong>
+                  ${model.specialty ? `<span class="mono" style="color: var(--text-secondary);"> (${escapeHtml(model.specialty)})</span>` : ''}
+                  ${model.contextWindow ? `<span style="color: var(--text-secondary);"> — ${(model.contextWindow / 1000).toFixed(0)}K context</span>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `).join('');
+
+    } catch (err: any) {
+      listEl.innerHTML = `<div style="color: var(--error);">Failed to load providers: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  async function loadTaskRouting() {
+    const listEl = document.getElementById('taskRoutingList');
+    if (!listEl) return;
+
+    try {
+      const res = await fetch('/app/api/llm/routing');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data = await res.json();
+      const { routing } = data;
+
+      if (!routing || routing.length === 0) {
+        listEl.innerHTML = '<div class="mono">No routing configured</div>';
+        return;
+      }
+
+      listEl.innerHTML = routing.map((route: any) => `
+        <div class="backup-item" style="padding: 0.75rem 1rem; margin-bottom: 0.5rem; border: 1px solid var(--border); border-radius: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <span class="mono" style="color: var(--text-secondary); font-size: 0.9em;">${escapeHtml(route.taskType)}</span>
+              <span style="margin: 0 0.75rem; color: var(--text-tertiary);">→</span>
+              <strong>${escapeHtml(route.preferredModelName || route.preferredModelId || 'Auto')}</strong>
+            </div>
+            <span style="padding: 0.25rem 0.75rem; background: ${route.enabled ? 'var(--success-light)' : 'var(--border)'}; color: ${route.enabled ? 'var(--success)' : 'var(--text-secondary)'}; border-radius: 12px; font-size: 0.85em;">
+              ${route.enabled ? '✓' : '✗'}
+            </span>
+          </div>
+        </div>
+      `).join('');
+
+    } catch (err: any) {
+      listEl.innerHTML = `<div style="color: var(--error);">Failed to load routing: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function escapeHtml(str: string): string {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  // Load LLM data when AI Models tab is opened
+  document.querySelector('[data-tab="ai-models"]')?.addEventListener('click', () => {
+    loadLLMProviders();
+    loadTaskRouting();
+  });
+
+  // Load immediately if hash is ai-models
+  if (window.location.hash === '#ai-models') {
+    loadLLMProviders();
+    loadTaskRouting();
+  }
 
   // ── Branding ──
   const brandName = document.getElementById('brandName') as HTMLInputElement;
