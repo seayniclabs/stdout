@@ -35,6 +35,7 @@ const licenseNotice = getLicenseNotice();
     <!-- Tab bar -->
     <div class="settings-tabs" role="tablist" aria-label="Settings sections">
       <button class="tab-btn active" data-tab="account" role="tab" aria-selected="true" aria-controls="tab-account">Account</button>
+      <button class="tab-btn" data-tab="ai-models" role="tab" aria-selected="false" aria-controls="tab-ai-models">AI Models</button>
       <button class="tab-btn" data-tab="integrations" role="tab" aria-selected="false" aria-controls="tab-integrations">Integrations</button>
       <button class="tab-btn" data-tab="data" role="tab" aria-selected="false" aria-controls="tab-data">Data</button>
     </div>
@@ -260,7 +261,33 @@ const licenseNotice = getLicenseNotice();
 
     </div><!-- /tab-account -->
 
-    <!-- ── TAB 2: INTEGRATIONS ── -->
+    <!-- ── TAB 2: AI MODELS ── -->
+    <div id="tab-ai-models" class="tab-panel" role="tabpanel">
+
+      <section class="section">
+        <h2>AI Providers</h2>
+        <p class="section-desc">
+          Configure which AI models Riggins uses for infrastructure monitoring. Code-specialized models
+          are recommended for log analysis, network discovery, and incident diagnosis.
+        </p>
+
+        <div id="llmProvidersList" class="backup-list">
+          <div class="loading mono">Loading providers...</div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>Model Routing</h2>
+        <p class="section-desc">Choose which model handles each type of task.</p>
+
+        <div id="taskRoutingList" class="backup-list">
+          <div class="loading mono">Loading routing...</div>
+        </div>
+      </section>
+
+    </div><!-- /tab-ai-models -->
+
+    <!-- ── TAB 3: INTEGRATIONS ── -->
     <div id="tab-integrations" class="tab-panel" role="tabpanel">
 
       <!-- AI Providers (BYOK) -->
