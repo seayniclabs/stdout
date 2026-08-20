@@ -742,13 +742,6 @@ const licenseNotice = getLicenseNotice();
     }
   }
 
-  function escapeHtml(str: string): string {
-    if (!str) return '';
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
   // Load LLM data when AI Models tab is opened
   document.querySelector('[data-tab="ai-models"]')?.addEventListener('click', () => {
     loadLLMProviders();
