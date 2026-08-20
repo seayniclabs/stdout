@@ -11,9 +11,11 @@
  * - Custom OpenAI-compatible APIs
  */
 
-import { db } from '../db';
+import { getDb } from '../db';
 import { llmProviders, llmModels, llmTaskRouting } from '../db/schema';
 import { eq, and } from 'drizzle-orm';
+
+const db = getDb();
 
 export type TaskType =
   | 'log_analysis'

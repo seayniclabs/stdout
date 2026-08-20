@@ -3,8 +3,11 @@
  * GET /app/api/llm/providers - List all providers
  */
 import type { APIRoute } from 'astro';
-import { db } from '../../../../lib/db';
+import { getDb } from '../../../../lib/db';
 import { llmProviders, llmModels } from '../../../../lib/db/schema';
+import { eq } from 'drizzle-orm';
+
+const db = getDb();
 
 export const GET: APIRoute = async ({ locals }) => {
   const user = locals.user;
