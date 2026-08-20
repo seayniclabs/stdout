@@ -1,6 +1,10 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { readFileSync } from 'fs';
 import { getRigginsSystemPrompt } from './riggins/system-prompt';
+import { diagnoseIncident as diagnoseWithRouter, analyzeLogs, parseNetworkDiscovery, generateRemediationScript } from './diagnose-with-router';
+
+// Re-export router functions for easy migration
+export { analyzeLogs, parseNetworkDiscovery, generateRemediationScript };
 
 export function getAnthropicKey(): string | null {
   const keyPath = process.env.ANTHROPIC_API_KEY_FILE || '/run/secrets/anthropic_api_key';
@@ -112,6 +116,12 @@ export async function diagnoseIncident(opts: {
   model?: string;
   provider?: string;
 }): Promise<DiagnosisResult> {
+  // NEW: If no provider specified, use the LLM router (NVIDIA NIM code models)
+  if (!opts.provider && !opts.apiKey) {
+    return diagnoseWithRouter(opts);
+  }
+
+  // Legacy path: specific provider or BYOK
   const model = opts.model || (opts.tier === 'paid' ? 'claude-sonnet-4-6-20250514' : 'claude-haiku-4-5-20251001');
 
   const pastResolutionsBlock = opts.pastResolutions.length > 0
