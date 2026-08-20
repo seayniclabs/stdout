@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 export * from './monitoring-schema';
 export * from './observatory-schema';
 export * from './agent-schema';
+export * from './llm-schema';
 import { incidents } from './monitoring-schema';
 
 // ============================================================================
