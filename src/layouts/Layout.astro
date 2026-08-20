@@ -200,11 +200,11 @@ if (user) {
     <slot />
   </main>
 
-  <!-- Observatory Agent Panel -->
-  <AgentPanel />
+  <!-- Observatory Agent Panel (only when authenticated) -->
+  {user && <AgentPanel />}
 
-  <!-- Floating Agent Toggle Button -->
-  <button
+  <!-- Floating Agent Toggle Button (only when authenticated) -->
+  {user && <button
     id="agentToggle"
     class="agent-toggle"
     aria-label="Open Observatory Agent (Steer)"
@@ -214,7 +214,7 @@ if (user) {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
       <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
     </svg>
-  </button>
+  </button>}
 
   <footer style="text-align:center; padding:2rem 1rem 3rem; opacity:0.4;">
     <div style="display:flex; justify-content:center; gap:16px; margin-bottom:6px;">
