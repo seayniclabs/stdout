@@ -1,0 +1,568 @@
+---
+import { getDb } from "../lib/db";
+
+const db = getDb();
+const rawDb = (db as any).$client;
+
+// Fetch discovered hosts
+let hosts: any[] = [];
+try {
+  const tableExists = rawDb.prepare(`
+    SELECT name FROM sqlite_master
+    WHERE type='table' AND name='discovered_hosts'
+  `).get();
+
+  if (tableExists) {
+    hosts = rawDb.prepare(`
+      SELECT
+        h.id, h.ip_address, h.hostname, h.device_type,
+        h.open_ports, h.services, h.mac_address, h.vendor,
+        h.last_seen,
+        s.name as stack_name, s.id as stack_id,
+        CASE
+          WHEN (julianday('now') - julianday(h.last_seen / 1000, 'unixepoch')) * 24 * 60 < 5 THEN 'healthy'
+          WHEN (julianday('now') - julianday(h.last_seen / 1000, 'unixepoch')) * 24 * 60 < 30 THEN 'warning'
+          ELSE 'offline'
+        END as health_status
+      FROM discovered_hosts h
+      LEFT JOIN stacks s ON h.stack_id = s.id
+      ORDER BY h.ip_address
+    `).all();
+  }
+} catch (e) {
+  console.error('[GroupedTopology] Error fetching hosts:', e);
+  hosts = [];
+}
+
+// Parse and enrich host data
+const nodes = hosts.map((h: any) => ({
+  id: h.id,
+  ip: h.ip_address,
+  hostname: h.hostname || h.ip_address,
+  type: h.device_type || "unknown",
+  stack: h.stack_name,
+  openPorts: h.open_ports ? JSON.parse(h.open_ports) : [],
+  services: h.services ? JSON.parse(h.services) : [],
+  mac: h.mac_address,
+  vendor: h.vendor,
+  health: h.health_status || "unknown",
+  lastSeen: h.last_seen,
+}));
+
+// Auto-group by subnet (192.168.68.x → "192.168.68.0/24")
+interface Group {
+  title: string;
+  accent: string;
+  nodes: typeof nodes;
+}
+
+const subnetGroups = new Map<string, typeof nodes>();
+
+nodes.forEach(node => {
+  const subnet = node.ip.substring(0, node.ip.lastIndexOf('.')) + '.0/24';
+  if (!subnetGroups.has(subnet)) {
+    subnetGroups.set(subnet, []);
+  }
+  subnetGroups.get(subnet)!.push(node);
+});
+
+// Also group by device type for ungrouped/misc
+const typeGroups = new Map<string, typeof nodes>();
+const knownTypes = ['router', 'gateway', 'server', 'docker-host', 'nas', 'switch'];
+
+nodes.forEach(node => {
+  if (knownTypes.includes(node.type)) {
+    if (!typeGroups.has(node.type)) {
+      typeGroups.set(node.type, []);
+    }
+    typeGroups.get(node.type)!.push(node);
+  }
+});
+
+// Build layer structure (subnet-based + type-based)
+const layers: Array<{ title: string; groups: Group[] }> = [];
+
+// Infrastructure layer (routers, gateways, core switches)
+const infraNodes = [...(typeGroups.get('router') || []), ...(typeGroups.get('gateway') || []), ...(typeGroups.get('switch') || [])];
+if (infraNodes.length > 0) {
+  layers.push({
+    title: 'Network Infrastructure',
+    groups: [{
+      title: 'Core Network',
+      accent: '#F97316',
+      nodes: infraNodes,
+    }]
+  });
+}
+
+// Servers & Hosts layer
+const serverNodes = [...(typeGroups.get('server') || []), ...(typeGroups.get('docker-host') || []), ...(typeGroups.get('nas') || [])];
+if (serverNodes.length > 0) {
+  layers.push({
+    title: 'Servers & Storage',
+    groups: [{
+      title: 'Compute & Storage',
+      accent: '#3B82F6',
+      nodes: serverNodes,
+    }]
+  });
+}
+
+// Subnet-based layers (for everything else)
+Array.from(subnetGroups.entries()).forEach(([subnet, subnetNodes]) => {
+  // Filter out nodes already in infrastructure/server layers
+  const remainingNodes = subnetNodes.filter(n =>
+    !infraNodes.includes(n) && !serverNodes.includes(n)
+  );
+
+  if (remainingNodes.length > 0) {
+    layers.push({
+      title: `Network Segment — ${subnet}`,
+      groups: [{
+        title: `${remainingNodes.length} device${remainingNodes.length === 1 ? '' : 's'}`,
+        accent: '#10B981',
+        nodes: remainingNodes,
+      }]
+    });
+  }
+});
+
+// Helper: format port list for display
+function formatPorts(ports: number[]): string {
+  if (!ports || ports.length === 0) return '';
+  const sorted = [...ports].sort((a, b) => a - b);
+  if (sorted.length <= 3) return sorted.join(', ');
+  return `${sorted.slice(0, 3).join(', ')} +${sorted.length - 3} more`;
+}
+
+// Helper: format service list
+function formatServices(services: any[]): string {
+  if (!services || services.length === 0) return '';
+  if (services.length === 1) return services[0].service || services[0].name || 'unknown';
+  return `${services[0].service || services[0].name || 'unknown'} +${services.length - 1} more`;
+}
+---
+
+<div class="grouped-topology-container">
+  <div class="topology-header">
+    <h3>Infrastructure Topology</h3>
+    <div class="topology-stats">
+      <span class="stat-item">
+        <span class="stat-value">{nodes.length}</span>
+        <span class="stat-label">Total Devices</span>
+      </span>
+      <span class="stat-item">
+        <span class="stat-value">{layers.length}</span>
+        <span class="stat-label">Network Layers</span>
+      </span>
+      <span class="stat-item">
+        <span class="stat-value">{nodes.filter(n => n.health === 'healthy').length}</span>
+        <span class="stat-label">Online</span>
+      </span>
+    </div>
+    <button id="refresh-topology" class="btn-small">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  {layers.length === 0 ? (
+    <div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+      </svg>
+      <h4>No infrastructure discovered yet</h4>
+      <p>Riggins will automatically discover and map your network infrastructure.</p>
+      <a href="/app/infrastructure/discovery" class="btn-primary">View Discovery Status</a>
+    </div>
+  ) : (
+    <div class="topology-layers">
+      {layers.map(layer => (
+        <div class="layer">
+          <h4 class="layer-title">{layer.title}</h4>
+          <div class="layer-groups">
+            {layer.groups.map(group => (
+              <div class="group-card" style={`border-left: 3px solid ${group.accent}`}>
+                {group.title && <div class="group-title">{group.title}</div>}
+                <div class="nodes-grid">
+                  {group.nodes.map(node => (
+                    <a href={`/app/infrastructure/hosts/${node.id}`} class="node-card" data-health={node.health}>
+                      <div class="node-header">
+                        <div class="node-status">
+                          <span class={`status-dot ${node.health}`}></span>
+                        </div>
+                        <div class="node-info">
+                          <div class="node-hostname">{node.hostname}</div>
+                          <div class="node-meta">
+                            <span class="node-ip">{node.ip}</span>
+                            {node.type !== 'unknown' && (
+                              <span class="node-type">{node.type}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      {(node.openPorts.length > 0 || node.services.length > 0 || node.vendor) && (
+                        <div class="node-details">
+                          {node.vendor && (
+                            <div class="detail-row">
+                              <span class="detail-label">Vendor:</span>
+                              <span class="detail-value">{node.vendor}</span>
+                            </div>
+                          )}
+                          {node.openPorts.length > 0 && (
+                            <div class="detail-row">
+                              <span class="detail-label">Ports:</span>
+                              <span class="detail-value">{formatPorts(node.openPorts)}</span>
+                            </div>
+                          )}
+                          {node.services.length > 0 && (
+                            <div class="detail-row">
+                              <span class="detail-label">Services:</span>
+                              <span class="detail-value">{formatServices(node.services)}</span>
+                            </div>
+                          )}
+                          {node.stack && (
+                            <div class="detail-row">
+                              <span class="detail-label">Stack:</span>
+                              <span class="detail-value">{node.stack}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+</div>
+
+<style>
+  .grouped-topology-container {
+    background: var(--bg-secondary, #0f1419);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 8px;
+    padding: 1.5rem;
+  }
+
+  .topology-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .topology-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary, #e6edf3);
+  }
+
+  .topology-stats {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary, #F97316);
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: var(--text-secondary, #8b949e);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .btn-small {
+    padding: 0.5rem 1rem;
+    background: var(--card-bg, #161b22);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 6px;
+    color: var(--text-primary, #e6edf3);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .btn-small:hover {
+    background: var(--accent, #F97316);
+    border-color: var(--accent, #F97316);
+    color: #fff;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-secondary, #8b949e);
+  }
+
+  .empty-state svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .empty-state h4 {
+    font-size: 1.125rem;
+    color: var(--text-primary, #e6edf3);
+    margin: 0 0 0.5rem 0;
+  }
+
+  .empty-state p {
+    margin: 0 0 1.5rem 0;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: var(--primary, #F97316);
+    color: #fff;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+
+  .btn-primary:hover {
+    background: var(--primary-hover, #ea580c);
+  }
+
+  .topology-layers {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  .layer {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .layer-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary, #e6edf3);
+    margin: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border-color, #30363d);
+  }
+
+  .layer-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .group-card {
+    background: var(--bg-primary, #0d1117);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 8px;
+    padding: 1rem;
+  }
+
+  .group-title {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-secondary, #8b949e);
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .nodes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+
+  .node-card {
+    background: var(--card-bg, #161b22);
+    border: 1px solid var(--border-color, #30363d);
+    border-radius: 6px;
+    padding: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .node-card:hover {
+    border-color: var(--primary, #F97316);
+    background: rgba(249, 115, 22, 0.05);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .node-card[data-health="offline"]:hover {
+    border-color: #EF4444;
+  }
+
+  .node-card[data-health="warning"]:hover {
+    border-color: #F59E0B;
+  }
+
+  .node-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .node-status {
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+  }
+
+  .status-dot {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+  }
+
+  .status-dot.healthy {
+    background: #10B981;
+    color: #10B981;
+  }
+
+  .status-dot.warning {
+    background: #F59E0B;
+    color: #F59E0B;
+    animation: pulse-warning 2s ease-in-out infinite;
+  }
+
+  .status-dot.offline {
+    background: #EF4444;
+    color: #EF4444;
+    animation: pulse-offline 1.5s ease-in-out infinite;
+  }
+
+  .status-dot.unknown {
+    background: #6B7280;
+    color: #6B7280;
+  }
+
+  @keyframes pulse-warning {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  @keyframes pulse-offline {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.2; }
+  }
+
+  .node-info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .node-hostname {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--text-primary, #e6edf3);
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .node-meta {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary, #8b949e);
+  }
+
+  .node-ip {
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+  }
+
+  .node-type {
+    padding: 0.125rem 0.5rem;
+    background: rgba(249, 115, 22, 0.1);
+    color: var(--primary, #F97316);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    text-transform: capitalize;
+  }
+
+  .node-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border-color, #30363d);
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 0.8125rem;
+    gap: 0.5rem;
+  }
+
+  .detail-label {
+    color: var(--text-secondary, #8b949e);
+    flex-shrink: 0;
+  }
+
+  .detail-value {
+    color: var(--text-primary, #e6edf3);
+    text-align: right;
+    font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 768px) {
+    .topology-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .topology-stats {
+      gap: 1rem;
+    }
+
+    .nodes-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<script>
+  document.getElementById('refresh-topology')?.addEventListener('click', () => {
+    window.location.reload();
+  });
+</script>
