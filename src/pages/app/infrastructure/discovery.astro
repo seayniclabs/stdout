@@ -1,68 +1,27 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import DiscoverySummary from '../../../components/DiscoverySummary.astro';
 import { getDb, schema } from '../../../lib/db';
-import { discoveredHosts, discoveredServices } from '../../../lib/db/schema';
-import { eq } from 'drizzle-orm';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const db = getDb();
-
-// Discovery data
-const hosts = db.select().from(discoveredHosts)
-  .orderBy(discoveredHosts.ipAddress).all();
-
-const allServices = db.select().from(discoveredServices).all();
-
-// Attach services to each host
-const hostsWithServices = hosts.map(host => ({
-  ...host,
-  services: allServices.filter(s => s.hostId === host.id),
-}));
-
-// Get stacks count for the banner
 const stacks = db.select().from(schema.stacks).all();
-
-const satellites: any[] = []; // satellites table doesn't exist yet
-
-// Last discovery run timestamp
-const lastDiscoveryRun = db.select().from(schema.systemState)
-  .where(eq(schema.systemState.key, 'last_discovery_run'))
-  .get()?.updatedAt;
-
-const totalEntities = hosts.length + stacks.length + satellites.length;
-
-function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 ---
 
-<Layout title="Infrastructure Discovery — StdOut">
-  <main class="infrastructure-page">
-    <!-- Autonomous Discovery Banner -->
+<Layout title="Discovery — StdOut">
+  <main class="discovery-page">
     <div class="auto-banner">
-      <div class="auto-icon">🤖</div>
+      <div class="auto-icon">🔍</div>
       <div class="auto-content">
-        <h2>Riggins is continuously monitoring your infrastructure</h2>
+        <h2>Riggins discovers and connects to your infrastructure automatically</h2>
         <div class="auto-meta">
-          <span class="highlight">{totalEntities} entities discovered</span> •
-          <span class="highlight">{stacks.length} stacks auto-created</span> •
-          Last scan: {lastDiscoveryRun ? timeAgo(lastDiscoveryRun) : 'Never'}
+          Configure credentials for services that need them, or ignore devices you don't want to monitor
         </div>
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
     <div class="tabs">
       <a href="/app/infrastructure/discovery" class="tab active">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -76,12 +35,6 @@ function timeAgo(timestamp: number): string {
         </svg>
         Stacks ({stacks.length})
       </a>
-      <a href="/app/infrastructure/satellites" class="tab">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
-        </svg>
-        Satellites ({satellites.length})
-      </a>
       <a href="/app/infrastructure/topology" class="tab">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
@@ -90,63 +43,87 @@ function timeAgo(timestamp: number): string {
       </a>
     </div>
 
-    <!-- Discovery Content -->
-    {hosts.length === 0 ? (
-      <div class="empty-state">
-        <div class="empty-icon">🔍</div>
-        <h3>Riggins is scanning your infrastructure...</h3>
-        <p>Auto-discovery runs continuously. Check back in a few minutes.</p>
-        <div class="auto-label">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
-          </svg>
-          Autonomous scanning enabled
+    <div class="discovery-container">
+      <div class="status-groups" id="statusGroups">
+        <div class="loading">Loading discovered devices...</div>
+      </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Configure Integration</h3>
+          <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="device-info" id="deviceInfo"></div>
+          <div class="form-group">
+            <label>Integration Type</label>
+            <input type="text" id="integrationType" readonly />
+          </div>
+          <div class="form-group">
+            <label>URL</label>
+            <input type="text" id="configUrl" />
+          </div>
+          <div class="form-group">
+            <label>Username (if required)</label>
+            <input type="text" id="configUsername" />
+          </div>
+          <div class="form-group">
+            <label>Password (if required)</label>
+            <input type="password" id="configPassword" />
+          </div>
+          <div class="form-actions">
+            <button onclick="testConnection()" class="btn btn-secondary">Test Connection</button>
+            <button onclick="saveConfiguration()" class="btn btn-primary">Save & Connect</button>
+          </div>
+          <div id="configError" class="error-message"></div>
+          <div id="configSuccess" class="success-message"></div>
         </div>
       </div>
-    ) : (
-      <div class="hosts-grid">
-        {hostsWithServices.map(host => {
-          const deviceType = host.deviceType || 'unknown';
-          const lastSeen = host.lastSeen ? timeAgo(host.lastSeen.getTime()) : 'Never';
-          const openPorts = host.openPorts ? JSON.parse(host.openPorts).length : 0;
-          const serviceCount = host.services.length;
+    </div>
 
-          return (
-            <a href={`/app/devices/${host.id}`} class="host-card">
-              <div class="host-header">
-                <div class="host-name">{host.hostname || host.ipAddress}</div>
-                <div class="device-type-badge">{deviceType}</div>
-              </div>
-              <div class="host-ip">{host.ipAddress}</div>
-              <div class="host-meta">
-                <div class="meta-row">
-                  <span class="meta-label">Last seen:</span>
-                  <span class="meta-value">{lastSeen}</span>
-                </div>
-                {openPorts > 0 && (
-                  <div class="meta-row">
-                    <span class="meta-label">Open ports:</span>
-                    <span class="meta-value">{openPorts}</span>
-                  </div>
-                )}
-                {serviceCount > 0 && (
-                  <div class="meta-row">
-                    <span class="meta-label">Services:</span>
-                    <span class="meta-value">{serviceCount}</span>
-                  </div>
-                )}
-              </div>
-              <div class="host-badge">AUTO-FOUND</div>
-            </a>
-          );
-        })}
+    <!-- Ignore Modal -->
+    <div id="ignoreModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Ignore Device</h3>
+          <button class="modal-close" onclick="closeIgnoreModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <p>Why are you ignoring this device?</p>
+          <div class="radio-group">
+            <label>
+              <input type="radio" name="ignoreReason" value="not-relevant" checked />
+              Not relevant to my infrastructure
+            </label>
+            <label>
+              <input type="radio" name="ignoreReason" value="security" />
+              Security concern
+            </label>
+            <label>
+              <input type="radio" name="ignoreReason" value="temporary" />
+              Temporary device
+            </label>
+            <label>
+              <input type="radio" name="ignoreReason" value="other" />
+              Other: <input type="text" id="otherReason" placeholder="Specify..." />
+            </label>
+          </div>
+          <p class="warning-text">This device will not be scanned again. You can un-ignore it from Settings.</p>
+          <div class="form-actions">
+            <button onclick="closeIgnoreModal()" class="btn btn-secondary">Cancel</button>
+            <button onclick="confirmIgnore()" class="btn btn-danger">Ignore Device</button>
+          </div>
+        </div>
       </div>
-    )}
+    </div>
   </main>
 </Layout>
 
 <style>
-  .infrastructure-page {
+  .discovery-page {
     max-width: 1400px;
     margin: 0 auto;
     padding: 24px;
@@ -176,11 +153,6 @@ function timeAgo(timestamp: number): string {
   .auto-meta {
     font-size: 14px;
     color: var(--text-secondary);
-  }
-
-  .auto-meta .highlight {
-    color: var(--success);
-    font-weight: 600;
   }
 
   .tabs {
@@ -217,138 +189,552 @@ function timeAgo(timestamp: number): string {
     border-bottom-color: var(--primary);
   }
 
-  .empty-state {
-    text-align: center;
-    padding: 64px 32px;
+  .discovery-container {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 12px;
+    padding: 24px;
   }
 
-  .empty-icon {
-    font-size: 64px;
-    margin-bottom: 16px;
-  }
-
-  .empty-state h3 {
-    font-size: 20px;
-    margin-bottom: 8px;
-  }
-
-  .empty-state p {
+  .loading {
+    text-align: center;
+    padding: 48px;
     color: var(--text-secondary);
+  }
+
+  .status-group {
     margin-bottom: 24px;
   }
 
-  .auto-label {
-    display: inline-flex;
+  .status-group:last-child {
+    margin-bottom: 0;
+  }
+
+  .status-group-header {
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: rgba(16, 185, 129, 0.1);
-    border: 1px solid rgba(16, 185, 129, 0.3);
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--bg-primary);
     border-radius: 8px;
-    color: var(--success);
-    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
   }
 
-  .hosts-grid {
+  .status-group-header:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .status-group-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .status-icon {
+    font-size: 20px;
+  }
+
+  .status-count {
+    background: var(--bg-tertiary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .status-group-content {
+    margin-top: 12px;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
   }
 
-  .host-card {
-    background: var(--bg-secondary);
+  .status-group-content.collapsed {
+    display: none;
+  }
+
+  .device-card {
+    background: var(--bg-primary);
     border: 1px solid var(--border);
     border-radius: 8px;
     padding: 16px;
-    text-decoration: none;
+  }
+
+  .device-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+
+  .device-title {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .device-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .device-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
     transition: all 0.2s ease;
   }
 
-  .host-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-2px);
+  .btn-sm.btn-primary {
+    background: var(--primary);
+    color: white;
   }
 
-  .host-header {
+  .btn-sm.btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .btn-sm.btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  .device-meta {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+
+  .device-meta p {
+    margin: 4px 0;
+  }
+
+  /* Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal.show {
+    display: flex;
+  }
+
+  .modal-content {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 8px;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .host-name {
-    font-weight: 600;
-    font-size: 16px;
+  .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
   }
 
-  .device-type-badge {
-    display: inline-block;
-    padding: 2px 8px;
-    background: rgba(99, 102, 241, 0.1);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 4px;
-    color: var(--primary);
-    font-size: 10px;
-    font-weight: 600;
-    text-transform: uppercase;
-  }
-
-  .host-ip {
-    font-size: 13px;
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
     color: var(--text-secondary);
-    font-family: var(--font-mono);
-    margin-bottom: 12px;
-  }
-
-  .host-meta {
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 12px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
+    align-items: center;
+    justify-content: center;
   }
 
-  .meta-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 12px;
-  }
-
-  .meta-label {
-    color: var(--text-secondary);
-  }
-
-  .meta-value {
+  .modal-close:hover {
     color: var(--text-primary);
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
     font-weight: 500;
   }
 
-  .host-badge {
-    display: inline-block;
-    padding: 4px 8px;
+  .form-group input[type="text"],
+  .form-group input[type="password"] {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .btn-danger {
+    background: #ef4444;
+    color: white;
+  }
+
+  .radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 16px 0;
+  }
+
+  .radio-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+
+  .warning-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+    padding: 12px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+
+  .error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #fca5a5;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
+  }
+
+  .error-message.show {
+    display: block;
+  }
+
+  .success-message {
     background: rgba(16, 185, 129, 0.1);
     border: 1px solid rgba(16, 185, 129, 0.3);
-    border-radius: 4px;
-    color: var(--success);
-    font-size: 11px;
-    font-weight: 600;
+    color: #6ee7b7;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-top: 16px;
+    display: none;
   }
 
-  @media (max-width: 768px) {
-    .infrastructure-page {
-      padding: 16px;
-    }
-
-    .tab {
-      white-space: nowrap;
-    }
-
-    .hosts-grid {
-      grid-template-columns: 1fr;
-    }
+  .success-message.show {
+    display: block;
   }
 </style>
+
+<script>
+  let currentHostId = '';
+
+  async function loadDiscoveredHosts() {
+    try {
+      const res = await fetch('/app/api/infrastructure/discovered-hosts');
+      const data = await res.json();
+
+      const container = document.getElementById('statusGroups');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      const groups = [
+        { key: 'connected', title: 'Connected', icon: '✅', expanded: false },
+        { key: 'needsConfig', title: 'Needs Configuration', icon: '⚠️', expanded: true },
+        { key: 'discovered', title: 'Discovered', icon: '🔍', expanded: false },
+        { key: 'connecting', title: 'Connecting', icon: '🔄', expanded: false },
+        { key: 'ignored', title: 'Ignored', icon: '🚫', expanded: false },
+        { key: 'failed', title: 'Failed', icon: '❌', expanded: false },
+      ];
+
+      for (const group of groups) {
+        const hosts = data[group.key] || [];
+        if (hosts.length === 0) continue;
+
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'status-group';
+        groupDiv.innerHTML = `
+          <div class="status-group-header" onclick="toggleGroup(this)">
+            <div class="status-group-title">
+              <span class="status-icon">${group.icon}</span>
+              <span>${group.title}</span>
+              <span class="status-count">${hosts.length}</span>
+            </div>
+            <span class="expand-icon">${group.expanded ? '▼' : '▶'}</span>
+          </div>
+          <div class="status-group-content ${group.expanded ? '' : 'collapsed'}">
+            ${hosts.map(host => renderDeviceCard(host, group.key)).join('')}
+          </div>
+        `;
+        container.appendChild(groupDiv);
+      }
+    } catch (error) {
+      console.error('Failed to load discovered hosts:', error);
+      const container = document.getElementById('statusGroups');
+      if (container) {
+        container.innerHTML = '<div class="error-message show">Failed to load discovered devices</div>';
+      }
+    }
+  }
+
+  function renderDeviceCard(host, status) {
+    const integrationName = detectIntegration(host.openPorts || []);
+    const actions = status === 'needsConfig'
+      ? `<button class="btn-sm btn-primary" onclick="openConfigModal('${host.id}', '${host.ipAddress}', '${integrationName}')">Configure</button>
+         <button class="btn-sm btn-danger" onclick="openIgnoreModal('${host.id}')">Ignore</button>`
+      : status === 'discovered'
+      ? `<button class="btn-sm btn-secondary" onclick="openConfigModal('${host.id}', '${host.ipAddress}', '${integrationName}')">Configure</button>
+         <button class="btn-sm btn-danger" onclick="openIgnoreModal('${host.id}')">Ignore</button>`
+      : '';
+
+    return `
+      <div class="device-card">
+        <div class="device-header">
+          <div>
+            <div class="device-title">${host.hostname || host.ipAddress}</div>
+            <div class="device-subtitle">${integrationName}</div>
+          </div>
+          <div class="device-actions">
+            ${actions}
+          </div>
+        </div>
+        <div class="device-meta">
+          <p><strong>IP:</strong> ${host.ipAddress}</p>
+          ${host.macAddress ? `<p><strong>MAC:</strong> ${host.macAddress}</p>` : ''}
+          ${host.vendor ? `<p><strong>Vendor:</strong> ${host.vendor}</p>` : ''}
+          ${host.openPorts && host.openPorts.length ? `<p><strong>Ports:</strong> ${host.openPorts.join(', ')}</p>` : ''}
+          ${host.connectionError ? `<p style="color: #fca5a5;"><strong>Error:</strong> ${host.connectionError}</p>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function detectIntegration(ports) {
+    const map = {
+      9090: 'Prometheus',
+      3000: 'Grafana',
+      9093: 'Alertmanager',
+      3100: 'Loki',
+      3306: 'MySQL',
+      5432: 'PostgreSQL',
+      6379: 'Redis',
+      27017: 'MongoDB',
+      9200: 'Elasticsearch',
+      2375: 'Docker API',
+      2376: 'Docker API (TLS)',
+    };
+
+    for (const port of ports) {
+      if (map[port]) return map[port];
+    }
+
+    return 'Unknown Service';
+  }
+
+  function toggleGroup(header) {
+    const content = header.nextElementSibling;
+    const icon = header.querySelector('.expand-icon');
+    if (content.classList.contains('collapsed')) {
+      content.classList.remove('collapsed');
+      icon.textContent = '▼';
+    } else {
+      content.classList.add('collapsed');
+      icon.textContent = '▶';
+    }
+  }
+
+  function openConfigModal(hostId, ipAddress, integrationType) {
+    currentHostId = hostId;
+    const modal = document.getElementById('configModal');
+    const typeInput = document.getElementById('integrationType');
+    const urlInput = document.getElementById('configUrl');
+
+    if (modal && typeInput && urlInput) {
+      typeInput.value = integrationType;
+      urlInput.value = `http://${ipAddress}:${getDefaultPort(integrationType)}`;
+      modal.classList.add('show');
+    }
+  }
+
+  function closeConfigModal() {
+    const modal = document.getElementById('configModal');
+    if (modal) modal.classList.remove('show');
+  }
+
+  function openIgnoreModal(hostId) {
+    currentHostId = hostId;
+    const modal = document.getElementById('ignoreModal');
+    if (modal) modal.classList.add('show');
+  }
+
+  function closeIgnoreModal() {
+    const modal = document.getElementById('ignoreModal');
+    if (modal) modal.classList.remove('show');
+  }
+
+  async function saveConfiguration() {
+    const url = document.getElementById('configUrl')?.value;
+    const username = document.getElementById('configUsername')?.value;
+    const password = document.getElementById('configPassword')?.value;
+    const integrationType = document.getElementById('integrationType')?.value;
+
+    try {
+      const res = await fetch('/app/api/infrastructure/configure-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          hostId: currentHostId,
+          integrationType: integrationType.toLowerCase().replace(/\s+/g, '-'),
+          config: { url, username, password },
+        }),
+      });
+
+      if (res.ok) {
+        showSuccess('configSuccess', 'Configuration saved successfully!');
+        setTimeout(() => {
+          closeConfigModal();
+          loadDiscoveredHosts();
+        }, 1500);
+      } else {
+        const error = await res.json();
+        showError('configError', error.error || 'Configuration failed');
+      }
+    } catch (error) {
+      showError('configError', 'Network error - please try again');
+    }
+  }
+
+  async function testConnection() {
+    await saveConfiguration();
+  }
+
+  async function confirmIgnore() {
+    const reasonRadios = document.getElementsByName('ignoreReason');
+    let reason = '';
+    for (const radio of reasonRadios) {
+      if (radio.checked) {
+        reason = radio.value === 'other'
+          ? document.getElementById('otherReason')?.value || 'Other'
+          : radio.value;
+        break;
+      }
+    }
+
+    try {
+      const res = await fetch('/app/api/infrastructure/ignore-host', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hostId: currentHostId, reason }),
+      });
+
+      if (res.ok) {
+        closeIgnoreModal();
+        loadDiscoveredHosts();
+      }
+    } catch (error) {
+      console.error('Failed to ignore device:', error);
+    }
+  }
+
+  function showError(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.textContent = message;
+      el.classList.add('show');
+      setTimeout(() => { el.classList.remove('show'); }, 5000);
+    }
+  }
+
+  function showSuccess(elementId, message) {
+    const el = document.getElementById(elementId);
+    if (el) {
+      el.textContent = message;
+      el.classList.add('show');
+      setTimeout(() => { el.classList.remove('show'); }, 5000);
+    }
+  }
+
+  function getDefaultPort(integrationType) {
+    const map = {
+      'Prometheus': 9090,
+      'Grafana': 3000,
+      'MySQL': 3306,
+      'PostgreSQL': 5432,
+      'Redis': 6379,
+      'Docker API': 2375,
+    };
+    return map[integrationType] || 80;
+  }
+
+  // Load on page load
+  loadDiscoveredHosts();
+
+  // Reload every 30 seconds
+  setInterval(loadDiscoveredHosts, 30000);
+</script>
