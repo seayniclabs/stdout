@@ -19,60 +19,77 @@ const DEBUG_MW = process.env.STDOUT_DEBUG_MIDDLEWARE === '1';
 const mwLog = (...args: unknown[]) => { if (DEBUG_MW) console.log(...args); };
 
 
-// Initialize Observatory (full initialization with baseline establishment)
+// Check if setup is complete before starting background workers
 (async () => {
   try {
-    const { initializeObservatory } = await import('./lib/observatory/initialization');
-    const result = await initializeObservatory();
+    const db = getDb();
+    const setupComplete = db.select().from(schema.setupProgress)
+      .where(eq(schema.setupProgress.stepName, 'complete'))
+      .get();
 
-    // Log full startup sequence
-    for (const line of result.startupLog) {
-      console.log('[Observatory]', line);
+    if (!setupComplete?.completed) {
+      console.log('[init] Setup not yet complete - background workers will not start');
+      return;
     }
 
-    if (result.success) {
-      console.log('[Observatory] ✓ Initialization complete');
-      console.log(`  Agents: ${result.agentsActivated.join(', ')}`);
-      console.log(`  Baselines: ${result.baselinesEstablished}`);
-      console.log(`  Monitors: ${result.monitorsConfigured}`);
-    } else {
-      console.error('[Observatory] ✗ Initialization failed:', result.errors);
+    console.log('[init] Setup complete - starting background workers');
+
+    // Initialize Observatory (full initialization with baseline establishment)
+    try {
+      const { initializeObservatory } = await import('./lib/observatory/initialization');
+      const result = await initializeObservatory();
+
+      // Log full startup sequence
+      for (const line of result.startupLog) {
+        console.log('[Observatory]', line);
+      }
+
+      if (result.success) {
+        console.log('[Observatory] ✓ Initialization complete');
+        console.log(`  Agents: ${result.agentsActivated.join(', ')}`);
+        console.log(`  Baselines: ${result.baselinesEstablished}`);
+        console.log(`  Monitors: ${result.monitorsConfigured}`);
+      } else {
+        console.error('[Observatory] ✗ Initialization failed:', result.errors);
+      }
+    } catch (err) {
+      console.error('[middleware] Failed to initialize Observatory:', err);
     }
+
+    // Initialize degradation mode check
+    initializeDegradationMode().catch(err =>
+      console.error('[middleware] Failed to initialize degradation mode:', err)
+    );
+
+    // Initialize event bus auto-wiring (cross-links entities when events fire)
+    initAutoWiring();
+
+    // Start the Observatory Watcher loop (polls stacks, detects anomalies)
+    startWatcher();
+
+    // Start the Autonomous Agent Watcher (Riggins monitors and acts)
+    setTimeout(async () => {
+      try {
+        const { startAutonomousWatcher } = await import('./lib/agent/autonomous-watcher');
+        startAutonomousWatcher();
+      } catch (err) {
+        console.error('[middleware] Failed to start autonomous agent watcher:', err);
+      }
+    }, 3000);
+
+    // Auto-start all monitors on boot (runs after DB init completes)
+    setTimeout(async () => {
+      try {
+        const { startAllMonitors } = await import('./lib/hud');
+        startAllMonitors();
+      } catch (err) {
+        console.error('[middleware] Failed to auto-start monitors:', err);
+      }
+    }, 2000);
   } catch (err) {
-    console.error('[middleware] Failed to initialize Observatory:', err);
+    console.error('[middleware] Failed to check setup status:', err);
   }
 })();
-
-// Initialize degradation mode check
-initializeDegradationMode().catch(err =>
-  console.error('[middleware] Failed to initialize degradation mode:', err)
-);
-
-// Initialize event bus auto-wiring (cross-links entities when events fire)
-initAutoWiring();
-
-// Start the Observatory Watcher loop (polls stacks, detects anomalies)
-startWatcher();
-
-// Start the Autonomous Agent Watcher (Riggins monitors and acts)
-setTimeout(async () => {
-  try {
-    const { startAutonomousWatcher } = await import('./lib/agent/autonomous-watcher');
-    startAutonomousWatcher();
-  } catch (err) {
-    console.error('[middleware] Failed to start autonomous agent watcher:', err);
-  }
-}, 3000);
-
-// Auto-start all monitors on boot (runs after DB init completes)
-setTimeout(async () => {
-  try {
-    const { startAllMonitors } = await import('./lib/hud');
-    startAllMonitors();
-  } catch (err) {
-    console.error('[middleware] Failed to auto-start monitors:', err);
-  }
-}, 2000);
 
 // Auto-detect Windlass on startup (tries common endpoints)
 setTimeout(async () => {

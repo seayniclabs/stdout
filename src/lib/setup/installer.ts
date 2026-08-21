@@ -182,9 +182,9 @@ export async function runScannerSetup(
     const tokenHash = await hashToken(token);
 
     await rawDb.prepare(`
-      INSERT INTO api_tokens (id, user_id, name, token_hash, created_at)
-      VALUES (?, ?, 'Scanner Token', ?, ?)
-    `).run(tokenId, userId, tokenHash, Date.now());
+      INSERT INTO api_tokens (id, name, token_hash, created_at)
+      VALUES (?, 'Scanner Token', ?, ?)
+    `).run(tokenId, tokenHash, Date.now());
 
     output.push('✓ Scanner API token generated');
     onProgress(30, 'Scanner token created');
