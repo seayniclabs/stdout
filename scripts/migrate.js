@@ -14,7 +14,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // DB_PATH is the single source of truth
-const dbPath = process.env.DB_PATH || process.env.DATABASE_PATH || '/data/stdout.db';
+const defaultDbPath = existsSync('/data') ? '/data/stdout.db' : './data/stdout.db';
+const dbPath = process.env.DB_PATH || process.env.DATABASE_PATH || defaultDbPath;
 console.log(`[migrate] Using database at: ${dbPath}`);
 
 const dir = dirname(dbPath);
