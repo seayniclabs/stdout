@@ -24,6 +24,15 @@ export const discoveredHosts = sqliteTable('discovered_hosts', {
   parentHostId: text('parent_host_id'), // For Docker containers: ID of the physical host running this container
   discoveredAt: integer('discovered_at', { mode: 'timestamp_ms' }),
   lastSeen: integer('last_seen', { mode: 'timestamp_ms' }).notNull(),
+  // Home Assistant-style connection tracking (2026-08-20)
+  connectionStatus: text('connection_status', {
+    enum: ['discovered', 'connecting', 'connected', 'needs_config', 'ignored', 'failed'],
+  }).notNull().default('discovered'),
+  connectionAttemptedAt: integer('connection_attempted_at', { mode: 'timestamp_ms' }),
+  connectionError: text('connection_error'),
+  credentials: text('credentials'), // JSON encrypted credentials
+  ignoreReason: text('ignore_reason'),
+  ignoredAt: integer('ignored_at', { mode: 'timestamp_ms' }),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
@@ -38,6 +47,33 @@ export const discoveredServices = sqliteTable('discovered_services', {
   lastSeen: integer('last_seen', { mode: 'timestamp_ms' }).notNull(),
   createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
+// Home Assistant-style integration configurations (2026-08-20)
+export const integrationConfigs = sqliteTable('integration_configs', {
+  id: text('id').primaryKey(),
+  hostId: text('host_id').notNull(), // FK to discovered_hosts
+  integrationType: text('integration_type').notNull(), // 'docker', 'prometheus', 'mysql', 'redis', etc.
+  config: text('config').notNull(), // JSON config (encrypted credentials)
+  status: text('status', {
+    enum: ['pending', 'connected', 'failed', 'disabled'],
+  }).notNull().default('pending'),
+  lastConnectionAttempt: integer('last_connection_attempt', { mode: 'timestamp_ms' }),
+  errorMessage: text('error_message'),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
+});
+
+// Home Assistant-style ignored discoveries (2026-08-20)
+export const ignoredDiscoveries = sqliteTable('ignored_discoveries', {
+  id: text('id').primaryKey(),
+  uniqueId: text('unique_id').notNull().unique(), // IP + MAC or service fingerprint
+  ipAddress: text('ip_address').notNull(),
+  macAddress: text('mac_address'),
+  hostname: text('hostname'),
+  reason: text('reason'), // User's ignore reason
+  ignoredAt: integer('ignored_at', { mode: 'timestamp_ms' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp_ms' }).notNull(),
 });
 
 export const incidents = sqliteTable('incidents', {
