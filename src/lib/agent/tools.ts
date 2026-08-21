@@ -247,9 +247,6 @@ export async function executeTool(
 
       case 'get_incidents': {
         const db = getDb();
-        const conditions = [`user_id = ${userId}`];
-        if (parameters.status) conditions.push(`status = ${parameters.status}`);
-        if (parameters.severity) conditions.push(`severity = ${parameters.severity}`);
 
         const query = sql`
           SELECT id, title, description, severity, status, created_at, resolved_at, stack_id

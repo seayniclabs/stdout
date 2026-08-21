@@ -61,6 +61,7 @@ export function dueKey(row: ScheduleRow, now: Date): string | null {
 
 async function tick(): Promise<void> {
   const db = getDb();
+  const rawDb = (db as any).$client;
   let rows: ScheduleRow[];
   try {
     rows = rawDb.prepare(`
@@ -87,8 +88,8 @@ async function tick(): Promise<void> {
     try {
       const { runInitialDiscovery } = await import('../initial-discovery');
       // Fire-and-forget — discovery is resilient and self-logging; don't block the ticker.
-      runInitialDiscovery(row.user_id).catch((e) =>
-        console.error(`[passive-discovery-worker] discovery failed for ${row.user_id}:`, e),
+      runInitialDiscovery().catch((e) =>
+        console.error('[passive-discovery-worker] discovery failed:', e),
       );
     } catch (error: unknown) {
       console.error('[passive-discovery-worker] could not start discovery:', error instanceof Error ? error.message : String(error));
@@ -103,13 +104,13 @@ async function tick(): Promise<void> {
  */
 export async function ensureDefaultSchedule(userId: string): Promise<boolean> {
   const db = getDb();
+  const rawDb = (db as any).$client;
   try {
     const existing = rawDb.prepare(`SELECT id FROM scanner_schedule LIMIT 1`).get() as { id: string } | undefined;
     if (existing) return false;
     const id = `sched_${userId}`;
 
     // Use raw SQLite instead of Drizzle sql template - NLM lesson: sql template doesn't work reliably with .run()
-    const rawDb = (db as any).$client;
     const stmt = rawDb.prepare(`
       INSERT INTO scanner_schedule (id, interval, hour, minute, weekday, enabled, modules, subnets, updated_at)
       VALUES (?, 'daily', 3, 0, 0, 1, '["network","docker","metrics"]', NULL, ?)

@@ -71,15 +71,15 @@ if (Astro.request.method === 'POST') {
       };
       console.log('[incidents/new] DEBUG - insert data:', JSON.stringify(insertData, null, 2));
 
-      // TEMPORARY: Use raw SQL to bypass Drizzle ORM issue
+      // Insert incident
       rawDb.prepare(`
         INSERT INTO incidents (
           id, stack_id, title, description, severity, status, tags,
-          created_at, updated_at, user_id
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         id, stackId, title, description, severity, 'active', tags,
-        now.getTime(), now.getTime(), user.id
+        now.getTime(), now.getTime()
       );
       console.log('[incidents/new] DEBUG - Raw SQL insert executed with userId:', user.id);
 

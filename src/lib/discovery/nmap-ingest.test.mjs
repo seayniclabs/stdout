@@ -88,7 +88,7 @@ test.describe('Nmap Ingestion API Endpoint Integration', () => {
     assert.strictEqual(resBody.servicesIngested, 1);
 
     // Verify database records
-    const hostRow = sqlite.prepare("SELECT * FROM discovered_hosts WHERE user_id = 'user_test_123'").get();
+    const hostRow = sqlite.prepare("SELECT * FROM discovered_hosts WHERE ip_address = '192.168.0.22'").get();
     assert.ok(hostRow);
     assert.strictEqual(hostRow.ip_address, '192.168.0.22');
     assert.strictEqual(hostRow.hostname, 'google-home');
@@ -104,21 +104,21 @@ test.describe('Nmap Ingestion API Endpoint Integration', () => {
     assert.strictEqual(serviceRow.service_version, 'Google Chromecast 1.56');
 
     // Verify entity graph
-    const deviceEntity = sqlite.prepare("SELECT * FROM entities WHERE user_id = 'user_test_123' AND type = 'device'").get();
+    const deviceEntity = sqlite.prepare("SELECT * FROM entities WHERE type = 'device'").get();
     assert.ok(deviceEntity);
     assert.strictEqual(deviceEntity.name, 'google-home');
     const deviceProps = JSON.parse(deviceEntity.properties);
     assert.strictEqual(deviceProps.ip, '192.168.0.22');
     assert.strictEqual(deviceProps.vendor, 'Google');
 
-    const serviceEntity = sqlite.prepare("SELECT * FROM entities WHERE user_id = 'user_test_123' AND type = 'service'").get();
+    const serviceEntity = sqlite.prepare("SELECT * FROM entities WHERE type = 'service'").get();
     assert.ok(serviceEntity);
     assert.strictEqual(serviceEntity.name, 'chromecast (8009/tcp)');
     const serviceProps = JSON.parse(serviceEntity.properties);
     assert.strictEqual(serviceProps.port, 8009);
     assert.strictEqual(serviceProps.serviceName, 'chromecast');
 
-    const relationship = sqlite.prepare("SELECT * FROM entity_relationships WHERE user_id = 'user_test_123'").get();
+    const relationship = sqlite.prepare("SELECT * FROM entity_relationships").get();
     assert.ok(relationship);
     assert.strictEqual(relationship.source_id, serviceEntity.id);
     assert.strictEqual(relationship.target_id, deviceEntity.id);

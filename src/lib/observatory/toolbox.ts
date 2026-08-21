@@ -153,8 +153,8 @@ const TOOLS: Record<string, ToolDef> = {
   const rawDb = (db as any).$client;
       const id = nanoid();
       const now = Date.now();
-      db.run(sql\\\`INSERT INTO stacks (id,user_id,name,description,tags,created_at,updated_at)
-        VALUES (\${id},\${'${safeTarget(a.userId)}'},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.description)}'},\${'[]'},\${now},\${now})\\\`);
+      db.run(sql\\\`INSERT INTO stacks (id,name,description,tags,created_at,updated_at)
+        VALUES (\${id},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.description)}'},\${'[]'},\${now},\${now})\\\`);
       console.log(JSON.stringify({id,name:'${safeTarget(a.name)}'}));
     `],
   },
@@ -171,8 +171,8 @@ const TOOLS: Record<string, ToolDef> = {
       const db = getDb();
       const id = nanoid();
       const now = Date.now();
-      db.run(sql\\\`INSERT INTO monitors (id,user_id,stack_id,name,type,target,interval_seconds,paused,current_status,consecutive_failures,created_at,updated_at)
-        VALUES (\${id},\${'${safeTarget(a.userId)}'},\${'${safeTarget(a.stackId)}'},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.type)}'},\${'${safeTarget(a.target)}'},\${300},\${0},\${'unknown'},\${0},\${now},\${now})\\\`);
+      db.run(sql\\\`INSERT INTO monitors (id,stack_id,name,type,target,interval_seconds,paused,current_status,consecutive_failures,created_at,updated_at)
+        VALUES (\${id},\${'${safeTarget(a.stackId)}'},\${'${safeTarget(a.name)}'},\${'${safeTarget(a.type)}'},\${'${safeTarget(a.target)}'},\${300},\${0},\${'unknown'},\${0},\${now},\${now})\\\`);
       console.log(JSON.stringify({id,name:'${safeTarget(a.name)}',target:'${safeTarget(a.target)}'}));
     `],
   },
@@ -280,9 +280,9 @@ async function auditTool(
     const id = `tool_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     db.run(sql`
       INSERT INTO observatory_agent_runs
-        (id, user_id, agent_name, stack_id, trigger, input_context, output_decision, decision_made, confidence_score, execution_time_ms, created_at)
+        (id, agent_name, stack_id, trigger, input_context, output_decision, decision_made, confidence_score, execution_time_ms, created_at)
       VALUES (
-        ${id}, ${userId ?? 'system'}, 'toolbox', ${null}, 'tool_invocation',
+        ${id}, 'toolbox', ${null}, 'tool_invocation',
         ${JSON.stringify({ tool: def.name, safety: def.safety, argv, reason: reason ?? null })},
         ${JSON.stringify({ outcome, detail: detail ?? null })},
         ${`${def.name}:${outcome}`}, ${null}, ${null}, ${Date.now()}

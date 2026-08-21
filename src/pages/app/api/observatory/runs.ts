@@ -15,22 +15,20 @@ export const GET: APIRoute = async ({ locals, url }) => {
   const authError = requireAuth(locals);
   if (authError) return authError;
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
-
   try {
     const db = getDb();
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const agentType = url.searchParams.get('agent'); // Filter by agent type
 
-    const conditions = ['user_id = ?'];
-    const params: unknown[] = [userId];
+    const conditions: string[] = [];
+    const params: unknown[] = [];
 
     if (agentType) {
       conditions.push('agent_type = ?');
       params.push(agentType);
     }
 
-    const whereClause = `WHERE ${conditions.join(' AND ')}`;
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const query = `
       SELECT

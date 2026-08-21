@@ -85,7 +85,6 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     // Create route
     upsertAlertRoute({
       id,
-      user_id: locals.user.id,
       name,
       type,
       config,
@@ -145,7 +144,6 @@ export const PUT: APIRoute = async ({ request, locals, cookies }) => {
     // Update route (upsert handles updates)
     upsertAlertRoute({
       id,
-      user_id: locals.user.id,
       name,
       type,
       config,

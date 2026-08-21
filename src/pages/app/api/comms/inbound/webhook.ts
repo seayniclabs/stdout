@@ -21,7 +21,6 @@ import { requireAuth } from '../../../../../lib/rbac';
  * Body: {
  *   text: string;           // The question/command
  *   channel: string;        // Channel identifier (e.g., "sonique", "cael")
- *   user_id?: string;       // Optional: override user lookup
  *   channel_id?: string;    // Optional: specific channel ID for logging
  * }
  *
@@ -34,7 +33,6 @@ import { requireAuth } from '../../../../../lib/rbac';
 interface InboundWebhookRequest {
   text: string;
   channel: string;
-  user_id?: string;
   channel_id?: string;
 }
 
@@ -50,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
   };
 
   const body: InboundWebhookRequest = await request.json();
-  const { text, channel, user_id, channel_id } = body;
+  const { text, channel, channel_id } = body;
 
   if (!text || !channel) {
     return new Response(
@@ -59,20 +57,20 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     );
   }
 
-  // Auth check: prefer session user, allow override via user_id
-  const userId = user_id || locals.user?.id;
+  // Auth check: use session user
+  const userId = locals.user?.id;
 
   if (!userId) {
     return new Response(
-      JSON.stringify({ error: 'User ID required (authenticate or provide user_id)' }),
+      JSON.stringify({ error: 'User authentication required' }),
       { status: 401, headers: corsHeaders }
     );
   }
 
-  // CSRF check if session-based (skip for external with user_id override)
-  if (locals.user && !user_id) {
+  // CSRF check if session-based
+  if (locals.user) {
     const { validateCsrf } = await import('../../../../../middleware');
-    const csrfToken = request.headers.get('x-csrf-token') || body._csrf;
+    const csrfToken = request.headers.get('x-csrf-token') || (body as any)._csrf;
     if (!validateCsrf(csrfToken, cookies)) {
       return new Response(JSON.stringify({ error: 'CSRF token validation failed' }), {
         status: 403,

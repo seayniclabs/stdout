@@ -20,7 +20,7 @@ export interface Alert {
 
 export interface AlertRoute {
   id: string;
-  user_id: string;
+  user_id?: string;
   name: string;
   type: 'slack' | 'webhook' | 'email' | 'discord';
   config: SlackConfig | WebhookConfig | EmailConfig | DiscordConfig;
@@ -66,7 +66,6 @@ export async function sendAlert(alert: Alert, userId: string): Promise<void> {
   db.prepare(`
     CREATE TABLE IF NOT EXISTS alerts (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
       severity TEXT NOT NULL,
       title TEXT NOT NULL,
       message TEXT NOT NULL,
@@ -80,11 +79,10 @@ export async function sendAlert(alert: Alert, userId: string): Promise<void> {
   `).run();
 
   db.prepare(`
-    INSERT INTO alerts (id, user_id, severity, title, message, source, metadata, fingerprint, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO alerts (id, severity, title, message, source, metadata, fingerprint, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     alert.id,
-    userId,
     alert.severity,
     alert.title,
     alert.message,
@@ -293,7 +291,7 @@ async function isAlertSuppressed(alert: Alert, userId: string): Promise<boolean>
 /**
  * Get all alert routes for a user
  */
-export function getAlertRoutes(userId: string): AlertRoute[] {
+export function getAlertRoutes(_userId?: string): AlertRoute[] {
   const db = getSqlite();
 
   try {
@@ -301,7 +299,7 @@ export function getAlertRoutes(userId: string): AlertRoute[] {
       SELECT * FROM alert_routes ORDER BY name ASC
     `).all() as Array<{
       id: string;
-      user_id: string;
+      user_id?: string;
       name: string;
       type: string;
       config: string;
@@ -337,7 +335,6 @@ export function upsertAlertRoute(route: Omit<AlertRoute, 'created_at' | 'updated
   db.prepare(`
     CREATE TABLE IF NOT EXISTS alert_routes (
       id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL,
       name TEXT NOT NULL,
       type TEXT NOT NULL,
       config TEXT NOT NULL,
@@ -352,11 +349,10 @@ export function upsertAlertRoute(route: Omit<AlertRoute, 'created_at' | 'updated
 
   db.prepare(`
     INSERT OR REPLACE INTO alert_routes
-    (id, user_id, name, type, config, enabled, min_severity, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM alert_routes WHERE id = ?), ?), ?)
+    (id, name, type, config, enabled, min_severity, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM alert_routes WHERE id = ?), ?), ?)
   `).run(
     route.id,
-    route.user_id,
     route.name,
     route.type,
     JSON.stringify(route.config),

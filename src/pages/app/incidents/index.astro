@@ -8,7 +8,7 @@ if (!user) return Astro.redirect('/app/login');
 
 const db = getDb();
 
-// Get user's incidents (single-instance: no user_id filter needed)
+// Get incidents (single-instance: no user filter needed)
 const userIncidents = db
   .select()
   .from(schema.incidents)

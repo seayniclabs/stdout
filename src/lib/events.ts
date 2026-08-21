@@ -75,9 +75,9 @@ async function persistEvent(event: StdOutEvent): Promise<void> {
     const rawDb = (db as any).$client;
     const now = Math.floor(Date.now() / 1000);
     rawDb.prepare(`
-      INSERT INTO event_log (id, type, user_id, payload, created_at)
-      VALUES (?, ?, ?, ?, ?)
-    `).run(crypto.randomUUID(), event.type, (event as any).userId ?? null, JSON.stringify(event), now);
+      INSERT INTO event_log (id, type, payload, created_at)
+      VALUES (?, ?, ?, ?)
+    `).run(crypto.randomUUID(), event.type, JSON.stringify(event), now);
   } catch {
     // Table may not exist yet on first boot — not fatal
   }

@@ -37,7 +37,7 @@ export interface SatelliteStatus {
 /**
  * Get overall system health summary
  */
-export async function getSystemHealth(userId: string): Promise<SystemHealthSummary> {
+export async function getSystemHealth(_userId?: string): Promise<SystemHealthSummary> {
   const db = getDb();
 
   // Get monitor counts by status - fetch all and count in JS
@@ -46,7 +46,6 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
     .from(schema.monitors)
     .where(
       and(
-        eq(schema.monitors.userId, userId),
         eq(schema.monitors.paused, false),
         eq(schema.monitors.maintenance, false)
       )
@@ -62,7 +61,6 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
   const allIncidents = db
     .select()
     .from(schema.incidents)
-    .where(eq(schema.incidents.userId, userId))
     .all();
 
   const alerts_open = allIncidents.filter(i => !i.resolvedAt).length;
@@ -95,14 +93,13 @@ export async function getSystemHealth(userId: string): Promise<SystemHealthSumma
 /**
  * Get recent incidents (last 7 days)
  */
-export async function getRecentIncidents(userId: string, limit = 5): Promise<RecentIncident[]> {
+export async function getRecentIncidents(_userId?: string, limit = 5): Promise<RecentIncident[]> {
   const db = getDb();
 
   // Get all incidents and filter in JS to avoid timestamp conversion issues
   const allIncidents = db
     .select()
     .from(schema.incidents)
-    .where(eq(schema.incidents.userId, userId))
     .orderBy(desc(schema.incidents.createdAt))
     .all();
 
@@ -139,7 +136,7 @@ export async function getRecentIncidents(userId: string, limit = 5): Promise<Rec
  * Get satellite agent statuses
  * TODO: Implement satellite agents table
  */
-export async function getSatelliteStatuses(userId: string): Promise<SatelliteStatus[]> {
+export async function getSatelliteStatuses(_userId?: string): Promise<SatelliteStatus[]> {
   // Satellite agents not yet implemented - return empty array
   return [];
 }
@@ -147,7 +144,7 @@ export async function getSatelliteStatuses(userId: string): Promise<SatelliteSta
 /**
  * Get stack summary (count and names)
  */
-export async function getStacksSummary(userId: string): Promise<{
+export async function getStacksSummary(_userId?: string): Promise<{
   total: number;
   names: string[];
 }> {
@@ -156,7 +153,6 @@ export async function getStacksSummary(userId: string): Promise<{
   const stacks = db
     .select()
     .from(schema.stacks)
-    .where(eq(schema.stacks.userId, userId))
     .all();
 
   return {

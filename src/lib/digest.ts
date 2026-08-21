@@ -42,7 +42,6 @@ export function generateDigest(userId: string): DigestData | null {
 
   // Monitors
   const monitors = db.select().from(schema.monitors)
-    .where(eq(schema.monitors.userId, userId))
     .all();
 
   const monitorsHealthy = monitors.filter(m => m.currentStatus === 'healthy').length;
@@ -65,12 +64,10 @@ export function generateDigest(userId: string): DigestData | null {
 
   // Docs and resolutions this week
   const docs = db.select().from(schema.docs)
-    .where(eq(schema.docs.userId, userId))
     .all()
     .filter(d => d.createdAt >= weekAgo);
 
   const resolutions = db.select().from(schema.resolutions)
-    .where(eq(schema.resolutions.userId, userId))
     .all()
     .filter(r => r.createdAt >= weekAgo);
 

@@ -15,9 +15,9 @@ const { tier, limits } = getUserLimits(user);
 const db = getDb();
 
 // Get stacks and incidents for linking
-const userStacks = db.select().from(schema.stacks).where(eq(schema.stacks.userId, user.id)).all();
+const userStacks = db.select().from(schema.stacks).all();
 const userIncidents = db.select({ id: schema.incidents.id, title: schema.incidents.title })
-  .from(schema.incidents).where(eq(schema.incidents.userId, user.id)).all();
+  .from(schema.incidents).all();
 
 let error = '';
 
@@ -43,8 +43,12 @@ if (Astro.request.method === 'POST') {
         const rawDb = (db as any).$client;
         let totalBytes = 0;
         if (rawDb?.prepare) {
-          const row = rawDb.prepare('SELECT COALESCE(SUM(size_bytes), 0) as total FROM docs WHERE user_id = ?').get(user.id);
-          totalBytes = row?.total || 0;
+          try {
+            const row = rawDb.prepare('SELECT COALESCE(SUM(LENGTH(content)), 0) as total FROM docs').get();
+            totalBytes = row?.total || 0;
+          } catch {
+            totalBytes = 0;
+          }
         }
         const maxBytes = limits.maxDocsStorageMB * 1024 * 1024;
         if (totalBytes + sizeBytes > maxBytes) {
@@ -55,11 +59,10 @@ if (Astro.request.method === 'POST') {
     if (!error && title && content) {
       const id = nanoid();
       const now = new Date();
-      const sizeBytes = new TextEncoder().encode(content).length;
       const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || id;
 
       db.insert(schema.docs).values({
-        id, userId: user.id, title, content, type: docType, slug, stackId, incidentId, tags, sizeBytes,
+        id, title, content, type: docType as any, slug, tags,
         createdAt: now, updatedAt: now,
       }).run();
 

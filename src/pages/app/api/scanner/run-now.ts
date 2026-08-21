@@ -24,8 +24,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   try {
     const session = locals.user!
     const db = getDb();
-    const schedule = db.select().from(schema.scannerSchedule)
-      .where(eq(schema.scannerSchedule.userId, session.id)).get();
+    const schedule = db.select().from(schema.scannerSchedule).get();
 
     if (schedule && !schedule.enabled) {
       return new Response(JSON.stringify({
@@ -81,9 +80,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
           // Check if entity already exists
           const existingEntity = db.prepare(`
             SELECT id FROM entities
-            WHERE user_id = ? AND type = 'device' AND properties->>'$.ip' = ?
+            WHERE type = 'device' AND properties->>'$.ip' = ?
             LIMIT 1
-          `).get(session.id, device.ip) as { id: string } | undefined;
+          `).get(device.ip) as { id: string } | undefined;
 
           if (existingEntity) {
             // Update existing
@@ -102,12 +101,11 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
             // Create new
             db.prepare(`
               INSERT INTO entities (
-                id, user_id, type, name, properties,
+                id, type, name, properties,
                 discovered_at, last_seen, created_at, updated_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
               nanoid(),
-              session.id,
               'device',
               device.metadata.friendlyName || device.hostname || device.ip,
               JSON.stringify(properties),
@@ -121,9 +119,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
           // Also populate discovered_hosts for backward compatibility
           const existingHost = db.prepare(`
             SELECT id FROM discovered_hosts
-            WHERE user_id = ? AND ip_address = ?
+            WHERE ip_address = ?
             LIMIT 1
-          `).get(session.id, device.ip) as { id: string } | undefined;
+          `).get(device.ip) as { id: string } | undefined;
 
           if (existingHost) {
             db.prepare(`
@@ -142,12 +140,11 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
           } else {
             db.prepare(`
               INSERT INTO discovered_hosts (
-                id, user_id, ip_address, hostname, mac_address, vendor,
+                id, ip_address, hostname, mac_address, vendor,
                 device_type, discovered_at, last_seen, created_at, updated_at
-              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             `).run(
               nanoid(),
-              session.id,
               device.ip,
               device.hostname || null,
               device.mac || null,
@@ -169,8 +166,8 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
           const { startMonitor } = await import('../../../../lib/hud');
           const newMonitors = db.prepare(`
             SELECT id FROM monitors
-            WHERE user_id = ? AND created_at >= ?
-          `).all(session.id, now) as Array<{ id: string }>;
+            WHERE created_at >= ?
+          `).all(now) as Array<{ id: string }>;
 
           for (const monitor of newMonitors) {
             try {

@@ -196,19 +196,18 @@ async function handleCreateMonitors(userId: string, send: (data: any) => void) {
 
   // Get all stacks
   let stacks = await rawDb.prepare(`
-    SELECT id, name FROM stacks WHERE user_id = ?
-  `).all(userId) as Array<{ id: string; name: string }>;
+    SELECT id, name FROM stacks
+  `).all() as Array<{ id: string; name: string }>;
 
   // Create default stack if none exist
   if (stacks.length === 0) {
     const stackId = nanoid();
     const now = Date.now();
     await db.run(sql`
-      INSERT INTO stacks (id, user_id, name, description, tags, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO stacks (id, name, description, tags, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
     `, [
       stackId,
-      userId,
       'Infrastructure',
       'Auto-discovered infrastructure and services',
       JSON.stringify(['auto-discovered']),
@@ -245,8 +244,7 @@ async function handleCreateMonitors(userId: string, send: (data: any) => void) {
     const existing = await rawDb.prepare(`
       SELECT id FROM monitors
       WHERE target LIKE ?
-      AND user_id = ?
-    `).get('%' + service.ip_address + '%', userId);
+    `).get('%' + service.ip_address + '%');
 
     if (existing) continue;
 
@@ -268,13 +266,12 @@ async function handleCreateMonitors(userId: string, send: (data: any) => void) {
 
     await db.run(sql`
       INSERT INTO monitors (
-        id, user_id, stack_id, name, type, target,
-        interval_seconds, paused, current_status, consecutive_failures,
+        id, stack_id, name, type, target,
+        interval_seconds, paused, current_status,
         created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 'unknown', 0, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, 0, 'unknown', ?, ?)
     `, [
       monitorId,
-      userId,
       stack.id,
       monitorName,
       monitorType,

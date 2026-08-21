@@ -98,19 +98,19 @@ export const GET: APIRoute = async ({ locals }) => {
             // Create windlass_config record if Windlass installation succeeded
             try {
               const { nanoid } = await import('nanoid');
-              const db = getDb();
-  const rawDb = (db as any).$client;
+              const { getSqlite } = await import('../../../../lib/db');
+              const sqlite = getSqlite();
               const windlassUrl = process.env.WINDLASS_URL || 'http://localhost:8116';
 
               // Check if config already exists
-              const existing = db.prepare('SELECT id FROM windlass_config WHERE user_id = ?').get(userId);
+              const existing = sqlite.prepare('SELECT id FROM windlass_config LIMIT 1').get();
 
               if (!existing) {
                 const now = new Date().toISOString();
-                db.prepare(`
-                  INSERT INTO windlass_config (id, user_id, endpoint_url, sync_interval_seconds, enabled, created_at, updated_at)
-                  VALUES (?, ?, ?, ?, ?, ?, ?)
-                `).run(nanoid(), userId, windlassUrl, 60, 1, now, now);
+                sqlite.prepare(`
+                  INSERT INTO windlass_config (id, endpoint_url, sync_interval_seconds, enabled, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, ?, ?)
+                `).run(nanoid(), windlassUrl, 60, 1, now, now);
 
                 watcher.addEvent({ type: 'log', message: `✓ Windlass config created: ${windlassUrl}`, timestamp: Date.now() });
               }

@@ -76,8 +76,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         hostId = existingHost.id;
         db.prepare(`
           UPDATE discovered_hosts
-          SET user_id = ?,
-              hostname = ?,
+          SET hostname = ?,
               mac_address = ?,
               vendor = ?,
               device_type = ?,
@@ -85,7 +84,6 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
               updated_at = ?
           WHERE id = ?
         `).run(
-          userId,
           host.hostname || null,
           host.mac || null,
           host.vendor || null,
@@ -98,12 +96,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         hostId = 'host_' + nanoid();
         db.prepare(`
           INSERT INTO discovered_hosts (
-            id, user_id, ip_address, hostname, mac_address, vendor,
+            id, ip_address, hostname, mac_address, vendor,
             device_type, discovered_at, last_seen, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).run(
           hostId,
-          userId,
           host.ip,
           host.hostname || null,
           host.mac || null,
@@ -155,14 +152,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         deviceEntityId = existingDeviceEntity.id;
         db.prepare(`
           UPDATE entities
-          SET user_id = ?,
-              name = ?,
+          SET name = ?,
               properties = ?,
               last_seen = ?,
               updated_at = ?
           WHERE id = ?
         `).run(
-          userId,
           host.hostname || host.ip,
           JSON.stringify(deviceProperties),
           now,
@@ -173,12 +168,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         deviceEntityId = 'ent_' + nanoid();
         db.prepare(`
           INSERT INTO entities (
-            id, user_id, type, name, properties,
+            id, type, name, properties,
             discovered_at, last_seen, created_at, updated_at
-          ) VALUES (?, ?, 'device', ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, 'device', ?, ?, ?, ?, ?, ?)
         `).run(
           deviceEntityId,
-          userId,
           host.hostname || host.ip,
           JSON.stringify(deviceProperties),
           now,
@@ -201,14 +195,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         if (existingService) {
           db.prepare(`
             UPDATE discovered_services
-            SET user_id = ?,
-                service_name = ?,
+            SET service_name = ?,
                 service_version = ?,
                 last_seen = ?,
                 updated_at = ?
             WHERE id = ?
           `).run(
-            userId,
             service.serviceName || null,
             service.serviceVersion || null,
             now,
@@ -218,13 +210,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         } else {
           db.prepare(`
             INSERT INTO discovered_services (
-              id, host_id, user_id, port, protocol,
+              id, host_id, port, protocol,
               service_name, service_version, last_seen, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).run(
             'svc_' + nanoid(),
             hostId,
-            userId,
             service.port,
             service.protocol,
             service.serviceName || null,
@@ -260,14 +251,12 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           serviceEntityId = existingServiceEntity.id;
           db.prepare(`
             UPDATE entities
-            SET user_id = ?,
-                name = ?,
+            SET name = ?,
                 properties = ?,
                 last_seen = ?,
                 updated_at = ?
             WHERE id = ?
           `).run(
-            userId,
             serviceEntityName,
             JSON.stringify(serviceProperties),
             now,
@@ -278,12 +267,11 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
           serviceEntityId = 'ent_' + nanoid();
           db.prepare(`
             INSERT INTO entities (
-              id, user_id, type, name, properties,
+              id, type, name, properties,
               discovered_at, last_seen, created_at, updated_at
-            ) VALUES (?, ?, 'service', ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, 'service', ?, ?, ?, ?, ?, ?)
           `).run(
             serviceEntityId,
-            userId,
             serviceEntityName,
             JSON.stringify(serviceProperties),
             now,
@@ -304,12 +292,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         if (existingRelationship) {
           db.prepare(`
             UPDATE entity_relationships
-            SET user_id = ?,
-                metadata = ?,
+            SET metadata = ?,
                 updated_at = ?
             WHERE id = ?
           `).run(
-            userId,
             JSON.stringify({ port: service.port, protocol: service.protocol }),
             now,
             existingRelationship.id
@@ -317,11 +303,10 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         } else {
           db.prepare(`
             INSERT INTO entity_relationships (
-              id, user_id, source_id, target_id, type, metadata, created_at, updated_at
-            ) VALUES (?, ?, ?, ?, 'runs_on', ?, ?, ?)
+              id, source_id, target_id, type, metadata, created_at, updated_at
+            ) VALUES (?, ?, ?, 'runs_on', ?, ?, ?)
           `).run(
             'rel_' + nanoid(),
-            userId,
             serviceEntityId,
             deviceEntityId,
             JSON.stringify({ port: service.port, protocol: service.protocol }),

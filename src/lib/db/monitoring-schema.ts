@@ -5,7 +5,6 @@ export const stacks = sqliteTable('stacks', {
   name: text('name').notNull(),
   description: text('description').notNull(),
   previousDescription: text('previous_description'),
-  userId: text('user_id'), // Owner of this stack for multi-user support
   createdAt: integer('created_at', { mode: 'timestamp_ms'}).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' }).notNull(),
 });
@@ -99,7 +98,6 @@ export const incidents = sqliteTable('incidents', {
   aiCostUsd: real('ai_cost_usd').notNull().default(0),
   aiTokensUsed: integer('ai_tokens_used').notNull().default(0),
   aiProvider: text('ai_provider'),
-  userId: text('user_id'), // Owner of this incident for multi-user support
 });
 
 export const resolutions = sqliteTable('resolutions', {
@@ -141,7 +139,6 @@ export const monitors = sqliteTable('monitors', {
   expectedStatus: integer('expected_status').default(200),
   retries: integer('retries').notNull().default(3),
   stackId: text('stack_id'),
-  userId: text('user_id'), // Owner of this monitor for multi-user support
   config: text('config'), // JSON config for monitor-specific settings
   paused: integer('paused', { mode: 'boolean' }).notNull().default(false),
   maintenance: integer('maintenance', { mode: 'boolean' }).notNull().default(false),

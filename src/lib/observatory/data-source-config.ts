@@ -97,8 +97,8 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
       const sourceId = `ds_obs_${t.type}_${userId}`;
       const now = Date.now();
       db.prepare(`
-        INSERT INTO data_sources (id, user_id, type, name, url, enabled, last_checked_at, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+        INSERT INTO data_sources (id, type, name, url, enabled, last_checked_at, created_at, updated_at)
+        VALUES (?, ?, ?, ?, 1, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           type = excluded.type,
           name = excluded.name,
@@ -106,7 +106,7 @@ export async function autoConfigureDataSources(userId: string): Promise<DataSour
           enabled = 1,
           last_checked_at = excluded.last_checked_at,
           updated_at = excluded.updated_at
-      `).run(sourceId, userId, t.type, t.name, t.url, now, now, now);
+      `).run(sourceId, t.type, t.name, t.url, now, now, now);
       configured++;
       log.push(`  ✓ ${t.name} configured (${t.type} @ ${t.url})`);
     } catch (error: unknown) {

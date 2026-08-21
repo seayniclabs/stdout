@@ -150,15 +150,15 @@ export async function saveStacks(stacks: StackDefinition[], userId: string): Pro
       
       // Insert or update stack
       const stmt = rawDb.prepare(`
-        INSERT INTO stacks (id, name, description, user_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO stacks (id, name, description, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
           name = excluded.name,
           description = excluded.description,
           updated_at = excluded.updated_at
       `);
       
-      stmt.run(stack.id, stack.name, stack.description, userId, now, now);
+      stmt.run(stack.id, stack.name, stack.description, now, now);
       
       // Update discovered_hosts with stack_id
       const updateStmt = rawDb.prepare(`

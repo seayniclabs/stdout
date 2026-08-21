@@ -91,9 +91,8 @@ export async function processWazuhAlert(alert: WazuhAlert, userId: number): Prom
         agent_ip,
         src_ip,
         severity,
-        full_log,
-        user_id
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        full_log
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       alert.timestamp || new Date().toISOString(),
       alert.rule.id,
@@ -104,8 +103,7 @@ export async function processWazuhAlert(alert: WazuhAlert, userId: number): Prom
       alert.agent?.ip || null,
       alert.data?.srcip || null,
       severity,
-      alert.full_log || JSON.stringify(alert),
-      userId
+      alert.full_log || JSON.stringify(alert)
     ]);
   } catch (err) {
     // Table may not exist yet (fresh install)

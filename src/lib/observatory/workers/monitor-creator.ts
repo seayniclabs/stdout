@@ -141,22 +141,21 @@ export async function saveMonitors(monitors: MonitorConfig[], userId: string): P
   for (const monitor of monitors) {
     try {
       const now = Date.now();
-      const id = `monitor-${monitor.hostId}-${monitor.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+      const target = (monitor.config as any)?.host || (monitor.config as any)?.url || monitor.name;
       const stmt = rawDb.prepare(`
         INSERT INTO monitors (
-          id, name, type, config, interval_seconds, user_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+          id, name, type, target, config, interval_seconds, paused, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `);
       
       stmt.run(
         id,
         monitor.name,
         monitor.type,
+        target,
         JSON.stringify(monitor.config),
         monitor.interval,
-        monitor.enabled ? 1 : 0,
-        userId,
+        monitor.enabled ? 0 : 1,
         now,
         now
       );

@@ -352,13 +352,12 @@ export function executeMonitorCreation(
         // Create new monitor
         db.prepare(`
           INSERT INTO monitors (
-            id, user_id, name, type, target, interval_seconds, timeout_ms,
+            id, name, type, target, interval_seconds, timeout_ms,
             expected_status, retries, stack_id, paused, maintenance,
             current_status, created_at, updated_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'unknown', ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, 'unknown', ?, ?)
         `).run(
           nanoid(),
-          userId,
           suggestion.name,
           suggestion.type,
           suggestion.target,

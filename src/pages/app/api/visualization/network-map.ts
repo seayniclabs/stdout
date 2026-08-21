@@ -30,13 +30,12 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
   const db = getSqlite();
 
-  // Get all entities and relationships for this user
+  // Get all entities and relationships
   const entities = db.prepare(`
     SELECT id, type, name, properties
     FROM entities
-    WHERE user_id = ?
     ORDER BY type, name
-  `).all(locals.user.id) as Array<{
+  `).all() as Array<{
     id: string;
     type: string;
     name: string;
@@ -46,8 +45,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const relationships = db.prepare(`
     SELECT source_id, target_id, type, metadata
     FROM entity_relationships
-    WHERE user_id = ?
-  `).all(locals.user.id) as Array<{
+  `).all() as Array<{
     source_id: string;
     target_id: string;
     type: string;
@@ -58,8 +56,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const monitors = db.prepare(`
     SELECT id, name, type, target, current_status
     FROM monitors
-    WHERE user_id = ?
-  `).all(locals.user.id) as Array<{
+  `).all() as Array<{
     id: string;
     name: string;
     type: string;

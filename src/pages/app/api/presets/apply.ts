@@ -18,7 +18,6 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const rbacError = checkRBAC(locals, 'manage_settings');
   if (rbacError) return rbacError;
 
-  const userId = locals.workspace?.ownerId || locals.user.id;
   const db = getDb();
 
   try {
@@ -47,10 +46,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     // Apply configuration
     const config = preset.configuration;
 
-    // 1. Update user settings with preset config
+    // 1. Update system settings with preset config
     const existingSettings = db.select()
-      .from(schema.userSettings)
-      .where(eq(schema.userSettings.userId, userId))
+      .from(schema.systemSettings)
       .get();
 
     const newSettings = {
@@ -63,32 +61,31 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     };
 
     if (existingSettings) {
-      db.update(schema.userSettings)
+      db.update(schema.systemSettings)
         .set(newSettings)
-        .where(eq(schema.userSettings.userId, userId))
         .run();
     } else {
-      db.insert(schema.userSettings)
-        .values({ ...newSettings, userId })
+      db.insert(schema.systemSettings)
+        .values({ id: 'instance', ...newSettings })
         .run();
     }
 
-    // 2. Create monitor templates (if user has no monitors yet)
+    // 2. Create monitor templates (if no monitors exist yet)
     const existingMonitors = db.select()
       .from(schema.monitors)
-      .where(eq(schema.monitors.userId, userId))
       .all();
 
     if (existingMonitors.length === 0 && config.monitors?.templates) {
+      const { nanoid } = await import('nanoid');
       for (const template of config.monitors.templates) {
         db.insert(schema.monitors).values({
-          userId,
+          id: nanoid(),
           name: template.name,
           type: template.type,
           target: '', // User fills this in
-          interval: template.interval,
-          timeout: template.timeout || 10,
-          status: 'paused', // Start paused, user activates after configuring
+          intervalSeconds: template.interval || 60,
+          timeoutMs: (template.timeout || 10) * 1000,
+          paused: true, // Start paused, user activates after configuring
           currentStatus: 'unknown',
           createdAt: new Date(),
           updatedAt: new Date()
@@ -98,9 +95,9 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
     // 3. Store preset metadata
     db.run(`
-      INSERT OR REPLACE INTO preset_applications (user_id, preset_id, applied_at, configuration)
-      VALUES (?, ?, ?, ?)
-    `, [userId, presetId, new Date().toISOString(), JSON.stringify(config)]);
+      INSERT OR REPLACE INTO preset_applications (preset_id, applied_at, configuration)
+      VALUES (?, ?, ?)
+    `, [presetId, new Date().toISOString(), JSON.stringify(config)]);
 
     return new Response(JSON.stringify({
       success: true,

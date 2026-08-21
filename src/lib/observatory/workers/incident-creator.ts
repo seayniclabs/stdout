@@ -30,9 +30,9 @@ export async function createIncident(trigger: IncidentTrigger, userId: string): 
     
     const stmt = rawDb.prepare(`
       INSERT INTO incidents (
-        id, title, description, severity, status, user_id, 
-        created_at, updated_at, detected_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        id, title, description, severity, status,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     stmt.run(
@@ -40,9 +40,7 @@ export async function createIncident(trigger: IncidentTrigger, userId: string): 
       trigger.title,
       trigger.description,
       trigger.severity,
-      "open",
-      userId,
-      now,
+      "active",
       now,
       now
     );

@@ -110,9 +110,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
       FROM resolutions_fts fts
       JOIN resolutions r ON r.rowid = fts.rowid
       JOIN incidents i ON r.incident_id = i.id
-      WHERE resolutions_fts MATCH ? AND i.user_id = ?
+      WHERE resolutions_fts MATCH ?
       ORDER BY rank LIMIT 10
-    `).all(ftsQuery, locals.user.id);
+    `).all(ftsQuery);
 
     for (const row of resRows) {
       results.push({
@@ -127,16 +127,16 @@ export const GET: APIRoute = async ({ locals, url }) => {
     console.error('[search] FTS search error:', e);
   }
 
-  // Search docs (user's own + community docs)
+  // Search docs (knowledge base)
   try {
     const ftsQuery = q.split(/\s+/).map(w => `"${w}"`).join(' OR ');
     const docRows = rawDb.prepare(`
       SELECT d.id, d.title, d.content, d.type, d.source
       FROM docs_fts fts
       JOIN docs d ON d.rowid = fts.rowid
-      WHERE docs_fts MATCH ? AND (d.user_id = ? OR d.source = 'community')
+      WHERE docs_fts MATCH ?
       ORDER BY rank LIMIT 10
-    `).all(ftsQuery, locals.user.id);
+    `).all(ftsQuery);
 
     for (const row of docRows) {
       results.push({
@@ -159,9 +159,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const stackRows = rawDb.prepare(`
       SELECT id, name, description
       FROM stacks
-      WHERE user_id = ? AND (name LIKE ? OR description LIKE ?)
+      WHERE name LIKE ? OR description LIKE ?
       LIMIT 10
-    `).all(locals.user.id, likeQ, likeQ);
+    `).all(likeQ, likeQ);
 
     for (const row of stackRows) {
       results.push({
@@ -177,19 +177,19 @@ export const GET: APIRoute = async ({ locals, url }) => {
   try {
     const likeQ = `%${q}%`;
     const monitorRows = rawDb.prepare(`
-      SELECT id, name, url, monitor_type
+      SELECT id, name, target, type
       FROM monitors
-      WHERE user_id = ? AND (name LIKE ? OR url LIKE ?)
+      WHERE name LIKE ? OR target LIKE ?
       LIMIT 10
-    `).all(locals.user.id, likeQ, likeQ);
+    `).all(likeQ, likeQ);
 
     for (const row of monitorRows) {
       results.push({
         type: 'monitor',
         monitorId: row.id,
         title: row.name,
-        snippet: row.url || '',
-        monitorType: row.monitor_type,
+        snippet: row.target || row.url || '',
+        monitorType: row.type || row.monitor_type,
       });
     }
   } catch { /* monitors table may vary */ }

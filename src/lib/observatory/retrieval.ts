@@ -334,8 +334,8 @@ async function retrieveCustomPatterns(
   const db = getDb();
 
   // Build query conditions (same logic as standard patterns)
-  const conditions: string[] = ['user_id = ?'];
-  const params: unknown[] = [userId];
+  const conditions: string[] = [];
+  const params: unknown[] = [];
 
   if (context.symptoms && context.symptoms.length > 0) {
     const symptomConditions = context.symptoms.map(() =>
@@ -356,12 +356,11 @@ async function retrieveCustomPatterns(
     }
   }
 
-  const whereClause = `WHERE ${conditions.join(' AND ')}`;
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
   const query = `
     SELECT
       id,
-      user_id,
       pattern_name,
       category,
       symptoms,
@@ -391,7 +390,7 @@ async function retrieveCustomPatterns(
 
   return rows.map(row => ({
     id: row.id,
-    userId: row.user_id,
+    userId: userId, // Use param instead of column
     patternName: row.pattern_name,
     category: row.category,
     symptoms: JSON.parse(row.symptoms),

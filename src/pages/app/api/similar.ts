@@ -70,9 +70,9 @@ export const GET: APIRoute = async ({ locals, url }) => {
         SELECT d.id, d.title, d.content, d.type, d.source
         FROM docs_fts fts
         JOIN docs d ON d.rowid = fts.rowid
-        WHERE docs_fts MATCH ? AND (d.user_id = ? OR d.source = 'community')
+        WHERE docs_fts MATCH ?
         ORDER BY rank LIMIT 5
-      `).all(ftsQuery, locals.user.id);
+      `).all(ftsQuery);
 
       for (const row of docRows) {
         docs.push({

@@ -80,7 +80,7 @@ function determineAlertState(report: SatelliteReport): 'ok' | 'warning' | 'criti
 }
 
 async function maybeFireAlerts(
-  agent: { id: string; name: string; userId: string },
+  agent: { id: string; name: string },
   report: SatelliteReport,
   prevAlertState: string,
   newAlertState: string,
@@ -104,7 +104,6 @@ async function maybeFireAlerts(
       if ((sec?.auth_failures_1h ?? 0) >= 10) details.push(`${sec!.auth_failures_1h} auth failures in last hour`);
 
       await fireAlert({
-        userId: agent.userId,
         serviceId: null,
         eventType: 'satellite_health',
         severity: newAlertState as 'warning' | 'critical',
@@ -113,7 +112,6 @@ async function maybeFireAlerts(
       }).catch(err => console.error(`[satellite/report] fireAlert failed for ${agent.id}:`, err));
     } else if (newAlertState === 'ok' && prevAlertState !== 'ok') {
       await fireAlert({
-        userId: agent.userId,
         serviceId: null,
         eventType: 'satellite_recovered',
         severity: 'info',
@@ -136,8 +134,8 @@ export const POST: APIRoute = async ({ request }) => {
   const rawDb = (db as any).$client;
 
   const agent = rawDb.prepare(`
-    SELECT id, user_id, name, alert_state FROM satellite_agents WHERE api_key = ?
-  `).get(tokenHash) as { id: string; user_id: string; name: string; alert_state: string } | undefined;
+    SELECT id, name, alert_state FROM satellite_agents WHERE api_key = ?
+  `).get(tokenHash) as { id: string; name: string; alert_state: string } | undefined;
 
   if (!agent) {
     return new Response(JSON.stringify({ error: 'Invalid token' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
@@ -160,9 +158,9 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Persist report
   rawDb.prepare(`
-    INSERT INTO satellite_reports (id, satellite_id, user_id, received_at, metrics)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(reportId, agent.id, agent.user_id, now, JSON.stringify(report));
+    INSERT INTO satellite_reports (id, satellite_id, received_at, metrics)
+    VALUES (?, ?, ?, ?)
+  `).run(reportId, agent.id, now, JSON.stringify(report));
 
   // Update agent last_seen, last_report summary, alert_state
   const summary = {
@@ -182,7 +180,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   // Fire alerts if state changed (non-blocking)
   maybeFireAlerts(
-    { id: agent.id, name: agent.name, userId: agent.user_id },
+    { id: agent.id, name: agent.name },
     report,
     agent.alert_state,
     newAlertState,
@@ -190,7 +188,6 @@ export const POST: APIRoute = async ({ request }) => {
 
   emit({
     type: 'satellite.report',
-    userId: agent.user_id,
     agentId: agent.id,
     alertState: newAlertState as 'ok' | 'warning' | 'critical' | 'stale',
   });
