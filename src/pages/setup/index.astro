@@ -15,8 +15,22 @@ import { logAudit, getClientIp } from '../../lib/audit';
 const session = Astro.locals.user;
 const progress = await getSetupProgress();
 
-if (session && progress.currentStep > SetupStep.AdminAccount) {
-  // User has an account, redirect to their current step
+// Check if any user exists in the system
+const db = getDb();
+const userCount = db.select().from(schema.users).all().length;
+
+// If a user exists but setup isn't complete, redirect to appropriate step
+if (userCount > 0) {
+  if (!session) {
+    // User exists but not logged in - redirect to login
+    return Astro.redirect('/app/login');
+  }
+
+  // User is logged in, redirect to their current setup step
+  if (progress.currentStep === SetupStep.AdminAccount) {
+    // Step 1 never completed properly, skip to step 2
+    return Astro.redirect('/setup/environment');
+  }
   if (progress.currentStep === SetupStep.Environment) return Astro.redirect('/setup/environment');
   if (progress.currentStep === SetupStep.License) return Astro.redirect('/setup/license');
   if (progress.currentStep >= SetupStep.Complete) return Astro.redirect('/app');
@@ -78,7 +92,6 @@ if (Astro.request.method === 'POST') {
 
         db.insert(schema.apiTokens).values({
           id: nanoid(),
-          userId: userId,
           name: 'Scanner (Auto-created during setup)',
           tokenHash,
           expiresAt,
