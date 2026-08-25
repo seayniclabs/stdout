@@ -23,11 +23,16 @@ const mwLog = (...args: unknown[]) => { if (DEBUG_MW) console.log(...args); };
 (async () => {
   try {
     const db = getDb();
-    const setupComplete = db.select().from(schema.setupProgress)
-      .where(eq(schema.setupProgress.stepName, 'complete'))
-      .get();
+    const rawDb = (db as any).$client;
 
-    if (!setupComplete?.completed) {
+    // Check system_state for installation_complete flag (more reliable than setup_progress)
+    const result = rawDb.prepare(`
+      SELECT value FROM system_state WHERE key = 'installation_complete'
+    `).get() as { value: string } | undefined;
+
+    const setupComplete = result?.value === 'true';
+
+    if (!setupComplete) {
       console.log('[init] Setup not yet complete - background workers will not start');
       return;
     }
