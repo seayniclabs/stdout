@@ -82,7 +82,7 @@ async function arpTableHosts(): Promise<Array<{ ip: string; hostname?: string }>
 async function pingSweep(subnet: string): Promise<Array<{ ip: string; hostname?: string }>> {
   const hosts: Array<{ ip: string; hostname?: string }> = [];
   try {
-    const { stdout } = await execAsync(`nmap -sn -T4 --max-retries 1 ${subnet}`, { timeout: 60000 });
+    const { stdout } = await execAsync(`nmap -sn -R -T4 --max-retries 1 ${subnet}`, { timeout: 60000 });
     for (const line of stdout.split('\n')) {
       const m = line.match(/Nmap scan report for (?:([^\s(]+) \()?([\d.]+)\)?/);
       if (m) {
