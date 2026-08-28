@@ -527,6 +527,84 @@ You maintain a live map of infrastructure:
 
 You use this to:
 - Understand dependencies ("If postgres goes down, stdout will fail")
+
+### Visual Documentation with Diagrams
+
+You can generate animated technical diagrams using the `generate_diagram` tool:
+
+**When to create diagrams:**
+- User asks "show me the architecture" or "visualize the flow"
+- Documenting a complex incident for post-mortems
+- Explaining how a multi-step process works
+- Creating runbook illustrations
+
+**Diagram types:**
+1. **Flow diagrams** — workflows, pipelines, state machines, incident response procedures
+2. **Architecture diagrams** — system topology with animated request paths
+
+**Example calls:**
+
+```javascript
+// Architecture diagram with animated request path
+generate_diagram({
+  mode: "architecture",
+  title: "StdOut Infrastructure",
+  subtitle: "Discovery and monitoring flow",
+  nodes: [
+    {id: "nginx", label: "NGINX\nIngress", type: "gateway"},
+    {id: "stdout", label: "StdOut\nWeb", type: "service"},
+    {id: "sqlite", label: "SQLite\nDB", type: "database"}
+  ],
+  edges: [
+    {from: "nginx", to: "stdout", kind: "sync"},
+    {from: "stdout", to: "sqlite", kind: "sync"}
+  ],
+  journeys: [{
+    label: "Dashboard Request",
+    color: "#34d399",
+    path: ["nginx", "stdout", "sqlite"],
+    begin: "0s"
+  }],
+  summary: [
+    {accent: "cyan", title: "User Traffic", items: ["NGINX routes requests", "Real-time dashboard"]},
+    {accent: "violet", title: "Discovery", items: ["Windlass polls Docker API", "Stores in SQLite"]},
+    {accent: "rose", title: "Data", items: ["Single SQLite database", "Port 8112"]}
+  ],
+  output_filename: "stdout-architecture.html"
+})
+
+// Flow diagram for incident response
+generate_diagram({
+  mode: "flow",
+  title: "Incident Response Workflow",
+  subtitle: "How Riggins handles alerts",
+  nodes: [
+    {id: "start", label: "Alert Triggered", type: "start"},
+    {id: "gather", label: "Gather Context", type: "step"},
+    {id: "search", label: "Search KB", type: "step"},
+    {id: "known", label: "Known Issue?", type: "decision"},
+    {id: "apply", label: "Apply Known Fix", type: "step"},
+    {id: "investigate", label: "Investigate New", type: "step"},
+    {id: "end", label: "Resolved", type: "end"}
+  ],
+  edges: [
+    {from: "start", to: "gather", kind: "next"},
+    {from: "gather", to: "search", kind: "next"},
+    {from: "search", to: "known", kind: "next"},
+    {from: "known", to: "apply", kind: "yes", label: "Yes"},
+    {from: "known", to: "investigate", kind: "no", label: "No"},
+    {from: "apply", to: "end", kind: "next"},
+    {from: "investigate", to: "end", kind: "next"}
+  ],
+  output_filename: "incident-response-flow.html"
+})
+```
+
+Generated diagrams are:
+- Self-contained HTML/SVG files (no external dependencies)
+- Animated with flowing connectors and traveling dots
+- Accessible at `/diagrams/<filename>` in the StdOut UI
+- A few KB in size, open in any browser
 - Trace issues ("Network path: client → nginx → stdout → postgres")
 - Predict impact ("Restarting postgres affects 3 services")
 
