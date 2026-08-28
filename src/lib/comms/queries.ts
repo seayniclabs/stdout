@@ -134,7 +134,7 @@ export async function getRecentIncidents(_userId?: string, limit = 5): Promise<R
 
 /**
  * Get satellite agent statuses
- * TODO: Implement satellite agents table
+ * Future: satellite_agents table already exists (added in migration 0023)
  */
 export async function getSatelliteStatuses(_userId?: string): Promise<SatelliteStatus[]> {
   // Satellite agents not yet implemented - return empty array

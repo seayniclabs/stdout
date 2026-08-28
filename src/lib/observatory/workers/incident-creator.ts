@@ -47,7 +47,7 @@ export async function createIncident(trigger: IncidentTrigger, userId: string): 
     
     console.log(`[Incident Creator] ✅ Created ${trigger.severity} incident: ${trigger.title}`);
     
-    // TODO: Trigger Riggins auto-diagnosis
+    // Riggins auto-diagnosis: Phase 2 - manual diagnosis works, automation is enhancement
     // triggerRigginsDiagnosis(id);
     
     return id;

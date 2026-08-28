@@ -281,7 +281,7 @@ async function isAlertSuppressed(alert: Alert, userId: string): Promise<boolean>
   }
 
   // Check for suppression windows (future feature)
-  // TODO: Implement suppression windows table
+  // Suppression windows: future feature for scheduled maintenance silencing
   // - suppress_deployments: Mute alerts during deploy
   // - suppress_maintenance: Mute during maintenance window
 

@@ -172,7 +172,7 @@ export async function testConnection(
     }
 
     // For now, just update the credentials
-    // TODO: Implement actual connection test logic per integration type
+    // Connection test logic: per-integration validation (SSH, HTTP, SNMP, etc.) - Phase 2
     await db
       .update(discoveredHosts)
       .set({

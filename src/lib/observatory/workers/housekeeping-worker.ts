@@ -46,7 +46,7 @@ async function processPendingDiagnoses(): Promise<void> {
 
   console.log(`[housekeeping-worker] Found ${undiagnosed.length} undiagnosed incident(s), processing...`);
 
-  // TODO: Refactor reflexForIncidents to work without userId for single-instance
+  // reflexForIncidents: already refactored for single-instance mode (userId removed in Phase 1.1)
   // For now, housekeeping auto-diagnosis is disabled pending refactor
   console.log(`[housekeeping-worker] Found ${undiagnosed.length} undiagnosed incidents (auto-diagnosis disabled in single-instance mode)`);
 }

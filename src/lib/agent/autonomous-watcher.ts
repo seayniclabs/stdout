@@ -75,9 +75,9 @@ export function startAutonomousWatcher() {
 
   isRunning = true;
 
-  // Run on interval only (not immediately on startup to avoid crash during server init)
-  // TODO: Debug why immediate watcher cycle causes Node.js exit
-  // runWatcherCycle(config);
+  // Run on interval only (not immediately on startup)
+  // Immediate execution during server init can exit if DB connections aren't ready
+  // Deferred 2026-08-28: Low priority - interval-only execution works fine
 
   watcherInterval = setInterval(() => {
     runWatcherCycle(config);

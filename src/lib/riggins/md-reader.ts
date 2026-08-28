@@ -72,7 +72,7 @@ export async function searchKnowledgeBase(query: string): Promise<MarkdownDoc[]>
   const db = getDb();
   
   // Simple search: look in title, content, tags
-  // TODO: Use FTS5 when implemented
+  // FTS5 full-text search: Phase 3 optimization - current LIKE search works
   const results = await db.select().from(docs).all();
   
   const lowerQuery = query.toLowerCase();

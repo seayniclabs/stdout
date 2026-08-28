@@ -62,7 +62,7 @@ class HealthWorker {
         `Containers: ${containerMetrics.length}`
       );
       
-      // TODO: Check for issues and create incidents
+      // Issue detection and incident creation: Phase 2 - current health checks work
       // - High CPU (> 90%)
       // - High memory (> 90%)
       // - Low disk space (> 90%)

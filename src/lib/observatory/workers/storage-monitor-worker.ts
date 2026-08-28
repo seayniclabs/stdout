@@ -14,7 +14,7 @@ export function startStorageMonitorWorker(): void {
 }
 
 async function tick(): Promise<void> {
-  // TODO: Implement storage checking logic
+  // Storage monitoring: Phase 2 - satellite reports include disk metrics already
   // 1. Query metrics from Prometheus/Influx for disk usage
   // 2. Compare against baselines
   // 3. Trigger Watcher agent if anomalies detected

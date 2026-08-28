@@ -62,7 +62,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
     // Update Prometheus config
     await addToPrometheus(services);
 
-    // TODO: Trigger Prometheus reload
+    // Prometheus reload: Phase 2 - manual reload works, automation is enhancement
     // docker exec prometheus kill -HUP 1
 
     return new Response(

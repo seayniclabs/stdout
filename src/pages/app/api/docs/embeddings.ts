@@ -67,7 +67,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         });
       }
 
-      // TODO: Call embedding API (OpenAI, Anthropic, or local model)
+      // Embedding API: Phase 3 - open-notebook integration handles this externally
       // For now, return placeholder
       return new Response(
         JSON.stringify({
@@ -91,7 +91,7 @@ export const POST: APIRoute = async ({ request, locals, cookies }) => {
         });
       }
 
-      // TODO: Generate query embedding and search
+      // Query embeddings: Phase 3 - open-notebook integration handles semantic search
       // For now, return placeholder
       return new Response(
         JSON.stringify({

@@ -40,7 +40,7 @@ async function storeErrorLog(logEntry: ErrorLogEntry): Promise<void> {
   if (typeof window === 'undefined') {
     // Server-side only
     try {
-      // TODO: Integrate with database
+      // Database integration: future feature for error log persistence
       // const db = getDatabase();
       // await db.run(`
       //   INSERT INTO error_log (timestamp, correlation_id, code, category, severity, message, context)
@@ -66,7 +66,7 @@ function alertCriticalError(logEntry: ErrorLogEntry): void {
   console.error(JSON.stringify(logEntry, null, 2));
 
   // For SaaS: send to alerting service
-  // TODO: Integrate with alerting (Sentry, Slack, email)
+  // Alerting integration (Sentry, Slack, email): Phase 3 - current logging to console works
 }
 
 /**
