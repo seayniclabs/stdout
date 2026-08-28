@@ -148,6 +148,13 @@
       "when": 1785873600000,
       "tag": "0022_add_missing_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1785960000000,
+      "tag": "0023_add_missing_columns",
+      "breakpoints": true
     }
   ]
 }

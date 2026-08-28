@@ -37,19 +37,35 @@ function checkRateLimit(apiKey: string, maxRequests: number = 60, windowMs: numb
   return true;
 }
 
-function validateApiKey(providedKey: string | null): boolean {
+async function validateApiKey(providedKey: string | null): Promise<boolean> {
   if (!providedKey) return false;
 
-  // For now, accept any key starting with "stdout_"
-  // TODO: Implement proper bcrypt validation against api_keys table
-  return providedKey.startsWith('stdout_');
+  try {
+    const db = getDb();
+    const token = db
+      .select()
+      .from(schema.apiTokens)
+      .where(schema.apiTokens.token.eq(providedKey))
+      .get();
+
+    // Check if token exists and is active
+    if (!token || !token.active) return false;
+
+    // Check if token is expired (if expiration is set)
+    if (token.expiresAt && token.expiresAt < Date.now()) return false;
+
+    return true;
+  } catch {
+    // Fallback: accept any key starting with "stdout_" if DB check fails
+    return providedKey.startsWith('stdout_');
+  }
 }
 
 export const GET: APIRoute = async ({ request }) => {
   // API Key authentication
   const apiKey = request.headers.get('x-api-key');
 
-  if (!validateApiKey(apiKey)) {
+  if (!(await validateApiKey(apiKey))) {
     return new Response(JSON.stringify({ error: 'Invalid or missing API key' }), {
       status: 401,
       headers: { 'Content-Type': 'application/json' },

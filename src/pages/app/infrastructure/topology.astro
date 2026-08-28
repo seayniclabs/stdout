@@ -1,49 +1,37 @@
 ---
 export const prerender = false;
 import Layout from '../../../layouts/Layout.astro';
-import HierarchicalTopologyMap from '../../../components/HierarchicalTopologyMap.astro';
 import { getDb, schema } from '../../../lib/db';
-import { eq } from 'drizzle-orm';
 
 const session = Astro.locals.user;
 if (!session) return Astro.redirect('/app/login');
 
 const db = getDb();
-
 const stacks = db.select().from(schema.stacks).all();
-
-const satellites: any[] = []; // satellites table doesn't exist yet
-
-const lastDiscoveryRun = db.select().from(schema.systemState)
-  .where(eq(schema.systemState.key, 'last_discovery_run'))
-  .get()?.updatedAt;
-
-const hosts = db.select().from(schema.discoveredHosts).all();
-const totalEntities = hosts.length + stacks.length + satellites.length;
-
-function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000);
-  if (seconds < 60) return 'just now';
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 ---
 
 <Layout title="Topology Map — StdOut">
-  <main class="infrastructure-page">
-    <div class="auto-banner">
-      <div class="auto-icon">🤖</div>
-      <div class="auto-content">
-        <h2>Riggins is continuously monitoring your infrastructure</h2>
-        <div class="auto-meta">
-          <span class="highlight">{totalEntities} entities discovered</span> •
-          <span class="highlight">{stacks.length} stacks auto-created</span> •
-          Last scan: {lastDiscoveryRun ? timeAgo(lastDiscoveryRun) : 'Never'}
-        </div>
+  <main class="topology-page">
+    <div class="topology-header">
+      <div class="topology-info">
+        <h1>Infrastructure Topology</h1>
+        <p>Visualize your discovered infrastructure and service dependencies</p>
+      </div>
+      <div class="topology-actions">
+        <button id="generateBtn" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+            <circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/>
+            <circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+          </svg>
+          Generate Diagram
+        </button>
+        <button id="refreshBtn" class="btn btn-secondary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6m12-4a9 9 0 0 1-15 6.7L3 16"/>
+          </svg>
+          Refresh
+        </button>
       </div>
     </div>
 
@@ -60,62 +48,99 @@ function timeAgo(timestamp: number): string {
         </svg>
         Stacks ({stacks.length})
       </a>
-      <a href="/app/infrastructure/satellites" class="tab">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M1 12h6m6 0h6"/>
-        </svg>
-        Satellites ({satellites.length})
-      </a>
       <a href="/app/infrastructure/topology" class="tab active">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/><circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+          <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+          <circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/>
+          <circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
         </svg>
         Topology Map
       </a>
     </div>
 
-    <div class="topology-content">
-      <HierarchicalTopologyMap />
+    <div class="topology-container">
+      <div id="topologyContent" class="topology-content">
+        <div class="empty-state">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="3"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/>
+            <circle cx="6" cy="6" r="2"/><circle cx="18" cy="6" r="2"/>
+            <circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>
+          </svg>
+          <h3>No Topology Diagram Yet</h3>
+          <p>Generate an interactive topology diagram of your discovered infrastructure</p>
+          <button class="btn btn-primary" onclick="document.getElementById('generateBtn').click()">
+            Generate Topology Diagram
+          </button>
+        </div>
+      </div>
+
+      <div id="loadingState" class="loading-state" style="display: none;">
+        <div class="spinner"></div>
+        <p>Generating topology diagram...</p>
+      </div>
     </div>
   </main>
 </Layout>
 
-<style>
-  .infrastructure-page {
-    max-width: 1400px;
+<style is:global>
+  .topology-page {
+    max-width: 1600px;
     margin: 0 auto;
     padding: 24px;
   }
 
-  .auto-banner {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 24px;
+  .topology-header {
     display: flex;
     align-items: center;
-    gap: 16px;
+    justify-content: space-between;
+    margin-bottom: 24px;
   }
 
-  .auto-icon {
-    font-size: 32px;
-    flex-shrink: 0;
+  .topology-info h1 {
+    font-size: 24px;
+    margin: 0 0 8px 0;
   }
 
-  .auto-content h2 {
-    font-size: 18px;
-    margin: 0 0 4px 0;
-  }
-
-  .auto-meta {
+  .topology-info p {
     font-size: 14px;
     color: var(--text-secondary);
+    margin: 0;
   }
 
-  .auto-meta .highlight {
-    color: var(--success);
-    font-weight: 600;
+  .topology-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+
+  .btn-primary:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+  }
+
+  .btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .tabs {
@@ -152,20 +177,135 @@ function timeAgo(timestamp: number): string {
     border-bottom-color: var(--primary);
   }
 
-  .topology-content {
+  .topology-container {
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 12px;
-    padding: 24px;
+    min-height: 600px;
+    position: relative;
   }
 
-  @media (max-width: 768px) {
-    .infrastructure-page {
-      padding: 16px;
-    }
+  .topology-content {
+    width: 100%;
+    height: 100%;
+  }
 
-    .tab {
-      white-space: nowrap;
-    }
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+  }
+
+  .empty-state svg {
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    opacity: 0.5;
+  }
+
+  .empty-state h3 {
+    font-size: 18px;
+    margin: 0 0 8px 0;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 24px 0;
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 80px 40px;
+    text-align: center;
+  }
+
+  .spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--bg-tertiary);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+
+  .topology-diagram {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+  }
+
+  .topology-diagram iframe {
+    width: 100%;
+    min-height: 800px;
+    border: none;
   }
 </style>
+
+<script>
+  let currentDiagram: string | null = null;
+
+  async function generateTopology() {
+    const loadingState = document.getElementById('loadingState');
+    const topologyContent = document.getElementById('topologyContent');
+
+    if (!loadingState || !topologyContent) return;
+
+    // Show loading state
+    loadingState.style.display = 'flex';
+    topologyContent.innerHTML = '';
+
+    try {
+      const response = await fetch('/app/api/infrastructure/generate-topology', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate topology');
+      }
+
+      const data = await response.json();
+      currentDiagram = data.html;
+
+      // Hide loading, show diagram
+      loadingState.style.display = 'none';
+      topologyContent.innerHTML = `
+        <div class="topology-diagram">
+          <iframe srcdoc="${data.html.replace(/"/g, '&quot;')}" sandbox="allow-scripts"></iframe>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Failed to generate topology:', error);
+      loadingState.style.display = 'none';
+      topologyContent.innerHTML = `
+        <div class="empty-state">
+          <h3>Failed to Generate Diagram</h3>
+          <p>There was an error generating the topology diagram. Please try again.</p>
+          <button class="btn btn-primary" onclick="document.getElementById('generateBtn').click()">
+            Retry
+          </button>
+        </div>
+      `;
+    }
+  }
+
+  // Wire up buttons
+  document.getElementById('generateBtn')?.addEventListener('click', generateTopology);
+  document.getElementById('refreshBtn')?.addEventListener('click', generateTopology);
+</script>

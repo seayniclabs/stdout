@@ -11,7 +11,7 @@ RUN npm run build
 
 FROM node:22-alpine AS runtime
 WORKDIR /app
-RUN apk add --no-cache nmap sqlite curl docker-cli
+RUN apk add --no-cache nmap sqlite curl docker-cli python3
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
@@ -25,6 +25,7 @@ COPY --from=build /app/src/lib/fix-verification.ts ./src/lib/fix-verification.ts
 COPY --from=build /app/src/lib/bulk-resolution.ts ./src/lib/bulk-resolution.ts
 COPY --from=build /app/scripts ./scripts
 COPY --from=build /app/community-packs ./community-packs
+COPY --from=build /app/dashmotion ./dashmotion
 RUN chmod +x scripts/start.sh
 ENV HOST=0.0.0.0 PORT=3000 NODE_ENV=production DB_PATH=/app/data/stdout.db
 EXPOSE 3000

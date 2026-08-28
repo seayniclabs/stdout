@@ -251,11 +251,9 @@ async function queryGenericOpenAI(provider: any, model: any, request: LLMRequest
 
 function decryptApiKey(encrypted: string | null): string | null {
   if (!encrypted) return null;
-  // TODO: Implement proper encryption/decryption
-  // For now, assume base64 encoding
-  try {
-    return Buffer.from(encrypted, 'base64').toString('utf-8');
-  } catch {
-    return null;
-  }
+
+  // Single-instance mode: API keys stored in plaintext in database
+  // Multi-instance would require proper encryption with a secret key
+  // For self-hosted single-instance deployment, database file security is sufficient
+  return encrypted;
 }

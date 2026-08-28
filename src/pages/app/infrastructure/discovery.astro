@@ -54,7 +54,7 @@ const stacks = db.select().from(schema.stacks).all();
       <div class="modal-content">
         <div class="modal-header">
           <h3>Configure Integration</h3>
-          <button class="modal-close" onclick="closeConfigModal()">&times;</button>
+          <button class="modal-close" data-action="close-config-modal">&times;</button>
         </div>
         <div class="modal-body">
           <div class="device-info" id="deviceInfo"></div>
@@ -75,8 +75,8 @@ const stacks = db.select().from(schema.stacks).all();
             <input type="password" id="configPassword" />
           </div>
           <div class="form-actions">
-            <button onclick="testConnection()" class="btn btn-secondary">Test Connection</button>
-            <button onclick="saveConfiguration()" class="btn btn-primary">Save & Connect</button>
+            <button data-action="test-connection" class="btn btn-secondary">Test Connection</button>
+            <button data-action="save-configuration" class="btn btn-primary">Save & Connect</button>
           </div>
           <div id="configError" class="error-message"></div>
           <div id="configSuccess" class="success-message"></div>
@@ -89,7 +89,7 @@ const stacks = db.select().from(schema.stacks).all();
       <div class="modal-content">
         <div class="modal-header">
           <h3>Ignore Device</h3>
-          <button class="modal-close" onclick="closeIgnoreModal()">&times;</button>
+          <button class="modal-close" data-action="close-ignore-modal">&times;</button>
         </div>
         <div class="modal-body">
           <p>Why are you ignoring this device?</p>
@@ -113,8 +113,8 @@ const stacks = db.select().from(schema.stacks).all();
           </div>
           <p class="warning-text">This device will not be scanned again. You can un-ignore it from Settings.</p>
           <div class="form-actions">
-            <button onclick="closeIgnoreModal()" class="btn btn-secondary">Cancel</button>
-            <button onclick="confirmIgnore()" class="btn btn-danger">Ignore Device</button>
+            <button data-action="close-ignore-modal" class="btn btn-secondary">Cancel</button>
+            <button data-action="confirm-ignore" class="btn btn-danger">Ignore Device</button>
           </div>
         </div>
       </div>
@@ -122,7 +122,7 @@ const stacks = db.select().from(schema.stacks).all();
   </main>
 </Layout>
 
-<style>
+<style is:global>
   .discovery-page {
     max-width: 1400px;
     margin: 0 auto;
@@ -383,6 +383,13 @@ const stacks = db.select().from(schema.stacks).all();
     padding: 24px;
   }
 
+  .modal-body > p {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 500;
+    margin: 0 0 8px 0;
+  }
+
   .form-group {
     margin-bottom: 16px;
   }
@@ -448,14 +455,40 @@ const stacks = db.select().from(schema.stacks).all();
     align-items: center;
     gap: 8px;
     font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
   }
 
-  .warning-text {
+  .radio-group label:hover {
+    background: var(--bg-tertiary);
+  }
+
+  .radio-group input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  .radio-group input[type="text"] {
+    flex: 1;
+    margin-left: 8px;
+    padding: 6px 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+  }
+
+  p.warning-text {
     font-size: 13px;
-    color: var(--text-secondary);
+    color: #fbbf24 !important;
     padding: 12px;
-    background: rgba(251, 191, 36, 0.1);
-    border: 1px solid rgba(251, 191, 36, 0.3);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid rgba(251, 191, 36, 0.4);
     border-radius: 6px;
     margin: 16px 0;
   }
@@ -505,12 +538,12 @@ const stacks = db.select().from(schema.stacks).all();
       container.innerHTML = '';
 
       const groups = [
-        { key: 'connected', title: 'Connected', icon: '✅', expanded: false },
+        { key: 'connected', title: 'Connected', icon: '✅', expanded: true },
         { key: 'needsConfig', title: 'Needs Configuration', icon: '⚠️', expanded: true },
-        { key: 'discovered', title: 'Discovered', icon: '🔍', expanded: false },
-        { key: 'connecting', title: 'Connecting', icon: '🔄', expanded: false },
+        { key: 'discovered', title: 'Discovered', icon: '🔍', expanded: true },
+        { key: 'connecting', title: 'Connecting', icon: '🔄', expanded: true },
         { key: 'ignored', title: 'Ignored', icon: '🚫', expanded: false },
-        { key: 'failed', title: 'Failed', icon: '❌', expanded: false },
+        { key: 'failed', title: 'Failed', icon: '❌', expanded: true },
       ];
 
       for (const group of groups) {
@@ -520,7 +553,7 @@ const stacks = db.select().from(schema.stacks).all();
         const groupDiv = document.createElement('div');
         groupDiv.className = 'status-group';
         groupDiv.innerHTML = `
-          <div class="status-group-header" onclick="toggleGroup(this)">
+          <div class="status-group-header" data-action="toggle-group">
             <div class="status-group-title">
               <span class="status-icon">${group.icon}</span>
               <span>${group.title}</span>
@@ -546,11 +579,11 @@ const stacks = db.select().from(schema.stacks).all();
   function renderDeviceCard(host, status) {
     const integrationName = detectIntegration(host.openPorts || []);
     const actions = status === 'needsConfig'
-      ? `<button class="btn-sm btn-primary" onclick="openConfigModal('${host.id}', '${host.ipAddress}', '${integrationName}')">Configure</button>
-         <button class="btn-sm btn-danger" onclick="openIgnoreModal('${host.id}')">Ignore</button>`
+      ? `<button class="btn-sm btn-primary btn-configure" data-host-id="${host.id}" data-ip="${host.ipAddress}" data-integration="${integrationName}">Configure</button>
+         <button class="btn-sm btn-danger btn-ignore" data-host-id="${host.id}">Ignore</button>`
       : status === 'discovered'
-      ? `<button class="btn-sm btn-secondary" onclick="openConfigModal('${host.id}', '${host.ipAddress}', '${integrationName}')">Configure</button>
-         <button class="btn-sm btn-danger" onclick="openIgnoreModal('${host.id}')">Ignore</button>`
+      ? `<button class="btn-sm btn-secondary btn-configure" data-host-id="${host.id}" data-ip="${host.ipAddress}" data-integration="${integrationName}">Configure</button>
+         <button class="btn-sm btn-danger btn-ignore" data-host-id="${host.id}">Ignore</button>`
       : '';
 
     return `
@@ -731,6 +764,54 @@ const stacks = db.select().from(schema.stacks).all();
     };
     return map[integrationType] || 80;
   }
+
+  // Event delegation for all click actions
+  document.addEventListener('click', (e) => {
+    const target = e.target as HTMLElement;
+    const action = target.dataset.action;
+
+    // Configure button
+    if (target.classList.contains('btn-configure')) {
+      const hostId = target.dataset.hostId;
+      const ip = target.dataset.ip;
+      const integration = target.dataset.integration;
+      if (hostId && ip && integration) {
+        openConfigModal(hostId, ip, integration);
+      }
+    }
+
+    // Ignore button
+    if (target.classList.contains('btn-ignore')) {
+      const hostId = target.dataset.hostId;
+      if (hostId) {
+        openIgnoreModal(hostId);
+      }
+    }
+
+    // Handle data-action buttons
+    if (action) {
+      switch (action) {
+        case 'close-config-modal':
+          closeConfigModal();
+          break;
+        case 'close-ignore-modal':
+          closeIgnoreModal();
+          break;
+        case 'test-connection':
+          testConnection();
+          break;
+        case 'save-configuration':
+          saveConfiguration();
+          break;
+        case 'confirm-ignore':
+          confirmIgnore();
+          break;
+        case 'toggle-group':
+          toggleGroup(target);
+          break;
+      }
+    }
+  });
 
   // Load on page load
   loadDiscoveredHosts();
