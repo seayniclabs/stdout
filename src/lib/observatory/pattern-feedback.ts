@@ -120,3 +120,106 @@ export function recordPatternOutcome(opts: {
 
   return result;
 }
+
+/**
+ * Record a human's verification of a Riggins suggestion (accept/reject/modify).
+ *
+ * This is the human half of the loop `recordPatternOutcome` closes for automated
+ * autopilot outcomes: a person looked at a proposed diagnosis/fix and approved,
+ * denied, or changed it before acting. Feeds the same `observatory_feedback`
+ * table so accuracy can be computed across both automated and human-verified
+ * suggestions without a second audit path.
+ */
+export function recordHumanVerification(opts: {
+  incidentId: string;
+  agentType: string;
+  suggestion: string;
+  action: 'accepted' | 'rejected' | 'modified';
+  decidedBy?: string;
+  actualResolution?: string;
+  notes?: string;
+}): void {
+  const USER_ACTION: Record<typeof opts.action, string> = {
+    accepted: 'helpful',
+    rejected: 'unhelpful',
+    modified: 'modified',
+  };
+
+  try {
+    const db = getDb();
+    const rawDb = (db as any).$client;
+    rawDb.prepare(`
+      INSERT INTO observatory_feedback
+        (id, incident_id, agent_type, suggestion, user_action, actual_resolution, notes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      `fb_${nanoid(12)}`, opts.incidentId, opts.agentType,
+      opts.suggestion.slice(0, 500), USER_ACTION[opts.action],
+      opts.actualResolution ?? null,
+      (opts.notes ? `${opts.notes} ` : '') + (opts.decidedBy ? `(decided_by:${opts.decidedBy})` : ''),
+      Date.now()
+    );
+  } catch { /* audit best-effort */ }
+}
+
+export interface AccuracyReport {
+  windowDays: number;
+  since: number;
+  total: number;
+  accepted: number;
+  rejected: number;
+  modified: number;
+  accuracyPct: number | null; // accepted / (accepted + rejected), null if no verified suggestions
+  byAgentType: Record<string, { total: number; accepted: number; rejected: number; modified: number; accuracyPct: number | null }>;
+}
+
+/**
+ * Compute Riggins suggestion accuracy from `observatory_feedback` over a rolling window.
+ *
+ * Accuracy = accepted / (accepted + rejected). 'modified' suggestions are tracked
+ * but excluded from the ratio — the human judged the diagnosis worth acting on but
+ * not verbatim, which is neither a clean hit nor a miss.
+ */
+export function getObservatoryAccuracy(windowDays = 30): AccuracyReport {
+  const db = getDb();
+  const rawDb = (db as any).$client;
+  const since = Date.now() - windowDays * 24 * 60 * 60 * 1000;
+
+  const rows = rawDb.prepare(`
+    SELECT agent_type, user_action
+    FROM observatory_feedback
+    WHERE created_at >= ?
+      AND user_action IN ('helpful', 'unhelpful', 'modified', 'success', 'failure')
+  `).all(since) as Array<{ agent_type: string; user_action: string }>;
+
+  const ACCEPTED = new Set(['helpful', 'success']);
+  const REJECTED = new Set(['unhelpful', 'failure']);
+
+  const byAgentType: AccuracyReport['byAgentType'] = {};
+  let accepted = 0, rejected = 0, modified = 0;
+
+  for (const row of rows) {
+    const bucket = byAgentType[row.agent_type] ??= { total: 0, accepted: 0, rejected: 0, modified: 0, accuracyPct: null };
+    bucket.total++;
+    if (ACCEPTED.has(row.user_action)) { accepted++; bucket.accepted++; }
+    else if (REJECTED.has(row.user_action)) { rejected++; bucket.rejected++; }
+    else if (row.user_action === 'modified') { modified++; bucket.modified++; }
+  }
+
+  for (const bucket of Object.values(byAgentType)) {
+    const verified = bucket.accepted + bucket.rejected;
+    bucket.accuracyPct = verified > 0 ? (bucket.accepted / verified) * 100 : null;
+  }
+
+  const verifiedTotal = accepted + rejected;
+  return {
+    windowDays,
+    since,
+    total: rows.length,
+    accepted,
+    rejected,
+    modified,
+    accuracyPct: verifiedTotal > 0 ? (accepted / verifiedTotal) * 100 : null,
+    byAgentType,
+  };
+}

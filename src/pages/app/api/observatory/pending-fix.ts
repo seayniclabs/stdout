@@ -61,6 +61,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
 
   if (decision === 'deny') {
     decidePendingFix(userId, id, 'denied', locals.user.id);
+    logHumanVerification(fix, 'rejected', locals.user.id);
     return json({ ok: true, decision: 'denied', id });
   }
 
@@ -89,6 +90,7 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
   const result = await applyRemediation(fix.command, execViaWindlass, true);
 
   decidePendingFix(userId, id, 'approved', locals.user.id, result);
+  logHumanVerification(fix, 'accepted', locals.user.id, result.applied ? 'applied' : 'apply_failed');
 
   return json({
     ok: result.applied,
@@ -97,6 +99,27 @@ export const POST: APIRoute = async ({ locals, request, cookies }) => {
     result,
   }, result.applied ? 200 : 400);
 };
+
+// Best-effort: a human deciding a parked fix IS a verification of Riggins' suggestion.
+// Log it to the observatory_feedback audit trail so accuracy is computable later
+// (see getObservatoryAccuracy in lib/observatory/pattern-feedback.ts).
+function logHumanVerification(
+  fix: { incidentId: string; command: string; proposedBy: string },
+  action: 'accepted' | 'rejected',
+  decidedBy: string,
+  actualResolution?: string,
+): void {
+  import('../../../../lib/observatory/pattern-feedback')
+    .then(({ recordHumanVerification }) => recordHumanVerification({
+      incidentId: fix.incidentId,
+      agentType: fix.proposedBy || 'analyst',
+      suggestion: fix.command,
+      action,
+      decidedBy,
+      actualResolution,
+    }))
+    .catch(() => { /* audit best-effort */ });
+}
 
 function json(obj: unknown, status = 200): Response {
   return new Response(JSON.stringify(obj), {
