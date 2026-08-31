@@ -193,12 +193,12 @@ Infrastructure monitoring today requires multiple tools (nmap for discovery, Doc
 
 ### Phased roadmap with gates
 
-| Phase | Deliverable | Blocked by | Exit gate (functional test) | Kill criterion |
-|-------|-------------|-----------|----------------------------|----------------|
-| 0 | Blueprint signed off | — | This doc: gate open (backfill mode) | Idea fails office hours (not applicable; already built) |
-| 1 | MVP: Discovery + UI + Incidents + KB + Riggins | Blueprint closed | (1) Discovery UI renders 40+ hosts in grid; (2) Riggins processes 1+ incidents; (3) KB search returns 3+ results; (4) Setup wizard completes without errors; (5) Zero console warnings on all pages | If discovery fails >3 consecutive cycles OR Riggins agent unresponsive OR KB search <50% accuracy |
-| 2 | Polish: Topology map + documentation + multi-arch images | Phase 1 exit gate | (1) Topology diagram generates SVG on-demand; (2) GitHub docs repo published; (3) Docker images push to registry (amd64 + arm64); (4) Install guide walkthrough succeeds on fresh machine | If diagram generation fails OR install guide steps don't work OR images don't build for both architectures |
-| 3 | Production validation: E2E testing + security audit + performance benchmarking | Phase 2 exit gate | (1) All 50+ pages tested via browser automation, HTTP 200; (2) Security audit 9.0+/10; (3) API response <50ms avg, page load <100ms; (4) Zero known critical/high vulnerabilities | If any CRITICAL bug found in E2E OR security score <8.0/10 OR performance <10ms (indicates regression) |
+| Phase | Deliverable | Blocked by | Exit gate (functional test) | Kill criterion | Status |
+|-------|-------------|-----------|----------------------------|----------------|--------|
+| 0 | Blueprint signed off | — | This doc: gate open (backfill mode) | Idea fails office hours (not applicable; already built) | done |
+| 1 | MVP: Discovery + UI + Incidents + KB + Riggins | Blueprint closed | (1) Discovery UI renders 40+ hosts in grid; (2) Riggins processes 1+ incidents; (3) KB search returns 3+ results; (4) Setup wizard completes without errors; (5) Zero console warnings on all pages | If discovery fails >3 consecutive cycles OR Riggins agent unresponsive OR KB search <50% accuracy | done |
+| 2 | Polish: Topology map + documentation + multi-arch images | Phase 1 exit gate | (1) Topology diagram generates SVG on-demand; (2) GitHub docs repo published; (3) Docker images push to registry (amd64 + arm64); (4) Install guide walkthrough succeeds on fresh machine | If diagram generation fails OR install guide steps don't work OR images don't build for both architectures | done |
+| 3 | Production validation: E2E testing + security audit + performance benchmarking | Phase 2 exit gate | (1) All 50+ pages tested via browser automation, HTTP 200; (2) Security audit 9.0+/10; (3) API response <50ms avg, page load <100ms; (4) Zero known critical/high vulnerabilities | If any CRITICAL bug found in E2E OR security score <8.0/10 OR performance <10ms (indicates regression) | done |
 
 **Core-differentiator check:** Riggins autonomous agent (Phase 1) is the differentiator—unique LLM-powered diagnosis + optional auto-remediation. This ships in Phase 1, before UI polish, per blueprint principle.
 
