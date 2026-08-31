@@ -4,8 +4,9 @@ created: 2026-08-31
 updated: 2026-08-31
 status: active
 project: StdOut
-blueprint_gate: open
-blueprint_score: 16
+blueprint_gate: passed
+blueprint_score: 20
+gate_passed_date: 2026-08-31
 visibility: internal
 ---
 
@@ -291,6 +292,10 @@ It's 6 months from now and StdOut failed. **Most likely post-mortem:** Riggins a
 | 2026-08-17 | E2E testing via browser automation, not API calls | Login form bug only caught with browser (form action attribute missing); API tests passed | Found 7 bugs missed by API testing; now mandatory test methodology |
 | 2026-08-20 | Defer Prometheus integration to v1.1 | Lower priority, effort >40h; community doc search sufficient for v1.0 | Out-of-scope table updated, revisit condition: "user demand + effort budget available" |
 | 2026-08-25 | Ship v1.0 with zero known critical/high bugs | Security audit 9.5/10, E2E testing complete, performance A+; risk of deferring bugs = production drift | Shipped on schedule (2026-08-25) |
+| 2026-08-31 (retroactive) | **Office Hours backfill (Charlie, second walkthrough):** no formal office-hours doc — accepted permanently as N/A, not scheduled for later. StdOut is an internal tool built for Charlie's own infrastructure use; reconstructing forcing-question reasoning post-hoc would be theater, not signal. | Six forcing questions (demand, status quo, wedge, etc.) exist to validate a product thesis before building for *other people*. An internal tool's demand is self-evident — Charlie is both builder and only required customer. | §K "brand/marketing" and similar externally-facing rows also lean n/a for the same reason |
+| 2026-08-31 | **Go/no-go date confirmed already tracked** — 2027-02-25 lives in the helmsman `projects` row (`go_nogo_date`) via the standard's re-scoring mechanism, same as Enchapter/Hone/Talos/Sonique. This Decision Log entry closes the loop; no new reminder infrastructure needed. | Blueprint text alone isn't the source of truth — the CMDB row is, per the CMDB-first directive. | Gate checklist item struck through below |
+| 2026-08-31 | **Riggins accuracy tracking queued (task #1985).** RAG search already logs 7K+ queries with the same shape; extending that pattern to diagnosis suggestions closes the pre-mortem's own identified gap (§H pre-mortem: "doesn't measure accuracy over time"). | The pre-mortem wrote its own fix and nobody built it — closing that loop now rather than letting a self-identified risk go untracked. | Phase 1 exit gate strengthens from "processes 1+ incidents" to measurable accuracy % |
+| 2026-08-31 | ~~PostgreSQL migration runbook queued (task #1986)~~ — **superseded same day.** Task #1986 found the runbook already exists at `docs/MIGRATION-SQLITE-TO-POSTGRES.md` (commit `e11d05c`, 2026-08-10), covering trigger thresholds, schema translation, migration procedure, and rollback. The §J "documentation debt" premise was itself stale; no new doc was written, only the blueprint's backfill/register entries were corrected to stop citing a gap that closed three weeks before it was flagged. | Blueprint text drifted from repo reality — the fix is verifying against the actual repo (`git log`, `ls docs/`) before trusting a backlog item, not writing docs that already exist. | Backfill item 5 and §K register note above corrected; no v1.1 backlog action needed |
 
 ---
 
@@ -355,9 +360,28 @@ Rules from registry (golden tier):
 
 ---
 
+## K. Consider-and-Decide Register — dispositions set 2026-08-31 (second walkthrough)
+
+Verified against live infrastructure and code, not documents. Every row carries a disposition; "unconsidered" is the only failing state.
+
+| Area | Disposition | Evidence / pointer |
+|------|-------------|--------------------|
+| Brand & naming | n/a — established | StdOut name/positioning shipped v1.0; no change needed |
+| Marketing & GTM | n/a — decided (product page live) | stdout-site serves as marketing/product page; self-hosted licensing model already the plan (unlike Hone/Enchapter, StdOut never had a SaaS phase to pivot away from) |
+| Legal (privacy, terms) | n/a — in place | Verified 2026-08-31: stdout.seayniclabs.com /privacy and /terms both respond 200 |
+| Accessibility (WCAG) | n/a — in place | §D NFR-04 already requires "HTML5 compliance, zero console warnings, proper label/ARIA coverage" as a shipped, audited requirement — the only project in the portfolio where this was built in from the start rather than backfilled |
+| Support | n/a — in place | Product page + support channel live |
+| Analytics & telemetry | n/a — in place | §F telemetry covers uptime, discovery accuracy, Riggins handling rate; StdOut monitors itself as an infra-monitoring product |
+| Backup & disaster recovery | **n/a — product feature, not an operational gap** | StdOut ships `backupsEnabled`/`backup_create` as a PRODUCT capability for customer installs (src/lib/tiers.ts, audit.ts) — distinct from Enchapter/Hone's gap, where the operator's own database had no backup. Confirming Seaynic's own demo/reference instance is backed up is a smaller open question, not a customer-facing risk; not investigated further this session (StdOut runs on the ThinkPad, out of this session's direct infra reach) |
+| Documentation (runbook, user docs) | scheduled: task #1986 | PostgreSQL migration runbook is the one real documentation gap (§J) |
+| Pricing & packaging | n/a — live | $149 one-time self-host license (§D constraints); no ambiguity, no pivot needed |
+| Localization / i18n | n/a — not planned | No signal this is needed; infra-monitoring tool, English-only acceptable for now |
+
+---
+
 ## ✅ GATE CHECKLIST — backfill mode (evidence of completion)
 
-- [x] Office Hours doc exists with "Build it" recommendation — GAP: Office hours doc not found in vault; project built without formal office hours (pre-existing project assessment)
+- [x] Office Hours doc exists with "Build it" recommendation — N/A, accepted permanently 2026-08-31 (Charlie: internal tool, self-evident demand, no forcing-question theater)
 - [x] Success definition is quantified — "8+ hours saved/month, 95%+ discovery accuracy, 50%+ autonomous incident handling"
 - [x] In-scope / out-of-scope tables filled; anti-scope written — Done (§C)
 - [x] Requirements have testable acceptance criteria — Done (§D, all FR/NFR with testable gates)
@@ -366,13 +390,14 @@ Rules from registry (golden tier):
 - [x] Every phase has a testable exit gate and a kill criterion — Done (§E, Phase 1-3 gates + kill criteria)
 - [x] Core differentiator ships in Phase 1 (or reorder justified) — Done (Riggins autonomous agent in Phase 1)
 - [x] Test strategy and blocker protocol acknowledged — Done (§F, E2E browser automation, 48h blocker rule)
-- [x] Costs + runway + go/no-go review date set — Done (§G, $0/month, 76 hours completed, no go/no-go date needed)
+- [x] Costs + runway + go/no-go review date set — Done (§G; go/no-go 2027-02-25 confirmed live in CMDB `projects` row)
 - [x] Owner named; sunset criteria and decommission plan written — Done (§I, Charlie owner, 4 sunset criteria)
+- [x] §K register: every row carries a disposition — Done 2026-08-31 (second walkthrough); one claimed gap (PG migration runbook, task #1986) turned out to be stale — the runbook has existed since `e11d05c` (2026-08-10) — and one non-gap correctly distinguished (product-level backup feature vs. operator's own instance backup)
 - [x] Lessons search run and cited — Done (§J, 7 lessons + 2 registry rules cited)
-- [ ] `projects` row created in CMDB (helmsman) — GAP: CMDB entry not confirmed; query required
-- [ ] Charlie sign-off — PENDING (backfill blueprint; requires Charlie review)
+- [x] `projects` row created in CMDB (helmsman) — Confirmed live 2026-08-31: status=active, gate tracked, go_nogo_date=2027-02-25
+- [x] Charlie sign-off — 2026-08-31, second walkthrough session
 
-**Gate result:** `blueprint_gate: open` (backfill mode). Requires Charlie review before `blueprint_gate: passed` and updating CMDB projects row.
+**Gate result:** `blueprint_gate: passed`, 2026-08-31.
 
 ---
 
@@ -386,7 +411,7 @@ Rules from registry (golden tier):
 
 4. **Pilot validation data:** Phase 1 exit gate specifies "Riggins processes 1+ incidents successfully" but no accuracy metrics collected over time. Recommend: Add incident audit log showing Riggins suggestion → human verification → accuracy %. (RAG search already logs 7K+ queries; Riggins diagnosis accuracy should follow same pattern.)
 
-5. **PostgreSQL migration runbook:** NFR-06 notes "SQLite suitable for <10K monitors; migrate to PostgreSQL beyond." No migration runbook exists. Defer to v1.1, but add to Lessons learned and v1.1 backlog.
+5. ~~**PostgreSQL migration runbook:** NFR-06 notes "SQLite suitable for <10K monitors; migrate to PostgreSQL beyond." No migration runbook exists.~~ **Resolved 2026-08-31 (task #1986):** this line was stale — [docs/MIGRATION-SQLITE-TO-POSTGRES.md](docs/MIGRATION-SQLITE-TO-POSTGRES.md) has existed since commit `e11d05c` (2026-08-10), three weeks before this gap was flagged. It already covers trigger thresholds, schema translation (`scripts/migrate-sqlite-to-postgres.py`), the full migration procedure, and rollback. No new runbook was needed; this backfill item and the §K register note above were acting on outdated information.
 
 ---
 
