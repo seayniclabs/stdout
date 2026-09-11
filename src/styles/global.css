@@ -27,13 +27,13 @@
 }
 .skip-link:focus { top: 1rem; }
 
-/* ── StdOut Design Tokens (Awwwards Dark) ────────── */
+/* ── StdOut Design Tokens (Fleet Harmonized) ────────── */
 :root {
-  --bg:            #0A0A0F;
-  --bg-surface:    #13131A;
-  --bg-elevated:   #1A1A24;
-  --bg-card:       #1A1A24;
-  --bg-hover:      #222230;
+  --bg:            #050508;
+  --bg-surface:    #0c0c14;
+  --bg-elevated:   #141420;
+  --bg-card:       #141420;
+  --bg-hover:      #1a1a26;
   --border:        rgba(255, 255, 255, 0.08);
   --border-hover:  rgba(249, 115, 22, 0.4);
   --text:          #E8E8F0;
