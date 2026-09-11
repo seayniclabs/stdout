@@ -345,7 +345,7 @@ if (user) {
   <script src="https://seayniclabs.com/dock.js?v=20260911" defer></script>
   <script src="https://seayniclabs.com/seaynic-topnav.js?v=20260911" defer></script>
   <seaynic-dock active="stdout" position="bottom-right"></seaynic-dock>
-  <seaynic-topnav position="top-right" offset-x="140" mobile-menu="off"></seaynic-topnav>
+  <seaynic-topnav position="top-right" offset-x="280" mobile-menu="off"></seaynic-topnav>
 </body>
 </html>
 
@@ -358,18 +358,22 @@ if (user) {
     padding: 14px 24px;
     max-width: 1100px;
     margin: 0 auto;
-    padding-right: 200px; /* Account for shared topnav + contact icon at top-right */
   }
   .ln-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; color: var(--text); text-decoration: none; }
-  .ln-links { display: flex; align-items: center; gap: 20px; }
+  .ln-links {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-right: 200px; /* Keep clear of shared topnav icons + CTA button */
+  }
   .ln-link { font-size: 13px; color: var(--text-muted); text-decoration: none; font-family: var(--font-mono); }
   .ln-link:hover { color: var(--text); }
   .btn-sm { padding: 7px 16px; font-size: 12px; }
   .btn-lg { padding: 14px 32px; font-size: 15px; }
 
-  /* Reset padding on narrow screens where shared topnav moves */
+  /* Reset margin on narrow screens where shared topnav moves */
   @media (max-width: 768px) {
-    .ln { padding-right: 24px; }
+    .ln-links { margin-right: 0; }
   }
 
   /* ── Glow button ───────────────────────────── */
