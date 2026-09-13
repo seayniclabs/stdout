@@ -8,6 +8,16 @@ repo: stdout
 
 # StdOut - Session Handoff
 
+## Riggins — corrections owed (fleet audit 2026-09-13)
+
+Riggins is StdOut's embedded agent. It was deliberately left out of the 2026-09-13 fleet fixes (scope, DoD wiring, metrics) because it lives in this app, not in agent-executor. Address these when StdOut is next worked on:
+
+- **No runner.** helmsman accepts `RIGGINS` as an owner and 7 tasks were assigned to it in the 30 days to 2026-09-13; all 7 were cancelled because nothing polls for `owner=RIGGINS`. Either StdOut polls helmsman for its tasks, or `RESTRICTED_OWNER_ASSIGNERS` in helmsman `server.py` should stop anyone but StdOut itself assigning to it.
+- **No Definition of Done.** `claude-config/agents/Definitions-of-Done.md` has no `## Riggins` section, so the assayer can only judge it against the generic four checks. Write the section (what a monitoring finding, a remediation, and a network scan must prove).
+- **No metrics.** Riggins never calls `agent_metrics.record_task_outcome`, so its fix rate is invisible to `capability-gap-analyzer.py`. Wire it in the same way agent-executor does, or decide explicitly that StdOut keeps its own metrics.
+- **Charter vs. code.** `claude-config/agents/Riggins.md` (17KB) is the charter; nothing in StdOut reads it. Decide which is authoritative and delete or reference the other.
+- The interactive `riggins` Claude Code subagent (`~/.claude/agents/riggins.md`) is a separate thing and is fine as-is.
+
 ## 🎯 Pick Up Here
 
 **✅ V1.0 PRODUCTION POLISH COMPLETE (2026-08-25)**
