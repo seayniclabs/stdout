@@ -72,14 +72,54 @@ StdOut is a production incident companion for self-hosters and solo developers, 
 
 ## Resource Inventory
 
-| Component | Port | Type | Tech |
-|-----------|------|------|------|
-| **StdOut Core** | 8112 | Astro SSR | Astro 5.17, Node 22, better-sqlite3 |
-| **Windlass** | 8116 | Schedule manager | Node.js, Docker API, cron evaluation |
-| **Observatory** | 8080 | Monitoring | Prometheus, Loki, Tempo, Ollama |
-| **Database** | (local) | SQLite | Drizzle ORM, WAL mode |
-| **Storage** | (data/) | Filesystem | incidents.db, knowledge base, logs |
-| **Network** | Tunnel | Cloudflare | seaynicroute.com → container:8112 |
+### Services Provided
+
+| Service | URL | Port | Health Check | Notes |
+|---------|-----|------|--------------|-------|
+| StdOut Core | https://stdout.seayniclabs.com | 443 | GET /api/health | Incident tracking + AI diagnostics |
+| Windlass | http://localhost:8116 | 8116 | GET /status.json | Schedule-aware Docker service manager (optional) |
+| Observatory | http://localhost:8080 | 8080 | GET /health | Proactive monitoring with LLM analysis (optional) |
+
+### Services Consumed
+
+| Service | URL | Auth Method | Credentials Location | Notes |
+|---------|-----|-------------|---------------------|-------|
+| Anthropic API | https://api.anthropic.com | API key | Environment variable `ANTHROPIC_API_KEY` | Optional AI diagnostics (users can bring own key) |
+| Resend | https://api.resend.com | API key | Environment variable `RESEND_API_KEY` | Email notifications |
+| GitHub API | https://api.github.com | OAuth token | Environment variable | Ticketing integration (optional) |
+| Docker Socket | unix:///var/run/docker.sock | Socket | `/var/run/docker.sock` | Windlass only; schedule-aware orchestration |
+
+### External Dependencies
+
+| Dependency | Version | Purpose | Documentation |
+|------------|---------|---------|---------------|
+| Astro | 5.17+ | SSR framework | https://astro.build |
+| Node.js | 22+ | Runtime | https://nodejs.org |
+| better-sqlite3 | 9.x | Database driver | https://github.com/WiseLibs/better-sqlite3 |
+| Drizzle ORM | 0.x | Database ORM | https://orm.drizzle.team |
+| Playwright | 1.x | E2E testing | https://playwright.dev |
+
+### Secrets & Credentials
+
+| Secret | Storage Location | Access Method | Notes |
+|--------|------------------|---------------|-------|
+| ANTHROPIC_API_KEY | Environment variable | App startup | Optional; users can provide their own |
+| RESEND_API_KEY | Environment variable | App startup | Email notifications |
+| GITHUB_OAUTH_TOKEN | Environment variable | Ticketing integration | Optional |
+| ENCRYPTION_KEY | Environment variable `SECRET_KEY` | App startup | 32-character random string |
+
+### Network & Infrastructure
+
+| Resource | Value | Purpose | Notes |
+|----------|-------|---------|-------|
+| Container Name | stdout | Docker | Auto-restart enabled |
+| Primary Port | 8112 | StdOut Core HTTP | Astro SSR server |
+| Windlass Port | 8116 | Docker scheduler | Optional; requires socket mount rw |
+| Observatory Port | 8080 | Monitoring | Optional; requires Ollama on host |
+| Volume Mount | /data | Persistence | incidents.db, knowledge base, logs |
+| Database File | /data/incidents.db | SQLite WAL | Auto-created on startup |
+| Public Domain | stdout.seayniclabs.com | HTTPS via Tunnel | Cloudflare Tunnel ingress |
+| TZ Environment | America/Chicago | Timezone | Required for correct cron times |
 
 ## Build & Deploy
 
