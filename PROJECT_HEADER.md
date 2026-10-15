@@ -76,12 +76,7 @@ StdOut is a production incident companion for self-hosters and solo developers, 
 
 ## Next Steps
 
-1. **[Priority: High]** Complete ticketing integrations — wire Jira, GitHub Issues, Zendesk connectors; auto-create tickets from StdOut incidents.
-
-2. **[Priority: Med]** Observatory auto-escalation — auto-create incidents from CRITICAL Observatory alerts; auto-assign to on-call based on schedule (Windlass).
-
-3. **[Priority: Med]** Multi-tenant SaaS mode — implement STDOUT_MODE=saas with organization isolation, team billing, and white-label options.
-- Incident export/archive workflows
+1. Parked until Sonique v1: this standalone product was retired 2026-10-06. It continues as a Sonique module built from the skill bundle in ~/Projects/stdout-skill (scaffolded 2026-10-04). Plan, order and stopping rules live in the Sonique blueprint (`blueprint show sonique`); the old SaaS roadmap is in this file's git history.
 
 ## Resource Inventory
 
